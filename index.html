@@ -2,7 +2,7 @@
 <html lang="pt">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0d47a1">
@@ -105,13 +105,14 @@ body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI
 /* MODAL */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity .25s}
 .overlay.on{opacity:1;pointer-events:all}
-.modal{background:#fff;border-radius:24px 24px 0 0;padding:18px 18px 36px;width:100%;max-height:92vh;overflow-y:auto;transform:translateY(100%);transition:transform .32s cubic-bezier(.34,1.56,.64,1)}
+.modal{background:#fff;border-radius:24px 24px 0 0;padding:18px 18px 36px;width:100%;max-height:92vh;overflow-y:auto;-webkit-overflow-scrolling:touch;transform:translateY(100%);transition:transform .32s cubic-bezier(.34,1.56,.64,1)}
 .overlay.on .modal{transform:translateY(0)}
 .mhandle{width:38px;height:4px;background:#ddd;border-radius:2px;margin:0 auto 14px}
 .mtitle{font-size:1.05rem;font-weight:800;margin-bottom:18px;text-align:center}
 .fg{margin-bottom:14px}
 label{display:block;font-size:.75rem;font-weight:700;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px}
-input,select,textarea{width:100%;border:1.5px solid #e0e0e0;border-radius:11px;padding:11px 13px;font-size:.95rem;font-family:inherit;color:var(--text);background:#fafafa;-webkit-appearance:none;transition:border-color .2s}
+input,select,textarea{width:100%;border:1.5px solid #e0e0e0;border-radius:11px;padding:11px 13px;font-size:1rem;font-family:inherit;color:var(--text);background:#fafafa;transition:border-color .2s;-webkit-user-select:auto;user-select:auto}
+select{-webkit-appearance:none}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue);background:#fff}
 textarea{resize:none;height:68px}
 
@@ -314,7 +315,16 @@ textarea{resize:none;height:68px}
     </div>
     <div class="fg">
       <label>Data</label>
-      <input type="date" id="e-date">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+        <select id="e-day"></select>
+        <select id="e-month">
+          <option value="01">Jan</option><option value="02">Fev</option><option value="03">Mar</option>
+          <option value="04">Abr</option><option value="05">Mai</option><option value="06">Jun</option>
+          <option value="07">Jul</option><option value="08">Ago</option><option value="09">Set</option>
+          <option value="10">Out</option><option value="11">Nov</option><option value="12">Dez</option>
+        </select>
+        <select id="e-year"></select>
+      </div>
     </div>
     <div class="fg">
       <label>Descrição (opcional)</label>
@@ -364,11 +374,29 @@ textarea{resize:none;height:68px}
     <div style="font-size:.82rem;color:#888;text-align:center;margin:-10px 0 16px">Defina o início e fim do seu ciclo do cartão</div>
     <div class="fg">
       <label>Data Início</label>
-      <input type="date" id="p-start">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+        <select id="ps-day"></select>
+        <select id="ps-month">
+          <option value="01">Jan</option><option value="02">Fev</option><option value="03">Mar</option>
+          <option value="04">Abr</option><option value="05">Mai</option><option value="06">Jun</option>
+          <option value="07">Jul</option><option value="08">Ago</option><option value="09">Set</option>
+          <option value="10">Out</option><option value="11">Nov</option><option value="12">Dez</option>
+        </select>
+        <select id="ps-year"></select>
+      </div>
     </div>
     <div class="fg">
       <label>Data Fim</label>
-      <input type="date" id="p-end">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+        <select id="pe-day"></select>
+        <select id="pe-month">
+          <option value="01">Jan</option><option value="02">Fev</option><option value="03">Mar</option>
+          <option value="04">Abr</option><option value="05">Mai</option><option value="06">Jun</option>
+          <option value="07">Jul</option><option value="08">Ago</option><option value="09">Set</option>
+          <option value="10">Out</option><option value="11">Nov</option><option value="12">Dez</option>
+        </select>
+        <select id="pe-year"></select>
+      </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
       <button onclick="setPeriodPreset('month')" style="border:1.5px solid #e0e0e0;border-radius:10px;padding:9px;font-size:.78rem;font-weight:700;background:#fafafa;cursor:pointer;color:#555">📆 Mês atual</button>
@@ -611,7 +639,8 @@ function openCatDetail(cat){
 function openAdd(){
   selCat('car'); selSub('gas');
   document.getElementById('e-amt').value='';
-  document.getElementById('e-date').value=today();
+  const td=today(); const now=new Date(); fillDays('e-day',new Date(now.getFullYear(),now.getMonth()+1,0).getDate()); fillYears('e-year',now.getFullYear());
+  setDateSelects('e-day','e-month','e-year',td);
   document.getElementById('e-desc').value='';
   openM('m-add');
 }
@@ -626,7 +655,7 @@ function selSub(s){
 }
 function saveEntry(){
   const amt=parseFloat(document.getElementById('e-amt').value);
-  const date=document.getElementById('e-date').value;
+  const date=getDateFromSelects('e-day','e-month','e-year');
   if(!amt||amt<=0){ toast('⚠️','Informe um valor válido'); return }
   if(!date){ toast('⚠️','Informe a data'); return }
   const d=gd();
@@ -641,26 +670,27 @@ function delE(id){
 
 // ═══ PERIOD ═══
 function openPeriod(){
-  const d=gd(), p=d.period;
-  document.getElementById('p-start').value=p.start;
-  document.getElementById('p-end').value=p.end;
+  const d=gd(), p=d.period, now=new Date();
+  fillDays('ps-day',31); fillYears('ps-year',now.getFullYear());
+  fillDays('pe-day',31); fillYears('pe-year',now.getFullYear());
+  setDateSelects('ps-day','ps-month','ps-year',p.start);
+  setDateSelects('pe-day','pe-month','pe-year',p.end);
   openM('m-period');
 }
 function setPeriodPreset(type){
   const now=new Date(), y=now.getFullYear(), m=String(now.getMonth()+1).padStart(2,'0');
   if(type==='month'){
     const last=new Date(y, now.getMonth()+1, 0).getDate();
-    document.getElementById('p-start').value=`${y}-${m}-01`;
-    document.getElementById('p-end').value=`${y}-${m}-${String(last).padStart(2,'0')}`;
+    setDateSelects('ps-day','ps-month','ps-year',`${y}-${m}-01`);
+    setDateSelects('pe-day','pe-month','pe-year',`${y}-${m}-${String(last).padStart(2,'0')}`);
   } else if(type==='last30'){
     const s=new Date(now); s.setDate(s.getDate()-29);
-    document.getElementById('p-start').value=s.toISOString().split('T')[0];
-    document.getElementById('p-end').value=now.toISOString().split('T')[0];
+    setDateSelects('ps-day','ps-month','ps-year',s.toISOString().split('T')[0]);
+    setDateSelects('pe-day','pe-month','pe-year',now.toISOString().split('T')[0]);
   }
 }
 function savePeriod(){
-  const s=document.getElementById('p-start').value, e=document.getElementById('p-end').value;
-  if(!s||!e){ toast('⚠️','Preencha início e fim'); return }
+  const s=getDateFromSelects('ps-day','ps-month','ps-year'), e=getDateFromSelects('pe-day','pe-month','pe-year');
   if(s>e){ toast('⚠️','Início deve ser antes do fim'); return }
   const d=gd(); d.period={start:s,end:e}; sd(d);
   closeM('m-period'); render(); toast('✅','Período atualizado!');
@@ -747,6 +777,31 @@ function toast(ic,msg){
   t.classList.add('on');
   if(_tt)clearTimeout(_tt);
   _tt=setTimeout(()=>t.classList.remove('on'),3200);
+}
+
+// ═══ DATE SELECTS ═══
+function fillDays(selId, count){
+  const s=document.getElementById(selId), cur=s.value;
+  s.innerHTML='';
+  for(let i=1;i<=count;i++){ const o=document.createElement('option'); o.value=String(i).padStart(2,'0'); o.textContent=String(i).padStart(2,'0'); s.appendChild(o) }
+  if(cur&&+cur<=count) s.value=cur;
+}
+function fillYears(selId, curYear){
+  const s=document.getElementById(selId);
+  s.innerHTML='';
+  for(let y=curYear-1;y<=curYear+2;y++){ const o=document.createElement('option'); o.value=String(y); o.textContent=String(y); s.appendChild(o) }
+  s.value=String(curYear);
+}
+function setDateSelects(dayId, moId, yearId, dateStr){
+  const [y,m,d]=dateStr.split('-');
+  fillDays(dayId, new Date(+y,+m,0).getDate());
+  fillYears(yearId, +y);
+  document.getElementById(dayId).value=d;
+  document.getElementById(moId).value=m;
+  document.getElementById(yearId).value=y;
+}
+function getDateFromSelects(dayId, moId, yearId){
+  return `${document.getElementById(yearId).value}-${document.getElementById(moId).value}-${document.getElementById(dayId).value}`;
 }
 
 // ═══ INIT ═══
