@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0d47a1">
+<title>💳 Gastos da Casa</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --blue:#1565c0;--blue-dark:#0d47a1;--blue-light:#1976d2;
+  --car:#e53935;--misc:#fb8c00;--mkt:#43a047;
+  --bg:#f0f2f5;--card:#fff;--text:#1a1a2e;--muted:#888;
+  --r:16px;--shadow:0 2px 12px rgba(0,0,0,.08)
+}
+body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:var(--text);min-height:100vh;padding-bottom:76px}
+
+/* HEADER */
+.hdr{background:linear-gradient(135deg,var(--blue-dark),var(--blue));color:#fff;padding:18px 18px 28px}
+.hdr-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.hdr-title{font-size:1.1rem;font-weight:800}
+.hdr-month{font-size:.78rem;opacity:.7;text-transform:capitalize;margin-top:1px}
+.hdr-btns{display:flex;gap:8px}
+.ibtn{background:rgba(255,255,255,.15);border:none;color:#fff;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.05rem;cursor:pointer}
+.ibtn:active{background:rgba(255,255,255,.3)}
+
+/* BUDGET CARD */
+.bcard{background:rgba(255,255,255,.12);border-radius:14px;padding:14px 16px}
+.brow{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:8px}
+.bspent{font-size:1.9rem;font-weight:900;line-height:1}
+.blimit{font-size:.78rem;opacity:.7}
+.brem{font-size:.82rem;font-weight:600;margin-top:2px}
+.pbar{height:8px;background:rgba(255,255,255,.2);border-radius:4px;overflow:hidden;margin-top:8px}
+.pfill{height:100%;border-radius:4px;transition:width .5s ease,background .3s}
+.pmeta{display:flex;justify-content:space-between;margin-top:5px;font-size:.68rem;opacity:.65}
+
+/* CONTENT */
+.content{padding:0 14px;margin-top:-14px}
+
+/* CARD */
+.card{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:16px;margin-bottom:12px}
+.ctitle{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:12px}
+
+/* ALERT */
+.alert{border-radius:12px;padding:12px 14px;font-size:.83rem;font-weight:600;display:none;align-items:center;gap:8px;margin-top:14px;margin-bottom:4px}
+.alert.warn{display:flex;background:#fff3e0;border:1px solid #ff9800;color:#e65100}
+.alert.danger{display:flex;background:#ffebee;border:1px solid #f44336;color:#b71c1c}
+
+/* CATEGORY GRID */
+.cgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;margin-top:14px}
+.ccat{background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:14px;border-left:4px solid;cursor:pointer;position:relative;overflow:hidden}
+.ccat::after{content:'';position:absolute;top:-10px;right:-10px;width:52px;height:52px;border-radius:50%;background:currentColor;opacity:.06}
+.ccat.car{border-color:var(--car);color:var(--car)}
+.ccat.misc{border-color:var(--misc);color:var(--misc)}
+.ccat.mkt{border-color:var(--mkt);color:var(--mkt);grid-column:1/-1}
+.cicon{font-size:1.45rem;margin-bottom:5px}
+.cname{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;opacity:.65;color:var(--text);margin-bottom:2px}
+.camt{font-size:1.2rem;font-weight:800;color:var(--text)}
+.ccnt{font-size:.68rem;color:var(--muted);margin-top:2px}
+
+/* CHART */
+.ch180{position:relative;height:180px;margin:0 auto;max-width:320px}
+.ch150{position:relative;height:150px}
+
+/* ENTRIES */
+.eitem{display:flex;align-items:center;padding:10px 0;border-bottom:1px solid #f2f2f2;gap:10px}
+.eitem:last-child{border-bottom:none}
+.edot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.einfo{flex:1;min-width:0}
+.edesc{font-size:.84rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.emeta{font-size:.7rem;color:var(--muted);margin-top:1px}
+.eamt{font-size:.88rem;font-weight:700;flex-shrink:0}
+.edel{background:none;border:none;color:#ccc;font-size:.95rem;cursor:pointer;padding:4px;flex-shrink:0}
+.empty{text-align:center;padding:28px 12px;color:var(--muted);font-size:.88rem}
+.empty .ei{font-size:2.2rem;margin-bottom:8px}
+
+/* FAB */
+.fab{position:fixed;bottom:88px;right:20px;width:58px;height:58px;border-radius:50%;background:var(--blue);color:#fff;border:none;font-size:1.9rem;box-shadow:0 4px 18px rgba(21,101,192,.45);cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:100;transition:transform .18s,box-shadow .18s}
+.fab:active{transform:scale(.93);box-shadow:0 2px 8px rgba(21,101,192,.3)}
+
+/* BOTTOM NAV */
+.bnav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #eee;display:flex;z-index:99;padding-bottom:env(safe-area-inset-bottom,0px)}
+.nbtn{flex:1;border:none;background:none;padding:9px 4px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:.62rem;color:#aaa;cursor:pointer}
+.nbtn.on{color:var(--blue)}
+.nbtn .ni{font-size:1.2rem}
+
+/* SCREENS */
+.scr{display:none}.scr.on{display:block}
+
+/* MONTH SELECTOR */
+.msel{display:flex;align-items:center;justify-content:center;gap:12px;padding:10px 0}
+.mnav{background:none;border:1.5px solid #e0e0e0;border-radius:50%;width:32px;height:32px;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.mlbl{font-weight:700;font-size:.95rem;min-width:140px;text-align:center}
+
+/* MODAL */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity .25s}
+.overlay.on{opacity:1;pointer-events:all}
+.modal{background:#fff;border-radius:24px 24px 0 0;padding:18px 18px 36px;width:100%;max-height:92vh;overflow-y:auto;transform:translateY(100%);transition:transform .32s cubic-bezier(.34,1.56,.64,1)}
+.overlay.on .modal{transform:translateY(0)}
+.mhandle{width:38px;height:4px;background:#ddd;border-radius:2px;margin:0 auto 14px}
+.mtitle{font-size:1.05rem;font-weight:800;margin-bottom:18px;text-align:center}
+.fg{margin-bottom:14px}
+label{display:block;font-size:.75rem;font-weight:700;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px}
+input,select,textarea{width:100%;border:1.5px solid #e0e0e0;border-radius:11px;padding:11px 13px;font-size:.95rem;font-family:inherit;color:var(--text);background:#fafafa;-webkit-appearance:none;transition:border-color .2s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue);background:#fff}
+textarea{resize:none;height:68px}
+
+/* CAT SELECTOR */
+.csel{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-bottom:14px}
+.copt{border:2px solid #e0e0e0;border-radius:12px;padding:10px 5px;text-align:center;cursor:pointer;transition:all .18s;background:#fafafa}
+.copt .oi{font-size:1.3rem;margin-bottom:3px}
+.copt .on{font-size:.67rem;font-weight:700;color:var(--muted)}
+.copt.sc{border-color:var(--blue);background:#e8f0fe}.copt.sc .on{color:var(--blue)}
+.copt.sc-car{border-color:var(--car);background:#fff5f5}.copt.sc-car .on{color:var(--car)}
+.copt.sc-misc{border-color:var(--misc);background:#fff8f0}.copt.sc-misc .on{color:var(--misc)}
+.copt.sc-mkt{border-color:var(--mkt);background:#f1f8e9}.copt.sc-mkt .on{color:var(--mkt)}
+
+/* SUBCATS */
+.sbg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:14px}
+.sbtn{border:1.5px solid #e0e0e0;border-radius:10px;padding:8px 3px;font-size:.7rem;font-weight:700;background:#fafafa;cursor:pointer;color:var(--muted);transition:all .18s}
+.sbtn.on{border-color:var(--car);background:#fff5f5;color:var(--car)}
+
+/* AMOUNT */
+.amtwrap{position:relative}
+.amtwrap::before{content:'$';position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:1rem;font-weight:700;color:var(--muted)}
+.amtwrap input{padding-left:26px;font-size:1.25rem;font-weight:700}
+
+/* BUTTONS */
+.btnp{width:100%;background:var(--blue);color:#fff;border:none;border-radius:13px;padding:14px;font-size:.95rem;font-weight:700;cursor:pointer;margin-top:6px}
+.btnp:active{opacity:.9}
+.btnw{background:#25D366;color:#fff;border:none;border-radius:13px;padding:13px;font-size:.9rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;width:100%;margin-top:10px}
+
+/* SUMMARY */
+.srow{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #f2f2f2;font-size:.88rem}
+.srow:last-child{border-bottom:none}
+.slbl{color:var(--muted)}
+.sval{font-weight:700}
+
+/* TOAST */
+.toast{position:fixed;top:18px;left:14px;right:14px;background:#1a1a2e;color:#fff;border-radius:13px;padding:13px 15px;font-size:.87rem;font-weight:500;z-index:500;transform:translateY(-110px);opacity:0;transition:all .32s cubic-bezier(.34,1.56,.64,1);display:flex;align-items:center;gap:9px}
+.toast.on{transform:translateY(0);opacity:1}
+.dsep{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin:4px 0 6px;padding:0 2px}
+</style>
+</head>
+<body>
+
+<!-- TOAST -->
+<div class="toast" id="toast"><span id="ti"></span><span id="tm"></span></div>
+
+<!-- ═══ TELA: INÍCIO ═══ -->
+<div class="scr on" id="s-home">
+  <div class="hdr">
+    <div class="hdr-top">
+      <div>
+        <div class="hdr-title">💳 Gastos da Casa</div>
+        <div class="hdr-month" id="hdr-month">—</div>
+      </div>
+      <div class="hdr-btns">
+        <button class="ibtn" onclick="openSettings()">⚙️</button>
+        <button class="ibtn" onclick="shareWA()">📲</button>
+      </div>
+    </div>
+    <div class="bcard">
+      <div class="brow">
+        <div>
+          <div style="font-size:.65rem;opacity:.65;margin-bottom:2px">TOTAL GASTO</div>
+          <div class="bspent" id="b-spent">$0.00</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:.65rem;opacity:.65;margin-bottom:2px">LIMITE DO CARTÃO</div>
+          <div class="blimit" id="b-limit">$0.00</div>
+          <div class="brem" id="b-rem">— disponível</div>
+        </div>
+      </div>
+      <div class="pbar"><div class="pfill" id="pfill" style="width:0%"></div></div>
+      <div class="pmeta">
+        <span id="ppct">0% utilizado</span>
+        <span id="ptoday">Hoje: $0.00</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="alert" id="alert"><span id="alert-ic"></span><span id="alert-msg"></span></div>
+
+    <div class="cgrid">
+      <div class="ccat car" onclick="openCatDetail('car')">
+        <div class="cicon">🚗</div>
+        <div class="cname">Carro</div>
+        <div class="camt" id="t-car">$0.00</div>
+        <div class="ccnt" id="c-car">0 lançamentos</div>
+      </div>
+      <div class="ccat misc" onclick="openCatDetail('misc')">
+        <div class="cicon">🛍️</div>
+        <div class="cname">Diversos</div>
+        <div class="camt" id="t-misc">$0.00</div>
+        <div class="ccnt" id="c-misc">0 lançamentos</div>
+      </div>
+      <div class="ccat mkt" onclick="openCatDetail('mkt')">
+        <div class="cicon">🛒</div>
+        <div class="cname">Supermercado</div>
+        <div class="camt" id="t-mkt">$0.00</div>
+        <div class="ccnt" id="c-mkt">0 lançamentos</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ctitle">Distribuição por Categoria</div>
+      <div class="ch180"><canvas id="donut"></canvas></div>
+    </div>
+
+    <div class="card">
+      <div class="ctitle">Gastos Diários — Mês Atual</div>
+      <div class="ch150"><canvas id="bars"></canvas></div>
+    </div>
+
+    <div class="card">
+      <div class="ctitle">Lançamentos Recentes</div>
+      <div id="recent"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ TELA: HISTÓRICO ═══ -->
+<div class="scr" id="s-hist">
+  <div class="hdr" style="padding-bottom:18px">
+    <div class="hdr-top">
+      <div><div class="hdr-title">📋 Histórico</div></div>
+      <button class="ibtn" onclick="shareWA()">📲</button>
+    </div>
+  </div>
+  <div class="content" style="margin-top:12px">
+    <div class="card" style="padding:8px 14px">
+      <div class="msel">
+        <button class="mnav" onclick="histDelta(-1)">‹</button>
+        <span class="mlbl" id="hist-lbl">—</span>
+        <button class="mnav" onclick="histDelta(1)">›</button>
+      </div>
+    </div>
+    <div id="hist-body"></div>
+  </div>
+</div>
+
+<!-- ═══ TELA: RELATÓRIO ═══ -->
+<div class="scr" id="s-rep">
+  <div class="hdr" style="padding-bottom:18px">
+    <div class="hdr-top">
+      <div><div class="hdr-title">📊 Relatório</div></div>
+      <button class="ibtn" onclick="shareWA()">📲</button>
+    </div>
+  </div>
+  <div class="content" style="margin-top:12px">
+    <div class="card" style="padding:8px 14px">
+      <div class="msel">
+        <button class="mnav" onclick="repDelta(-1)">‹</button>
+        <span class="mlbl" id="rep-lbl">—</span>
+        <button class="mnav" onclick="repDelta(1)">›</button>
+      </div>
+    </div>
+    <div id="rep-body"></div>
+    <div id="rep-carro"></div>
+  </div>
+</div>
+
+<!-- NAV -->
+<nav class="bnav">
+  <button class="nbtn on" id="n-home" onclick="go('home')"><span class="ni">🏠</span><span>Início</span></button>
+  <button class="nbtn" id="n-hist" onclick="go('hist')"><span class="ni">📋</span><span>Histórico</span></button>
+  <button class="nbtn" id="n-rep" onclick="go('rep')"><span class="ni">📊</span><span>Relatório</span></button>
+</nav>
+
+<button class="fab" onclick="openAdd()">+</button>
+
+<!-- ═══ MODAL: ADICIONAR ═══ -->
+<div class="overlay" id="m-add" onclick="ocOver(event,'m-add')">
+  <div class="modal">
+    <div class="mhandle"></div>
+    <div class="mtitle">➕ Novo Lançamento</div>
+    <div class="fg">
+      <label>Categoria</label>
+      <div class="csel">
+        <div class="copt" id="o-car" onclick="selCat('car')"><div class="oi">🚗</div><div class="on">Carro</div></div>
+        <div class="copt" id="o-misc" onclick="selCat('misc')"><div class="oi">🛍️</div><div class="on">Diversos</div></div>
+        <div class="copt" id="o-mkt" onclick="selCat('mkt')"><div class="oi">🛒</div><div class="on">Mercado</div></div>
+      </div>
+    </div>
+    <div class="fg" id="sub-grp" style="display:none">
+      <label>Subcategoria — Carro</label>
+      <div class="sbg">
+        <button class="sbtn" id="sb-gas" onclick="selSub('gas')">⛽ Gasolina</button>
+        <button class="sbtn" id="sb-oil" onclick="selSub('oil')">🛢️ Óleo</button>
+        <button class="sbtn" id="sb-div" onclick="selSub('div')">🔧 Diversos</button>
+      </div>
+    </div>
+    <div class="fg">
+      <label>Valor</label>
+      <div class="amtwrap"><input type="number" id="e-amt" placeholder="0.00" step="0.01" min="0" inputmode="decimal"></div>
+    </div>
+    <div class="fg">
+      <label>Data</label>
+      <input type="date" id="e-date">
+    </div>
+    <div class="fg">
+      <label>Descrição (opcional)</label>
+      <textarea id="e-desc" placeholder="Ex: Gasolina no Petro-Canada…"></textarea>
+    </div>
+    <button class="btnp" onclick="saveEntry()">💾 Salvar</button>
+  </div>
+</div>
+
+<!-- ═══ MODAL: CONFIGURAÇÕES ═══ -->
+<div class="overlay" id="m-cfg" onclick="ocOver(event,'m-cfg')">
+  <div class="modal">
+    <div class="mhandle"></div>
+    <div class="mtitle">⚙️ Configurações</div>
+    <div class="fg">
+      <label>Limite Mensal do Cartão ($)</label>
+      <div class="amtwrap"><input type="number" id="cfg-lim" placeholder="3000.00" step="0.01" min="0" inputmode="decimal"></div>
+    </div>
+    <div class="fg">
+      <label>Alertar quando atingir (%)</label>
+      <input type="number" id="cfg-pct" placeholder="80" min="1" max="100" inputmode="numeric">
+    </div>
+    <button class="btnp" onclick="saveCfg()">💾 Salvar</button>
+    <button class="btnw" onclick="shareWA()" style="margin-top:16px;border-top:none">
+      <span style="font-size:1.1rem">📱</span> Compartilhar com Esposa (WhatsApp)
+    </button>
+    <div style="margin-top:18px;padding-top:14px;border-top:1px solid #f0f0f0">
+      <button onclick="if(confirm('Apagar TODOS os dados?')){localStorage.removeItem('gd');location.reload()}" style="width:100%;background:none;border:1.5px solid #ffcdd2;color:#c62828;border-radius:11px;padding:11px;font-size:.85rem;font-weight:700;cursor:pointer">🗑️ Apagar todos os dados</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: DETALHE CATEGORIA ═══ -->
+<div class="overlay" id="m-cat" onclick="ocOver(event,'m-cat')">
+  <div class="modal">
+    <div class="mhandle"></div>
+    <div class="mtitle" id="m-cat-title">Categoria</div>
+    <div id="m-cat-body"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+// ═══ CONSTANTS ═══
+const WA = '14379718925';
+const CATS = { car:'Carro', misc:'Diversos', mkt:'Supermercado' };
+const CICONS = { car:'🚗', misc:'🛍️', mkt:'🛒' };
+const CCOL = { car:'#e53935', misc:'#fb8c00', mkt:'#43a047' };
+const SUBS = { gas:'⛽ Gasolina', oil:'🛢️ Óleo', div:'🔧 Diversos' };
+
+// ═══ DATA ═══
+function ld(){ try{ return JSON.parse(localStorage.getItem('gd')||'{}') }catch(e){ return {} } }
+function sd(d){ localStorage.setItem('gd', JSON.stringify(d)) }
+function gd(){
+  const d = ld();
+  if(!d.entries) d.entries=[];
+  if(!d.limit) d.limit=3000;
+  if(!d.alertPct) d.alertPct=80;
+  return d;
+}
+function fmt(n){ return '$'+(+n||0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',') }
+function fdate(s){ if(!s) return ''; const [y,m,d]=s.split('-'); return `${d}/${m}/${y}` }
+function today(){ return new Date().toISOString().split('T')[0] }
+function curMo(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}` }
+function moLabel(k){
+  const [y,m]=k.split('-');
+  const M=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  return `${M[+m-1]} ${y}`;
+}
+function moEntries(entries, mo){ return entries.filter(e=>e.date&&e.date.startsWith(mo)) }
+
+// ═══ STATE ═══
+let _cat='car', _sub='gas';
+let _hmo=curMo(), _rmo=curMo();
+let _dc=null, _bc=null;
+
+// ═══ RENDER HOME ═══
+function render(){
+  const d=gd(), mo=curMo(), es=moEntries(d.entries,mo);
+  document.getElementById('hdr-month').textContent=moLabel(mo);
+  const tots={car:0,misc:0,mkt:0}, cnts={car:0,misc:0,mkt:0};
+  let total=0;
+  es.forEach(e=>{ tots[e.cat]=(tots[e.cat]||0)++(e.amt||0); cnts[e.cat]=(cnts[e.cat]||0)+1; total+=+(e.amt||0) });
+  const td=today(), tdTot=es.filter(e=>e.date===td).reduce((s,e)=>s+(+(e.amt||0)),0);
+  document.getElementById('b-spent').textContent=fmt(total);
+  document.getElementById('b-limit').textContent=fmt(d.limit);
+  const rem=d.limit-total;
+  const remEl=document.getElementById('b-rem');
+  remEl.textContent=(rem>=0?fmt(rem):'-'+fmt(-rem))+' disponível';
+  remEl.style.color=rem<0?'#ff6b6b':'rgba(255,255,255,.85)';
+  document.getElementById('ptoday').textContent='Hoje: '+fmt(tdTot);
+  const pct=d.limit>0?Math.min(total/d.limit*100,100):0;
+  const over=total>d.limit;
+  document.getElementById('pfill').style.width=pct+'%';
+  document.getElementById('pfill').style.background=over?'#f44336':pct>=(d.alertPct||80)?'#ff9800':'#69f0ae';
+  document.getElementById('ppct').textContent=pct.toFixed(1)+'% utilizado';
+  // Alert
+  const al=document.getElementById('alert');
+  if(over){
+    al.className='alert danger';
+    document.getElementById('alert-ic').textContent='🚨';
+    document.getElementById('alert-msg').textContent=`LIMITE EXCEDIDO! Você gastou ${fmt(total-d.limit)} além do limite de ${fmt(d.limit)}.`;
+  } else if(pct>=(d.alertPct||80)){
+    al.className='alert warn';
+    document.getElementById('alert-ic').textContent='⚠️';
+    document.getElementById('alert-msg').textContent=`Atenção: ${pct.toFixed(0)}% do limite utilizado. Restam apenas ${fmt(rem)}.`;
+  } else { al.className='alert'; }
+  // Cat cards
+  ['car','misc','mkt'].forEach(c=>{
+    document.getElementById('t-'+c).textContent=fmt(tots[c]||0);
+    document.getElementById('c-'+c).textContent=(cnts[c]||0)+' lançamento'+(cnts[c]!==1?'s':'');
+  });
+  // Charts
+  renderDonut(tots); renderBars(es,mo);
+  // Recent
+  renderRecent(d.entries);
+}
+
+function renderDonut(tots){
+  const ctx=document.getElementById('donut').getContext('2d');
+  const vs=[tots.car||0,tots.misc||0,tots.mkt||0], has=vs.some(v=>v>0);
+  if(_dc)_dc.destroy();
+  _dc=new Chart(ctx,{type:'doughnut',data:{
+    labels:['🚗 Carro','🛍️ Diversos','🛒 Supermercado'],
+    datasets:[{data:has?vs:[1,1,1],backgroundColor:has?['#e53935','#fb8c00','#43a047']:['#e8e8e8','#efefef','#e0e0e0'],borderWidth:0,hoverOffset:6}]
+  },options:{cutout:'68%',plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:10,boxWidth:13}},tooltip:{callbacks:{label:c=>` ${c.label}: ${fmt(c.raw)}`}}}}});
+}
+
+function renderBars(es, mo){
+  const ctx=document.getElementById('bars').getContext('2d');
+  const [y,m]=mo.split('-'); const dim=new Date(+y,+m,0).getDate(), td=new Date().getDate();
+  const dt={};
+  es.forEach(e=>{ const day=+e.date.split('-')[2]; dt[day]=(dt[day]||0)+(+(e.amt||0)) });
+  const lbs=[],vs=[],cs=[];
+  for(let i=1;i<=Math.min(dim,td);i++){ lbs.push(i); vs.push(dt[i]||0); cs.push(dt[i]>0?'#1565c0':'#e8eaf6') }
+  if(_bc)_bc.destroy();
+  _bc=new Chart(ctx,{type:'bar',data:{labels:lbs,datasets:[{data:vs,backgroundColor:cs,borderRadius:4,barPercentage:.72}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${fmt(c.raw)}`}}},
+    scales:{x:{grid:{display:false},ticks:{font:{size:9}}},y:{grid:{color:'#f0f0f0'},ticks:{font:{size:9},callback:v=>'$'+v}}}}});
+}
+
+function renderRecent(all){
+  const rec=[...all].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,8);
+  const el=document.getElementById('recent');
+  if(!rec.length){ el.innerHTML='<div class="empty"><div class="ei">📭</div>Nenhum lançamento ainda</div>'; return; }
+  el.innerHTML=rec.map(e=>`
+    <div class="eitem">
+      <div class="edot" style="background:${CCOL[e.cat]}"></div>
+      <div class="einfo">
+        <div class="edesc">${e.desc||CATS[e.cat]}</div>
+        <div class="emeta">${fdate(e.date)} · ${CATS[e.cat]}${e.sub?' · '+SUBS[e.sub]:''}</div>
+      </div>
+      <div class="eamt" style="color:${CCOL[e.cat]}">${fmt(e.amt)}</div>
+      <button class="edel" onclick="delE('${e.id}')">✕</button>
+    </div>`).join('');
+}
+
+// ═══ HISTORY ═══
+function renderHist(){
+  const d=gd(), es=moEntries(d.entries,_hmo).sort((a,b)=>b.date.localeCompare(a.date));
+  document.getElementById('hist-lbl').textContent=moLabel(_hmo);
+  const el=document.getElementById('hist-body');
+  if(!es.length){ el.innerHTML='<div class="card"><div class="empty"><div class="ei">📭</div>Sem lançamentos neste mês</div></div>'; return; }
+  const byDay={};
+  es.forEach(e=>{ if(!byDay[e.date])byDay[e.date]=[]; byDay[e.date].push(e) });
+  el.innerHTML=Object.keys(byDay).sort((a,b)=>b.localeCompare(a)).map(date=>{
+    const dt=byDay[date].reduce((s,e)=>s+(+(e.amt||0)),0);
+    return `<div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-weight:700;font-size:.88rem">${fdate(date)}</div>
+        <div style="font-weight:700;color:#1565c0">${fmt(dt)}</div>
+      </div>
+      ${byDay[date].map(e=>`<div class="eitem">
+        <div class="edot" style="background:${CCOL[e.cat]}"></div>
+        <div class="einfo">
+          <div class="edesc">${e.desc||CATS[e.cat]}</div>
+          <div class="emeta">${CATS[e.cat]}${e.sub?' · '+SUBS[e.sub]:''}</div>
+        </div>
+        <div class="eamt" style="color:${CCOL[e.cat]}">${fmt(e.amt)}</div>
+        <button class="edel" onclick="delE('${e.id}')">✕</button>
+      </div>`).join('')}
+    </div>`;
+  }).join('');
+}
+function histDelta(n){ const [y,m]=_hmo.split('-').map(Number); const dt=new Date(y,m-1+n,1); _hmo=`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}`; renderHist() }
+
+// ═══ REPORT ═══
+function renderRep(){
+  const d=gd(), es=moEntries(d.entries,_rmo);
+  document.getElementById('rep-lbl').textContent=moLabel(_rmo);
+  const tots={car:0,misc:0,mkt:0}, stots={};
+  let grand=0;
+  es.forEach(e=>{ const a=+(e.amt||0); tots[e.cat]=(tots[e.cat]||0)+a; grand+=a; if(e.sub)stots[e.sub]=(stots[e.sub]||0)+a });
+  const pct=d.limit>0?(grand/d.limit*100):0;
+  const rem=d.limit-grand;
+  document.getElementById('rep-body').innerHTML=`
+    <div class="card">
+      <div class="ctitle">Resumo — ${moLabel(_rmo)}</div>
+      <div class="srow"><span class="slbl">Total Gasto</span><span class="sval" style="color:#1565c0">${fmt(grand)}</span></div>
+      <div class="srow"><span class="slbl">Limite do Cartão</span><span class="sval">${fmt(d.limit)}</span></div>
+      <div class="srow"><span class="slbl">Utilização</span><span class="sval" style="color:${pct>100?'#f44336':pct>=80?'#ff9800':'#43a047'}">${pct.toFixed(1)}%</span></div>
+      <div class="srow"><span class="slbl">Disponível</span><span class="sval" style="color:${rem<0?'#f44336':'#43a047'}">${fmt(rem)}</span></div>
+      <hr style="border:none;border-top:1px solid #f0f0f0;margin:6px 0">
+      <div class="srow"><span class="slbl">🚗 Carro</span><span class="sval" style="color:#e53935">${fmt(tots.car)}</span></div>
+      <div class="srow"><span class="slbl">🛍️ Diversos</span><span class="sval" style="color:#fb8c00">${fmt(tots.misc)}</span></div>
+      <div class="srow"><span class="slbl">🛒 Supermercado</span><span class="sval" style="color:#43a047">${fmt(tots.mkt)}</span></div>
+      <button class="btnw" onclick="shareWA()"><span style="font-size:1.1rem">📱</span>Enviar por WhatsApp</button>
+    </div>`;
+  const cd=document.getElementById('rep-carro');
+  if(tots.car>0){
+    cd.innerHTML=`<div class="card">
+      <div class="ctitle">🚗 Carro — Detalhes</div>
+      ${['gas','oil','div'].filter(s=>stots[s]).map(s=>`<div class="srow"><span class="slbl">${SUBS[s]}</span><span class="sval" style="color:#e53935">${fmt(stots[s])}</span></div>`).join('')}
+      ${Object.keys(stots).filter(s=>!['gas','oil','div'].includes(s)).map(s=>`<div class="srow"><span class="slbl">${s}</span><span class="sval" style="color:#e53935">${fmt(stots[s])}</span></div>`).join('')}
+    </div>`;
+  } else { cd.innerHTML='' }
+}
+function repDelta(n){ const [y,m]=_rmo.split('-').map(Number); const dt=new Date(y,m-1+n,1); _rmo=`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}`; renderRep() }
+
+// ═══ CAT DETAIL ═══
+function openCatDetail(cat){
+  const d=gd(), es=moEntries(d.entries,curMo()).filter(e=>e.cat===cat).sort((a,b)=>b.date.localeCompare(a.date));
+  const tot=es.reduce((s,e)=>s+(+(e.amt||0)),0);
+  document.getElementById('m-cat-title').textContent=CICONS[cat]+' '+CATS[cat];
+  document.getElementById('m-cat-body').innerHTML=!es.length?'<div class="empty"><div class="ei">📭</div>Sem lançamentos este mês</div>':`
+    <div style="text-align:center;padding:10px 0 14px;border-bottom:1px solid #f2f2f2;margin-bottom:8px">
+      <div style="font-size:.7rem;color:#888;margin-bottom:4px">TOTAL DO MÊS</div>
+      <div style="font-size:1.9rem;font-weight:900;color:${CCOL[cat]}">${fmt(tot)}</div>
+    </div>
+    ${es.map(e=>`<div class="eitem">
+      <div class="edot" style="background:${CCOL[cat]}"></div>
+      <div class="einfo">
+        <div class="edesc">${e.desc||CATS[e.cat]}</div>
+        <div class="emeta">${fdate(e.date)}${e.sub?' · '+SUBS[e.sub]:''}</div>
+      </div>
+      <div class="eamt" style="color:${CCOL[cat]}">${fmt(e.amt)}</div>
+      <button class="edel" onclick="delE('${e.id}');closeM('m-cat')">✕</button>
+    </div>`).join('')}`;
+  openM('m-cat');
+}
+
+// ═══ ADD ENTRY ═══
+function openAdd(){
+  selCat('car'); selSub('gas');
+  document.getElementById('e-amt').value='';
+  document.getElementById('e-date').value=today();
+  document.getElementById('e-desc').value='';
+  openM('m-add');
+}
+function selCat(c){
+  _cat=c;
+  ['car','misc','mkt'].forEach(k=>{ document.getElementById('o-'+k).className='copt'+(k===c?' sc-'+k:'') });
+  document.getElementById('sub-grp').style.display=c==='car'?'block':'none';
+}
+function selSub(s){
+  _sub=s;
+  ['gas','oil','div'].forEach(k=>{ document.getElementById('sb-'+k).className='sbtn'+(k===s?' on':'') });
+}
+function saveEntry(){
+  const amt=parseFloat(document.getElementById('e-amt').value);
+  const date=document.getElementById('e-date').value;
+  if(!amt||amt<=0){ toast('⚠️','Informe um valor válido'); return }
+  if(!date){ toast('⚠️','Informe a data'); return }
+  const d=gd();
+  d.entries.push({ id:Date.now().toString(), cat:_cat, sub:_cat==='car'?_sub:null, amt, date, desc:document.getElementById('e-desc').value.trim() });
+  sd(d); closeM('m-add'); render(); toast('✅','Lançamento salvo!'); checkAlert();
+}
+function delE(id){
+  if(!confirm('Excluir este lançamento?')) return;
+  const d=gd(); d.entries=d.entries.filter(e=>e.id!==id); sd(d);
+  render(); renderHist(); renderRep(); toast('🗑️','Excluído');
+}
+
+// ═══ CONFIG ═══
+function openSettings(){
+  const d=gd();
+  document.getElementById('cfg-lim').value=d.limit||3000;
+  document.getElementById('cfg-pct').value=d.alertPct||80;
+  openM('m-cfg');
+}
+function saveCfg(){
+  const lim=parseFloat(document.getElementById('cfg-lim').value);
+  if(!lim||lim<=0){ toast('⚠️','Informe um limite válido'); return }
+  const d=gd(); d.limit=lim; d.alertPct=parseInt(document.getElementById('cfg-pct').value)||80;
+  sd(d); closeM('m-cfg'); render(); toast('✅','Configurações salvas!');
+}
+
+// ═══ WHATSAPP ═══
+function shareWA(){
+  const d=gd(), mo=curMo(), es=moEntries(d.entries,mo);
+  const tots={car:0,misc:0,mkt:0}; let g=0;
+  es.forEach(e=>{ tots[e.cat]=(tots[e.cat]||0)+(+(e.amt||0)); g+=+(e.amt||0) });
+  const pct=d.limit>0?(g/d.limit*100).toFixed(1):'—', rem=d.limit-g;
+  const td=today(), tde=es.filter(e=>e.date===td), tdT=tde.reduce((s,e)=>s+(+(e.amt||0)),0);
+  let msg=`💳 *GASTOS DA CASA — ${moLabel(mo)}*\n`;
+  msg+=`━━━━━━━━━━━━━━━━━━\n`;
+  msg+=`📊 Total gasto: *${fmt(g)}*\n`;
+  msg+=`📈 Limite: ${fmt(d.limit)} (${pct}% utilizado)\n`;
+  msg+=`💰 Disponível: *${fmt(rem)}*\n\n`;
+  msg+=`🗂 *Por Categoria:*\n`;
+  msg+=`🚗 Carro: ${fmt(tots.car)}\n`;
+  msg+=`🛍️ Diversos: ${fmt(tots.misc)}\n`;
+  msg+=`🛒 Supermercado: ${fmt(tots.mkt)}\n`;
+  if(tdT>0){
+    msg+=`\n📅 *Hoje (${fdate(td)}):* ${fmt(tdT)}\n`;
+    tde.forEach(e=>{ msg+=`  • ${e.desc||CATS[e.cat]}: ${fmt(e.amt)}\n` });
+  }
+  if(g>d.limit) msg+=`\n🚨 *LIMITE EXCEDIDO em ${fmt(g-d.limit)}!*\n`;
+  else if(parseFloat(pct)>=(d.alertPct||80)) msg+=`\n⚠️ *Atenção: ${pct}% do limite utilizado!*\n`;
+  msg+=`\n_Enviado via Gastos da Casa_`;
+  window.open(`https://wa.me/${WA}?text=${encodeURIComponent(msg)}`, '_blank');
+}
+
+// ═══ ALERT ═══
+function checkAlert(){
+  const d=gd(), es=moEntries(d.entries,curMo()), g=es.reduce((s,e)=>s+(+(e.amt||0)),0), pct=d.limit>0?g/d.limit*100:0;
+  if(g>d.limit) toast('🚨',`Limite EXCEDIDO! Gasto: ${fmt(g)} / Limite: ${fmt(d.limit)}`);
+  else if(pct>=(d.alertPct||80)) toast('⚠️',`${pct.toFixed(0)}% do limite utilizado! Restam ${fmt(d.limit-g)}.`);
+}
+
+// ═══ UI ═══
+function go(name){
+  document.querySelectorAll('.scr').forEach(s=>s.classList.remove('on'));
+  document.querySelectorAll('.nbtn').forEach(b=>b.classList.remove('on'));
+  document.getElementById('s-'+name).classList.add('on');
+  document.getElementById('n-'+name).classList.add('on');
+  if(name==='hist')renderHist();
+  if(name==='rep')renderRep();
+}
+function openM(id){ document.getElementById(id).classList.add('on') }
+function closeM(id){ document.getElementById(id).classList.remove('on') }
+function ocOver(e,id){ if(e.target.id===id)closeM(id) }
+let _tt=null;
+function toast(ic,msg){
+  const t=document.getElementById('toast');
+  document.getElementById('ti').textContent=ic;
+  document.getElementById('tm').textContent=msg;
+  t.classList.add('on');
+  if(_tt)clearTimeout(_tt);
+  _tt=setTimeout(()=>t.classList.remove('on'),3200);
+}
+
+// ═══ INIT ═══
+window.addEventListener('DOMContentLoaded',()=>{
+  render();
+  // Daily notification check
+  const last=localStorage.getItem('gd_daily'), td=today();
+  if(last!==td){
+    localStorage.setItem('gd_daily',td);
+    const d=gd(), es=moEntries(d.entries,curMo()), g=es.reduce((s,e)=>s+(+(e.amt||0)),0), pct=d.limit>0?g/d.limit*100:0;
+    setTimeout(()=>{
+      if(g>d.limit) toast('🚨',`Limite excedido! ${fmt(g)} de ${fmt(d.limit)} gastos este mês.`);
+      else if(pct>=(d.alertPct||80)) toast('⚠️',`${pct.toFixed(0)}% do limite mensal atingido!`);
+      else { const tde=es.filter(e=>e.date===td); if(tde.length) toast('📅',`Hoje: ${fmt(tde.reduce((s,e)=>s+(+(e.amt||0)),0))} em ${tde.length} lançamento(s)`) }
+    }, 900);
+  }
+});
+</script>
+</body>
+</html>
