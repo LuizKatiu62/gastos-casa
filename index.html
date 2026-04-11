@@ -35,6 +35,14 @@ body{background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI
 .pbar{height:8px;background:rgba(255,255,255,.2);border-radius:4px;overflow:hidden;margin-top:8px}
 .pfill{height:100%;border-radius:4px;transition:width .5s ease,background .3s}
 .pmeta{display:flex;justify-content:space-between;margin-top:5px;font-size:.68rem;opacity:.65}
+/* PERIOD ROW */
+.period-row{display:flex;align-items:center;gap:6px;margin-bottom:10px;cursor:pointer;background:rgba(255,255,255,.1);border-radius:10px;padding:7px 10px;border:1px solid rgba(255,255,255,.18)}
+.period-ic{font-size:.9rem}
+.period-txt{flex:1;font-size:.78rem;font-weight:600;opacity:.9}
+.period-arrow{font-size:.75rem;opacity:.55}
+/* LIMIT INLINE */
+.lim-tap{cursor:pointer;display:inline-flex;align-items:center;gap:4px}
+.lim-pen{font-size:.7rem;opacity:.55;margin-left:2px}
 
 /* CONTENT */
 .content{padding:0 14px;margin-top:-14px}
@@ -163,15 +171,21 @@ textarea{resize:none;height:68px}
       </div>
     </div>
     <div class="bcard">
+      <!-- Período -->
+      <div class="period-row" onclick="openPeriod()">
+        <span class="period-ic">📅</span>
+        <span class="period-txt" id="b-period">— até —</span>
+        <span class="period-arrow">✏️</span>
+      </div>
       <div class="brow">
         <div>
           <div style="font-size:.65rem;opacity:.65;margin-bottom:2px">TOTAL GASTO</div>
           <div class="bspent" id="b-spent">$0.00</div>
         </div>
-        <div style="text-align:right">
-          <div style="font-size:.65rem;opacity:.65;margin-bottom:2px">LIMITE DO CARTÃO</div>
-          <div class="blimit" id="b-limit">$0.00</div>
-          <div class="brem" id="b-rem">— disponível</div>
+        <div style="text-align:right" onclick="openLimEdit()" class="lim-tap">
+          <div style="font-size:.65rem;opacity:.65;margin-bottom:2px">DISPONÍVEL <span class="lim-pen">✏️</span></div>
+          <div class="blimit" id="b-limit" style="font-size:1rem;font-weight:800">$0.00</div>
+          <div class="brem" id="b-rem">— restante</div>
         </div>
       </div>
       <div class="pbar"><div class="pfill" id="pfill" style="width:0%"></div></div>
@@ -342,6 +356,45 @@ textarea{resize:none;height:68px}
   </div>
 </div>
 
+<!-- ═══ MODAL: PERÍODO ═══ -->
+<div class="overlay" id="m-period" onclick="ocOver(event,'m-period')">
+  <div class="modal">
+    <div class="mhandle"></div>
+    <div class="mtitle">📅 Período de Controle</div>
+    <div style="font-size:.82rem;color:#888;text-align:center;margin:-10px 0 16px">Defina o início e fim do seu ciclo do cartão</div>
+    <div class="fg">
+      <label>Data Início</label>
+      <input type="date" id="p-start">
+    </div>
+    <div class="fg">
+      <label>Data Fim</label>
+      <input type="date" id="p-end">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+      <button onclick="setPeriodPreset('month')" style="border:1.5px solid #e0e0e0;border-radius:10px;padding:9px;font-size:.78rem;font-weight:700;background:#fafafa;cursor:pointer;color:#555">📆 Mês atual</button>
+      <button onclick="setPeriodPreset('last30')" style="border:1.5px solid #e0e0e0;border-radius:10px;padding:9px;font-size:.78rem;font-weight:700;background:#fafafa;cursor:pointer;color:#555">🔄 Últimos 30 dias</button>
+    </div>
+    <button class="btnp" onclick="savePeriod()">✅ Confirmar Período</button>
+  </div>
+</div>
+
+<!-- ═══ MODAL: EDITAR LIMITE ═══ -->
+<div class="overlay" id="m-lim" onclick="ocOver(event,'m-lim')">
+  <div class="modal">
+    <div class="mhandle"></div>
+    <div class="mtitle">💳 Valor Disponível no Cartão</div>
+    <div class="fg">
+      <label>Limite mensal ($)</label>
+      <div class="amtwrap"><input type="number" id="lim-val" placeholder="0.00" step="0.01" min="0" inputmode="decimal"></div>
+    </div>
+    <div class="fg">
+      <label>Alertar quando atingir (%)</label>
+      <input type="number" id="lim-pct" placeholder="80" min="1" max="100" inputmode="numeric">
+    </div>
+    <button class="btnp" onclick="saveLim()">💾 Salvar</button>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
 // ═══ CONSTANTS ═══
@@ -359,6 +412,11 @@ function gd(){
   if(!d.entries) d.entries=[];
   if(!d.limit) d.limit=3000;
   if(!d.alertPct) d.alertPct=80;
+  if(!d.period){
+    const now=new Date(), y=now.getFullYear(), m=String(now.getMonth()+1).padStart(2,'0');
+    const last=new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+    d.period={ start:`${y}-${m}-01`, end:`${y}-${m}-${String(last).padStart(2,'0')}` };
+  }
   return d;
 }
 function fmt(n){ return '$'+(+n||0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',') }
@@ -371,6 +429,7 @@ function moLabel(k){
   return `${M[+m-1]} ${y}`;
 }
 function moEntries(entries, mo){ return entries.filter(e=>e.date&&e.date.startsWith(mo)) }
+function periodEntries(entries, p){ return entries.filter(e=>e.date&&e.date>=p.start&&e.date<=p.end) }
 
 // ═══ STATE ═══
 let _cat='car', _sub='gas';
@@ -379,8 +438,9 @@ let _dc=null, _bc=null;
 
 // ═══ RENDER HOME ═══
 function render(){
-  const d=gd(), mo=curMo(), es=moEntries(d.entries,mo);
-  document.getElementById('hdr-month').textContent=moLabel(mo);
+  const d=gd(), p=d.period, es=periodEntries(d.entries,p);
+  document.getElementById('hdr-month').textContent=`${fdate(p.start)} → ${fdate(p.end)}`;
+  document.getElementById('b-period').textContent=`${fdate(p.start)} → ${fdate(p.end)}`;
   const tots={car:0,misc:0,mkt:0}, cnts={car:0,misc:0,mkt:0};
   let total=0;
   es.forEach(e=>{ tots[e.cat]=(tots[e.cat]||0)++(e.amt||0); cnts[e.cat]=(cnts[e.cat]||0)+1; total+=+(e.amt||0) });
@@ -414,7 +474,7 @@ function render(){
     document.getElementById('c-'+c).textContent=(cnts[c]||0)+' lançamento'+(cnts[c]!==1?'s':'');
   });
   // Charts
-  renderDonut(tots); renderBars(es,mo);
+  renderDonut(tots); renderBars(es,p);
   // Recent
   renderRecent(d.entries);
 }
@@ -429,17 +489,22 @@ function renderDonut(tots){
   },options:{cutout:'68%',plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:10,boxWidth:13}},tooltip:{callbacks:{label:c=>` ${c.label}: ${fmt(c.raw)}`}}}}});
 }
 
-function renderBars(es, mo){
+function renderBars(es, p){
   const ctx=document.getElementById('bars').getContext('2d');
-  const [y,m]=mo.split('-'); const dim=new Date(+y,+m,0).getDate(), td=new Date().getDate();
   const dt={};
-  es.forEach(e=>{ const day=+e.date.split('-')[2]; dt[day]=(dt[day]||0)+(+(e.amt||0)) });
-  const lbs=[],vs=[],cs=[];
-  for(let i=1;i<=Math.min(dim,td);i++){ lbs.push(i); vs.push(dt[i]||0); cs.push(dt[i]>0?'#1565c0':'#e8eaf6') }
+  es.forEach(e=>{ dt[e.date]=(dt[e.date]||0)+(+(e.amt||0)) });
+  const lbs=[],vs=[],cs=[], td=today();
+  let cur=new Date(p.start+'T00:00:00'), end=new Date(p.end+'T00:00:00');
+  while(cur<=end && cur.toISOString().split('T')[0]<=td){
+    const ds=cur.toISOString().split('T')[0];
+    lbs.push(cur.getDate()+'/'+(cur.getMonth()+1));
+    vs.push(dt[ds]||0); cs.push(dt[ds]>0?'#1565c0':'#e8eaf6');
+    cur.setDate(cur.getDate()+1);
+  }
   if(_bc)_bc.destroy();
   _bc=new Chart(ctx,{type:'bar',data:{labels:lbs,datasets:[{data:vs,backgroundColor:cs,borderRadius:4,barPercentage:.72}]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${fmt(c.raw)}`}}},
-    scales:{x:{grid:{display:false},ticks:{font:{size:9}}},y:{grid:{color:'#f0f0f0'},ticks:{font:{size:9},callback:v=>'$'+v}}}}});
+    scales:{x:{grid:{display:false},ticks:{font:{size:9},maxRotation:45}},y:{grid:{color:'#f0f0f0'},ticks:{font:{size:9},callback:v=>'$'+v}}}}});
 }
 
 function renderRecent(all){
@@ -572,6 +637,47 @@ function delE(id){
   if(!confirm('Excluir este lançamento?')) return;
   const d=gd(); d.entries=d.entries.filter(e=>e.id!==id); sd(d);
   render(); renderHist(); renderRep(); toast('🗑️','Excluído');
+}
+
+// ═══ PERIOD ═══
+function openPeriod(){
+  const d=gd(), p=d.period;
+  document.getElementById('p-start').value=p.start;
+  document.getElementById('p-end').value=p.end;
+  openM('m-period');
+}
+function setPeriodPreset(type){
+  const now=new Date(), y=now.getFullYear(), m=String(now.getMonth()+1).padStart(2,'0');
+  if(type==='month'){
+    const last=new Date(y, now.getMonth()+1, 0).getDate();
+    document.getElementById('p-start').value=`${y}-${m}-01`;
+    document.getElementById('p-end').value=`${y}-${m}-${String(last).padStart(2,'0')}`;
+  } else if(type==='last30'){
+    const s=new Date(now); s.setDate(s.getDate()-29);
+    document.getElementById('p-start').value=s.toISOString().split('T')[0];
+    document.getElementById('p-end').value=now.toISOString().split('T')[0];
+  }
+}
+function savePeriod(){
+  const s=document.getElementById('p-start').value, e=document.getElementById('p-end').value;
+  if(!s||!e){ toast('⚠️','Preencha início e fim'); return }
+  if(s>e){ toast('⚠️','Início deve ser antes do fim'); return }
+  const d=gd(); d.period={start:s,end:e}; sd(d);
+  closeM('m-period'); render(); toast('✅','Período atualizado!');
+}
+
+// ═══ LIMIT INLINE EDIT ═══
+function openLimEdit(){
+  const d=gd();
+  document.getElementById('lim-val').value=d.limit||3000;
+  document.getElementById('lim-pct').value=d.alertPct||80;
+  openM('m-lim');
+}
+function saveLim(){
+  const lim=parseFloat(document.getElementById('lim-val').value);
+  if(!lim||lim<=0){ toast('⚠️','Informe um valor válido'); return }
+  const d=gd(); d.limit=lim; d.alertPct=parseInt(document.getElementById('lim-pct').value)||80;
+  sd(d); closeM('m-lim'); render(); toast('✅','Limite salvo!');
 }
 
 // ═══ CONFIG ═══
