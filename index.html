@@ -619,6 +619,7 @@ body {
       </div>
       <!-- Subcategoria Carro -->
       <div id="fgrupo-sub" style="display:none;margin-top:12px">
+        <label style="display:block;font-size:12px;font-weight:700;color:#888;margin-bottom:7px;text-transform:uppercase">Subcategoria — Carro</label>
         <select id="fsel-carro-sub" onchange="fotoSelecionarCarroSub(this.value)" style="font-size:16px;width:100%">
           <option value="">— Selecione —</option>
           <option value="gas-rr">⛽ Gasolina (Range Rover)</option>
@@ -629,6 +630,36 @@ body {
           <option value="outros">🔖 Outros</option>
         </select>
         <input type="text" id="finp-carro-outros" placeholder="Especifique..." style="display:none;margin-top:8px;font-size:16px;width:100%" oninput="fotoAtualizarCarroOutros(this.value)">
+      </div>
+      <!-- Local de Compra — Supermercado -->
+      <div id="fgrupo-loja" style="display:none;margin-top:12px">
+        <label style="display:block;font-size:12px;font-weight:700;color:#888;margin-bottom:7px;text-transform:uppercase">Local de Compra</label>
+        <select id="fsel-loja" onchange="fotoSelecionarLoja(this.value)" style="font-size:16px;width:100%">
+          <option value="">— Selecione o local —</option>
+          <option value="walmart">Walmart</option>
+          <option value="superstore">Superstore</option>
+          <option value="shoppers">Shoppers</option>
+          <option value="nofrills">No Frills</option>
+          <option value="vine">On the Vine</option>
+          <option value="outros">Outros</option>
+        </select>
+        <input type="text" id="finp-loja-outros" placeholder="Qual supermercado?" style="display:none;margin-top:8px;font-size:16px;width:100%" oninput="fotoAtualizarLojaOutros(this.value)">
+      </div>
+      <!-- Subcategoria — Diversos -->
+      <div id="fgrupo-div" style="display:none;margin-top:12px">
+        <label style="display:block;font-size:12px;font-weight:700;color:#888;margin-bottom:7px;text-transform:uppercase">Subcategoria — Diversos</label>
+        <select id="fsel-div" onchange="fotoSelecionarDivSub(this.value)" style="font-size:16px;width:100%">
+          <option value="">— Selecione —</option>
+          <option value="roupas">👕 Roupas</option>
+          <option value="amazon">📦 Amazon</option>
+          <option value="restaurantes">🍽️ Restaurantes</option>
+          <option value="dollarama">🏪 Dollarama</option>
+          <option value="esportes">🏃 Esportes</option>
+          <option value="veterinario">🐾 Veterinário</option>
+          <option value="lazer">🎉 Lazer</option>
+          <option value="outros">🔖 Outros</option>
+        </select>
+        <input type="text" id="finp-div-outros" placeholder="Especifique..." style="display:none;margin-top:8px;font-size:16px;width:100%" oninput="fotoAtualizarDivOutros(this.value)">
       </div>
     </div>
 
@@ -1414,20 +1445,32 @@ function mostrarToast(ic, msg) {
 // ─────────────────────────────
 // FOTO RECIBO
 // ─────────────────────────────
-var _fotoCat = 'mercado', _fotoSub = null, _fotoCarroOutros = '', _tesseractCarregado = false;
+var _fotoCat = 'mercado', _fotoSub = null, _fotoCarroOutros = '';
+var _fotoLoja = '', _fotoLojaOutros = '', _fotoDivSub = '', _fotoDivOutros = '';
+var _tesseractCarregado = false;
 
 function fotoSelecionarCat(c) {
   _fotoCat = c;
   ['carro','diversos','mercado'].forEach(function(k) {
     document.getElementById('fsel-'+k).className = 'opt-cat' + (k===c ? ' sel-'+k : '');
   });
-  document.getElementById('fgrupo-sub').style.display = c==='carro' ? 'block' : 'none';
+  document.getElementById('fgrupo-sub').style.display  = c==='carro'   ? 'block' : 'none';
+  document.getElementById('fgrupo-loja').style.display = c==='mercado' ? 'block' : 'none';
+  document.getElementById('fgrupo-div').style.display  = c==='diversos'? 'block' : 'none';
   if (c==='carro') {
     document.getElementById('fsel-carro-sub').value = '';
     document.getElementById('finp-carro-outros').style.display = 'none';
     _fotoSub = null; _fotoCarroOutros = '';
-  } else {
-    _fotoSub = null;
+  }
+  if (c==='mercado') {
+    document.getElementById('fsel-loja').value = '';
+    document.getElementById('finp-loja-outros').style.display = 'none';
+    _fotoLoja = ''; _fotoLojaOutros = '';
+  }
+  if (c==='diversos') {
+    document.getElementById('fsel-div').value = '';
+    document.getElementById('finp-div-outros').style.display = 'none';
+    _fotoDivSub = ''; _fotoDivOutros = '';
   }
 }
 function fotoSelecionarCarroSub(v) {
@@ -1440,6 +1483,18 @@ function fotoAtualizarCarroOutros(v) {
   _fotoCarroOutros = v.trim();
   _fotoSub = _fotoCarroOutros || null;
 }
+function fotoSelecionarLoja(v) {
+  _fotoLoja = v;
+  document.getElementById('finp-loja-outros').style.display = v==='outros' ? 'block' : 'none';
+  if (v !== 'outros') _fotoLojaOutros = '';
+}
+function fotoAtualizarLojaOutros(v) { _fotoLojaOutros = v.trim(); }
+function fotoSelecionarDivSub(v) {
+  _fotoDivSub = v;
+  document.getElementById('finp-div-outros').style.display = v==='outros' ? 'block' : 'none';
+  if (v !== 'outros') _fotoDivOutros = '';
+}
+function fotoAtualizarDivOutros(v) { _fotoDivOutros = v.trim(); }
 
 function processarFoto(input) {
   if (!input.files || !input.files[0]) return;
@@ -1522,8 +1577,11 @@ function salvarLancamentoFoto() {
   var desc  = document.getElementById('foto-desc').value.trim();
   if (!valor || valor <= 0) { mostrarToast('⚠️', 'Informe o valor'); return; }
   if (!data)                { mostrarToast('⚠️', 'Informe a data');  return; }
+  var DIV_LABELS = { roupas:'👕 Roupas', amazon:'📦 Amazon', restaurantes:'🍽️ Restaurantes', dollarama:'🏪 Dollarama', esportes:'🏃 Esportes', veterinario:'🐾 Veterinário', lazer:'🎉 Lazer', outros:'Outros' };
+  var lojaFinal  = _fotoCat==='mercado'  ? (_fotoLoja==='outros'   ? (_fotoLojaOutros||'Outros') : (_fotoLoja   ? LOJAS[_fotoLoja]        : '')) : null;
+  var divFinal   = _fotoCat==='diversos' ? (_fotoDivSub==='outros' ? (_fotoDivOutros||'Outros')  : (_fotoDivSub ? DIV_LABELS[_fotoDivSub] : '')) : null;
   var d = getDados();
-  d.lancamentos.push({ id: Date.now()+'', cat: _fotoCat, sub: _fotoSub||null, valor: valor, data: data, desc: desc });
+  d.lancamentos.push({ id: Date.now()+'', cat: _fotoCat, sub: _fotoSub||null, loja: lojaFinal||null, divsub: divFinal||null, valor: valor, data: data, desc: desc });
   salvarDados(d);
   // Limpar form
   document.getElementById('inp-foto').value = '';
@@ -1532,6 +1590,13 @@ function salvarLancamentoFoto() {
   document.getElementById('ocr-status').style.display = 'none';
   document.getElementById('btn-foto-txt').textContent = '📷 Abrir Câmera';
   document.getElementById('foto-desc').value = '';
+  document.getElementById('fsel-carro-sub').value = '';
+  document.getElementById('fsel-loja').value = '';
+  document.getElementById('fsel-div').value = '';
+  document.getElementById('finp-carro-outros').style.display = 'none';
+  document.getElementById('finp-loja-outros').style.display = 'none';
+  document.getElementById('finp-div-outros').style.display = 'none';
+  _fotoSub = null; _fotoCarroOutros = ''; _fotoLoja = ''; _fotoLojaOutros = ''; _fotoDivSub = ''; _fotoDivOutros = '';
   verificarAlerta();
   mostrarToast('✅', 'Lançamento salvo!');
   irPara('inicio');
