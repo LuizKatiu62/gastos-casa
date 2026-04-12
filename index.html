@@ -477,6 +477,20 @@ body {
         </div>
       </div>
 
+      <div class="form-group" id="grupo-loja" style="display:none">
+        <label>Local de Compra</label>
+        <select id="sel-loja" onchange="selecionarLoja(this.value)" style="font-size:16px">
+          <option value="">— Selecione o local —</option>
+          <option value="walmart">Walmart</option>
+          <option value="superstore">Superstore</option>
+          <option value="shoppers">Shoppers</option>
+          <option value="nofrills">No Frills</option>
+          <option value="vine">On the Vine</option>
+          <option value="outros">Outros</option>
+        </select>
+        <input type="text" id="inp-loja-outros" placeholder="Qual supermercado?" style="display:none;margin-top:8px;font-size:16px" oninput="atualizarLojaOutros(this.value)">
+      </div>
+
       <div class="form-group">
         <label>2. Valor Gasto</label>
         <div class="wrap-valor">
@@ -645,6 +659,7 @@ var WA = '14379718925';
 var NOMES = { carro:'Carro', diversos:'Diversos', mercado:'Supermercado' };
 var CORES = { carro:'#e53935', diversos:'#fb8c00', mercado:'#43a047' };
 var SUBS  = { gas:'⛽ Gasolina', oleo:'🛢️ Óleo', div:'🔧 Diversos' };
+var LOJAS = { walmart:'Walmart', superstore:'Superstore', shoppers:'Shoppers', nofrills:'No Frills', vine:'On the Vine', outros:'Outros' };
 
 function lerDados() {
   try { return JSON.parse(localStorage.getItem('gastos') || '{}'); } catch(e) { return {}; }
@@ -919,8 +934,8 @@ function renderizarRecentes(todos) {
     return '<div class="lancamento">' +
       '<div class="lanc-ponto" style="background:'+CORES[l.cat]+'"></div>' +
       '<div class="lanc-info">' +
-        '<div class="lanc-desc">'+(l.desc||NOMES[l.cat])+'</div>' +
-        '<div class="lanc-meta">'+formatarData(l.data)+' · '+NOMES[l.cat]+(l.sub?' · '+SUBS[l.sub]:'')+'</div>' +
+        '<div class="lanc-desc">'+(l.desc||(l.loja?l.loja:NOMES[l.cat]))+'</div>' +
+        '<div class="lanc-meta">'+formatarData(l.data)+' · '+NOMES[l.cat]+(l.loja?' · '+l.loja:'')+(l.sub&&l.cat==='carro'?' · '+SUBS[l.sub]:'')+'</div>' +
       '</div>' +
       '<div class="lanc-valor" style="color:'+CORES[l.cat]+'">'+formatar(l.valor)+'</div>' +
       '<button class="lanc-del" onclick="excluir(\''+l.id+'\')">✕</button>' +
@@ -990,7 +1005,7 @@ function renderizarHistorico() {
           '<div class="lanc-ponto" style="background:'+CORES[l.cat]+';flex-shrink:0"></div>' +
           '<div class="lanc-info">' +
             '<div class="lanc-desc">'+(l.desc||NOMES[l.cat])+'</div>' +
-            '<div class="lanc-meta">'+NOMES[l.cat]+(l.sub?' · '+SUBS[l.sub]:'')+'</div>' +
+            '<div class="lanc-meta">'+NOMES[l.cat]+(l.loja?' · '+l.loja:'')+(l.sub&&l.cat==='carro'?' · '+SUBS[l.sub]:'')+'</div>' +
           '</div>' +
           '<div class="lanc-valor" style="color:'+CORES[l.cat]+'">'+formatar(l.valor)+'</div>' +
           '<button class="lanc-del" onclick="excluir(\''+l.id+'\');renderizarHistorico()">✕</button>' +
@@ -1153,12 +1168,19 @@ function renderizarRelatorio() {
 // ─────────────────────────────
 // ADICIONAR
 // ─────────────────────────────
+var _loja = '', _lojaOutros = '';
 function selecionarCat(c) {
   _cat = c;
   ['carro','diversos','mercado'].forEach(function(k) {
     document.getElementById('sel-'+k).className = 'opt-cat' + (k===c ? ' sel-'+k : '');
   });
-  document.getElementById('grupo-sub').style.display = c==='carro' ? 'block' : 'none';
+  document.getElementById('grupo-sub').style.display  = c==='carro'   ? 'block' : 'none';
+  document.getElementById('grupo-loja').style.display = c==='mercado' ? 'block' : 'none';
+  if (c==='mercado') {
+    document.getElementById('sel-loja').value = '';
+    document.getElementById('inp-loja-outros').style.display = 'none';
+    _loja = ''; _lojaOutros = '';
+  }
 }
 function selecionarSub(s) {
   _sub = s;
@@ -1166,23 +1188,34 @@ function selecionarSub(s) {
     document.getElementById('sub-'+k).className = 'opt-sub' + (k===s ? ' ativo' : '');
   });
 }
+function selecionarLoja(v) {
+  _loja = v;
+  document.getElementById('inp-loja-outros').style.display = v==='outros' ? 'block' : 'none';
+  if (v !== 'outros') _lojaOutros = '';
+}
+function atualizarLojaOutros(v) { _lojaOutros = v.trim(); }
 function salvarLancamento() {
   var valor = parseFloat(document.getElementById('inp-valor').value);
   var data  = document.getElementById('inp-data').value;
   if (!valor || valor <= 0) { mostrarToast('⚠️', 'Informe o valor gasto'); return; }
   if (!data) { mostrarToast('⚠️', 'Selecione a data'); return; }
+  var lojaFinal = _cat==='mercado' ? (_loja==='outros' ? (_lojaOutros||'Outros') : (_loja ? LOJAS[_loja] : '')) : null;
   var d = getDados();
   d.lancamentos.push({
-    id: Date.now().toString(),
-    cat: _cat,
-    sub: _cat==='carro' ? _sub : null,
+    id:   Date.now().toString(),
+    cat:  _cat,
+    sub:  _cat==='carro' ? _sub : (_cat==='mercado' ? (_loja||null) : null),
+    loja: lojaFinal || null,
     valor: valor,
-    data: data,
-    desc: document.getElementById('inp-desc').value.trim()
+    data:  data,
+    desc:  document.getElementById('inp-desc').value.trim()
   });
   salvarDados(d);
   document.getElementById('inp-valor').value = '';
   document.getElementById('inp-desc').value = '';
+  document.getElementById('sel-loja').value = '';
+  document.getElementById('inp-loja-outros').style.display = 'none';
+  _loja = ''; _lojaOutros = '';
   renderizar();
   irPara('inicio');
   mostrarToast('✅', 'Lançamento salvo!');
