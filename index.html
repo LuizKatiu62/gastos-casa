@@ -1092,18 +1092,18 @@ function setRelPeriodo(tipo) {
 function getRelPeriodo() {
   var d = getDados();
   if (_relTipo === 'periodo') {
-    return { ini: d.periodo.inicio, fim: d.periodo.fim };
+    return { inicio: d.periodo.inicio, fim: d.periodo.fim };
   }
   if (_relTipo === 'mes') {
     var n = new Date(), y = n.getFullYear(), m = (n.getMonth()+1+'').padStart(2,'0');
     var ultimo = new Date(y, n.getMonth()+1, 0).getDate();
-    return { ini: y+'-'+m+'-01', fim: y+'-'+m+'-'+(ultimo+'').padStart(2,'0') };
+    return { inicio: y+'-'+m+'-01', fim: y+'-'+m+'-'+(ultimo+'').padStart(2,'0') };
   }
   // custom
   var ini = document.getElementById('rel-ini').value;
   var fim = document.getElementById('rel-fim').value;
   if (!ini || !fim) return null;
-  return { ini: ini, fim: fim };
+  return { inicio: ini, fim: fim };
 }
 
 function renderizarRelatorio() {
@@ -1136,12 +1136,12 @@ function renderizarRelatorio() {
 
   // Dias do período
   var diasPeriodo = 0;
-  var cur = new Date(per.ini+'T12:00:00'), fim = new Date(per.fim+'T12:00:00');
+  var cur = new Date(per.inicio+'T12:00:00'), fim = new Date(per.fim+'T12:00:00');
   while(cur<=fim){ diasPeriodo++; cur.setDate(cur.getDate()+1); }
   var projecao = diasPeriodo > 0 && diasComGasto > 0 ? (grand/diasComGasto)*diasPeriodo : 0;
 
   // Período label
-  var perLabel = formatarData(per.ini) + ' → ' + formatarData(per.fim);
+  var perLabel = formatarData(per.inicio) + ' → ' + formatarData(per.fim);
 
   // ── Métricas cards ──
   var corLimite = pctLimite>100?'#f44336':pctLimite>=80?'#ff9800':'#1565c0';
