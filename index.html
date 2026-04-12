@@ -299,8 +299,10 @@ body {
         <label>% Alerta</label>
         <input type="number" id="inp-alerta" placeholder="80" inputmode="numeric" onblur="salvarConfig()" onchange="salvarConfig()">
       </div>
-      <button class="btn-ok" onclick="fazerBackup()" style="background:#43a047;color:#fff">☁️ Backup</button>
-      <button class="btn-ok" onclick="sairApp()" style="background:#f9a825;color:#000">✕ Sair</button>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <button class="btn-ok" onclick="fazerBackup()" style="background:#43a047;color:#fff">☁️</button>
+        <button class="btn-ok" onclick="sairApp()" style="background:#f9a825;color:#000">✕</button>
+      </div>
     </div>
 
     <!-- Período -->
