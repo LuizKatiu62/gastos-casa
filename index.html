@@ -115,6 +115,41 @@ body {
 .orc-barra-fundo { background:#f0f0f0; height:8px; border-radius:4px; overflow:hidden; margin:4px 0 2px 0; }
 .orc-barra-fill { height:100%; border-radius:4px; transition:width 0.4s; }
 
+/* RELATORIO PERIODO */
+.rel-periodo-card { margin-bottom:12px; }
+.rel-periodo-btns { display:flex; gap:6px; flex-wrap:wrap; }
+.rel-per-btn { flex:1; min-width:80px; padding:8px 6px; border:2px solid #e0e0e0; border-radius:10px; background:#fafafa; font-size:12px; font-weight:700; color:#888; cursor:pointer; }
+.rel-per-btn.ativo { border-color:#1565c0; background:#e8f0fe; color:#1565c0; }
+
+/* METRICAS CARDS */
+.rel-metricas { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px; }
+.rel-met-card { background:white; border-radius:12px; padding:12px 14px; box-shadow:0 2px 8px rgba(0,0,0,0.07); }
+.rel-met-val { font-size:18px; font-weight:900; margin-bottom:2px; }
+.rel-met-lbl { font-size:10px; font-weight:700; color:#aaa; text-transform:uppercase; }
+.rel-met-sub { font-size:11px; color:#bbb; margin-top:3px; }
+
+/* CATEGORIA BLOCO */
+.rel-cat-bloco { background:white; border-radius:12px; padding:14px; margin-bottom:8px; box-shadow:0 2px 8px rgba(0,0,0,0.07); border-left:5px solid; }
+.rel-cat-bloco.carro   { border-color:#e53935; }
+.rel-cat-bloco.diversos{ border-color:#fb8c00; }
+.rel-cat-bloco.mercado { border-color:#43a047; }
+.rel-cat-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+.rel-cat-nome { font-size:14px; font-weight:800; color:#333; }
+.rel-cat-pct-total { font-size:11px; color:#aaa; font-weight:700; }
+.rel-cat-nums { display:flex; justify-content:space-between; margin-bottom:6px; }
+.rel-cat-num { text-align:center; }
+.rel-cat-num-val { font-size:14px; font-weight:900; }
+.rel-cat-num-lbl { font-size:9px; color:#aaa; text-transform:uppercase; }
+
+/* TOP GASTOS */
+.rel-top-item { display:flex; align-items:center; padding:9px 0; border-bottom:1px solid #f5f5f5; gap:10px; }
+.rel-top-item:last-child { border-bottom:none; }
+.rel-top-num { font-size:11px; font-weight:800; color:#bbb; width:16px; text-align:center; flex-shrink:0; }
+.rel-top-info { flex:1; min-width:0; }
+.rel-top-desc { font-size:13px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.rel-top-meta { font-size:10px; color:#bbb; margin-top:1px; }
+.rel-top-val { font-size:13px; font-weight:900; flex-shrink:0; }
+
 /* CARD GENERICO */
 .card { background:white; border-radius:14px; padding:16px; margin-bottom:14px; box-shadow:0 2px 8px rgba(0,0,0,0.08); }
 .card-titulo { font-size:11px; font-weight:700; color:#aaa; text-transform:uppercase; letter-spacing:1px; margin-bottom:12px; }
@@ -509,11 +544,20 @@ body {
     <button class="btn-voltar" onclick="irPara('inicio')">✕</button>
   </div>
   <div class="conteudo">
-    <div class="card" style="padding:8px 14px">
-      <div class="nav-mes">
-        <button onclick="mudarMesRel(-1)">‹</button>
-        <span id="label-rel">—</span>
-        <button onclick="mudarMesRel(1)">›</button>
+    <!-- Seletor de período -->
+    <div class="card rel-periodo-card">
+      <div class="card-titulo">Período do Relatório</div>
+      <div class="rel-periodo-btns">
+        <button class="rel-per-btn ativo" id="rper-periodo" onclick="setRelPeriodo('periodo')">Período atual</button>
+        <button class="rel-per-btn" id="rper-mes"     onclick="setRelPeriodo('mes')">Este mês</button>
+        <button class="rel-per-btn" id="rper-custom"  onclick="setRelPeriodo('custom')">Personalizado</button>
+      </div>
+      <div id="rel-custom-datas" style="display:none;margin-top:10px">
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="date" id="rel-ini" onchange="renderizarRelatorio()" style="flex:1;padding:8px;border:2px solid #e0e0e0;border-radius:8px;font-size:14px">
+          <span style="color:#aaa">→</span>
+          <input type="date" id="rel-fim" onchange="renderizarRelatorio()" style="flex:1;padding:8px;border:2px solid #e0e0e0;border-radius:8px;font-size:14px">
+        </div>
       </div>
     </div>
     <div id="corpo-relatorio"></div>
@@ -648,7 +692,7 @@ function lancamentosMes(lista, mes) {
 // ─────────────────────────────
 // ESTADO
 // ─────────────────────────────
-var _cat = 'carro', _sub = 'gas', _mesHist = mesAtual(), _mesRel = mesAtual();
+var _cat = 'carro', _sub = 'gas', _mesHist = mesAtual(), _relTipo = 'periodo';
 
 // ─────────────────────────────
 // RENDER INÍCIO
@@ -964,64 +1008,146 @@ function mudarMesHist(n) {
 // ─────────────────────────────
 // RELATÓRIO
 // ─────────────────────────────
-function renderizarRelatorio() {
-  document.getElementById('label-rel').textContent = nomeMes(_mesRel);
-  var d = getDados();
-  var lista = lancamentosMes(d.lancamentos, _mesRel);
-  var tots = { carro:0, diversos:0, mercado:0 }, stots = {}, grand = 0;
-  lista.forEach(function(l) {
-    var a = parseFloat(l.valor||0);
-    tots[l.cat] = (tots[l.cat]||0) + a;
-    grand += a;
-    if (l.sub) stots[l.sub] = (stots[l.sub]||0) + a;
+function setRelPeriodo(tipo) {
+  _relTipo = tipo;
+  ['periodo','mes','custom'].forEach(function(t) {
+    document.getElementById('rper-'+t).className = 'rel-per-btn' + (t===tipo?' ativo':'');
   });
-  var pct = d.limite > 0 ? (grand/d.limite*100) : 0, rest = d.limite - grand;
-  var orc = d.orcamentos;
+  document.getElementById('rel-custom-datas').style.display = tipo==='custom' ? 'block' : 'none';
+  if (tipo !== 'custom') renderizarRelatorio();
+}
 
-  function linhaOrc(cat, icone, cor, label, subcats) {
+function getRelPeriodo() {
+  var d = getDados();
+  if (_relTipo === 'periodo') {
+    return { ini: d.periodo.inicio, fim: d.periodo.fim };
+  }
+  if (_relTipo === 'mes') {
+    var n = new Date(), y = n.getFullYear(), m = (n.getMonth()+1+'').padStart(2,'0');
+    var ultimo = new Date(y, n.getMonth()+1, 0).getDate();
+    return { ini: y+'-'+m+'-01', fim: y+'-'+m+'-'+(ultimo+'').padStart(2,'0') };
+  }
+  // custom
+  var ini = document.getElementById('rel-ini').value;
+  var fim = document.getElementById('rel-fim').value;
+  if (!ini || !fim) return null;
+  return { ini: ini, fim: fim };
+}
+
+function renderizarRelatorio() {
+  var d = getDados();
+  var per = getRelPeriodo();
+  var el  = document.getElementById('corpo-relatorio');
+  if (!per) { el.innerHTML = '<div class="vazio">Selecione as datas do período</div>'; return; }
+
+  var lista = lancamentosPeriodo(d.lancamentos, per);
+  var tots  = { carro:0, diversos:0, mercado:0 };
+  var stots = {};
+  var grand = 0;
+  var porDia = {};
+  lista.forEach(function(l) {
+    var v = parseFloat(l.valor||0);
+    tots[l.cat] = (tots[l.cat]||0) + v;
+    grand += v;
+    if (l.sub) stots[l.sub] = (stots[l.sub]||0) + v;
+    porDia[l.data] = (porDia[l.data]||0) + v;
+  });
+
+  // Métricas gerais
+  var orc = d.orcamentos;
+  var pctLimite = d.limite > 0 ? (grand/d.limite*100) : 0;
+  var dispLimite = d.limite - grand;
+  var diasComGasto = Object.keys(porDia).length;
+  var mediaDia = diasComGasto > 0 ? grand/diasComGasto : 0;
+  var maiorDia = '', maiorVal = 0;
+  Object.keys(porDia).forEach(function(dt) { if(porDia[dt]>maiorVal){maiorVal=porDia[dt];maiorDia=dt;} });
+
+  // Dias do período
+  var diasPeriodo = 0;
+  var cur = new Date(per.ini+'T12:00:00'), fim = new Date(per.fim+'T12:00:00');
+  while(cur<=fim){ diasPeriodo++; cur.setDate(cur.getDate()+1); }
+  var projecao = diasPeriodo > 0 && diasComGasto > 0 ? (grand/diasComGasto)*diasPeriodo : 0;
+
+  // Período label
+  var perLabel = formatarData(per.ini) + ' → ' + formatarData(per.fim);
+
+  // ── Métricas cards ──
+  var corLimite = pctLimite>100?'#f44336':pctLimite>=80?'#ff9800':'#1565c0';
+  var metHtml =
+    '<div class="rel-metricas">' +
+    '<div class="rel-met-card"><div class="rel-met-val" style="color:#1565c0">'+formatar(grand)+'</div><div class="rel-met-lbl">Total Gasto</div><div class="rel-met-sub">'+diasComGasto+' dias c/ gasto</div></div>' +
+    '<div class="rel-met-card"><div class="rel-met-val" style="color:'+(dispLimite<0?'#f44336':'#43a047')+'">'+formatar(dispLimite)+'</div><div class="rel-met-lbl">Disponível</div><div class="rel-met-sub">Limite: '+formatar(d.limite)+'</div></div>' +
+    '<div class="rel-met-card"><div class="rel-met-val" style="color:'+corLimite+'">'+pctLimite.toFixed(1)+'%</div><div class="rel-met-lbl">% do Limite</div><div class="rel-met-sub">'+lista.length+' lançamentos</div></div>' +
+    '<div class="rel-met-card"><div class="rel-met-val" style="color:#555">'+formatar(mediaDia)+'</div><div class="rel-met-lbl">Média / dia</div><div class="rel-met-sub">Projeção: '+formatar(projecao)+'</div></div>' +
+    (maiorDia?'<div class="rel-met-card" style="grid-column:1/-1"><div class="rel-met-val" style="color:#e53935;font-size:15px">'+formatar(maiorVal)+'</div><div class="rel-met-lbl">Maior gasto — '+formatarData(maiorDia)+'</div></div>':'') +
+    '</div>';
+
+  // ── Barra limite ──
+  var barLimHtml = d.limite > 0 ?
+    '<div class="card" style="margin-bottom:8px"><div class="card-titulo">Utilização do Limite</div>' +
+    '<div class="orc-barra-fundo" style="height:12px"><div class="orc-barra-fill" style="width:'+Math.min(pctLimite,100).toFixed(1)+'%;background:'+corLimite+'"></div></div>' +
+    '<div style="display:flex;justify-content:space-between;font-size:11px;margin-top:5px"><span style="color:#aaa">CA$ 0</span><span style="color:'+corLimite+';font-weight:800">'+pctLimite.toFixed(1)+'%</span><span style="color:#aaa">'+formatar(d.limite)+'</span></div>' +
+    '</div>' : '';
+
+  // ── Categorias ──
+  function catBloco(cat, classe, icone, cor, subcats) {
     var g = tots[cat]||0, o = orc[cat]||0;
-    var pC = o > 0 ? Math.min(g/o*100,100) : 0;
-    var corBarra = g > o && o > 0 ? '#f44336' : pC >= 80 ? '#ff9800' : cor;
-    var restC = o - g;
-    var barraHtml = o > 0
-      ? '<div class="orc-barra-fundo"><div class="orc-barra-fill" style="width:'+pC.toFixed(1)+'%;background:'+corBarra+'"></div></div>' +
-        '<div style="display:flex;justify-content:space-between;font-size:11px;color:#bbb">' +
-        '<span>'+pC.toFixed(0)+'% do orçamento '+formatar(o)+'</span>' +
-        '<span style="color:'+(restC<0?'#f44336':'#43a047')+'">'+(restC>=0?'sobra ':'excedeu ')+formatar(Math.abs(restC))+'</span>' +
-        '</div>'
-      : '';
-    var subHtml = '';
-    if (subcats) {
-      if (stots.gas)  subHtml += '<div class="linha-rel" style="padding-left:16px"><span class="rotulo" style="font-size:13px">'+SUBS.gas+'</span><span class="numero" style="color:'+cor+';font-size:13px">'+formatar(stots.gas)+'</span></div>';
-      if (stots.oleo) subHtml += '<div class="linha-rel" style="padding-left:16px"><span class="rotulo" style="font-size:13px">'+SUBS.oleo+'</span><span class="numero" style="color:'+cor+';font-size:13px">'+formatar(stots.oleo)+'</span></div>';
-      if (stots.div)  subHtml += '<div class="linha-rel" style="padding-left:16px"><span class="rotulo" style="font-size:13px">'+SUBS.div+'</span><span class="numero" style="color:'+cor+';font-size:13px">'+formatar(stots.div)+'</span></div>';
+    var pC = o>0 ? Math.min(g/o*100,100) : 0;
+    var pTot = grand>0 ? (g/grand*100) : 0;
+    var corB = g>o&&o>0?'#f44336':pC>=80?'#ff9800':cor;
+    var restC = o-g;
+    var barraH = o>0
+      ? '<div class="orc-barra-fundo"><div class="orc-barra-fill" style="width:'+pC.toFixed(1)+'%;background:'+corB+'"></div></div>' +
+        '<div style="display:flex;justify-content:space-between;font-size:10px;margin-top:3px">' +
+        '<span style="color:#aaa">'+pC.toFixed(0)+'% do orçado '+formatar(o)+'</span>' +
+        '<span style="color:'+(restC<0?'#f44336':'#43a047')+';font-weight:700">'+(restC>=0?'sobra ':'excedeu ')+formatar(Math.abs(restC))+'</span>' +
+        '</div>' : '';
+    var subH = '';
+    if(subcats){
+      if(stots.gas)  subH += '<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-top:1px solid #f5f5f5"><span style="color:#888">⛽ Gasolina</span><span style="font-weight:700;color:'+cor+'">'+formatar(stots.gas)+'</span></div>';
+      if(stots.oleo) subH += '<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-top:1px solid #f5f5f5"><span style="color:#888">🛢️ Óleo</span><span style="font-weight:700;color:'+cor+'">'+formatar(stots.oleo)+'</span></div>';
+      if(stots.div)  subH += '<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-top:1px solid #f5f5f5"><span style="color:#888">🔧 Diversos</span><span style="font-weight:700;color:'+cor+'">'+formatar(stots.div)+'</span></div>';
     }
-    return '<div class="linha-rel"><span class="rotulo">'+icone+' '+label+'</span><span class="numero" style="color:'+cor+'">'+formatar(g)+'</span></div>' +
-           subHtml + barraHtml;
+    return '<div class="rel-cat-bloco '+classe+'">' +
+      '<div class="rel-cat-header"><span class="rel-cat-nome">'+icone+' '+NOMES[cat]+'</span><span class="rel-cat-pct-total">'+pTot.toFixed(1)+'% do total</span></div>' +
+      '<div class="rel-cat-nums">' +
+        '<div class="rel-cat-num"><div class="rel-cat-num-val" style="color:'+cor+'">'+formatar(g)+'</div><div class="rel-cat-num-lbl">Gasto</div></div>' +
+        (o>0?'<div class="rel-cat-num"><div class="rel-cat-num-val" style="color:#555">'+formatar(o)+'</div><div class="rel-cat-num-lbl">Orçado</div></div>':'') +
+        (o>0?'<div class="rel-cat-num"><div class="rel-cat-num-val" style="color:'+(restC<0?'#f44336':'#43a047')+'">'+formatar(Math.abs(restC))+'</div><div class="rel-cat-num-lbl">'+(restC<0?'Excedeu':'Disponível')+'</div></div>':'') +
+      '</div>' +
+      barraH + subH +
+    '</div>';
   }
 
-  var html = '<div class="card"><div class="card-titulo">Resumo — '+nomeMes(_mesRel)+'</div>' +
-    '<div class="linha-rel"><span class="rotulo">Total Gasto</span><span class="numero" style="color:#1565c0">'+formatar(grand)+'</span></div>' +
-    '<div class="linha-rel"><span class="rotulo">Limite do Cartão</span><span class="numero">'+formatar(d.limite)+'</span></div>' +
-    '<div class="linha-rel"><span class="rotulo">Utilização</span><span class="numero" style="color:'+(pct>100?'#f44336':pct>=80?'#ff9800':'#43a047')+'">'+pct.toFixed(1)+'%</span></div>' +
-    '<div class="linha-rel"><span class="rotulo">Disponível</span><span class="numero" style="color:'+(rest<0?'#f44336':'#43a047')+'">'+formatar(rest)+'</span></div>' +
-    '<hr style="border:none;border-top:1px solid #f0f0f0;margin:10px 0">' +
-    '<div style="font-size:11px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Orçamento por Categoria</div>' +
-    linhaOrc('carro',   '🚗', '#e53935', 'Carro',        true) +
-    '<hr style="border:none;border-top:1px solid #f5f5f5;margin:8px 0">' +
-    linhaOrc('diversos','🛍️', '#fb8c00', 'Diversos',     false) +
-    '<hr style="border:none;border-top:1px solid #f5f5f5;margin:8px 0">' +
-    linhaOrc('mercado', '🛒', '#43a047', 'Supermercado', false) +
-    '<button class="btn-whatsapp" style="margin-top:14px" onclick="compartilhar()">📱 Enviar por WhatsApp</button>' +
-    '<button class="btn-apagar" onclick="if(confirm(\'Apagar TODOS os dados?\')){{localStorage.removeItem(\'gastos\');location.reload()}}">🗑️ Apagar todos os dados</button>' +
+  var catsHtml =
+    '<div style="font-size:11px;font-weight:800;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin:12px 0 8px">Por Categoria</div>' +
+    catBloco('carro',   'carro',   '🚗', '#e53935', true) +
+    catBloco('diversos','diversos','🛍️', '#fb8c00', false) +
+    catBloco('mercado', 'mercado', '🛒', '#43a047', false);
+
+  // ── Top 5 gastos ──
+  var top5 = lista.slice().sort(function(a,b){ return parseFloat(b.valor)-parseFloat(a.valor); }).slice(0,5);
+  var topHtml = top5.length ?
+    '<div class="card" style="margin-bottom:8px"><div class="card-titulo">Top 5 Maiores Gastos</div>' +
+    top5.map(function(l,i){
+      return '<div class="rel-top-item">' +
+        '<div class="rel-top-num">'+(i+1)+'</div>' +
+        '<div class="lanc-ponto" style="background:'+CORES[l.cat]+';flex-shrink:0;width:8px;height:8px;border-radius:50%"></div>' +
+        '<div class="rel-top-info"><div class="rel-top-desc">'+(l.desc||NOMES[l.cat])+'</div><div class="rel-top-meta">'+formatarData(l.data)+' · '+NOMES[l.cat]+'</div></div>' +
+        '<div class="rel-top-val" style="color:'+CORES[l.cat]+'">'+formatar(l.valor)+'</div>' +
+      '</div>';
+    }).join('') + '</div>' : '';
+
+  // ── Ações ──
+  var acoesHtml =
+    '<div class="card">' +
+    '<button class="btn-whatsapp" onclick="compartilhar()">📱 Enviar por WhatsApp</button>' +
+    '<button class="btn-apagar" style="margin-top:8px" onclick="if(confirm(\'Apagar TODOS os dados?\')){{localStorage.removeItem(\'gastos\');location.reload()}}">🗑️ Apagar todos os dados</button>' +
     '</div>';
-  document.getElementById('corpo-relatorio').innerHTML = html;
-}
-function mudarMesRel(n) {
-  var p = _mesRel.split('-').map(Number);
-  var d = new Date(p[0], p[1]-1+n, 1);
-  _mesRel = d.getFullYear()+'-'+(d.getMonth()+1+'').padStart(2,'0');
-  renderizarRelatorio();
+
+  el.innerHTML =
+    '<div style="font-size:12px;color:#aaa;font-weight:600;margin-bottom:10px;text-align:center">📅 '+perLabel+'</div>' +
+    metHtml + barLimHtml + catsHtml + topHtml + acoesHtml;
 }
 
 // ─────────────────────────────
@@ -1168,7 +1294,10 @@ function irPara(tela) {
     document.getElementById('inp-foto').value = '';
   }
   if (tela==='historico') renderizarHistorico();
-  if (tela==='relatorio') renderizarRelatorio();
+  if (tela==='relatorio') {
+    setRelPeriodo(_relTipo);
+    renderizarRelatorio();
+  }
   window.scrollTo(0,0);
 }
 
