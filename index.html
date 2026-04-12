@@ -62,10 +62,17 @@ body { margin:0; font-family: -apple-system, sans-serif; background:#f0f2f5; pad
 .card-cat.carro { border-color:#e53935; }
 .card-cat.diversos { border-color:#fb8c00; }
 .card-cat.mercado { border-color:#43a047; grid-column:1/-1; }
-.cat-icon { font-size:22px; margin-bottom:4px; }
-.cat-nome { font-size:11px; font-weight:700; color:#aaa; text-transform:uppercase; margin-bottom:2px; }
-.cat-valor { font-size:20px; font-weight:900; }
-.cat-qtd { font-size:11px; color:#bbb; margin-top:2px; }
+.cat-header { display:flex; align-items:center; gap:6px; margin-bottom:10px; }
+.cat-icon { font-size:20px; }
+.cat-nome { font-size:12px; font-weight:700; color:#aaa; text-transform:uppercase; flex:1; }
+.cat-qtd { font-size:10px; color:#ccc; background:#f5f5f5; border-radius:10px; padding:2px 7px; }
+.cat-linha-vals { display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:8px; }
+.cat-bloco { min-width:0; }
+.cat-bloco-mid { text-align:center; }
+.cat-rotulo { font-size:10px; color:#bbb; text-transform:uppercase; margin-bottom:2px; }
+.cat-valor { font-size:15px; font-weight:900; white-space:nowrap; }
+.cat-orc-val { color:#999; }
+.cat-orc { font-size:10px; color:#bbb; margin-top:3px; }
 .cat-barra-fundo { background:#f0f0f0; height:6px; border-radius:3px; overflow:hidden; margin-top:7px; }
 .cat-barra-fill { height:100%; border-radius:3px; transition:width 0.4s; }
 .cat-orc { font-size:10px; color:#bbb; margin-top:3px; }
@@ -269,26 +276,59 @@ body { margin:0; font-family: -apple-system, sans-serif; background:#f0f2f5; pad
 
     <div class="grid-cat">
       <div class="card-cat carro" onclick="irParaCategoria('carro')">
-        <div class="cat-icon">🚗</div>
-        <div class="cat-nome">Carro</div>
-        <div class="cat-valor" id="val-carro" style="color:#e53935">CA$ 0,00</div>
-        <div class="cat-qtd" id="qtd-carro">0 lançamentos</div>
+        <div class="cat-header"><span class="cat-icon">🚗</span><span class="cat-nome">Carro</span><span class="cat-qtd" id="qtd-carro">0</span></div>
+        <div class="cat-linha-vals">
+          <div class="cat-bloco">
+            <div class="cat-rotulo">Gasto</div>
+            <div class="cat-valor" id="val-carro" style="color:#e53935">CA$ 0,00</div>
+          </div>
+          <div class="cat-bloco cat-bloco-mid">
+            <div class="cat-rotulo">Orçado</div>
+            <div class="cat-valor cat-orc-val" id="orc-val-carro">—</div>
+          </div>
+          <div class="cat-bloco" style="text-align:right">
+            <div class="cat-rotulo">Disponível</div>
+            <div class="cat-valor" id="disp-carro">—</div>
+          </div>
+        </div>
         <div class="cat-barra-fundo" id="bfundo-carro" style="display:none"><div class="cat-barra-fill" id="bfill-carro" style="width:0%;background:#e53935"></div></div>
         <div class="cat-orc" id="corc-carro"></div>
       </div>
       <div class="card-cat diversos" onclick="irParaCategoria('diversos')">
-        <div class="cat-icon">🛍️</div>
-        <div class="cat-nome">Diversos</div>
-        <div class="cat-valor" id="val-diversos" style="color:#fb8c00">CA$ 0,00</div>
-        <div class="cat-qtd" id="qtd-diversos">0 lançamentos</div>
+        <div class="cat-header"><span class="cat-icon">🛍️</span><span class="cat-nome">Diversos</span><span class="cat-qtd" id="qtd-diversos">0</span></div>
+        <div class="cat-linha-vals">
+          <div class="cat-bloco">
+            <div class="cat-rotulo">Gasto</div>
+            <div class="cat-valor" id="val-diversos" style="color:#fb8c00">CA$ 0,00</div>
+          </div>
+          <div class="cat-bloco cat-bloco-mid">
+            <div class="cat-rotulo">Orçado</div>
+            <div class="cat-valor cat-orc-val" id="orc-val-diversos">—</div>
+          </div>
+          <div class="cat-bloco" style="text-align:right">
+            <div class="cat-rotulo">Disponível</div>
+            <div class="cat-valor" id="disp-diversos">—</div>
+          </div>
+        </div>
         <div class="cat-barra-fundo" id="bfundo-diversos" style="display:none"><div class="cat-barra-fill" id="bfill-diversos" style="width:0%;background:#fb8c00"></div></div>
         <div class="cat-orc" id="corc-diversos"></div>
       </div>
       <div class="card-cat mercado" onclick="irParaCategoria('mercado')">
-        <div class="cat-icon">🛒</div>
-        <div class="cat-nome">Supermercado</div>
-        <div class="cat-valor" id="val-mercado" style="color:#43a047">CA$ 0,00</div>
-        <div class="cat-qtd" id="qtd-mercado">0 lançamentos</div>
+        <div class="cat-header"><span class="cat-icon">🛒</span><span class="cat-nome">Supermercado</span><span class="cat-qtd" id="qtd-mercado">0</span></div>
+        <div class="cat-linha-vals">
+          <div class="cat-bloco">
+            <div class="cat-rotulo">Gasto</div>
+            <div class="cat-valor" id="val-mercado" style="color:#43a047">CA$ 0,00</div>
+          </div>
+          <div class="cat-bloco cat-bloco-mid">
+            <div class="cat-rotulo">Orçado</div>
+            <div class="cat-valor cat-orc-val" id="orc-val-mercado">—</div>
+          </div>
+          <div class="cat-bloco" style="text-align:right">
+            <div class="cat-rotulo">Disponível</div>
+            <div class="cat-valor" id="disp-mercado">—</div>
+          </div>
+        </div>
         <div class="cat-barra-fundo" id="bfundo-mercado" style="display:none"><div class="cat-barra-fill" id="bfill-mercado" style="width:0%;background:#43a047"></div></div>
         <div class="cat-orc" id="corc-mercado"></div>
       </div>
@@ -540,22 +580,31 @@ function renderizar() {
   var cores = { carro:'#e53935', diversos:'#fb8c00', mercado:'#43a047' };
   ['carro','diversos','mercado'].forEach(function(c) {
     var gasto = tots[c]||0;
-    var orc = d.orcamentos[c]||0;
+    var orc   = d.orcamentos[c]||0;
+    var qtd   = qtds[c]||0;
     document.getElementById('val-'+c).textContent = formatar(gasto);
-    document.getElementById('qtd-'+c).textContent = (qtds[c]||0) + ' lançamento' + (qtds[c]!==1?'s':'');
-    var bfundo = document.getElementById('bfundo-'+c);
-    var bfill  = document.getElementById('bfill-'+c);
-    var corc   = document.getElementById('corc-'+c);
+    document.getElementById('qtd-'+c).textContent = qtd + ' lanç.';
+    var bfundo   = document.getElementById('bfundo-'+c);
+    var bfill    = document.getElementById('bfill-'+c);
+    var corc     = document.getElementById('corc-'+c);
+    var orcEl    = document.getElementById('orc-val-'+c);
+    var dispEl   = document.getElementById('disp-'+c);
     if (orc > 0) {
-      var pCat = Math.min(gasto/orc*100, 100);
-      var corCat = gasto > orc ? '#f44336' : pCat >= 80 ? '#ff9800' : cores[c];
-      bfundo.style.display = 'block';
-      bfill.style.width = pCat + '%';
-      bfill.style.background = corCat;
+      var pCat   = Math.min(gasto/orc*100, 100);
       var restCat = orc - gasto;
-      corc.textContent = pCat.toFixed(0)+'% de '+formatar(orc)+(restCat>=0 ? ' (sobra '+formatar(restCat)+')' : ' (excedeu '+formatar(-restCat)+')');
+      var corCat  = gasto > orc ? '#f44336' : pCat >= 80 ? '#ff9800' : cores[c];
+      orcEl.textContent  = formatar(orc);
+      dispEl.textContent = restCat >= 0 ? formatar(restCat) : '-'+formatar(-restCat);
+      dispEl.style.color = restCat < 0 ? '#f44336' : '#43a047';
+      bfundo.style.display = 'block';
+      bfill.style.width    = pCat + '%';
+      bfill.style.background = corCat;
+      corc.textContent = pCat.toFixed(0)+'% utilizado';
       corc.style.color = restCat < 0 ? '#f44336' : '#bbb';
     } else {
+      orcEl.textContent  = '—';
+      dispEl.textContent = '—';
+      dispEl.style.color = '#ccc';
       bfundo.style.display = 'none';
       corc.textContent = '';
     }
