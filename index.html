@@ -264,7 +264,7 @@ body {
         <label>% Alerta</label>
         <input type="number" id="inp-alerta" placeholder="80" inputmode="numeric" onblur="salvarConfig()" onchange="salvarConfig()">
       </div>
-      <button class="btn-ok" onclick="window.close()" style="background:#e53935">✕ Sair</button>
+      <button class="btn-ok" onclick="sairApp()" style="background:#e53935">✕ Sair</button>
     </div>
 
     <!-- Período -->
@@ -1170,6 +1170,19 @@ function irPara(tela) {
   if (tela==='historico') renderizarHistorico();
   if (tela==='relatorio') renderizarRelatorio();
   window.scrollTo(0,0);
+}
+
+function sairApp() {
+  var isPWA = window.navigator.standalone === true ||
+              window.matchMedia('(display-mode: standalone)').matches;
+  if (isPWA) {
+    mostrarToast('🏠', 'Pressione o botão Home para sair');
+  } else {
+    window.close();
+    setTimeout(function() {
+      mostrarToast('🏠', 'Pressione o botão Home para sair');
+    }, 300);
+  }
 }
 
 // ─────────────────────────────
