@@ -75,6 +75,7 @@ body { margin:0; font-family: -apple-system, sans-serif; background:#f0f2f5; pad
 .cat-rotulo { font-size:10px; font-weight:700; color:#444; text-transform:uppercase; margin-bottom:2px; }
 .cat-valor { font-size:15px; font-weight:900; white-space:nowrap; }
 .cat-orc-val { color:#444; }
+.cat-sub-orc { font-size:10px; color:#888; margin-top:2px; font-weight:600; }
 .cat-orc { font-size:10px; color:#555; margin-top:3px; font-weight:600; }
 .cat-barra-fundo { background:#f0f0f0; height:6px; border-radius:3px; overflow:hidden; margin-top:7px; }
 .cat-barra-fill { height:100%; border-radius:3px; transition:width 0.4s; }
@@ -280,15 +281,12 @@ body { margin:0; font-family: -apple-system, sans-serif; background:#f0f2f5; pad
       <div class="card-cat carro" onclick="irParaCategoria('carro')">
         <div class="cat-header"><span class="cat-icon">🚗</span><span class="cat-nome">Carro</span><span class="cat-qtd" id="qtd-carro">0</span></div>
         <div class="cat-linha-vals">
-          <div class="cat-bloco">
+          <div>
             <div class="cat-rotulo">Gasto</div>
             <div class="cat-valor" id="val-carro" style="color:#e53935">CA$ 0,00</div>
+            <div class="cat-sub-orc" id="orc-val-carro"></div>
           </div>
-          <div class="cat-bloco cat-bloco-mid">
-            <div class="cat-rotulo">Orçado</div>
-            <div class="cat-valor cat-orc-val" id="orc-val-carro">—</div>
-          </div>
-          <div class="cat-bloco" style="text-align:right">
+          <div style="text-align:right">
             <div class="cat-rotulo">Disponível</div>
             <div class="cat-valor" id="disp-carro">—</div>
           </div>
@@ -299,15 +297,12 @@ body { margin:0; font-family: -apple-system, sans-serif; background:#f0f2f5; pad
       <div class="card-cat diversos" onclick="irParaCategoria('diversos')">
         <div class="cat-header"><span class="cat-icon">🛍️</span><span class="cat-nome">Diversos</span><span class="cat-qtd" id="qtd-diversos">0</span></div>
         <div class="cat-linha-vals">
-          <div class="cat-bloco">
+          <div>
             <div class="cat-rotulo">Gasto</div>
             <div class="cat-valor" id="val-diversos" style="color:#fb8c00">CA$ 0,00</div>
+            <div class="cat-sub-orc" id="orc-val-diversos"></div>
           </div>
-          <div class="cat-bloco cat-bloco-mid">
-            <div class="cat-rotulo">Orçado</div>
-            <div class="cat-valor cat-orc-val" id="orc-val-diversos">—</div>
-          </div>
-          <div class="cat-bloco" style="text-align:right">
+          <div style="text-align:right">
             <div class="cat-rotulo">Disponível</div>
             <div class="cat-valor" id="disp-diversos">—</div>
           </div>
@@ -318,15 +313,12 @@ body { margin:0; font-family: -apple-system, sans-serif; background:#f0f2f5; pad
       <div class="card-cat mercado" onclick="irParaCategoria('mercado')">
         <div class="cat-header"><span class="cat-icon">🛒</span><span class="cat-nome">Supermercado</span><span class="cat-qtd" id="qtd-mercado">0</span></div>
         <div class="cat-linha-vals">
-          <div class="cat-bloco">
+          <div>
             <div class="cat-rotulo">Gasto</div>
             <div class="cat-valor" id="val-mercado" style="color:#43a047">CA$ 0,00</div>
+            <div class="cat-sub-orc" id="orc-val-mercado"></div>
           </div>
-          <div class="cat-bloco cat-bloco-mid">
-            <div class="cat-rotulo">Orçado</div>
-            <div class="cat-valor cat-orc-val" id="orc-val-mercado">—</div>
-          </div>
-          <div class="cat-bloco" style="text-align:right">
+          <div style="text-align:right">
             <div class="cat-rotulo">Disponível</div>
             <div class="cat-valor" id="disp-mercado">—</div>
           </div>
@@ -595,7 +587,7 @@ function renderizar() {
       var pCat   = Math.min(gasto/orc*100, 100);
       var restCat = orc - gasto;
       var corCat  = gasto > orc ? '#f44336' : pCat >= 80 ? '#ff9800' : cores[c];
-      orcEl.textContent  = formatar(orc);
+      orcEl.textContent  = 'Orç: ' + formatar(orc);
       dispEl.textContent = restCat >= 0 ? formatar(restCat) : '-'+formatar(-restCat);
       dispEl.style.color = restCat < 0 ? '#f44336' : '#43a047';
       bfundo.style.display = 'block';
@@ -604,7 +596,7 @@ function renderizar() {
       corc.textContent = pCat.toFixed(0)+'% utilizado';
       corc.style.color = restCat < 0 ? '#f44336' : '#bbb';
     } else {
-      orcEl.textContent  = '—';
+      orcEl.textContent  = '';
       dispEl.textContent = '—';
       dispEl.style.color = '#ccc';
       bfundo.style.display = 'none';
