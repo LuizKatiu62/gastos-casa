@@ -190,6 +190,7 @@ body { margin:0; font-family: -apple-system, sans-serif; background:#f0f2f5; pad
 
 /* BOTOES */
 .btn-salvar { width:100%; background:#1565c0; color:white; border:none; border-radius:14px; padding:16px; font-size:16px; font-weight:700; cursor:pointer; }
+.btn-foto-label { display:block; width:100%; padding:16px; background:#fff3e0; border:2px dashed #fb8c00; border-radius:14px; color:#e65100; font-size:15px; font-weight:700; text-align:center; cursor:pointer; box-sizing:border-box; }
 .btn-whatsapp { width:100%; background:#25D366; color:white; border:none; border-radius:14px; padding:14px; font-size:15px; font-weight:700; cursor:pointer; margin-top:10px; }
 .btn-apagar { width:100%; background:none; border:2px solid #ffcdd2; color:#c62828; border-radius:12px; padding:12px; font-size:14px; font-weight:700; cursor:pointer; margin-top:8px; }
 
@@ -288,13 +289,22 @@ body { margin:0; font-family: -apple-system, sans-serif; background:#f0f2f5; pad
 
   <div class="conteudo">
 
-    <button class="btn-registrar" onclick="irPara('add')">
-      <span class="plus">＋</span>
-      <div style="text-align:left">
-        <div>Registrar Gasto</div>
-        <div style="font-size:12px;color:#888;font-weight:400;margin-top:2px">Toque aqui para lançar uma despesa</div>
-      </div>
-    </button>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <button class="btn-registrar" onclick="irPara('add')" style="margin-bottom:0">
+        <span class="plus">＋</span>
+        <div style="text-align:left">
+          <div>Registrar</div>
+          <div style="font-size:11px;color:#888;font-weight:400;margin-top:1px">Digitar manualmente</div>
+        </div>
+      </button>
+      <button class="btn-registrar" onclick="irPara('foto')" style="margin-bottom:0;border-color:#e53935">
+        <span class="plus" style="font-size:22px">📷</span>
+        <div style="text-align:left">
+          <div style="color:#e53935">Foto Recibo</div>
+          <div style="font-size:11px;color:#888;font-weight:400;margin-top:1px">Ler pelo recibo</div>
+        </div>
+      </button>
+    </div>
 
     <div class="grid-cat">
       <div class="card-cat carro" onclick="irParaCategoria('carro')">
@@ -475,6 +485,71 @@ body { margin:0; font-family: -apple-system, sans-serif; background:#f0f2f5; pad
       </div>
     </div>
     <div id="corpo-relatorio"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════
+     FOTO RECIBO
+════════════════════════════ -->
+<div class="tela" id="tela-foto">
+  <div class="topo-add">
+    <h2>📷 Foto do Recibo</h2>
+    <button class="btn-voltar" onclick="irPara('inicio')">✕</button>
+  </div>
+  <div class="conteudo">
+
+    <!-- Passo 1: Categoria -->
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-titulo">1. Escolha a Categoria</div>
+      <div class="grid-sel">
+        <div class="opt-cat" id="fsel-carro" onclick="fotoSelecionarCat('carro')"><div class="ic">🚗</div><div class="nm">Carro</div></div>
+        <div class="opt-cat" id="fsel-diversos" onclick="fotoSelecionarCat('diversos')"><div class="ic">🛍️</div><div class="nm">Diversos</div></div>
+        <div class="opt-cat" id="fsel-mercado" onclick="fotoSelecionarCat('mercado')"><div class="ic">🛒</div><div class="nm">Mercado</div></div>
+      </div>
+      <!-- Subcategoria Carro -->
+      <div id="fgrupo-sub" style="display:none;margin-top:12px">
+        <div class="grid-sub">
+          <div class="opt-sub" id="fsub-gas"  onclick="fotoSelecionarSub('gas')">⛽ Gasolina</div>
+          <div class="opt-sub" id="fsub-oleo" onclick="fotoSelecionarSub('oleo')">🛢️ Óleo</div>
+          <div class="opt-sub" id="fsub-div"  onclick="fotoSelecionarSub('div')">🔧 Diversos</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Passo 2: Foto -->
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-titulo">2. Tire a Foto do Recibo</div>
+      <label class="btn-foto-label">
+        <input type="file" accept="image/*" capture="environment" id="inp-foto" style="display:none" onchange="processarFoto(this)">
+        <span id="btn-foto-txt">📷 Abrir Câmera</span>
+      </label>
+      <div id="foto-preview" style="display:none;margin-top:12px;text-align:center">
+        <img id="foto-img" style="max-width:100%;max-height:200px;border-radius:10px;border:2px solid #e0e0e0">
+      </div>
+      <div id="ocr-status" style="margin-top:10px;font-size:13px;color:#888;text-align:center;display:none"></div>
+    </div>
+
+    <!-- Passo 3: Confirmar dados -->
+    <div class="card" id="foto-form" style="display:none">
+      <div class="card-titulo">3. Confirme os Dados</div>
+      <div class="form-group">
+        <label>Valor (CA$)</label>
+        <div class="wrap-valor">
+          <span class="prefixo">CA$</span>
+          <input type="number" id="foto-valor" placeholder="0.00" inputmode="decimal" step="0.01">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Data</label>
+        <input type="date" id="foto-data">
+      </div>
+      <div class="form-group">
+        <label>Descrição (opcional)</label>
+        <textarea id="foto-desc" placeholder="Ex: Shoppers Drug Mart"></textarea>
+      </div>
+      <button class="btn-salvar" onclick="salvarLancamentoFoto()">✅ Salvar Lançamento</button>
+    </div>
+
   </div>
 </div>
 
@@ -1052,6 +1127,15 @@ function irPara(tela) {
     selecionarSub('gas');
     document.getElementById('inp-data').value = hoje();
   }
+  if (tela==='foto') {
+    fotoSelecionarCat('mercado');
+    document.getElementById('foto-preview').style.display = 'none';
+    document.getElementById('foto-form').style.display = 'none';
+    document.getElementById('ocr-status').style.display = 'none';
+    document.getElementById('btn-foto-txt').textContent = '📷 Abrir Câmera';
+    document.getElementById('foto-desc').value = '';
+    document.getElementById('inp-foto').value = '';
+  }
   if (tela==='historico') renderizarHistorico();
   if (tela==='relatorio') renderizarRelatorio();
   window.scrollTo(0,0);
@@ -1068,6 +1152,123 @@ function mostrarToast(ic, msg) {
   t.classList.add('visivel');
   if (_tmr) clearTimeout(_tmr);
   _tmr = setTimeout(function(){ t.classList.remove('visivel'); }, 3000);
+}
+
+// ─────────────────────────────
+// FOTO RECIBO
+// ─────────────────────────────
+var _fotoCat = 'mercado', _fotoSub = null, _tesseractCarregado = false;
+
+function fotoSelecionarCat(c) {
+  _fotoCat = c;
+  ['carro','diversos','mercado'].forEach(function(k) {
+    document.getElementById('fsel-'+k).className = 'opt-cat' + (k===c ? ' sel-'+k : '');
+  });
+  document.getElementById('fgrupo-sub').style.display = c==='carro' ? 'block' : 'none';
+  if (c==='carro') fotoSelecionarSub('gas');
+  else _fotoSub = null;
+}
+function fotoSelecionarSub(s) {
+  _fotoSub = s;
+  ['gas','oleo','div'].forEach(function(k) {
+    document.getElementById('fsub-'+k).className = 'opt-sub' + (k===s ? ' ativo' : '');
+  });
+}
+
+function processarFoto(input) {
+  if (!input.files || !input.files[0]) return;
+  var file = input.files[0];
+  var url  = URL.createObjectURL(file);
+
+  // Mostrar preview
+  document.getElementById('foto-img').src = url;
+  document.getElementById('foto-preview').style.display = 'block';
+  document.getElementById('btn-foto-txt').textContent = '📷 Trocar Foto';
+
+  // Mostrar form imediatamente
+  document.getElementById('foto-data').value = hoje();
+  document.getElementById('foto-form').style.display = 'block';
+  document.getElementById('foto-valor').value = '';
+
+  // Tentar OCR
+  var status = document.getElementById('ocr-status');
+  status.style.display = 'block';
+  status.textContent = '🔍 Lendo recibo...';
+
+  carregarTesseract(function(Tesseract) {
+    if (!Tesseract) {
+      status.textContent = '⚠️ Leitura automática indisponível. Digite o valor.';
+      return;
+    }
+    Tesseract.recognize(file, 'eng', { logger: function(){} }).then(function(result) {
+      var texto = result.data.text;
+      var valor = extrairValorRecibo(texto);
+      if (valor) {
+        document.getElementById('foto-valor').value = valor.toFixed(2);
+        status.textContent = '✅ Valor lido: CA$ ' + valor.toFixed(2) + ' — confirme abaixo.';
+        status.style.color = '#43a047';
+      } else {
+        status.textContent = '⚠️ Não consegui ler o valor. Digite manualmente.';
+        status.style.color = '#e65100';
+      }
+    }).catch(function() {
+      status.textContent = '⚠️ Erro na leitura. Digite o valor manualmente.';
+      status.style.color = '#e65100';
+    });
+  });
+}
+
+function extrairValorRecibo(texto) {
+  // Procura padrões de total: TOTAL, SUBTOTAL, AMOUNT DUE seguidos de valor
+  var padroes = [
+    /(?:total|amount due|balance|subtotal|montant)[^\d]*(\d+[.,]\d{2})/gi,
+    /\$\s*(\d+[.,]\d{2})/g,
+    /(\d+[.,]\d{2})/g
+  ];
+  var candidatos = [];
+  for (var i = 0; i < padroes.length; i++) {
+    var m, re = padroes[i];
+    re.lastIndex = 0;
+    while ((m = re.exec(texto)) !== null) {
+      var v = parseFloat(m[1].replace(',', '.'));
+      if (v > 0 && v < 10000) candidatos.push({ v: v, prio: i });
+    }
+    if (i < 2 && candidatos.length > 0) break;
+  }
+  if (!candidatos.length) return null;
+  // Prefere o maior valor entre os de maior prioridade
+  candidatos.sort(function(a,b){ return a.prio-b.prio || b.v-a.v; });
+  return candidatos[0].v;
+}
+
+function carregarTesseract(cb) {
+  if (window.Tesseract) { cb(window.Tesseract); return; }
+  var s = document.createElement('script');
+  s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+  s.onload  = function() { cb(window.Tesseract); };
+  s.onerror = function() { cb(null); };
+  document.head.appendChild(s);
+}
+
+function salvarLancamentoFoto() {
+  var valor = parseFloat(document.getElementById('foto-valor').value);
+  var data  = document.getElementById('foto-data').value;
+  var desc  = document.getElementById('foto-desc').value.trim();
+  if (!valor || valor <= 0) { mostrarToast('⚠️', 'Informe o valor'); return; }
+  if (!data)                { mostrarToast('⚠️', 'Informe a data');  return; }
+  var d = getDados();
+  d.lancamentos.push({ id: Date.now()+'', cat: _fotoCat, sub: _fotoSub||null, valor: valor, data: data, desc: desc });
+  salvarDados(d);
+  // Limpar form
+  document.getElementById('inp-foto').value = '';
+  document.getElementById('foto-preview').style.display = 'none';
+  document.getElementById('foto-form').style.display = 'none';
+  document.getElementById('ocr-status').style.display = 'none';
+  document.getElementById('btn-foto-txt').textContent = '📷 Abrir Câmera';
+  document.getElementById('foto-desc').value = '';
+  verificarAlerta();
+  mostrarToast('✅', 'Lançamento salvo!');
+  irPara('inicio');
 }
 
 // ─────────────────────────────
