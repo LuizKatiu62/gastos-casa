@@ -6,7 +6,9 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260412-010">
+<meta name="app-version" content="20260412-011">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -288,7 +290,13 @@ body {
 <div class="tela ativa" id="tela-inicio">
 
   <div class="topo">
-    <h1>💳 Gastos da Casa</h1>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <h1 style="margin:0">💳 Gastos da Casa</h1>
+      <div id="sync-status" style="font-size:11px;color:rgba(255,255,255,0.7);display:flex;align-items:center;gap:4px">
+        <span id="sync-dot" style="width:8px;height:8px;border-radius:50%;background:#aaa;display:inline-block"></span>
+        <span id="sync-txt">...</span>
+      </div>
+    </div>
 
     <!-- Limite -->
     <div class="linha-limite">
@@ -735,6 +743,80 @@ var CORES = { carro:'#e53935', diversos:'#fb8c00', mercado:'#43a047' };
 var SUBS  = { gas:'⛽ Gasolina', oleo:'🛢️ Óleo', div:'🔧 Diversos', 'gas-rr':'⛽ Gasolina (Range Rover)', 'gas-pilot':'⛽ Gasolina (Pilot)', pneu:'🔧 Pneu', pecas:'🔩 Peças', outros:'🔖 Outros' };
 var LOJAS = { walmart:'Walmart', superstore:'Superstore', shoppers:'Shoppers', nofrills:'No Frills', vine:'On the Vine', outros:'Outros' };
 
+// ─────────────────────────────
+// FIREBASE SYNC
+// ─────────────────────────────
+var FB_CONFIG = {
+  apiKey: "AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU",
+  authDomain: "gastos-casa-7f431.firebaseapp.com",
+  projectId: "gastos-casa-7f431",
+  storageBucket: "gastos-casa-7f431.firebasestorage.app",
+  messagingSenderId: "272395890131",
+  appId: "1:272395890131:web:5bd6057f62fe6b7abc9326",
+  databaseURL: "https://gastos-casa-7f431-default-rtdb.firebaseio.com"
+};
+var _fbRef = null, _fbAtivo = false, _fbSalvando = false;
+
+function syncStatus(cor, txt) {
+  document.getElementById('sync-dot').style.background = cor;
+  document.getElementById('sync-txt').textContent = txt;
+}
+function inicializarFirebase() {
+  try {
+    firebase.initializeApp(FB_CONFIG);
+    _fbRef = firebase.database().ref('dados');
+    _fbAtivo = true;
+    syncStatus('#ffb300', 'conectando...');
+    // Carregar dados mais recentes ao iniciar
+    _fbRef.once('value').then(function(snap) {
+      var fbData = snap.val();
+      var localTs = localStorage.getItem('gastos_ts') ? new Date(localStorage.getItem('gastos_ts')).getTime() : 0;
+      var fbTs = fbData && fbData._ts ? fbData._ts : 0;
+      if (!fbData || !fbData.lancamentos) {
+        // Firebase vazio — enviar dados locais
+        var local = getDados(); local._ts = Date.now();
+        _fbRef.set(local);
+        syncStatus('#43a047', 'sincronizado');
+      } else if (fbTs > localTs + 1000) {
+        // Firebase mais recente — usar dados da nuvem
+        var d = Object.assign({}, fbData); delete d._ts;
+        localStorage.setItem('gastos', JSON.stringify(d));
+        localStorage.setItem('gastos_ts', new Date(fbTs).toISOString());
+        renderizar();
+        syncStatus('#43a047', 'atualizado ☁️');
+        mostrarToast('☁️', 'Dados atualizados da nuvem!');
+      } else {
+        // Local mais recente — enviar para nuvem
+        var local = getDados(); local._ts = localTs || Date.now();
+        _fbRef.set(local);
+        syncStatus('#43a047', 'sincronizado');
+      }
+      // Listener em tempo real para mudanças de outro dispositivo
+      _fbRef.on('value', function(snap) {
+        if (_fbSalvando) return;
+        var fbData = snap.val();
+        if (!fbData || !fbData.lancamentos) return;
+        var localTs = localStorage.getItem('gastos_ts') ? new Date(localStorage.getItem('gastos_ts')).getTime() : 0;
+        var fbTs = fbData._ts || 0;
+        if (fbTs > localTs + 1000) {
+          var d = Object.assign({}, fbData); delete d._ts;
+          localStorage.setItem('gastos', JSON.stringify(d));
+          localStorage.setItem('gastos_ts', new Date(fbTs).toISOString());
+          renderizar();
+          if (document.getElementById('tela-historico').classList.contains('ativa')) renderizarHistorico();
+          if (document.getElementById('tela-relatorio').classList.contains('ativa')) renderizarRelatorio();
+          syncStatus('#43a047', 'atualizado ☁️');
+          mostrarToast('🔄', 'Sync: novo dado de outro dispositivo');
+        }
+      });
+    }).catch(function(e) {
+      syncStatus('#e53935', 'offline');
+    });
+  } catch(e) {
+    syncStatus('#e53935', 'erro sync');
+  }
+}
+
 function lerDados() {
   try { return JSON.parse(localStorage.getItem('gastos') || '{}'); } catch(e) { return {}; }
 }
@@ -745,6 +827,19 @@ function salvarDados(d) {
   try {
     localStorage.setItem('gastos', JSON.stringify(d));
     localStorage.setItem('gastos_ts', new Date().toISOString());
+    if (_fbAtivo && _fbRef) {
+      _fbSalvando = true;
+      syncStatus('#ffb300', 'salvando...');
+      var fbData = Object.assign({}, d, { _ts: Date.now() });
+      _fbRef.set(fbData).then(function() {
+        syncStatus('#43a047', 'sincronizado ✓');
+        setTimeout(function() { _fbSalvando = false; }, 2000);
+      }).catch(function() {
+        _fbSalvando = false;
+        syncStatus('#e53935', 'erro sync');
+        mostrarToast('⚠️', 'Salvo local, erro na nuvem');
+      });
+    }
   } catch(e) {
     mostrarToast('🚨', 'ERRO: dados NÃO salvos! Ative o modo normal (não privado).');
   }
@@ -1725,6 +1820,9 @@ window.onload = function() {
   if (d.orcamentos.diversos) document.getElementById('orc-diversos').value = d.orcamentos.diversos;
   if (d.orcamentos.mercado)  document.getElementById('orc-mercado').value  = d.orcamentos.mercado;
   renderizar();
+
+  // Inicializar sincronização Firebase
+  inicializarFirebase();
 
   // Verificar versão — mostra botão de atualizar se há nova versão
   var metaVer = document.querySelector('meta[name="app-version"]');
