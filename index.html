@@ -354,6 +354,10 @@ body {
   </div>
 
   <input type="file" id="inp-restaurar" accept=".json" style="display:none" onchange="restaurarBackup(this)">
+  <div id="aviso-storage" style="display:none;background:#b71c1c;color:#fff;padding:12px 16px;font-size:13px;font-weight:700;border-radius:10px;margin:8px 16px 0">
+    ⚠️ Modo Privado detectado — os dados NÃO serão salvos. Abra o app em modo normal ou use o atalho na tela inicial.
+  </div>
+  <div id="aviso-ts" style="display:none;font-size:11px;color:rgba(255,255,255,0.6);text-align:right;padding:4px 16px 0"></div>
   <div id="alerta" class="alerta"></div>
 
   <div class="conteudo">
@@ -727,7 +731,17 @@ var LOJAS = { walmart:'Walmart', superstore:'Superstore', shoppers:'Shoppers', n
 function lerDados() {
   try { return JSON.parse(localStorage.getItem('gastos') || '{}'); } catch(e) { return {}; }
 }
-function salvarDados(d) { localStorage.setItem('gastos', JSON.stringify(d)); }
+function _storageOk() {
+  try { localStorage.setItem('_t','1'); localStorage.removeItem('_t'); return true; } catch(e) { return false; }
+}
+function salvarDados(d) {
+  try {
+    localStorage.setItem('gastos', JSON.stringify(d));
+    localStorage.setItem('gastos_ts', new Date().toISOString());
+  } catch(e) {
+    mostrarToast('🚨', 'ERRO: dados NÃO salvos! Ative o modo normal (não privado).');
+  }
+}
 function getDados() {
   var d = lerDados();
   if (!d.lancamentos) d.lancamentos = [];
@@ -1435,6 +1449,7 @@ function fazerBackup() {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+  localStorage.setItem('gastos_ultimo_backup', hoje());
   mostrarToast('☁️', 'Backup salvo: ' + nome);
 }
 function restaurarBackup(input) {
@@ -1648,6 +1663,30 @@ function salvarLancamentoFoto() {
 // INÍCIO
 // ─────────────────────────────
 window.onload = function() {
+  // Verificar se localStorage está disponível
+  if (!_storageOk()) {
+    document.getElementById('aviso-storage').style.display = 'block';
+  } else {
+    // Mostrar quando foi o último save
+    var ts = localStorage.getItem('gastos_ts');
+    if (ts) {
+      var dt = new Date(ts);
+      var hhmm = dt.getHours().toString().padStart(2,'0') + ':' + dt.getMinutes().toString().padStart(2,'0');
+      var ddmm = (dt.getDate()+'').padStart(2,'0') + '/' + ((dt.getMonth()+1)+'').padStart(2,'0');
+      var avTs = document.getElementById('aviso-ts');
+      avTs.textContent = '💾 Último save: ' + ddmm + ' às ' + hhmm;
+      avTs.style.display = 'block';
+    }
+    // Lembrete de backup diário
+    var ultimoBackup = localStorage.getItem('gastos_ultimo_backup');
+    var hojeStr = hoje();
+    if (ultimoBackup !== hojeStr) {
+      setTimeout(function() {
+        mostrarToast('☁️', 'Lembrete: faça seu backup diário!');
+      }, 2000);
+    }
+  }
+
   var d = getDados();
   if (d.limite) document.getElementById('inp-limite').value = d.limite;
   document.getElementById('inp-alerta').value = d.alertaPct || 80;
