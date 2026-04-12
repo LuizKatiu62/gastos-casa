@@ -755,6 +755,7 @@ var FB_CONFIG = {
   appId: "1:272395890131:web:5bd6057f62fe6b7abc9326",
   databaseURL: "https://gastos-casa-7f431-default-rtdb.firebaseio.com"
 };
+var FB_SECRET = 'lk62-gastos-9f3a7b2e';
 var _fbRef = null, _fbAtivo = false, _fbSalvando = false;
 
 function syncStatus(cor, txt) {
@@ -764,7 +765,7 @@ function syncStatus(cor, txt) {
 function inicializarFirebase() {
   try {
     firebase.initializeApp(FB_CONFIG);
-    _fbRef = firebase.database().ref('dados');
+    _fbRef = firebase.database().ref('gastos/' + FB_SECRET);
     _fbAtivo = true;
     syncStatus('#ffb300', 'conectando...');
     // Carregar dados mais recentes ao iniciar
