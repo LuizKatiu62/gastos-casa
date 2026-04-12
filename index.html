@@ -183,11 +183,11 @@ body { margin:0; font-family: -apple-system, sans-serif; background:#f0f2f5; pad
     <div class="linha-limite">
       <div class="campo-topo" style="flex:1">
         <label>Limite do Cartão (CA$)</label>
-        <input type="number" id="inp-limite" placeholder="Ex: 3000" inputmode="decimal">
+        <input type="number" id="inp-limite" placeholder="Ex: 3000" inputmode="decimal" onblur="salvarConfig()" onchange="salvarConfig()">
       </div>
       <div class="campo-topo" style="width:90px">
         <label>% Alerta</label>
-        <input type="number" id="inp-alerta" placeholder="80" inputmode="numeric">
+        <input type="number" id="inp-alerta" placeholder="80" inputmode="numeric" onblur="salvarConfig()" onchange="salvarConfig()">
       </div>
       <button class="btn-ok" onclick="salvarConfig()">Salvar</button>
     </div>
@@ -743,16 +743,16 @@ function excluir(id) {
 // ─────────────────────────────
 // CONFIGURAÇÃO
 // ─────────────────────────────
-function salvarConfig() {
+function salvarConfig(mostrarMsg) {
   var lim = parseFloat(document.getElementById('inp-limite').value);
   var pct = parseInt(document.getElementById('inp-alerta').value) || 80;
-  if (!lim || lim <= 0) { mostrarToast('⚠️', 'Informe o limite do cartão'); return; }
+  if (!lim || lim <= 0) return;
   var d = getDados();
   d.limite = lim;
   d.alertaPct = pct;
   salvarDados(d);
   renderizar();
-  mostrarToast('✅', 'Limite salvo: ' + formatar(lim));
+  if (mostrarMsg !== false) mostrarToast('✅', 'Limite salvo: ' + formatar(lim));
 }
 function salvarPeriodo() {
   var ini = document.getElementById('inp-inicio').value;
