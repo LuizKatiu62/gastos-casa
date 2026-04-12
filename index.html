@@ -1698,6 +1698,13 @@ window.onload = function() {
   if (d.orcamentos.diversos) document.getElementById('orc-diversos').value = d.orcamentos.diversos;
   if (d.orcamentos.mercado)  document.getElementById('orc-mercado').value  = d.orcamentos.mercado;
   renderizar();
+
+  // Service Worker — garante que o iPhone sempre carrega a versão mais recente
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').then(function(reg) {
+      reg.update();
+    });
+  }
 };
 </script>
 </body>
