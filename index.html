@@ -469,12 +469,17 @@ body {
       </div>
 
       <div class="form-group" id="grupo-sub" style="display:none">
-        <label>Tipo — Carro</label>
-        <div class="grid-sub">
-          <button class="opt-sub" id="sub-gas" onclick="selecionarSub('gas')">⛽ Gasolina</button>
-          <button class="opt-sub" id="sub-oleo" onclick="selecionarSub('oleo')">🛢️ Óleo</button>
-          <button class="opt-sub" id="sub-div" onclick="selecionarSub('div')">🔧 Diversos</button>
-        </div>
+        <label>Subcategoria — Carro</label>
+        <select id="sel-carro-sub" onchange="selecionarCarroSub(this.value)" style="font-size:16px">
+          <option value="">— Selecione —</option>
+          <option value="gas-rr">⛽ Gasolina (Range Rover)</option>
+          <option value="gas-pilot">⛽ Gasolina (Pilot)</option>
+          <option value="oleo">🛢️ Óleo</option>
+          <option value="pneu">🔧 Pneu</option>
+          <option value="pecas">🔩 Peças</option>
+          <option value="outros">🔖 Outros</option>
+        </select>
+        <input type="text" id="inp-carro-outros" placeholder="Especifique..." style="display:none;margin-top:8px;font-size:16px" oninput="atualizarCarroOutros(this.value)">
       </div>
 
       <div class="form-group" id="grupo-loja" style="display:none">
@@ -614,11 +619,16 @@ body {
       </div>
       <!-- Subcategoria Carro -->
       <div id="fgrupo-sub" style="display:none;margin-top:12px">
-        <div class="grid-sub">
-          <div class="opt-sub" id="fsub-gas"  onclick="fotoSelecionarSub('gas')">⛽ Gasolina</div>
-          <div class="opt-sub" id="fsub-oleo" onclick="fotoSelecionarSub('oleo')">🛢️ Óleo</div>
-          <div class="opt-sub" id="fsub-div"  onclick="fotoSelecionarSub('div')">🔧 Diversos</div>
-        </div>
+        <select id="fsel-carro-sub" onchange="fotoSelecionarCarroSub(this.value)" style="font-size:16px;width:100%">
+          <option value="">— Selecione —</option>
+          <option value="gas-rr">⛽ Gasolina (Range Rover)</option>
+          <option value="gas-pilot">⛽ Gasolina (Pilot)</option>
+          <option value="oleo">🛢️ Óleo</option>
+          <option value="pneu">🔧 Pneu</option>
+          <option value="pecas">🔩 Peças</option>
+          <option value="outros">🔖 Outros</option>
+        </select>
+        <input type="text" id="finp-carro-outros" placeholder="Especifique..." style="display:none;margin-top:8px;font-size:16px;width:100%" oninput="fotoAtualizarCarroOutros(this.value)">
       </div>
     </div>
 
@@ -674,7 +684,7 @@ body {
 var WA = '14379718925';
 var NOMES = { carro:'Carro', diversos:'Diversos', mercado:'Supermercado' };
 var CORES = { carro:'#e53935', diversos:'#fb8c00', mercado:'#43a047' };
-var SUBS  = { gas:'⛽ Gasolina', oleo:'🛢️ Óleo', div:'🔧 Diversos' };
+var SUBS  = { gas:'⛽ Gasolina', oleo:'🛢️ Óleo', div:'🔧 Diversos', 'gas-rr':'⛽ Gasolina (Range Rover)', 'gas-pilot':'⛽ Gasolina (Pilot)', pneu:'🔧 Pneu', pecas:'🔩 Peças', outros:'🔖 Outros' };
 var LOJAS = { walmart:'Walmart', superstore:'Superstore', shoppers:'Shoppers', nofrills:'No Frills', vine:'On the Vine', outros:'Outros' };
 
 function lerDados() {
@@ -951,7 +961,7 @@ function renderizarRecentes(todos) {
       '<div class="lanc-ponto" style="background:'+CORES[l.cat]+'"></div>' +
       '<div class="lanc-info">' +
         '<div class="lanc-desc">'+(l.desc||(l.loja||l.divsub||NOMES[l.cat]))+'</div>' +
-        '<div class="lanc-meta">'+formatarData(l.data)+' · '+NOMES[l.cat]+(l.loja?' · '+l.loja:'')+(l.divsub?' · '+l.divsub:'')+(l.sub&&l.cat==='carro'?' · '+SUBS[l.sub]:'')+'</div>' +
+        '<div class="lanc-meta">'+formatarData(l.data)+' · '+NOMES[l.cat]+(l.loja?' · '+l.loja:'')+(l.divsub?' · '+l.divsub:'')+(l.sub&&l.cat==='carro'?' · '+(SUBS[l.sub]||l.sub):'')+'</div>' +
       '</div>' +
       '<div class="lanc-valor" style="color:'+CORES[l.cat]+'">'+formatar(l.valor)+'</div>' +
       '<button class="lanc-del" onclick="excluir(\''+l.id+'\')">✕</button>' +
@@ -1021,7 +1031,7 @@ function renderizarHistorico() {
           '<div class="lanc-ponto" style="background:'+CORES[l.cat]+';flex-shrink:0"></div>' +
           '<div class="lanc-info">' +
             '<div class="lanc-desc">'+(l.desc||NOMES[l.cat])+'</div>' +
-            '<div class="lanc-meta">'+NOMES[l.cat]+(l.loja?' · '+l.loja:'')+(l.divsub?' · '+l.divsub:'')+(l.sub&&l.cat==='carro'?' · '+SUBS[l.sub]:'')+'</div>' +
+            '<div class="lanc-meta">'+NOMES[l.cat]+(l.loja?' · '+l.loja:'')+(l.divsub?' · '+l.divsub:'')+(l.sub&&l.cat==='carro'?' · '+(SUBS[l.sub]||l.sub):'')+'</div>' +
           '</div>' +
           '<div class="lanc-valor" style="color:'+CORES[l.cat]+'">'+formatar(l.valor)+'</div>' +
           '<button class="lanc-del" onclick="excluir(\''+l.id+'\');renderizarHistorico()">✕</button>' +
@@ -1080,7 +1090,7 @@ function renderizarRelatorio() {
     var v = parseFloat(l.valor||0);
     tots[l.cat] = (tots[l.cat]||0) + v;
     grand += v;
-    if (l.sub) stots[l.sub] = (stots[l.sub]||0) + v;
+    if (l.sub) { var subKey = SUBS[l.sub] || l.sub; stots[subKey] = (stots[subKey]||0) + v; }
     porDia[l.data] = (porDia[l.data]||0) + v;
   });
 
@@ -1135,9 +1145,9 @@ function renderizarRelatorio() {
         '</div>' : '';
     var subH = '';
     if(subcats){
-      if(stots.gas)  subH += '<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-top:1px solid #f5f5f5"><span style="color:#888">⛽ Gasolina</span><span style="font-weight:700;color:'+cor+'">'+formatar(stots.gas)+'</span></div>';
-      if(stots.oleo) subH += '<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-top:1px solid #f5f5f5"><span style="color:#888">🛢️ Óleo</span><span style="font-weight:700;color:'+cor+'">'+formatar(stots.oleo)+'</span></div>';
-      if(stots.div)  subH += '<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-top:1px solid #f5f5f5"><span style="color:#888">🔧 Diversos</span><span style="font-weight:700;color:'+cor+'">'+formatar(stots.div)+'</span></div>';
+      Object.keys(stots).forEach(function(lbl) {
+        if(stots[lbl]) subH += '<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-top:1px solid #f5f5f5"><span style="color:#888">'+lbl+'</span><span style="font-weight:700;color:'+cor+'">'+formatar(stots[lbl])+'</span></div>';
+      });
     }
     return '<div class="rel-cat-bloco '+classe+'">' +
       '<div class="rel-cat-header"><span class="rel-cat-nome">'+icone+' '+NOMES[cat]+'</span><span class="rel-cat-pct-total">'+pTot.toFixed(1)+'% do total</span></div>' +
@@ -1184,7 +1194,7 @@ function renderizarRelatorio() {
 // ─────────────────────────────
 // ADICIONAR
 // ─────────────────────────────
-var _loja = '', _lojaOutros = '', _divSub = '', _divOutros = '';
+var _loja = '', _lojaOutros = '', _divSub = '', _divOutros = '', _carroSub = '', _carroOutros = '';
 function selecionarCat(c) {
   _cat = c;
   ['carro','diversos','mercado'].forEach(function(k) {
@@ -1193,6 +1203,11 @@ function selecionarCat(c) {
   document.getElementById('grupo-sub').style.display  = c==='carro'   ? 'block' : 'none';
   document.getElementById('grupo-loja').style.display = c==='mercado' ? 'block' : 'none';
   document.getElementById('grupo-div').style.display  = c==='diversos'? 'block' : 'none';
+  if (c==='carro') {
+    document.getElementById('sel-carro-sub').value = '';
+    document.getElementById('inp-carro-outros').style.display = 'none';
+    _carroSub = ''; _carroOutros = '';
+  }
   if (c==='mercado') {
     document.getElementById('sel-loja').value = '';
     document.getElementById('inp-loja-outros').style.display = 'none';
@@ -1204,12 +1219,12 @@ function selecionarCat(c) {
     _divSub = ''; _divOutros = '';
   }
 }
-function selecionarSub(s) {
-  _sub = s;
-  ['gas','oleo','div'].forEach(function(k) {
-    document.getElementById('sub-'+k).className = 'opt-sub' + (k===s ? ' ativo' : '');
-  });
+function selecionarCarroSub(v) {
+  _carroSub = v;
+  document.getElementById('inp-carro-outros').style.display = v==='outros' ? 'block' : 'none';
+  if (v !== 'outros') _carroOutros = '';
 }
+function atualizarCarroOutros(v) { _carroOutros = v.trim(); }
 function selecionarLoja(v) {
   _loja = v;
   document.getElementById('inp-loja-outros').style.display = v==='outros' ? 'block' : 'none';
@@ -1227,14 +1242,16 @@ function salvarLancamento() {
   var data  = document.getElementById('inp-data').value;
   if (!valor || valor <= 0) { mostrarToast('⚠️', 'Informe o valor gasto'); return; }
   if (!data) { mostrarToast('⚠️', 'Selecione a data'); return; }
-  var DIV_LABELS = { roupas:'👕 Roupas', amazon:'📦 Amazon', restaurantes:'🍽️ Restaurantes', dollarama:'🏪 Dollarama', outros:'Outros' };
-  var lojaFinal = _cat==='mercado'  ? (_loja==='outros'   ? (_lojaOutros||'Outros')  : (_loja   ? LOJAS[_loja]        : '')) : null;
-  var divFinal  = _cat==='diversos' ? (_divSub==='outros' ? (_divOutros||'Outros')   : (_divSub ? DIV_LABELS[_divSub] : '')) : null;
+  var CARRO_LABELS = { 'gas-rr':'⛽ Gasolina (Range Rover)', 'gas-pilot':'⛽ Gasolina (Pilot)', oleo:'🛢️ Óleo', pneu:'🔧 Pneu', pecas:'🔩 Peças', outros:'Outros' };
+  var DIV_LABELS = { roupas:'👕 Roupas', amazon:'📦 Amazon', restaurantes:'🍽️ Restaurantes', dollarama:'🏪 Dollarama', esportes:'🏃 Esportes', veterinario:'🐾 Veterinário', lazer:'🎉 Lazer', outros:'Outros' };
+  var carroFinal = _cat==='carro'   ? (_carroSub==='outros' ? (_carroOutros||'Outros') : (_carroSub ? CARRO_LABELS[_carroSub] : '')) : null;
+  var lojaFinal  = _cat==='mercado'  ? (_loja==='outros'   ? (_lojaOutros||'Outros')  : (_loja   ? LOJAS[_loja]        : '')) : null;
+  var divFinal   = _cat==='diversos' ? (_divSub==='outros' ? (_divOutros||'Outros')   : (_divSub ? DIV_LABELS[_divSub] : '')) : null;
   var d = getDados();
   d.lancamentos.push({
     id:   Date.now().toString(),
     cat:  _cat,
-    sub:  _cat==='carro' ? _sub : null,
+    sub:  carroFinal || null,
     loja: lojaFinal || null,
     divsub: divFinal || null,
     valor: valor,
@@ -1246,9 +1263,11 @@ function salvarLancamento() {
   document.getElementById('inp-desc').value = '';
   document.getElementById('sel-loja').value = '';
   document.getElementById('inp-loja-outros').style.display = 'none';
+  document.getElementById('sel-carro-sub').value = '';
+  document.getElementById('inp-carro-outros').style.display = 'none';
   document.getElementById('sel-div').value = '';
   document.getElementById('inp-div-outros').style.display = 'none';
-  _loja = ''; _lojaOutros = ''; _divSub = ''; _divOutros = '';
+  _loja = ''; _lojaOutros = ''; _divSub = ''; _divOutros = ''; _carroSub = ''; _carroOutros = '';
   renderizar();
   irPara('inicio');
   mostrarToast('✅', 'Lançamento salvo!');
@@ -1396,7 +1415,7 @@ function mostrarToast(ic, msg) {
 // ─────────────────────────────
 // FOTO RECIBO
 // ─────────────────────────────
-var _fotoCat = 'mercado', _fotoSub = null, _tesseractCarregado = false;
+var _fotoCat = 'mercado', _fotoSub = null, _fotoCarroOutros = '', _tesseractCarregado = false;
 
 function fotoSelecionarCat(c) {
   _fotoCat = c;
@@ -1404,14 +1423,23 @@ function fotoSelecionarCat(c) {
     document.getElementById('fsel-'+k).className = 'opt-cat' + (k===c ? ' sel-'+k : '');
   });
   document.getElementById('fgrupo-sub').style.display = c==='carro' ? 'block' : 'none';
-  if (c==='carro') fotoSelecionarSub('gas');
-  else _fotoSub = null;
+  if (c==='carro') {
+    document.getElementById('fsel-carro-sub').value = '';
+    document.getElementById('finp-carro-outros').style.display = 'none';
+    _fotoSub = null; _fotoCarroOutros = '';
+  } else {
+    _fotoSub = null;
+  }
 }
-function fotoSelecionarSub(s) {
-  _fotoSub = s;
-  ['gas','oleo','div'].forEach(function(k) {
-    document.getElementById('fsub-'+k).className = 'opt-sub' + (k===s ? ' ativo' : '');
-  });
+function fotoSelecionarCarroSub(v) {
+  var CARRO_LABELS = { 'gas-rr':'⛽ Gasolina (Range Rover)', 'gas-pilot':'⛽ Gasolina (Pilot)', oleo:'🛢️ Óleo', pneu:'🔧 Pneu', pecas:'🔩 Peças', outros:'Outros' };
+  document.getElementById('finp-carro-outros').style.display = v==='outros' ? 'block' : 'none';
+  if (v === 'outros') { _fotoSub = null; _fotoCarroOutros = ''; }
+  else { _fotoSub = v ? CARRO_LABELS[v] : null; _fotoCarroOutros = ''; }
+}
+function fotoAtualizarCarroOutros(v) {
+  _fotoCarroOutros = v.trim();
+  _fotoSub = _fotoCarroOutros || null;
 }
 
 function processarFoto(input) {
