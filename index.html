@@ -66,6 +66,19 @@ body { margin:0; font-family: -apple-system, sans-serif; background:#f0f2f5; pad
 .cat-nome { font-size:11px; font-weight:700; color:#aaa; text-transform:uppercase; margin-bottom:2px; }
 .cat-valor { font-size:20px; font-weight:900; }
 .cat-qtd { font-size:11px; color:#bbb; margin-top:2px; }
+.cat-barra-fundo { background:#f0f0f0; height:6px; border-radius:3px; overflow:hidden; margin-top:7px; }
+.cat-barra-fill { height:100%; border-radius:3px; transition:width 0.4s; }
+.cat-orc { font-size:10px; color:#bbb; margin-top:3px; }
+
+/* GRID ORCAMENTOS */
+.grid-orc { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-top:10px; }
+.campo-orc label { display:block; font-size:10px; color:rgba(255,255,255,0.65); margin-bottom:4px; text-transform:uppercase; }
+.campo-orc input { width:100%; padding:8px 10px; border:2px solid rgba(255,255,255,0.35); border-radius:8px; background:rgba(255,255,255,0.15); color:white; font-size:14px; box-sizing:border-box; }
+.campo-orc input::placeholder { color:rgba(255,255,255,0.4); }
+
+/* BARRA ORCAMENTO RELATORIO */
+.orc-barra-fundo { background:#f0f0f0; height:8px; border-radius:4px; overflow:hidden; margin:4px 0 2px 0; }
+.orc-barra-fill { height:100%; border-radius:4px; transition:width 0.4s; }
 
 /* CARD GENERICO */
 .card { background:white; border-radius:14px; padding:16px; margin-bottom:14px; box-shadow:0 2px 8px rgba(0,0,0,0.08); }
@@ -202,6 +215,25 @@ body { margin:0; font-family: -apple-system, sans-serif; background:#f0f2f5; pad
       <input type="date" id="inp-fim" onchange="salvarPeriodo()">
     </div>
 
+    <!-- Orçamentos por categoria -->
+    <div style="margin-bottom:10px">
+      <div style="font-size:11px;color:rgba(255,255,255,0.65);text-transform:uppercase;margin-bottom:6px">Orçamento por Categoria (CA$)</div>
+      <div class="grid-orc">
+        <div class="campo-orc">
+          <label>🚗 Carro</label>
+          <input type="number" id="orc-carro" placeholder="500" inputmode="decimal" onblur="salvarOrcamentos()" onchange="salvarOrcamentos()">
+        </div>
+        <div class="campo-orc">
+          <label>🛍️ Diversos</label>
+          <input type="number" id="orc-diversos" placeholder="300" inputmode="decimal" onblur="salvarOrcamentos()" onchange="salvarOrcamentos()">
+        </div>
+        <div class="campo-orc">
+          <label>🛒 Mercado</label>
+          <input type="number" id="orc-mercado" placeholder="1200" inputmode="decimal" onblur="salvarOrcamentos()" onchange="salvarOrcamentos()">
+        </div>
+      </div>
+    </div>
+
     <!-- Resumo -->
     <div class="resumo">
       <div class="resumo-linha">
@@ -241,18 +273,24 @@ body { margin:0; font-family: -apple-system, sans-serif; background:#f0f2f5; pad
         <div class="cat-nome">Carro</div>
         <div class="cat-valor" id="val-carro" style="color:#e53935">CA$ 0,00</div>
         <div class="cat-qtd" id="qtd-carro">0 lançamentos</div>
+        <div class="cat-barra-fundo" id="bfundo-carro" style="display:none"><div class="cat-barra-fill" id="bfill-carro" style="width:0%;background:#e53935"></div></div>
+        <div class="cat-orc" id="corc-carro"></div>
       </div>
       <div class="card-cat diversos" onclick="irParaCategoria('diversos')">
         <div class="cat-icon">🛍️</div>
         <div class="cat-nome">Diversos</div>
         <div class="cat-valor" id="val-diversos" style="color:#fb8c00">CA$ 0,00</div>
         <div class="cat-qtd" id="qtd-diversos">0 lançamentos</div>
+        <div class="cat-barra-fundo" id="bfundo-diversos" style="display:none"><div class="cat-barra-fill" id="bfill-diversos" style="width:0%;background:#fb8c00"></div></div>
+        <div class="cat-orc" id="corc-diversos"></div>
       </div>
       <div class="card-cat mercado" onclick="irParaCategoria('mercado')">
         <div class="cat-icon">🛒</div>
         <div class="cat-nome">Supermercado</div>
         <div class="cat-valor" id="val-mercado" style="color:#43a047">CA$ 0,00</div>
         <div class="cat-qtd" id="qtd-mercado">0 lançamentos</div>
+        <div class="cat-barra-fundo" id="bfundo-mercado" style="display:none"><div class="cat-barra-fill" id="bfill-mercado" style="width:0%;background:#43a047"></div></div>
+        <div class="cat-orc" id="corc-mercado"></div>
       </div>
     </div>
 
@@ -413,6 +451,7 @@ function getDados() {
   if (!d.lancamentos) d.lancamentos = [];
   if (!d.limite)     d.limite = 0;
   if (!d.alertaPct)  d.alertaPct = 80;
+  if (!d.orcamentos) d.orcamentos = { carro:0, diversos:0, mercado:0 };
   if (!d.periodo) {
     var n = new Date(), y = n.getFullYear(), m = (n.getMonth()+1+'').padStart(2,'0');
     var ultimo = new Date(y, n.getMonth()+1, 0).getDate();
@@ -498,9 +537,28 @@ function renderizar() {
   }
 
   // Cards categoria
+  var cores = { carro:'#e53935', diversos:'#fb8c00', mercado:'#43a047' };
   ['carro','diversos','mercado'].forEach(function(c) {
-    document.getElementById('val-'+c).textContent = formatar(tots[c]||0);
+    var gasto = tots[c]||0;
+    var orc = d.orcamentos[c]||0;
+    document.getElementById('val-'+c).textContent = formatar(gasto);
     document.getElementById('qtd-'+c).textContent = (qtds[c]||0) + ' lançamento' + (qtds[c]!==1?'s':'');
+    var bfundo = document.getElementById('bfundo-'+c);
+    var bfill  = document.getElementById('bfill-'+c);
+    var corc   = document.getElementById('corc-'+c);
+    if (orc > 0) {
+      var pCat = Math.min(gasto/orc*100, 100);
+      var corCat = gasto > orc ? '#f44336' : pCat >= 80 ? '#ff9800' : cores[c];
+      bfundo.style.display = 'block';
+      bfill.style.width = pCat + '%';
+      bfill.style.background = corCat;
+      var restCat = orc - gasto;
+      corc.textContent = pCat.toFixed(0)+'% de '+formatar(orc)+(restCat>=0 ? ' (sobra '+formatar(restCat)+')' : ' (excedeu '+formatar(-restCat)+')');
+      corc.style.color = restCat < 0 ? '#f44336' : '#bbb';
+    } else {
+      bfundo.style.display = 'none';
+      corc.textContent = '';
+    }
   });
 
   renderizarPizza(tots, total);
@@ -668,20 +726,43 @@ function renderizarRelatorio() {
     if (l.sub) stots[l.sub] = (stots[l.sub]||0) + a;
   });
   var pct = d.limite > 0 ? (grand/d.limite*100) : 0, rest = d.limite - grand;
+  var orc = d.orcamentos;
+
+  function linhaOrc(cat, icone, cor, label, subcats) {
+    var g = tots[cat]||0, o = orc[cat]||0;
+    var pC = o > 0 ? Math.min(g/o*100,100) : 0;
+    var corBarra = g > o && o > 0 ? '#f44336' : pC >= 80 ? '#ff9800' : cor;
+    var restC = o - g;
+    var barraHtml = o > 0
+      ? '<div class="orc-barra-fundo"><div class="orc-barra-fill" style="width:'+pC.toFixed(1)+'%;background:'+corBarra+'"></div></div>' +
+        '<div style="display:flex;justify-content:space-between;font-size:11px;color:#bbb">' +
+        '<span>'+pC.toFixed(0)+'% do orçamento '+formatar(o)+'</span>' +
+        '<span style="color:'+(restC<0?'#f44336':'#43a047')+'">'+(restC>=0?'sobra ':'excedeu ')+formatar(Math.abs(restC))+'</span>' +
+        '</div>'
+      : '';
+    var subHtml = '';
+    if (subcats) {
+      if (stots.gas)  subHtml += '<div class="linha-rel" style="padding-left:16px"><span class="rotulo" style="font-size:13px">'+SUBS.gas+'</span><span class="numero" style="color:'+cor+';font-size:13px">'+formatar(stots.gas)+'</span></div>';
+      if (stots.oleo) subHtml += '<div class="linha-rel" style="padding-left:16px"><span class="rotulo" style="font-size:13px">'+SUBS.oleo+'</span><span class="numero" style="color:'+cor+';font-size:13px">'+formatar(stots.oleo)+'</span></div>';
+      if (stots.div)  subHtml += '<div class="linha-rel" style="padding-left:16px"><span class="rotulo" style="font-size:13px">'+SUBS.div+'</span><span class="numero" style="color:'+cor+';font-size:13px">'+formatar(stots.div)+'</span></div>';
+    }
+    return '<div class="linha-rel"><span class="rotulo">'+icone+' '+label+'</span><span class="numero" style="color:'+cor+'">'+formatar(g)+'</span></div>' +
+           subHtml + barraHtml;
+  }
 
   var html = '<div class="card"><div class="card-titulo">Resumo — '+nomeMes(_mesRel)+'</div>' +
     '<div class="linha-rel"><span class="rotulo">Total Gasto</span><span class="numero" style="color:#1565c0">'+formatar(grand)+'</span></div>' +
     '<div class="linha-rel"><span class="rotulo">Limite do Cartão</span><span class="numero">'+formatar(d.limite)+'</span></div>' +
     '<div class="linha-rel"><span class="rotulo">Utilização</span><span class="numero" style="color:'+(pct>100?'#f44336':pct>=80?'#ff9800':'#43a047')+'">'+pct.toFixed(1)+'%</span></div>' +
     '<div class="linha-rel"><span class="rotulo">Disponível</span><span class="numero" style="color:'+(rest<0?'#f44336':'#43a047')+'">'+formatar(rest)+'</span></div>' +
-    '<hr style="border:none;border-top:1px solid #f0f0f0;margin:6px 0">' +
-    '<div class="linha-rel"><span class="rotulo">🚗 Carro</span><span class="numero" style="color:#e53935">'+formatar(tots.carro)+'</span></div>' +
-    (stots.gas ? '<div class="linha-rel" style="padding-left:16px"><span class="rotulo" style="font-size:13px">'+SUBS.gas+'</span><span class="numero" style="color:#e53935;font-size:13px">'+formatar(stots.gas)+'</span></div>' : '') +
-    (stots.oleo ? '<div class="linha-rel" style="padding-left:16px"><span class="rotulo" style="font-size:13px">'+SUBS.oleo+'</span><span class="numero" style="color:#e53935;font-size:13px">'+formatar(stots.oleo)+'</span></div>' : '') +
-    (stots.div ? '<div class="linha-rel" style="padding-left:16px"><span class="rotulo" style="font-size:13px">'+SUBS.div+'</span><span class="numero" style="color:#e53935;font-size:13px">'+formatar(stots.div)+'</span></div>' : '') +
-    '<div class="linha-rel"><span class="rotulo">🛍️ Diversos</span><span class="numero" style="color:#fb8c00">'+formatar(tots.diversos)+'</span></div>' +
-    '<div class="linha-rel"><span class="rotulo">🛒 Supermercado</span><span class="numero" style="color:#43a047">'+formatar(tots.mercado)+'</span></div>' +
-    '<button class="btn-whatsapp" onclick="compartilhar()">📱 Enviar por WhatsApp</button>' +
+    '<hr style="border:none;border-top:1px solid #f0f0f0;margin:10px 0">' +
+    '<div style="font-size:11px;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Orçamento por Categoria</div>' +
+    linhaOrc('carro',   '🚗', '#e53935', 'Carro',        true) +
+    '<hr style="border:none;border-top:1px solid #f5f5f5;margin:8px 0">' +
+    linhaOrc('diversos','🛍️', '#fb8c00', 'Diversos',     false) +
+    '<hr style="border:none;border-top:1px solid #f5f5f5;margin:8px 0">' +
+    linhaOrc('mercado', '🛒', '#43a047', 'Supermercado', false) +
+    '<button class="btn-whatsapp" style="margin-top:14px" onclick="compartilhar()">📱 Enviar por WhatsApp</button>' +
     '<button class="btn-apagar" onclick="if(confirm(\'Apagar TODOS os dados?\')){{localStorage.removeItem(\'gastos\');location.reload()}}">🗑️ Apagar todos os dados</button>' +
     '</div>';
   document.getElementById('corpo-relatorio').innerHTML = html;
@@ -754,6 +835,15 @@ function salvarConfig(mostrarMsg) {
   renderizar();
   if (mostrarMsg !== false) mostrarToast('✅', 'Limite salvo: ' + formatar(lim));
 }
+function salvarOrcamentos() {
+  var carro    = parseFloat(document.getElementById('orc-carro').value)    || 0;
+  var diversos = parseFloat(document.getElementById('orc-diversos').value) || 0;
+  var mercado  = parseFloat(document.getElementById('orc-mercado').value)  || 0;
+  var d = getDados();
+  d.orcamentos = { carro: carro, diversos: diversos, mercado: mercado };
+  salvarDados(d);
+  renderizar();
+}
 function salvarPeriodo() {
   var ini = document.getElementById('inp-inicio').value;
   var fim = document.getElementById('inp-fim').value;
@@ -778,7 +868,14 @@ function compartilhar() {
   var thj = lhj.reduce(function(s,l){ return s+parseFloat(l.valor||0); }, 0);
   var msg = '💳 *GASTOS DA CASA*\n📅 '+formatarData(p.inicio)+' → '+formatarData(p.fim)+'\n━━━━━━━━━━━━━━━━\n';
   msg += '📊 Total: *'+formatar(g)+'*\n📈 Limite: '+formatar(d.limite)+' ('+pct+'%)\n💰 Disponível: *'+formatar(rest)+'*\n\n';
-  msg += '🚗 Carro: '+formatar(tots.carro)+'\n🛍️ Diversos: '+formatar(tots.diversos)+'\n🛒 Supermercado: '+formatar(tots.mercado);
+  var orc = d.orcamentos;
+  function linhaWA(ic, cat) {
+    var g2 = tots[cat]||0, o2 = orc[cat]||0;
+    var txt = ic+' '+formatar(g2);
+    if (o2 > 0) txt += ' / orçado '+formatar(o2)+' ('+(g2/o2*100).toFixed(0)+'%)';
+    return txt;
+  }
+  msg += linhaWA('🚗 Carro:', 'carro')+'\n'+linhaWA('🛍️ Diversos:', 'diversos')+'\n'+linhaWA('🛒 Supermercado:', 'mercado');
   if (thj > 0) { msg += '\n\n📅 *Hoje ('+formatarData(hj)+'):*\n'; lhj.forEach(function(l){ msg += '  • '+(l.desc||NOMES[l.cat])+': '+formatar(l.valor)+'\n'; }); }
   if (g > d.limite) msg += '\n🚨 *LIMITE EXCEDIDO em '+formatar(g-d.limite)+'!*';
   msg += '\n\n_Enviado via Gastos da Casa_';
@@ -838,6 +935,9 @@ window.onload = function() {
   document.getElementById('inp-alerta').value = d.alertaPct || 80;
   document.getElementById('inp-inicio').value = d.periodo.inicio;
   document.getElementById('inp-fim').value    = d.periodo.fim;
+  if (d.orcamentos.carro)    document.getElementById('orc-carro').value    = d.orcamentos.carro;
+  if (d.orcamentos.diversos) document.getElementById('orc-diversos').value = d.orcamentos.diversos;
+  if (d.orcamentos.mercado)  document.getElementById('orc-mercado').value  = d.orcamentos.mercado;
   renderizar();
 };
 </script>
