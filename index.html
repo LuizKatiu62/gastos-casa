@@ -58,23 +58,23 @@ body { margin:0; font-family: -apple-system, sans-serif; background:#f0f2f5; pad
 
 /* CARDS CATEGORIA */
 .grid-cat { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
-.card-cat { background:white; border-radius:14px; padding:14px; border-left:6px solid; cursor:pointer; box-shadow:0 3px 10px rgba(0,0,0,0.10); }
-.card-cat.carro   { border-color:#e53935; background:linear-gradient(135deg,#fff5f5 0%,#ffffff 60%); }
-.card-cat.diversos{ border-color:#fb8c00; background:linear-gradient(135deg,#fff8f0 0%,#ffffff 60%); }
-.card-cat.mercado { border-color:#43a047; background:linear-gradient(135deg,#f1f8e9 0%,#ffffff 60%); grid-column:1/-1; }
+.card-cat { background:white; border-radius:14px; padding:14px; border-left:5px solid; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.08); }
+.card-cat.carro   { border-color:#e53935; }
+.card-cat.diversos{ border-color:#fb8c00; }
+.card-cat.mercado { border-color:#43a047; grid-column:1/-1; }
 .cat-header { display:flex; align-items:center; gap:6px; margin-bottom:10px; }
-.cat-icon { font-size:22px; }
-.cat-nome { font-size:12px; font-weight:800; color:#666; text-transform:uppercase; flex:1; letter-spacing:0.5px; }
-.cat-qtd { font-size:10px; color:#999; background:#f0f0f0; border-radius:10px; padding:2px 7px; }
+.cat-icon { font-size:20px; }
+.cat-nome { font-size:12px; font-weight:800; color:#555; text-transform:uppercase; flex:1; }
+.cat-qtd { font-size:10px; color:#ccc; background:#f5f5f5; border-radius:10px; padding:2px 7px; }
 .cat-linha-vals { display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:8px; }
 .cat-bloco { min-width:0; }
 .cat-bloco-mid { text-align:center; }
-.cat-rotulo { font-size:10px; font-weight:700; color:#999; text-transform:uppercase; margin-bottom:3px; letter-spacing:0.3px; }
+.cat-rotulo { font-size:10px; font-weight:700; color:#888; text-transform:uppercase; margin-bottom:2px; }
 .cat-valor { font-size:15px; font-weight:900; white-space:nowrap; }
-.cat-orc-val { color:#777; }
-.cat-orc { font-size:10px; color:#999; margin-top:4px; font-weight:600; }
-.cat-barra-fundo { background:#e8e8e8; height:7px; border-radius:4px; overflow:hidden; margin-top:7px; }
-.cat-barra-fill { height:100%; border-radius:4px; transition:width 0.4s; }
+.cat-orc-val { color:#666; }
+.cat-orc { font-size:10px; color:#999; margin-top:3px; font-weight:600; }
+.cat-barra-fundo { background:#f0f0f0; height:6px; border-radius:3px; overflow:hidden; margin-top:7px; }
+.cat-barra-fill { height:100%; border-radius:3px; transition:width 0.4s; }
 
 /* GRID ORCAMENTOS */
 .grid-orc { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-top:10px; }
