@@ -6,6 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
+<meta name="app-version" content="20260412-010">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -356,6 +357,9 @@ body {
   </div>
 
   <input type="file" id="inp-restaurar" accept=".json" style="display:none" onchange="restaurarBackup(this)">
+  <div id="banner-update" style="display:none;background:#1565c0;color:#fff;padding:12px 16px;text-align:center;cursor:pointer;font-size:14px;font-weight:700;border-radius:10px;margin:8px 16px 0" onclick="forcarAtualizacao()">
+    🔄 Nova versão disponível — toque para atualizar
+  </div>
   <div id="aviso-storage" style="display:none;background:#b71c1c;color:#fff;padding:12px 16px;font-size:13px;font-weight:700;border-radius:10px;margin:8px 16px 0">
     ⚠️ Modo Privado detectado — os dados NÃO serão salvos. Abra o app em modo normal ou use o atalho na tela inicial.
   </div>
@@ -1699,6 +1703,18 @@ window.onload = function() {
   if (d.orcamentos.mercado)  document.getElementById('orc-mercado').value  = d.orcamentos.mercado;
   renderizar();
 
+  // Verificar versão — mostra botão de atualizar se há nova versão
+  var metaVer = document.querySelector('meta[name="app-version"]');
+  var appVer  = metaVer ? metaVer.getAttribute('content') : '';
+  var storedVer = localStorage.getItem('appVersion') || '';
+  if (appVer && appVer !== storedVer) {
+    localStorage.setItem('appVersion', appVer);
+    if (storedVer !== '') {
+      // Já tinha versão anterior — mostra botão de atualizar
+      document.getElementById('banner-update').style.display = 'block';
+    }
+  }
+
   // Service Worker — garante que o iPhone sempre carrega a versão mais recente
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').then(function(reg) {
@@ -1706,6 +1722,10 @@ window.onload = function() {
     });
   }
 };
+
+function forcarAtualizacao() {
+  window.location.href = window.location.pathname + '?v=' + Date.now();
+}
 </script>
 </body>
 </html>
