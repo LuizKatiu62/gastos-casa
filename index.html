@@ -799,7 +799,10 @@ function inicializarFirebase() {
         if (!fbData || !fbData.lancamentos) return;
         var localTs = localStorage.getItem('gastos_ts') ? new Date(localStorage.getItem('gastos_ts')).getTime() : 0;
         var fbTs = fbData._ts || 0;
-        if (fbTs > localTs + 1000) {
+        var localCount = getDados().lancamentos.length;
+        var fbCount = fbData.lancamentos.length;
+        // Só aplica dados do Firebase se for genuinamente mais recente (diferença > 5s) ou tiver mais lançamentos
+        if (fbTs > localTs + 5000 || (fbCount > localCount && fbTs > localTs)) {
           var d = Object.assign({}, fbData); delete d._ts;
           localStorage.setItem('gastos', JSON.stringify(d));
           localStorage.setItem('gastos_ts', new Date(fbTs).toISOString());
@@ -1444,8 +1447,9 @@ function salvarLancamento() {
   document.getElementById('sel-div').value = '';
   document.getElementById('inp-div-outros').style.display = 'none';
   _loja = ''; _lojaOutros = ''; _divSub = ''; _divOutros = ''; _carroSub = ''; _carroOutros = '';
-  renderizar();
   irPara('inicio');
+  renderizar();
+  setTimeout(renderizar, 300);
   mostrarToast('✅', 'Lançamento salvo!');
   verificarAlerta();
 }
@@ -1782,6 +1786,8 @@ function salvarLancamentoFoto() {
   verificarAlerta();
   mostrarToast('✅', 'Lançamento salvo!');
   irPara('inicio');
+  renderizar();
+  setTimeout(renderizar, 300);
 }
 
 // ─────────────────────────────
