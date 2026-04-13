@@ -783,6 +783,12 @@ function inicializarFirebase() {
         var d = Object.assign({}, fbData); delete d._ts;
         localStorage.setItem('gastos', JSON.stringify(d));
         localStorage.setItem('gastos_ts', new Date(fbTs).toISOString());
+        // Atualizar campos de período na tela
+        if (d.periodo) {
+          document.getElementById('inp-inicio').value = d.periodo.inicio;
+          document.getElementById('inp-fim').value    = d.periodo.fim;
+        }
+        if (d.limite) document.getElementById('inp-limite').value = d.limite;
         renderizar();
         syncStatus('#43a047', 'atualizado ☁️');
         mostrarToast('☁️', 'Dados atualizados da nuvem!');
