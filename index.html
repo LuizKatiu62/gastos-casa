@@ -529,6 +529,7 @@ body {
           <option value="amazon">📦 Amazon</option>
           <option value="restaurantes">🍽️ Restaurantes</option>
           <option value="dollarama">🏪 Dollarama</option>
+          <option value="staples">🖨️ Staples</option>
           <option value="esportes">🏃 Esportes</option>
           <option value="veterinario">🐾 Veterinário</option>
           <option value="lazer">🎉 Lazer</option>
@@ -681,6 +682,7 @@ body {
           <option value="amazon">📦 Amazon</option>
           <option value="restaurantes">🍽️ Restaurantes</option>
           <option value="dollarama">🏪 Dollarama</option>
+          <option value="staples">🖨️ Staples</option>
           <option value="esportes">🏃 Esportes</option>
           <option value="veterinario">🐾 Veterinário</option>
           <option value="lazer">🎉 Lazer</option>
@@ -1430,7 +1432,7 @@ function salvarLancamento() {
   if (!valor || valor <= 0) { mostrarToast('⚠️', 'Informe o valor gasto'); return; }
   if (!data) { mostrarToast('⚠️', 'Selecione a data'); return; }
   var CARRO_LABELS = { 'gas-rr':'⛽ Gasolina (Range Rover)', 'gas-pilot':'⛽ Gasolina (Pilot)', oleo:'🛢️ Óleo', pneu:'🔧 Pneu', pecas:'🔩 Peças', outros:'Outros' };
-  var DIV_LABELS = { roupas:'👕 Roupas', amazon:'📦 Amazon', restaurantes:'🍽️ Restaurantes', dollarama:'🏪 Dollarama', esportes:'🏃 Esportes', veterinario:'🐾 Veterinário', lazer:'🎉 Lazer', outros:'Outros' };
+  var DIV_LABELS = { roupas:'👕 Roupas', amazon:'📦 Amazon', restaurantes:'🍽️ Restaurantes', dollarama:'🏪 Dollarama', staples:'🖨️ Staples', esportes:'🏃 Esportes', veterinario:'🐾 Veterinário', lazer:'🎉 Lazer', outros:'Outros' };
   var carroFinal = _cat==='carro'   ? (_carroSub==='outros' ? (_carroOutros||'Outros') : (_carroSub ? CARRO_LABELS[_carroSub] : '')) : null;
   var lojaFinal  = _cat==='mercado'  ? (_loja==='outros'   ? (_lojaOutros||'Outros')  : (_loja   ? LOJAS[_loja]        : '')) : null;
   var divFinal   = _cat==='diversos' ? (_divSub==='outros' ? (_divOutros||'Outros')   : (_divSub ? DIV_LABELS[_divSub] : '')) : null;
@@ -1771,7 +1773,7 @@ function salvarLancamentoFoto() {
   var desc  = document.getElementById('foto-desc').value.trim();
   if (!valor || valor <= 0) { mostrarToast('⚠️', 'Informe o valor'); return; }
   if (!data)                { mostrarToast('⚠️', 'Informe a data');  return; }
-  var DIV_LABELS = { roupas:'👕 Roupas', amazon:'📦 Amazon', restaurantes:'🍽️ Restaurantes', dollarama:'🏪 Dollarama', esportes:'🏃 Esportes', veterinario:'🐾 Veterinário', lazer:'🎉 Lazer', outros:'Outros' };
+  var DIV_LABELS = { roupas:'👕 Roupas', amazon:'📦 Amazon', restaurantes:'🍽️ Restaurantes', dollarama:'🏪 Dollarama', staples:'🖨️ Staples', esportes:'🏃 Esportes', veterinario:'🐾 Veterinário', lazer:'🎉 Lazer', outros:'Outros' };
   var lojaFinal  = _fotoCat==='mercado'  ? (_fotoLoja==='outros'   ? (_fotoLojaOutros||'Outros') : (_fotoLoja   ? LOJAS[_fotoLoja]        : '')) : null;
   var divFinal   = _fotoCat==='diversos' ? (_fotoDivSub==='outros' ? (_fotoDivOutros||'Outros')  : (_fotoDivSub ? DIV_LABELS[_fotoDivSub] : '')) : null;
   var d = getDados();
