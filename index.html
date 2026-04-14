@@ -278,6 +278,19 @@ body {
 /* TOAST */
 .toast { position:fixed; top:16px; left:12px; right:12px; background:#1a1a2e; color:white; border-radius:14px; padding:14px 16px; font-size:14px; z-index:999; transform:translateY(-120px); opacity:0; transition:all 0.3s; display:flex; align-items:center; gap:10px; pointer-events:none; }
 .toast.visivel { transform:translateY(0); opacity:1; }
+/* MODAL EDIÇÃO */
+.edit-overlay { position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:800; display:flex; align-items:flex-end; justify-content:center; }
+.edit-modal { background:#fff; border-radius:20px 20px 0 0; padding:20px 16px 32px; width:100%; max-width:480px; max-height:92vh; overflow-y:auto; }
+.edit-modal h3 { font-size:16px; font-weight:800; color:#1565c0; margin:0 0 16px; }
+.edit-group { margin-bottom:12px; }
+.edit-group label { display:block; font-size:11px; font-weight:700; color:#888; text-transform:uppercase; margin-bottom:4px; }
+.edit-group input, .edit-group select { width:100%; padding:10px 12px; border:1.5px solid #ddd; border-radius:10px; font-size:15px; font-family:inherit; outline:none; background:#fff; }
+.edit-group input:focus, .edit-group select:focus { border-color:#1565c0; }
+.edit-btns { display:flex; gap:10px; margin-top:18px; }
+.edit-btn-save { flex:1; background:#1565c0; color:#fff; border:none; border-radius:12px; padding:14px; font-size:16px; font-weight:700; cursor:pointer; font-family:inherit; }
+.edit-btn-cancel { flex:1; background:#f5f5f5; color:#666; border:none; border-radius:12px; padding:14px; font-size:16px; font-weight:700; cursor:pointer; font-family:inherit; }
+.lanc-edit { background:none; border:none; color:#aaa; font-size:14px; cursor:pointer; padding:4px; }
+.lanc-edit:hover { color:#1565c0; }
 </style>
 </head>
 <body>
@@ -731,6 +744,84 @@ body {
   </div>
 </div>
 
+<!-- MODAL EDIÇÃO -->
+<div id="modal-edicao" style="display:none" class="edit-overlay" onclick="if(event.target===this)fecharModalEdicao()">
+  <div class="edit-modal">
+    <h3>✏️ Editar Lançamento</h3>
+    <div class="edit-group">
+      <label>Data</label>
+      <input type="date" id="edit-data">
+    </div>
+    <div class="edit-group">
+      <label>Valor (CAD $)</label>
+      <input type="number" id="edit-valor" step="0.01" min="0" inputmode="decimal">
+    </div>
+    <div class="edit-group">
+      <label>Categoria</label>
+      <select id="edit-cat" onchange="editCatChange()">
+        <option value="carro">🚗 Carro</option>
+        <option value="mercado">🛒 Supermercado</option>
+        <option value="diversos">🛍️ Diversos</option>
+      </select>
+    </div>
+    <!-- Carro -->
+    <div id="edit-sub-carro" class="edit-group" style="display:none">
+      <label>Subcategoria Carro</label>
+      <select id="edit-carro-sub" onchange="editCarroSubChange(this.value)">
+        <option value="">— Selecionar —</option>
+        <option value="gas-rr">⛽ Gasolina (Range Rover)</option>
+        <option value="gas-pilot">⛽ Gasolina (Pilot)</option>
+        <option value="oleo">🛢️ Óleo</option>
+        <option value="pneu">🔧 Pneu</option>
+        <option value="pecas">🔩 Peças</option>
+        <option value="outros">Outros</option>
+      </select>
+      <input type="text" id="edit-carro-outros" placeholder="Especifique..." style="display:none;margin-top:6px">
+    </div>
+    <!-- Mercado -->
+    <div id="edit-sub-mercado" class="edit-group" style="display:none">
+      <label>Loja</label>
+      <select id="edit-loja" onchange="editLojaChange(this.value)">
+        <option value="">— Selecionar —</option>
+        <option value="walmart">Walmart</option>
+        <option value="superstore">Superstore</option>
+        <option value="shoppers">Shoppers</option>
+        <option value="nofrills">No Frills</option>
+        <option value="costco">Costco</option>
+        <option value="vine">On the Vine</option>
+        <option value="outros">Outros</option>
+      </select>
+      <input type="text" id="edit-loja-outros" placeholder="Nome da loja..." style="display:none;margin-top:6px">
+    </div>
+    <!-- Diversos -->
+    <div id="edit-sub-diversos" class="edit-group" style="display:none">
+      <label>Subcategoria Diversos</label>
+      <select id="edit-div-sub" onchange="editDivSubChange(this.value)">
+        <option value="">— Selecionar —</option>
+        <option value="roupas">👕 Roupas</option>
+        <option value="amazon">📦 Amazon</option>
+        <option value="restaurantes">🍽️ Restaurantes</option>
+        <option value="dollarama">🏪 Dollarama</option>
+        <option value="staples">🖨️ Staples</option>
+        <option value="academia">💪 Academia</option>
+        <option value="esportes">🏃 Esportes</option>
+        <option value="veterinario">🐾 Veterinário</option>
+        <option value="lazer">🎉 Lazer</option>
+        <option value="outros">Outros</option>
+      </select>
+      <input type="text" id="edit-div-outros" placeholder="Especifique..." style="display:none;margin-top:6px">
+    </div>
+    <div class="edit-group">
+      <label>Descrição (opcional)</label>
+      <input type="text" id="edit-desc" placeholder="Ex: conta de luz, compras...">
+    </div>
+    <div class="edit-btns">
+      <button class="edit-btn-cancel" onclick="fecharModalEdicao()">Cancelar</button>
+      <button class="edit-btn-save" onclick="salvarEdicao()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
 <!-- NAV -->
 <nav class="nav">
   <button id="nb-inicio" class="active" onclick="irPara('inicio')"><span>🏠</span>Início</button>
@@ -1133,6 +1224,7 @@ function renderizarRecentes(todos) {
         '<div class="lanc-meta">'+formatarData(l.data)+' · '+NOMES[l.cat]+(l.loja?' · '+l.loja:'')+(l.divsub?' · '+l.divsub:'')+(l.sub&&l.cat==='carro'?' · '+(SUBS[l.sub]||l.sub):'')+'</div>' +
       '</div>' +
       '<div class="lanc-valor" style="color:'+CORES[l.cat]+'">'+formatar(l.valor)+'</div>' +
+      '<button class="lanc-edit" onclick="editarLancamento(\''+l.id+'\')">✏️</button>' +
       '<button class="lanc-del" onclick="excluir(\''+l.id+'\')">✕</button>' +
     '</div>';
   }).join('');
@@ -1168,6 +1260,7 @@ function irParaCategoria(cat) {
           '<div class="lanc-meta">'+formatarData(l.data)+(l.sub?' · '+SUBS[l.sub]:'')+'</div>' +
         '</div>' +
         '<div class="lanc-valor" style="color:'+CORES[cat]+'">'+formatar(l.valor)+'</div>' +
+        '<button class="lanc-edit" onclick="editarLancamento(\''+l.id+'\')">✏️</button>' +
         '<button class="lanc-del" onclick="excluir(\''+l.id+'\');irParaCategoria(\''+cat+'\')">✕</button>' +
       '</div>';
     }).join('');
@@ -1203,6 +1296,7 @@ function renderizarHistorico() {
             '<div class="lanc-meta">'+NOMES[l.cat]+(l.loja?' · '+l.loja:'')+(l.divsub?' · '+l.divsub:'')+(l.sub&&l.cat==='carro'?' · '+(SUBS[l.sub]||l.sub):'')+'</div>' +
           '</div>' +
           '<div class="lanc-valor" style="color:'+CORES[l.cat]+'">'+formatar(l.valor)+'</div>' +
+          '<button class="lanc-edit" onclick="editarLancamento(\''+l.id+'\')">✏️</button>' +
           '<button class="lanc-del" onclick="excluir(\''+l.id+'\');renderizarHistorico()">✕</button>' +
         '</div>';
       }).join('');
@@ -1472,6 +1566,109 @@ function excluir(id) {
   salvarDados(d);
   renderizar();
   mostrarToast('🗑️', 'Excluído');
+}
+
+// ─────────────────────────────
+// EDITAR LANÇAMENTO
+// ─────────────────────────────
+var _editId = null;
+var CARRO_LABELS_E = { 'gas-rr':'⛽ Gasolina (Range Rover)', 'gas-pilot':'⛽ Gasolina (Pilot)', oleo:'🛢️ Óleo', pneu:'🔧 Pneu', pecas:'🔩 Peças', outros:'Outros' };
+var DIV_LABELS_E   = { roupas:'👕 Roupas', amazon:'📦 Amazon', restaurantes:'🍽️ Restaurantes', dollarama:'🏪 Dollarama', staples:'🖨️ Staples', academia:'💪 Academia', esportes:'🏃 Esportes', veterinario:'🐾 Veterinário', lazer:'🎉 Lazer', outros:'Outros' };
+var LOJAS_INV = {};
+(function(){ Object.keys(LOJAS).forEach(function(k){ LOJAS_INV[LOJAS[k]] = k; }); })();
+var CARRO_INV = {};
+(function(){ Object.keys(CARRO_LABELS_E).forEach(function(k){ CARRO_INV[CARRO_LABELS_E[k]] = k; }); })();
+var DIV_INV = {};
+(function(){ Object.keys(DIV_LABELS_E).forEach(function(k){ DIV_INV[DIV_LABELS_E[k]] = k; }); })();
+
+function editarLancamento(id) {
+  var d = getDados();
+  var l = d.lancamentos.find(function(x){ return x.id === id; });
+  if (!l) return;
+  _editId = id;
+  document.getElementById('edit-data').value  = l.data  || '';
+  document.getElementById('edit-valor').value = l.valor || '';
+  document.getElementById('edit-desc').value  = l.desc  || '';
+  document.getElementById('edit-cat').value   = l.cat   || 'carro';
+  editCatChange();
+  // Preencher subcategorias
+  if (l.cat === 'carro') {
+    var carroKey = l.sub ? (CARRO_INV[l.sub] || 'outros') : '';
+    document.getElementById('edit-carro-sub').value = carroKey;
+    editCarroSubChange(carroKey);
+    if (carroKey === 'outros') document.getElementById('edit-carro-outros').value = l.sub || '';
+  } else if (l.cat === 'mercado') {
+    var lojaKey = l.loja ? (LOJAS_INV[l.loja] || 'outros') : '';
+    document.getElementById('edit-loja').value = lojaKey;
+    editLojaChange(lojaKey);
+    if (lojaKey === 'outros') document.getElementById('edit-loja-outros').value = l.loja || '';
+  } else if (l.cat === 'diversos') {
+    var divKey = l.divsub ? (DIV_INV[l.divsub] || 'outros') : '';
+    document.getElementById('edit-div-sub').value = divKey;
+    editDivSubChange(divKey);
+    if (divKey === 'outros') document.getElementById('edit-div-outros').value = l.divsub || '';
+  }
+  document.getElementById('modal-edicao').style.display = 'flex';
+}
+
+function fecharModalEdicao() {
+  document.getElementById('modal-edicao').style.display = 'none';
+  _editId = null;
+}
+
+function editCatChange() {
+  var cat = document.getElementById('edit-cat').value;
+  document.getElementById('edit-sub-carro').style.display    = cat === 'carro'    ? '' : 'none';
+  document.getElementById('edit-sub-mercado').style.display  = cat === 'mercado'  ? '' : 'none';
+  document.getElementById('edit-sub-diversos').style.display = cat === 'diversos' ? '' : 'none';
+}
+
+function editCarroSubChange(v) {
+  document.getElementById('edit-carro-outros').style.display = v === 'outros' ? '' : 'none';
+}
+function editLojaChange(v) {
+  document.getElementById('edit-loja-outros').style.display = v === 'outros' ? '' : 'none';
+}
+function editDivSubChange(v) {
+  document.getElementById('edit-div-outros').style.display = v === 'outros' ? '' : 'none';
+}
+
+function salvarEdicao() {
+  if (!_editId) return;
+  var valor = parseFloat(document.getElementById('edit-valor').value);
+  var data  = document.getElementById('edit-data').value;
+  if (!valor || valor <= 0) { mostrarToast('⚠️', 'Informe o valor'); return; }
+  if (!data) { mostrarToast('⚠️', 'Informe a data'); return; }
+  var cat = document.getElementById('edit-cat').value;
+  var carroSubKey = document.getElementById('edit-carro-sub').value;
+  var lojaKey     = document.getElementById('edit-loja').value;
+  var divSubKey   = document.getElementById('edit-div-sub').value;
+  var carroFinal = cat === 'carro'
+    ? (carroSubKey === 'outros' ? (document.getElementById('edit-carro-outros').value.trim() || 'Outros') : (carroSubKey ? CARRO_LABELS_E[carroSubKey] : null))
+    : null;
+  var lojaFinal  = cat === 'mercado'
+    ? (lojaKey === 'outros' ? (document.getElementById('edit-loja-outros').value.trim() || 'Outros') : (lojaKey ? LOJAS[lojaKey] : null))
+    : null;
+  var divFinal   = cat === 'diversos'
+    ? (divSubKey === 'outros' ? (document.getElementById('edit-div-outros').value.trim() || 'Outros') : (divSubKey ? DIV_LABELS_E[divSubKey] : null))
+    : null;
+  var d = getDados();
+  var idx = d.lancamentos.findIndex(function(x){ return x.id === _editId; });
+  if (idx === -1) { mostrarToast('⚠️', 'Lançamento não encontrado'); return; }
+  d.lancamentos[idx] = Object.assign({}, d.lancamentos[idx], {
+    data:   data,
+    valor:  valor,
+    cat:    cat,
+    sub:    carroFinal || null,
+    loja:   lojaFinal  || null,
+    divsub: divFinal   || null,
+    desc:   document.getElementById('edit-desc').value.trim()
+  });
+  salvarDados(d);
+  fecharModalEdicao();
+  renderizar();
+  renderizarHistorico();
+  mostrarToast('✅', 'Lançamento atualizado!');
 }
 
 // ─────────────────────────────
