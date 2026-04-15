@@ -868,6 +868,31 @@ function inicializarFirebase() {
     // Carregar dados mais recentes ao iniciar
     _fbRef.once('value').then(function(snap) {
       var fbData = snap.val();
+
+      // ── Processar pendentes ANTES de qualquer sync ──
+      var _pendingImportados = 0;
+      if (fbData && fbData.pending && typeof fbData.pending === 'object') {
+        var pendingKeys = Object.keys(fbData.pending);
+        if (pendingKeys.length > 0) {
+          var localD = getDados();
+          pendingKeys.forEach(function(k) {
+            var lanc = fbData.pending[k];
+            if (lanc && lanc.id && !localD.lancamentos.some(function(l){ return l.id === lanc.id; })) {
+              localD.lancamentos.push(lanc);
+              _pendingImportados++;
+            }
+          });
+          if (_pendingImportados > 0) {
+            localStorage.setItem('gastos', JSON.stringify(localD));
+            localStorage.setItem('gastos_ts', new Date().toISOString());
+          }
+          // Remover pending do fbData para o sync não reescrevê-los
+          fbData = Object.assign({}, fbData);
+          delete fbData.pending;
+          _fbRef.child('pending').remove();
+        }
+      }
+
       var localTs = localStorage.getItem('gastos_ts') ? new Date(localStorage.getItem('gastos_ts')).getTime() : 0;
       var fbTs = fbData && fbData._ts ? fbData._ts : 0;
       if (!fbData || !fbData.lancamentos) {
@@ -876,11 +901,15 @@ function inicializarFirebase() {
         _fbRef.set(local);
         syncStatus('#43a047', 'sincronizado');
       } else if (fbTs > localTs + 1000) {
-        // Firebase mais recente — usar dados da nuvem
+        // Firebase mais recente — usar dados da nuvem (já sem pending)
         var d = Object.assign({}, fbData); delete d._ts;
+        // Mesclar com pendentes já importados
+        var localNow = getDados();
+        if (_pendingImportados > 0) {
+          d.lancamentos = localNow.lancamentos;
+        }
         localStorage.setItem('gastos', JSON.stringify(d));
-        localStorage.setItem('gastos_ts', new Date(fbTs).toISOString());
-        // Atualizar campos de período na tela
+        localStorage.setItem('gastos_ts', new Date().toISOString());
         if (d.periodo) {
           document.getElementById('inp-inicio').value = d.periodo.inicio;
           document.getElementById('inp-fim').value    = d.periodo.fim;
@@ -888,12 +917,18 @@ function inicializarFirebase() {
         if (d.limite) document.getElementById('inp-limite').value = d.limite;
         renderizar();
         syncStatus('#43a047', 'atualizado ☁️');
-        mostrarToast('☁️', 'Dados atualizados da nuvem!');
+        if (_pendingImportados === 0) mostrarToast('☁️', 'Dados atualizados da nuvem!');
       } else {
         // Local mais recente — enviar para nuvem
-        var local = getDados(); local._ts = localTs || Date.now();
+        var local = getDados(); local._ts = Date.now();
         _fbRef.set(local);
         syncStatus('#43a047', 'sincronizado');
+      }
+      if (_pendingImportados > 0) {
+        var local = getDados(); local._ts = Date.now();
+        _fbRef.set(local);
+        renderizar();
+        mostrarToast('📲', _pendingImportados === 1 ? 'Lançamento importado do iPhone!' : _pendingImportados + ' lançamentos importados do iPhone!');
       }
       // Listener em tempo real para mudanças de outro dispositivo
       _fbRef.on('value', function(snap) {
