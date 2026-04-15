@@ -1274,8 +1274,9 @@ function renderizarBarras(lista, p) {
 function renderizarRecentes(todos) {
   var el = document.getElementById('lista-recentes');
   var rec = todos.slice().sort(function(a,b){
-    var d = b.data.localeCompare(a.data);
-    return d !== 0 ? d : (b.id||'').localeCompare(a.id||'');
+    if (b.data > a.data) return 1;
+    if (b.data < a.data) return -1;
+    return (parseInt(b.id||0) - parseInt(a.id||0));
   }).slice(0,8);
   if (!rec.length) {
     el.innerHTML = '<div class="vazio">📭 Nenhum lançamento ainda.<br>Toque em <b>Registrar Gasto</b> para começar.</div>';
