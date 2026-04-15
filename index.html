@@ -1273,7 +1273,10 @@ function renderizarBarras(lista, p) {
 
 function renderizarRecentes(todos) {
   var el = document.getElementById('lista-recentes');
-  var rec = todos.slice().sort(function(a,b){ return b.data.localeCompare(a.data); }).slice(0,8);
+  var rec = todos.slice().sort(function(a,b){
+    var d = b.data.localeCompare(a.data);
+    return d !== 0 ? d : (b.id||'').localeCompare(a.id||'');
+  }).slice(0,8);
   if (!rec.length) {
     el.innerHTML = '<div class="vazio">📭 Nenhum lançamento ainda.<br>Toque em <b>Registrar Gasto</b> para começar.</div>';
     return;
@@ -1336,7 +1339,10 @@ function irParaCategoria(cat) {
 function renderizarHistorico() {
   document.getElementById('label-hist').textContent = nomeMes(_mesHist);
   var d = getDados();
-  var lista = lancamentosMes(d.lancamentos, _mesHist).sort(function(a,b){ return b.data.localeCompare(a.data); });
+  var lista = lancamentosMes(d.lancamentos, _mesHist).sort(function(a,b){
+    var dd = b.data.localeCompare(a.data);
+    return dd !== 0 ? dd : (b.id||'').localeCompare(a.id||'');
+  });
   var el = document.getElementById('corpo-historico');
   if (!lista.length) {
     el.innerHTML = '<div class="vazio">📭 Sem lançamentos neste mês</div>';
