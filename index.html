@@ -899,7 +899,34 @@ function inicializarFirebase() {
       _fbRef.on('value', function(snap) {
         if (_fbSalvando) return;
         var fbData = snap.val();
-        if (!fbData || !fbData.lancamentos) return;
+        if (!fbData) return;
+
+        // ── Processar lançamentos pendentes (vindos do iPhone Shortcut) ──
+        if (fbData.pending && typeof fbData.pending === 'object') {
+          var pendingKeys = Object.keys(fbData.pending);
+          if (pendingKeys.length > 0) {
+            var d = getDados();
+            var adicionados = 0;
+            pendingKeys.forEach(function(k) {
+              var lanc = fbData.pending[k];
+              if (lanc && lanc.id && !d.lancamentos.some(function(l){ return l.id === lanc.id; })) {
+                d.lancamentos.push(lanc);
+                adicionados++;
+              }
+            });
+            if (adicionados > 0) {
+              salvarDados(d);
+              _fbRef.child('pending').remove();
+              renderizar();
+              if (document.getElementById('tela-historico').classList.contains('ativa')) renderizarHistorico();
+              if (document.getElementById('tela-relatorio').classList.contains('ativa')) { setRelPeriodo(_relTipo); renderizarRelatorio(); }
+              mostrarToast('📲', adicionados === 1 ? 'Lançamento importado do iPhone!' : adicionados + ' lançamentos importados do iPhone!');
+              return;
+            }
+          }
+        }
+
+        if (!fbData.lancamentos) return;
         var localTs = localStorage.getItem('gastos_ts') ? new Date(localStorage.getItem('gastos_ts')).getTime() : 0;
         var fbTs = fbData._ts || 0;
         var localCount = getDados().lancamentos.length;
@@ -1668,6 +1695,8 @@ function salvarEdicao() {
   fecharModalEdicao();
   renderizar();
   renderizarHistorico();
+  setRelPeriodo(_relTipo);
+  renderizarRelatorio();
   mostrarToast('✅', 'Lançamento atualizado!');
 }
 

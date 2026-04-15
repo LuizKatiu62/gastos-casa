@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Gasto Rápido">
+  <title>Gasto Rápido</title>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+      background: #0f1923;
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: env(safe-area-inset-top, 20px) 16px env(safe-area-inset-bottom, 16px);
+      padding-top: max(env(safe-area-inset-top), 20px);
+    }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 0 20px;
+    }
+    .header h1 { font-size: 18px; font-weight: 700; color: #fff; }
+    .header-date { font-size: 13px; color: #8899aa; }
+
+    /* ── Valor ── */
+    .valor-wrap {
+      background: #1a2535;
+      border-radius: 20px;
+      padding: 20px;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    .valor-label { font-size: 12px; color: #8899aa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+    .valor-input {
+      width: 100%;
+      background: none;
+      border: none;
+      outline: none;
+      font-size: 44px;
+      font-weight: 700;
+      color: #fff;
+      text-align: center;
+      caret-color: #4fc3f7;
+    }
+    .valor-input::placeholder { color: #2a3a4a; }
+
+    /* ── Categorias ── */
+    .section-label {
+      font-size: 12px;
+      color: #8899aa;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+    }
+    .cats {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .cat-btn {
+      background: #1a2535;
+      border: 2px solid transparent;
+      border-radius: 16px;
+      padding: 16px 8px;
+      text-align: center;
+      cursor: pointer;
+      transition: all .15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .cat-btn .icon { font-size: 26px; display: block; margin-bottom: 4px; }
+    .cat-btn .name { font-size: 12px; font-weight: 600; color: #8899aa; }
+    .cat-btn.active-mercado { border-color: #43a047; background: #0e2212; }
+    .cat-btn.active-mercado .name { color: #66bb6a; }
+    .cat-btn.active-carro   { border-color: #e53935; background: #220d0d; }
+    .cat-btn.active-carro   .name { color: #ef5350; }
+    .cat-btn.active-diversos{ border-color: #fb8c00; background: #221608; }
+    .cat-btn.active-diversos .name { color: #ffa726; }
+
+    /* ── Subcategorias ── */
+    .subcats {
+      display: none;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .subcats.visible { display: flex; }
+    .sub-btn {
+      background: #1a2535;
+      border: 2px solid transparent;
+      border-radius: 50px;
+      padding: 10px 16px;
+      font-size: 14px;
+      color: #aabbcc;
+      cursor: pointer;
+      white-space: nowrap;
+      -webkit-tap-highlight-color: transparent;
+      transition: all .15s;
+    }
+    .sub-btn.active { border-color: #4fc3f7; background: #0d2030; color: #4fc3f7; }
+
+    /* ── Data ── */
+    .data-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #1a2535;
+      border-radius: 14px;
+      padding: 14px 16px;
+      margin-bottom: 20px;
+    }
+    .data-wrap label { font-size: 13px; color: #8899aa; flex-shrink: 0; }
+    .data-input {
+      background: none;
+      border: none;
+      outline: none;
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+      width: 100%;
+      text-align: right;
+    }
+
+    /* ── Botão Salvar ── */
+    .btn-salvar {
+      width: 100%;
+      padding: 18px;
+      border-radius: 18px;
+      border: none;
+      font-size: 18px;
+      font-weight: 700;
+      cursor: pointer;
+      background: #1565c0;
+      color: #fff;
+      -webkit-tap-highlight-color: transparent;
+      transition: opacity .15s, transform .1s;
+      margin-top: auto;
+    }
+    .btn-salvar:active { opacity: .8; transform: scale(.98); }
+    .btn-salvar:disabled { background: #1a2535; color: #4a5a6a; }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: calc(env(safe-area-inset-bottom, 0px) + 30px);
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #1b5e20;
+      color: #fff;
+      padding: 14px 28px;
+      border-radius: 50px;
+      font-size: 16px;
+      font-weight: 700;
+      opacity: 0;
+      transition: opacity .3s, transform .3s;
+      pointer-events: none;
+      white-space: nowrap;
+      z-index: 999;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ── Erro ── */
+    .toast-err { background: #b71c1c; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>💸 Gasto Rápido</h1>
+  <span class="header-date" id="hdr-date"></span>
+</div>
+
+<!-- Valor -->
+<div class="valor-wrap">
+  <div class="valor-label">Valor</div>
+  <input id="inp-valor" class="valor-input" type="number" inputmode="decimal"
+         placeholder="0.00" step="0.01" min="0" autofocus>
+</div>
+
+<!-- Categoria -->
+<div class="section-label">Categoria</div>
+<div class="cats">
+  <button class="cat-btn" id="cat-mercado" onclick="selecionarCat('mercado')">
+    <span class="icon">🛒</span>
+    <span class="name">Mercado</span>
+  </button>
+  <button class="cat-btn" id="cat-carro" onclick="selecionarCat('carro')">
+    <span class="icon">🚗</span>
+    <span class="name">Carro</span>
+  </button>
+  <button class="cat-btn" id="cat-diversos" onclick="selecionarCat('diversos')">
+    <span class="icon">🔖</span>
+    <span class="name">Diversos</span>
+  </button>
+</div>
+
+<!-- Subcategorias Mercado -->
+<div class="subcats" id="subs-mercado">
+  <button class="sub-btn" onclick="selecionarSub('Walmart')">Walmart</button>
+  <button class="sub-btn" onclick="selecionarSub('Superstore')">Superstore</button>
+  <button class="sub-btn" onclick="selecionarSub('Shoppers')">Shoppers</button>
+  <button class="sub-btn" onclick="selecionarSub('No Frills')">No Frills</button>
+  <button class="sub-btn" onclick="selecionarSub('Costco')">Costco</button>
+  <button class="sub-btn" onclick="selecionarSub('On the Vine')">On the Vine</button>
+  <button class="sub-btn" onclick="selecionarSub('Outros')">Outros</button>
+</div>
+
+<!-- Subcategorias Carro -->
+<div class="subcats" id="subs-carro">
+  <button class="sub-btn" onclick="selecionarSub('⛽ Gasolina (Range Rover)')">Gasolina RR</button>
+  <button class="sub-btn" onclick="selecionarSub('⛽ Gasolina (Pilot)')">Gasolina Pilot</button>
+  <button class="sub-btn" onclick="selecionarSub('🛢️ Óleo')">Óleo</button>
+  <button class="sub-btn" onclick="selecionarSub('🔧 Pneu')">Pneu</button>
+  <button class="sub-btn" onclick="selecionarSub('🔩 Peças')">Peças</button>
+  <button class="sub-btn" onclick="selecionarSub('Outros')">Outros</button>
+</div>
+
+<!-- Subcategorias Diversos -->
+<div class="subcats" id="subs-diversos">
+  <button class="sub-btn" onclick="selecionarSub('🍽️ Restaurantes')">Restaurantes</button>
+  <button class="sub-btn" onclick="selecionarSub('📦 Amazon')">Amazon</button>
+  <button class="sub-btn" onclick="selecionarSub('👕 Roupas')">Roupas</button>
+  <button class="sub-btn" onclick="selecionarSub('🏪 Dollarama')">Dollarama</button>
+  <button class="sub-btn" onclick="selecionarSub('💪 Academia')">Academia</button>
+  <button class="sub-btn" onclick="selecionarSub('🏃 Esportes')">Esportes</button>
+  <button class="sub-btn" onclick="selecionarSub('🎉 Lazer')">Lazer</button>
+  <button class="sub-btn" onclick="selecionarSub('🖨️ Staples')">Staples</button>
+  <button class="sub-btn" onclick="selecionarSub('🐾 Veterinário')">Veterinário</button>
+  <button class="sub-btn" onclick="selecionarSub('Outros')">Outros</button>
+</div>
+
+<!-- Data -->
+<div class="data-wrap">
+  <label>Data</label>
+  <input id="inp-data" class="data-input" type="date">
+</div>
+
+<button class="btn-salvar" id="btn-salvar" onclick="salvar()">Salvar</button>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Config ──────────────────────────────────────────
+var FB_CONFIG = {
+  apiKey: "AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU",
+  authDomain: "gastos-casa-7f431.firebaseapp.com",
+  databaseURL: "https://gastos-casa-7f431-default-rtdb.firebaseio.com",
+  projectId: "gastos-casa-7f431",
+  storageBucket: "gastos-casa-7f431.firebasestorage.app",
+  messagingSenderId: "272395890131",
+  appId: "1:27239589031:web:5bd6057f62fe6b7abc9326"
+};
+var FB_PATH = 'gastos/lk62-gastos-9f3a7b2e';
+
+var _cat = null, _sub = null, _fbRef = null;
+
+// ── Init ────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', function() {
+  // Data de hoje
+  var hoje = new Date();
+  var y = hoje.getFullYear();
+  var m = String(hoje.getMonth() + 1).padStart(2, '0');
+  var d = String(hoje.getDate()).padStart(2, '0');
+  document.getElementById('inp-data').value = y + '-' + m + '-' + d;
+  document.getElementById('hdr-date').textContent =
+    hoje.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' });
+
+  // Firebase
+  try {
+    firebase.initializeApp(FB_CONFIG);
+    _fbRef = firebase.database().ref(FB_PATH);
+  } catch(e) { console.warn('Firebase:', e); }
+
+  document.getElementById('inp-valor').focus();
+});
+
+// ── Selecionar categoria ─────────────────────────────
+function selecionarCat(cat) {
+  _cat = cat;
+  _sub = null;
+
+  ['mercado','carro','diversos'].forEach(function(c) {
+    document.getElementById('cat-' + c).className = 'cat-btn' + (c === cat ? ' active-' + c : '');
+    document.getElementById('subs-' + c).classList.toggle('visible', c === cat);
+  });
+
+  // Limpar seleção de sub
+  document.querySelectorAll('.sub-btn').forEach(function(b) { b.classList.remove('active'); });
+}
+
+// ── Selecionar subcategoria ──────────────────────────
+function selecionarSub(sub) {
+  _sub = sub;
+  document.querySelectorAll('.sub-btn').forEach(function(b) {
+    b.classList.toggle('active', b.textContent.trim() === sub || b.getAttribute('onclick').includes("'" + sub + "'"));
+  });
+}
+
+// ── Salvar ───────────────────────────────────────────
+function salvar() {
+  var valor = parseFloat(document.getElementById('inp-valor').value);
+  var data  = document.getElementById('inp-data').value;
+
+  if (!valor || valor <= 0) { toast('Informe o valor', true); return; }
+  if (!_cat)                { toast('Escolha a categoria', true); return; }
+  if (!data)                { toast('Informe a data', true); return; }
+
+  var id = Date.now().toString();
+  var lanc = {
+    id:     id,
+    cat:    _cat,
+    sub:    (_cat === 'carro'    ? _sub : null) || null,
+    loja:   (_cat === 'mercado'  ? _sub : null) || null,
+    divsub: (_cat === 'diversos' ? _sub : null) || null,
+    valor:  valor,
+    data:   data,
+    desc:   ''
+  };
+
+  var btn = document.getElementById('btn-salvar');
+  btn.disabled = true;
+  btn.textContent = 'Salvando...';
+
+  if (!_fbRef) {
+    toast('Sem conexão com Firebase', true);
+    btn.disabled = false; btn.textContent = 'Salvar';
+    return;
+  }
+
+  // Grava na fila pending — o app principal importa ao abrir
+  _fbRef.child('pending/' + id).set(lanc).then(function() {
+    toast('✅  CA$ ' + valor.toFixed(2) + ' salvo!');
+    // Reset
+    document.getElementById('inp-valor').value = '';
+    document.getElementById('inp-valor').focus();
+    ['mercado','carro','diversos'].forEach(function(c) {
+      document.getElementById('cat-' + c).className = 'cat-btn';
+      document.getElementById('subs-' + c).classList.remove('visible');
+    });
+    document.querySelectorAll('.sub-btn').forEach(function(b) { b.classList.remove('active'); });
+    _cat = null; _sub = null;
+    btn.disabled = false; btn.textContent = 'Salvar';
+  }).catch(function(e) {
+    toast('Erro ao salvar: ' + e.message, true);
+    btn.disabled = false; btn.textContent = 'Salvar';
+  });
+}
+
+// ── Toast ────────────────────────────────────────────
+function toast(msg, err) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast' + (err ? ' toast-err' : '') + ' show';
+  setTimeout(function() { el.classList.remove('show'); }, 2500);
+}
+</script>
+</body>
+</html>
