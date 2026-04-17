@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260417-005">
+<meta name="app-version" content="20260417-006">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -22,6 +22,28 @@
 #app-loading .ld-icon { font-size: 48px; animation: ld-pulse 1.2s ease-in-out infinite; }
 #app-loading .ld-txt  { font-size: 15px; font-weight: 600; color: #6b7280; font-family: -apple-system, sans-serif; }
 @keyframes ld-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.92)} }
+
+/* ── LOGIN SCREEN ── */
+#tela-login {
+  position: fixed; inset: 0; z-index: 9998;
+  background: linear-gradient(150deg, #1d4ed8 0%, #1e3a8a 100%);
+  display: none; flex-direction: column; align-items: center; justify-content: center; padding: 24px;
+}
+#tela-login.ativa { display: flex; }
+.login-card {
+  background: #fff; border-radius: 20px; padding: 32px 28px;
+  width: 100%; max-width: 360px; box-shadow: 0 20px 60px rgba(0,0,0,.3);
+}
+.login-logo { text-align: center; font-size: 52px; margin-bottom: 6px; }
+.login-title { text-align: center; font-size: 20px; font-weight: 700; color: #111827; margin-bottom: 2px; }
+.login-sub { text-align: center; font-size: 13px; color: #6b7280; margin-bottom: 28px; }
+.login-campo { margin-bottom: 16px; }
+.login-campo label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+.login-campo input { width: 100%; padding: 13px 14px; border: 1.5px solid #e5e7eb; border-radius: 10px; font-size: 16px; outline: none; box-sizing: border-box; }
+.login-campo input:focus { border-color: #1d4ed8; }
+.login-btn { width: 100%; padding: 14px; background: #1d4ed8; color: #fff; border: none; border-radius: 10px; font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 8px; }
+.login-btn:disabled { opacity: .55; cursor: default; }
+.login-erro { color: #ef4444; font-size: 13px; text-align: center; margin-top: 12px; min-height: 18px; }
 
 /* ── RESET & BASE ── */
 *, *::before, *::after { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
@@ -491,6 +513,25 @@ body {
 <div id="app-loading">
   <div class="ld-icon">💳</div>
   <div class="ld-txt">Carregando…</div>
+</div>
+
+<div id="tela-login">
+  <div class="login-card">
+    <div class="login-logo">💳</div>
+    <div class="login-title">Gastos da Casa</div>
+    <div class="login-sub">Entre para acessar seus dados</div>
+    <div class="login-campo">
+      <label>E-mail</label>
+      <input type="email" id="login-email" placeholder="seu@email.com" inputmode="email" autocomplete="email">
+    </div>
+    <div class="login-campo">
+      <label>Senha</label>
+      <input type="password" id="login-senha" placeholder="••••••••" autocomplete="current-password"
+             onkeydown="if(event.key==='Enter')fazerLogin()">
+    </div>
+    <button class="login-btn" id="login-btn" onclick="fazerLogin()">Entrar</button>
+    <div class="login-erro" id="login-erro"></div>
+  </div>
 </div>
 
 <div class="toast" id="toast"><span id="ti"></span><span id="tm"></span></div>
@@ -1137,6 +1178,33 @@ var LOJAS = { walmart:'Walmart', superstore:'Superstore', shoppers:'Shoppers', n
 // ─────────────────────────────
 // FIREBASE SYNC
 // ─────────────────────────────
+// ─────────────────────────────
+// AUTENTICAÇÃO
+// ─────────────────────────────
+function mostrarLogin() {
+  document.getElementById('tela-login').classList.add('ativa');
+}
+function esconderLogin() {
+  document.getElementById('tela-login').classList.remove('ativa');
+}
+function fazerLogin() {
+  var email = document.getElementById('login-email').value.trim();
+  var senha = document.getElementById('login-senha').value;
+  var btn   = document.getElementById('login-btn');
+  var erro  = document.getElementById('login-erro');
+  erro.textContent = '';
+  if (!email || !senha) { erro.textContent = 'Preencha e-mail e senha.'; return; }
+  btn.disabled = true; btn.textContent = 'Entrando…';
+  firebase.auth().signInWithEmailAndPassword(email, senha)
+    .catch(function() {
+      btn.disabled = false; btn.textContent = 'Entrar';
+      erro.textContent = 'E-mail ou senha incorretos.';
+    });
+}
+function fazerLogout() {
+  firebase.auth().signOut();
+}
+
 var FB_CONFIG = {
   apiKey: "AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU",
   authDomain: "gastos-casa-7f431.firebaseapp.com",
@@ -1147,15 +1215,16 @@ var FB_CONFIG = {
   databaseURL: "https://gastos-casa-7f431-default-rtdb.firebaseio.com"
 };
 var FB_SECRET = 'lk62-gastos-9f3a7b2e';
-var _fbRef = null, _fbAtivo = false, _fbSalvando = false;
+var _fbRef = null, _fbAtivo = false, _fbSalvando = false, _fbIniciado = false;
 
 function syncStatus(cor, txt) {
   document.getElementById('sync-dot').style.background = cor;
   document.getElementById('sync-txt').textContent = txt;
 }
 function inicializarFirebase() {
+  if (_fbIniciado) return;
+  _fbIniciado = true;
   try {
-    firebase.initializeApp(FB_CONFIG);
     _fbRef = firebase.database().ref('gastos/' + FB_SECRET);
     _fbAtivo = true;
     syncStatus('#ffb300', 'conectando...');
@@ -2796,15 +2865,8 @@ function restaurarBackup(input) {
   reader.readAsText(input.files[0]);
 }
 function sairApp() {
-  var isPWA = window.navigator.standalone === true ||
-              window.matchMedia('(display-mode: standalone)').matches;
-  if (isPWA) {
-    mostrarToast('🏠', 'Pressione o botão Home para sair');
-  } else {
-    window.close();
-    setTimeout(function() {
-      mostrarToast('🏠', 'Pressione o botão Home para sair');
-    }, 300);
+  if (confirm('Sair da conta?')) {
+    fazerLogout();
   }
 }
 
@@ -3028,8 +3090,16 @@ window.onload = function() {
   // Atualiza preview de parcelamento ao digitar valor
   document.getElementById('inp-valor').addEventListener('input', atualizarPreviewParcela);
 
-  // Inicializar sincronização Firebase
-  inicializarFirebase();
+  // Inicializar Firebase e aguardar autenticação
+  try { firebase.initializeApp(FB_CONFIG); } catch(e) {}
+  firebase.auth().onAuthStateChanged(function(user) {
+    if (user) {
+      esconderLogin();
+      inicializarFirebase();
+    } else {
+      mostrarLogin();
+    }
+  });
 
   // Verificar versão — mostra botão de atualizar se há nova versão
   var metaVer = document.querySelector('meta[name="app-version"]');
@@ -3065,6 +3135,7 @@ function forcarAtualizacao() {
 
 <!-- Firebase carregado no fim do body para não bloquear o render -->
 <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 </body>
 </html>
