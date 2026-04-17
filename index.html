@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260417-003">
+<meta name="app-version" content="20260417-004">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -1828,10 +1828,13 @@ function exportarPDF() {
       'th:last-child{text-align:right}' +
       '.rodape{margin-top:24px;font-size:11px;color:#9ca3af;text-align:center}' +
       '.btn-print{display:block;width:100%;padding:14px;background:#1d4ed8;color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;margin-bottom:20px}' +
-      '@media print{.btn-print{display:none}}' +
+      '@media print{.btn-print{display:none}.btn-fechar{display:none}}' +
     '</style></head><body>' +
     '<div class="page">' +
-      '<button class="btn-print" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>' +
+      '<div style="display:flex;gap:10px;margin-bottom:20px">' +
+        '<button class="btn-print" style="flex:1;margin-bottom:0" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>' +
+        '<button class="btn-fechar" onclick="window.close()" style="padding:14px 20px;background:#f3f4f6;color:#374151;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer">← Fechar</button>' +
+      '</div>' +
       '<h1>💳 Gastos da Casa</h1>' +
       '<div class="sub">Histórico de transações — ' + mesLabel + '</div>' +
       '<div class="resumo-box">' +
@@ -2969,8 +2972,8 @@ function salvarLancamentoFoto() {
 // ─────────────────────────────
 // INÍCIO
 // ─────────────────────────────
-window.onload = function() {
-  // Esconder tela de loading
+document.addEventListener('DOMContentLoaded', function() {
+  // Esconder tela de loading (DOMContentLoaded é mais rápido que window.onload)
   var ld = document.getElementById('app-loading');
   if (ld) ld.style.display = 'none';
 
