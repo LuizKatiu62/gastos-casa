@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260417-008">
+<meta name="app-version" content="20260417-009">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -2286,12 +2286,41 @@ function renderizarParcelas() {
     return maxB - maxA;
   });
 
-  var html = '<div class="card" style="display:flex;gap:10px;margin-bottom:10px">' +
-    '<button style="flex:1;padding:13px 8px;border:none;border-radius:14px;font-size:14px;font-weight:700;cursor:pointer;background:#7c3aed;color:#fff;font-family:inherit" onclick="exportarPDFParcelas()">🖨️ PDF</button>' +
-    '</div>';
-
+  // Calcula totais globais
   var COR  = { mercado:'#16a34a', carro:'#dc2626', diversos:'#ea580c' };
   var ICO  = { mercado:'🛒', carro:'🚗', diversos:'🛍️' };
+  var totalGeralPago = 0, totalGeralRestante = 0, totalGeralCompromisso = 0;
+  keys.forEach(function(gid) {
+    var g = grupos[gid]; var pagas = 0;
+    for (var n = 1; n <= g.total; n++) { var l = g.lancs[n]; if (l && l.data <= hj) pagas++; }
+    totalGeralPago       += pagas * g.valorParc;
+    totalGeralRestante   += (g.total - pagas) * g.valorParc;
+    totalGeralCompromisso+= g.total * g.valorParc;
+  });
+
+  var html =
+    '<div class="card" style="background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;border-radius:16px;padding:16px;margin-bottom:12px">' +
+      '<div style="font-size:12px;opacity:.8;margin-bottom:10px;font-weight:600">RESUMO PARCELAMENTOS</div>' +
+      '<div style="display:flex;justify-content:space-between;gap:8px">' +
+        '<div style="text-align:center;flex:1">' +
+          '<div style="font-size:11px;opacity:.75;margin-bottom:2px">Compromisso total</div>' +
+          '<div style="font-size:16px;font-weight:800">'+formatar(totalGeralCompromisso)+'</div>' +
+        '</div>' +
+        '<div style="width:1px;background:rgba(255,255,255,.2)"></div>' +
+        '<div style="text-align:center;flex:1">' +
+          '<div style="font-size:11px;opacity:.75;margin-bottom:2px">Já pago</div>' +
+          '<div style="font-size:16px;font-weight:800;color:#bbf7d0">'+formatar(totalGeralPago)+'</div>' +
+        '</div>' +
+        '<div style="width:1px;background:rgba(255,255,255,.2)"></div>' +
+        '<div style="text-align:center;flex:1">' +
+          '<div style="font-size:11px;opacity:.75;margin-bottom:2px">Restante</div>' +
+          '<div style="font-size:16px;font-weight:800;color:#fde68a">'+formatar(totalGeralRestante)+'</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="card" style="display:flex;gap:10px;margin-bottom:10px">' +
+    '<button style="flex:1;padding:13px 8px;border:none;border-radius:14px;font-size:14px;font-weight:700;cursor:pointer;background:#7c3aed;color:#fff;font-family:inherit" onclick="exportarPDFParcelas()">🖨️ PDF</button>' +
+    '</div>';
 
   keys.forEach(function(gid) {
     var g   = grupos[gid];
@@ -2357,6 +2386,15 @@ function exportarPDFParcelas() {
   var COR = { mercado:'#16a34a', carro:'#dc2626', diversos:'#ea580c' };
   var ICO = { mercado:'🛒', carro:'🚗', diversos:'🛍️' };
 
+  var totPago = 0, totRest = 0, totComp = 0;
+  keys.forEach(function(gid) {
+    var g = grupos[gid]; var pagas = 0;
+    for (var n = 1; n <= g.total; n++) { var l = g.lancs[n]; if (l && l.data <= hj) pagas++; }
+    totPago += pagas * g.valorParc;
+    totRest += (g.total - pagas) * g.valorParc;
+    totComp += g.total * g.valorParc;
+  });
+
   var linhas = '';
   keys.forEach(function(gid) {
     var g = grupos[gid]; var cor = COR[g.cat]||'#7c3aed'; var ico = ICO[g.cat]||'📦';
@@ -2399,7 +2437,14 @@ function exportarPDFParcelas() {
       '<button class="btn-fechar" onclick="window.close()" style="padding:14px 20px;background:#f3f4f6;color:#374151;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer">← Fechar</button>' +
     '</div>' +
     '<h1 style="font-size:20px;margin:0 0 4px">📦 Parcelamentos</h1>' +
-    '<div style="font-size:13px;color:#6b7280;margin-bottom:20px">Gerado em '+dataHoje+'</div>' +
+    '<div style="font-size:13px;color:#6b7280;margin-bottom:16px">Gerado em '+dataHoje+'</div>' +
+    '<div style="background:#7c3aed;color:#fff;border-radius:12px;padding:14px;margin-bottom:20px;display:flex;justify-content:space-between;gap:8px">' +
+      '<div style="text-align:center;flex:1"><div style="font-size:10px;opacity:.75;margin-bottom:2px">Compromisso total</div><div style="font-size:15px;font-weight:800">'+formatar(totComp)+'</div></div>' +
+      '<div style="width:1px;background:rgba(255,255,255,.25)"></div>' +
+      '<div style="text-align:center;flex:1"><div style="font-size:10px;opacity:.75;margin-bottom:2px">Já pago</div><div style="font-size:15px;font-weight:800;color:#bbf7d0">'+formatar(totPago)+'</div></div>' +
+      '<div style="width:1px;background:rgba(255,255,255,.25)"></div>' +
+      '<div style="text-align:center;flex:1"><div style="font-size:10px;opacity:.75;margin-bottom:2px">Restante</div><div style="font-size:15px;font-weight:800;color:#fde68a">'+formatar(totRest)+'</div></div>' +
+    '</div>' +
     linhas +
     '</body></html>';
 
