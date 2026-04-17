@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260417-011">
+<meta name="app-version" content="20260417-012">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -2717,6 +2717,7 @@ function _executarSalvar(lancs) {
   document.getElementById('sel-parcelas').style.display = 'none';
   document.getElementById('grupo-parc-ini').style.display = 'none';
   document.getElementById('parcela-preview').textContent = '';
+  resetZoom();
   irPara('inicio');
   renderizar();
   setTimeout(renderizar, 300);
@@ -3015,6 +3016,15 @@ function toggleConfig() {
 // ─────────────────────────────
 // NAVEGAÇÃO
 // ─────────────────────────────
+function resetZoom() {
+  // Corrige zoom travado no iOS após interagir com inputs
+  var vp = document.querySelector('meta[name="viewport"]');
+  if (!vp) return;
+  var orig = vp.getAttribute('content');
+  vp.setAttribute('content', orig + ', maximum-scale=1');
+  setTimeout(function() { vp.setAttribute('content', orig); }, 100);
+}
+
 function irPara(tela) {
   var todas = document.querySelectorAll('.tela');
   for (var i=0; i<todas.length; i++) todas[i].classList.remove('ativa');
@@ -3263,6 +3273,7 @@ function salvarLancamentoFoto() {
   _fotoSub = null; _fotoCarroOutros = ''; _fotoLoja = ''; _fotoLojaOutros = ''; _fotoDivSub = ''; _fotoDivOutros = '';
   verificarAlerta();
   mostrarToast('✅', 'Lançamento salvo!');
+  resetZoom();
   irPara('inicio');
   renderizar();
   setTimeout(renderizar, 300);
