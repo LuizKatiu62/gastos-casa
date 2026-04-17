@@ -1,4 +1,4 @@
-var CACHE = 'gastos-v1';
+var CACHE = 'gastos-v2';
 
 // Ao instalar, não pré-carrega nada — sempre busca da rede
 self.addEventListener('install', function(e) {
