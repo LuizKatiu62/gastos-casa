@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260416-001">
+<meta name="app-version" content="20260416-002">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1774,7 +1774,6 @@ function renderizarRelatorio() {
   var acoesHtml =
     '<div class="card">' +
     '<button class="btn-whatsapp" onclick="compartilhar()">📱 Enviar por WhatsApp</button>' +
-    '<button class="btn-apagar" style="margin-top:8px" onclick="if(confirm(\'Apagar TODOS os dados?\')){{localStorage.removeItem(\'gastos\');location.reload()}}">🗑️ Apagar todos os dados</button>' +
     '</div>';
 
   el.innerHTML =
