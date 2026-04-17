@@ -2202,10 +2202,13 @@ function exportarPDFRelcat() {
       'th:last-child{text-align:right}' +
       '.rodape{margin-top:24px;font-size:11px;color:#9ca3af;text-align:center}' +
       '.btn-print{display:block;width:100%;padding:14px;background:'+cor+';color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;margin-bottom:20px}' +
-      '@media print{.btn-print{display:none}}' +
+      '@media print{.btn-print{display:none}.btn-fechar{display:none}}' +
     '</style></head><body>' +
     '<div class="page">' +
-      '<button class="btn-print" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>' +
+      '<div style="display:flex;gap:10px;margin-bottom:20px">' +
+        '<button class="btn-print" style="flex:1;margin-bottom:0" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>' +
+        '<button class="btn-fechar" onclick="window.close()" style="padding:14px 20px;background:#f3f4f6;color:#374151;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer">← Fechar</button>' +
+      '</div>' +
       '<h1>'+icone+' '+nome+'</h1>' +
       '<div class="sub">Relatório por categoria · '+perLabel+'</div>' +
       '<div class="hero">' +
