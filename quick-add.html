@@ -8,6 +8,7 @@
   <meta name="apple-mobile-web-app-title" content="Gasto Rápido">
   <title>Gasto Rápido</title>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -632,21 +633,28 @@ window.addEventListener('DOMContentLoaded', function() {
   document.getElementById('hdr-date').textContent =
     hoje.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'short' });
 
-  // Firebase
+  // Firebase — aguarda autenticação antes de conectar ao banco
   try {
     firebase.initializeApp(FB_CONFIG);
-    _fbRef = firebase.database().ref(FB_PATH);
-    setSyncStatus('connecting');
-    _fbRef.once('value').then(function(snap) {
-      var fbData = snap.val() || {};
-      _lancamentos = fbData.lancamentos || [];
-      if (fbData.pending && typeof fbData.pending === 'object') {
-        Object.keys(fbData.pending).forEach(function(k) {
-          if (fbData.pending[k]) _lancamentos.push(fbData.pending[k]);
-        });
+    firebase.auth().onAuthStateChanged(function(user) {
+      if (!user) {
+        // Não autenticado — redireciona para o app principal fazer login
+        window.location.href = 'index.html';
+        return;
       }
-      setSyncStatus('ok');
-    }).catch(function() { setSyncStatus('err'); });
+      _fbRef = firebase.database().ref(FB_PATH);
+      setSyncStatus('connecting');
+      _fbRef.once('value').then(function(snap) {
+        var fbData = snap.val() || {};
+        _lancamentos = fbData.lancamentos || [];
+        if (fbData.pending && typeof fbData.pending === 'object') {
+          Object.keys(fbData.pending).forEach(function(k) {
+            if (fbData.pending[k]) _lancamentos.push(fbData.pending[k]);
+          });
+        }
+        setSyncStatus('ok');
+      }).catch(function() { setSyncStatus('err'); });
+    });
   } catch(e) {
     console.warn('Firebase:', e);
     setSyncStatus('err');
