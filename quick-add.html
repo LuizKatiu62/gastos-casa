@@ -109,6 +109,34 @@
     }
     .sub-btn.active { border-color: #4fc3f7; background: #0d2030; color: #4fc3f7; }
 
+    /* ── Descrição ── */
+    .desc-wrap {
+      margin-bottom: 16px;
+    }
+    .desc-label {
+      display: block;
+      font-size: 12px;
+      color: #8899aa;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+    .desc-input {
+      width: 100%;
+      background: #1a2535;
+      border: 1.5px solid transparent;
+      border-radius: 14px;
+      padding: 13px 14px;
+      font-size: 15px;
+      font-family: inherit;
+      color: #fff;
+      resize: none;
+      outline: none;
+      transition: border-color .15s;
+    }
+    .desc-input::placeholder { color: #2a3a4a; }
+    .desc-input:focus { border-color: #4fc3f7; }
+
     /* ── Data ── */
     .data-wrap {
       display: flex;
@@ -240,6 +268,12 @@
   <button class="sub-btn" onclick="selecionarSub('Outros')">Outros</button>
 </div>
 
+<!-- Descrição -->
+<div class="desc-wrap">
+  <label class="desc-label">O que foi gasto? <span style="opacity:.45">(opcional)</span></label>
+  <textarea id="inp-desc" class="desc-input" placeholder="Ex: Gasolina no Petro-Canada, compras no Costco…" rows="2"></textarea>
+</div>
+
 <!-- Data -->
 <div class="data-wrap">
   <label>Data</label>
@@ -317,6 +351,7 @@ function salvar() {
   if (!data)                { toast('Informe a data', true); return; }
 
   var id = Date.now().toString();
+  var desc = (document.getElementById('inp-desc').value || '').trim();
   var lanc = {
     id:     id,
     cat:    _cat,
@@ -325,7 +360,7 @@ function salvar() {
     divsub: (_cat === 'diversos' ? _sub : null) || null,
     valor:  valor,
     data:   data,
-    desc:   ''
+    desc:   desc
   };
 
   var btn = document.getElementById('btn-salvar');
@@ -343,6 +378,7 @@ function salvar() {
     toast('✅  CA$ ' + valor.toFixed(2) + ' salvo!');
     // Reset
     document.getElementById('inp-valor').value = '';
+    document.getElementById('inp-desc').value = '';
     document.getElementById('inp-valor').focus();
     ['mercado','carro','diversos'].forEach(function(c) {
       document.getElementById('cat-' + c).className = 'cat-btn';
