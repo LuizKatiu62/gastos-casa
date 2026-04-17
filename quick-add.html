@@ -631,14 +631,12 @@ function selecionarSub(sub) {
   });
 }
 
-// ── Verificar duplicata ───────────────────────────────
-function verificarDuplicata(valor, data, cat, sub) {
+// ── Verificar duplicata (valor + data + categoria) ────
+function verificarDuplicata(valor, data, cat) {
   return _lancamentos.filter(function(l) {
-    if (Math.abs(parseFloat(l.valor) - valor) > 0.001) return false;
-    if (l.data !== data) return false;
-    if (l.cat  !== cat)  return false;
-    var lSub = l.loja || l.divsub || l.sub || null;
-    return lSub === sub;
+    return Math.abs(parseFloat(l.valor) - valor) <= 0.001 &&
+           l.data === data &&
+           l.cat  === cat;
   });
 }
 
@@ -669,8 +667,8 @@ function salvar() {
     desc:   desc
   };
 
-  // Checar duplicata
-  var dups = verificarDuplicata(valor, data, _cat, _sub);
+  // Checar duplicata (valor + data + categoria)
+  var dups = verificarDuplicata(valor, data, _cat);
   if (dups.length > 0) {
     var dup = dups[0];
     var catNome = { mercado: '🛒 Mercado', carro: '🚗 Carro', diversos: '🔖 Diversos' }[dup.cat] || dup.cat;

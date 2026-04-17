@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260416-002">
+<meta name="app-version" content="20260416-003">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -414,6 +414,21 @@ body {
   box-shadow: 0 8px 24px rgba(0,0,0,.25);
 }
 .toast.visivel { transform: translateY(0); opacity: 1; }
+
+/* ── MODAL DUPLICATA ── */
+.dup2-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 900; display: none; align-items: flex-end; justify-content: center; }
+.dup2-overlay.show { display: flex; }
+.dup2-modal { background: #fff; border-radius: 24px 24px 0 0; padding: 24px 18px calc(28px + env(safe-area-inset-bottom)); width: 100%; max-width: 480px; animation: dup2-up .22s cubic-bezier(.34,1.56,.64,1); }
+@keyframes dup2-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.dup2-handle { width: 36px; height: 4px; background: #e5e7eb; border-radius: 2px; margin: 0 auto 18px; }
+.dup2-icon { font-size: 36px; text-align: center; margin-bottom: 6px; }
+.dup2-title { font-size: 18px; font-weight: 900; color: #92400e; text-align: center; margin-bottom: 4px; }
+.dup2-desc { font-size: 13px; color: #6b7280; text-align: center; margin-bottom: 14px; }
+.dup2-info { background: #fffbeb; border: 1.5px solid #f59e0b; border-radius: 13px; padding: 13px 15px; font-size: 14px; color: #111827; margin-bottom: 18px; line-height: 1.75; }
+.dup2-info strong { color: #92400e; }
+.dup2-btns { display: flex; gap: 10px; }
+.dup2-btn-cancel { flex: 1; padding: 14px; border-radius: 13px; border: 1.5px solid #e5e7eb; background: #f9fafb; color: #374151; font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit; }
+.dup2-btn-confirm { flex: 1; padding: 14px; border-radius: 13px; border: none; background: #f59e0b; color: #fff; font-size: 15px; font-weight: 800; cursor: pointer; font-family: inherit; }
 
 /* ── MODAL EDIÇÃO ── */
 .edit-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 800; display: flex; align-items: flex-end; justify-content: center; }
@@ -889,6 +904,20 @@ body {
 </div>
 
 <!-- MODAL EDIÇÃO -->
+<div id="modal-duplicata" class="dup2-overlay" onclick="if(event.target===this)fecharDupMain()">
+  <div class="dup2-modal">
+    <div class="dup2-handle"></div>
+    <div class="dup2-icon">⚠️</div>
+    <div class="dup2-title">Lançamento duplicado!</div>
+    <div class="dup2-desc">Este valor já foi registrado hoje nesta categoria:</div>
+    <div class="dup2-info" id="dup2-info"></div>
+    <div class="dup2-btns">
+      <button class="dup2-btn-cancel" onclick="fecharDupMain()">Cancelar</button>
+      <button class="dup2-btn-confirm" onclick="salvarForcadoMain()">Salvar mesmo assim</button>
+    </div>
+  </div>
+</div>
+
 <div id="modal-edicao" style="display:none" class="edit-overlay" onclick="if(event.target===this)fecharModalEdicao()">
   <div class="edit-modal">
     <h3>✏️ Editar Lançamento</h3>
@@ -1827,27 +1856,34 @@ function selecionarDivSub(v) {
   if (v !== 'outros') _divOutros = '';
 }
 function atualizarDivOutros(v) { _divOutros = v.trim(); }
-function salvarLancamento() {
-  var valor = parseFloat(document.getElementById('inp-valor').value);
-  var data  = document.getElementById('inp-data').value;
-  if (!valor || valor <= 0) { mostrarToast('⚠️', 'Informe o valor gasto'); return; }
-  if (!data) { mostrarToast('⚠️', 'Selecione a data'); return; }
-  var CARRO_LABELS = { 'gas-rr':'⛽ Gasolina (Range Rover)', 'gas-pilot':'⛽ Gasolina (Pilot)', oleo:'🛢️ Óleo', pneu:'🔧 Pneu', pecas:'🔩 Peças', outros:'Outros' };
-  var DIV_LABELS = { roupas:'👕 Roupas', amazon:'📦 Amazon', restaurantes:'🍽️ Restaurantes', dollarama:'🏪 Dollarama', staples:'🖨️ Staples', academia:'💪 Academia', esportes:'🏃 Esportes', veterinario:'🐾 Veterinário', remedio:'💊 Remédio', lazer:'🎉 Lazer', outros:'Outros' };
-  var carroFinal = _cat==='carro'   ? (_carroSub==='outros' ? (_carroOutros||'Outros') : (_carroSub ? CARRO_LABELS[_carroSub] : '')) : null;
-  var lojaFinal  = _cat==='mercado'  ? (_loja==='outros'   ? (_lojaOutros||'Outros')  : (_loja   ? LOJAS[_loja]        : '')) : null;
-  var divFinal   = _cat==='diversos' ? (_divSub==='outros' ? (_divOutros||'Outros')   : (_divSub ? DIV_LABELS[_divSub] : '')) : null;
+// ── Duplicata ─────────────────────────────────────────
+var _lancPendenteMain = null;
+
+function verificarDuplicataMain(valor, data, cat) {
   var d = getDados();
-  d.lancamentos.push({
-    id:   Date.now().toString(),
-    cat:  _cat,
-    sub:  carroFinal || null,
-    loja: lojaFinal || null,
-    divsub: divFinal || null,
-    valor: valor,
-    data:  data,
-    desc:  document.getElementById('inp-desc').value.trim()
+  return d.lancamentos.filter(function(l) {
+    return Math.abs(parseFloat(l.valor) - valor) <= 0.001 &&
+           l.data === data &&
+           l.cat  === cat;
   });
+}
+
+function fecharDupMain() {
+  document.getElementById('modal-duplicata').classList.remove('show');
+  _lancPendenteMain = null;
+}
+
+function salvarForcadoMain() {
+  fecharDupMain();
+  if (_lancPendenteMain) {
+    _executarSalvar(_lancPendenteMain);
+    _lancPendenteMain = null;
+  }
+}
+
+function _executarSalvar(lanc) {
+  var d = getDados();
+  d.lancamentos.push(lanc);
   salvarDados(d);
   document.getElementById('inp-valor').value = '';
   document.getElementById('inp-desc').value = '';
@@ -1863,6 +1899,48 @@ function salvarLancamento() {
   setTimeout(renderizar, 300);
   mostrarToast('✅', 'Lançamento salvo!');
   verificarAlerta();
+}
+
+function salvarLancamento() {
+  var valor = parseFloat(document.getElementById('inp-valor').value);
+  var data  = document.getElementById('inp-data').value;
+  if (!valor || valor <= 0) { mostrarToast('⚠️', 'Informe o valor gasto'); return; }
+  if (!data) { mostrarToast('⚠️', 'Selecione a data'); return; }
+  var CARRO_LABELS = { 'gas-rr':'⛽ Gasolina (Range Rover)', 'gas-pilot':'⛽ Gasolina (Pilot)', oleo:'🛢️ Óleo', pneu:'🔧 Pneu', pecas:'🔩 Peças', outros:'Outros' };
+  var DIV_LABELS = { roupas:'👕 Roupas', amazon:'📦 Amazon', restaurantes:'🍽️ Restaurantes', dollarama:'🏪 Dollarama', staples:'🖨️ Staples', academia:'💪 Academia', esportes:'🏃 Esportes', veterinario:'🐾 Veterinário', remedio:'💊 Remédio', lazer:'🎉 Lazer', outros:'Outros' };
+  var carroFinal = _cat==='carro'   ? (_carroSub==='outros' ? (_carroOutros||'Outros') : (_carroSub ? CARRO_LABELS[_carroSub] : '')) : null;
+  var lojaFinal  = _cat==='mercado'  ? (_loja==='outros'   ? (_lojaOutros||'Outros')  : (_loja   ? LOJAS[_loja]        : '')) : null;
+  var divFinal   = _cat==='diversos' ? (_divSub==='outros' ? (_divOutros||'Outros')   : (_divSub ? DIV_LABELS[_divSub] : '')) : null;
+  var lanc = {
+    id:     Date.now().toString(),
+    cat:    _cat,
+    sub:    carroFinal || null,
+    loja:   lojaFinal  || null,
+    divsub: divFinal   || null,
+    valor:  valor,
+    data:   data,
+    desc:   document.getElementById('inp-desc').value.trim()
+  };
+
+  // Checar duplicata (valor + data + categoria)
+  var dups = verificarDuplicataMain(valor, data, _cat);
+  if (dups.length > 0) {
+    var dup = dups[0];
+    var catNome = { mercado:'🛒 Mercado', carro:'🚗 Carro', diversos:'🔖 Diversos' }[dup.cat] || dup.cat;
+    var subStr = dup.loja || dup.divsub || dup.sub || '';
+    var p = (dup.data||'').split('-');
+    var dataFmt = p.length===3 ? p[2]+'/'+p[1]+'/'+p[0] : dup.data;
+    document.getElementById('dup2-info').innerHTML =
+      '<strong>Valor:</strong> CA$ ' + parseFloat(dup.valor).toFixed(2) + '<br>' +
+      '<strong>Data:</strong> ' + dataFmt + '<br>' +
+      '<strong>Categoria:</strong> ' + catNome + (subStr ? ' · ' + subStr : '') +
+      (dup.desc ? '<br><strong>Descrição:</strong> ' + dup.desc : '');
+    _lancPendenteMain = lanc;
+    document.getElementById('modal-duplicata').classList.add('show');
+    return;
+  }
+
+  _executarSalvar(lanc);
 }
 function excluir(id) {
   if (!confirm('Excluir este lançamento?')) return;
