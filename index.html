@@ -1551,7 +1551,8 @@ function renderizarBarras(lista, p) {
 
 function renderizarRecentes(todos) {
   var el = document.getElementById('lista-recentes');
-  var rec = todos.slice().sort(function(a,b){
+  var hj = hoje();
+  var rec = todos.filter(function(l){ return l.data <= hj; }).sort(function(a,b){
     if (b.data > a.data) return 1;
     if (b.data < a.data) return -1;
     return (parseInt(b.id||0) - parseInt(a.id||0));
