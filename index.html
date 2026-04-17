@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260417-023">
+<meta name="app-version" content="20260417-024">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -213,9 +213,10 @@ body {
   transition: transform .15s, box-shadow .15s;
 }
 .card-cat:active { transform: scale(.98); }
-.card-cat.carro    { border-color: #ef4444; }
-.card-cat.diversos { border-color: #f97316; }
-.card-cat.mercado  { border-color: #22c55e; grid-column: 1/-1; }
+.card-cat.carro       { border-color: #ef4444; }
+.card-cat.diversos    { border-color: #f97316; }
+.card-cat.mercado     { border-color: #22c55e; }
+.card-cat.parcelados  { border-color: #7c3aed; }
 .cat-header { display: flex; align-items: center; gap: 7px; margin-bottom: 10px; }
 .cat-icon { font-size: 20px; }
 .cat-nome { font-size: 11px; font-weight: 800; color: #374151; text-transform: uppercase; letter-spacing: .5px; flex: 1; }
@@ -310,12 +311,13 @@ body {
 .sel-parcelas { font-size: 16px; margin-top: 8px; width: 100%; padding: 8px; border-radius: 10px; border: 1.5px solid #d1d5db; background: #fff; }
 
 /* ── RELATÓRIO POR CATEGORIA ── */
-.relcat-tabs { display:flex; gap:8px; margin-bottom:14px; }
-.relcat-tab { flex:1; padding:10px 6px; border:2px solid #e5e7eb; background:#f9fafb; border-radius:16px; font-size:12px; font-weight:700; color:#6b7280; cursor:pointer; text-align:center; line-height:1.4; transition:all .2s; font-family:inherit; }
-.relcat-tab.ativo-mercado  { border-color:#43a047; background:#f0fdf4; color:#2e7d32; }
-.relcat-tab.ativo-carro    { border-color:#e53935; background:#fef2f2; color:#c62828; }
-.relcat-tab.ativo-diversos { border-color:#fb8c00; background:#fff7ed; color:#c05900; }
-.relcat-tab.ativo-parcelas { border-color:#7c3aed; background:#f5f3ff; color:#5b21b6; }
+.relcat-tabs { display:flex; gap:6px; margin-bottom:14px; overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:4px; }
+.relcat-tab { flex:0 0 auto; min-width:58px; padding:8px 6px; border:2px solid #e5e7eb; background:#f9fafb; border-radius:14px; font-size:11px; font-weight:700; color:#6b7280; cursor:pointer; text-align:center; line-height:1.4; transition:all .2s; font-family:inherit; }
+.relcat-tab.ativo-mercado    { border-color:#43a047; background:#f0fdf4; color:#2e7d32; }
+.relcat-tab.ativo-carro      { border-color:#e53935; background:#fef2f2; color:#c62828; }
+.relcat-tab.ativo-diversos   { border-color:#fb8c00; background:#fff7ed; color:#c05900; }
+.relcat-tab.ativo-parcelados { border-color:#7c3aed; background:#f5f3ff; color:#5b21b6; }
+.relcat-tab.ativo-parcelas   { border-color:#7c3aed; background:#f5f3ff; color:#5b21b6; }
 /* ── PARCELAS REPORT ── */
 .parc-grupo-card { background:#fff; border-radius:16px; padding:16px; margin-bottom:14px; box-shadow:0 2px 8px rgba(0,0,0,.06); }
 .parc-grupo-hdr  { display:flex; justify-content:space-between; align-items:flex-start; padding-left:10px; margin-bottom:12px; }
@@ -392,12 +394,14 @@ body {
 }
 .opt-cat .ic { font-size: 22px; margin-bottom: 4px; }
 .opt-cat .nm { font-size: 11px; font-weight: 700; color: #9ca3af; }
-.opt-cat.sel-carro    { border-color: #ef4444; background: #fef2f2; }
-.opt-cat.sel-carro .nm { color: #dc2626; }
-.opt-cat.sel-diversos { border-color: #f97316; background: #fff7ed; }
-.opt-cat.sel-diversos .nm { color: #ea580c; }
-.opt-cat.sel-mercado  { border-color: #22c55e; background: #f0fdf4; }
+.opt-cat.sel-carro       { border-color: #ef4444; background: #fef2f2; }
+.opt-cat.sel-carro .nm   { color: #dc2626; }
+.opt-cat.sel-diversos    { border-color: #f97316; background: #fff7ed; }
+.opt-cat.sel-diversos .nm{ color: #ea580c; }
+.opt-cat.sel-mercado     { border-color: #22c55e; background: #f0fdf4; }
 .opt-cat.sel-mercado .nm { color: #16a34a; }
+.opt-cat.sel-parcelados  { border-color: #7c3aed; background: #f5f3ff; }
+.opt-cat.sel-parcelados .nm { color: #6d28d9; }
 
 /* ── BOTÕES ── */
 .btn-salvar {
@@ -713,6 +717,22 @@ body {
         <div class="cat-barra-fundo" id="bfundo-mercado" style="display:none"><div class="cat-barra-fill" id="bfill-mercado" style="width:0%;background:#43a047"></div></div>
         <div class="cat-orc" id="corc-mercado"></div>
       </div>
+      <div class="card-cat parcelados" onclick="irParaCategoria('parcelados')">
+        <div class="cat-header"><span class="cat-icon">📦</span><span class="cat-nome">Parcelados</span><span class="cat-qtd" id="qtd-parcelados">0</span></div>
+        <div class="cat-linha-vals">
+          <div>
+            <div class="cat-rotulo">Gasto</div>
+            <div class="cat-valor" id="val-parcelados" style="color:#7c3aed">CA$ 0,00</div>
+            <div class="cat-sub-orc" id="orc-val-parcelados"></div>
+          </div>
+          <div style="text-align:right">
+            <div class="cat-rotulo">Disponível</div>
+            <div class="cat-valor" id="disp-parcelados">—</div>
+          </div>
+        </div>
+        <div class="cat-barra-fundo" id="bfundo-parcelados" style="display:none"><div class="cat-barra-fill" id="bfill-parcelados" style="width:0%;background:#7c3aed"></div></div>
+        <div class="cat-orc" id="corc-parcelados"></div>
+      </div>
     </div>
 
     <div class="card">
@@ -755,6 +775,9 @@ body {
           </div>
           <div class="opt-cat" id="sel-mercado" onclick="selecionarCat('mercado')">
             <div class="ic">🛒</div><div class="nm">Mercado</div>
+          </div>
+          <div class="opt-cat" id="sel-parcelados" onclick="selecionarCat('parcelados')">
+            <div class="ic">📦</div><div class="nm">Parcelados</div>
           </div>
         </div>
       </div>
@@ -1151,10 +1174,11 @@ body {
   <div class="conteudo">
     <!-- Tabs categoria -->
     <div class="relcat-tabs">
-      <button class="relcat-tab" id="rct-mercado"  onclick="setRelCat('mercado')">🛒<br>Mercado</button>
-      <button class="relcat-tab" id="rct-carro"    onclick="setRelCat('carro')">🚗<br>Carro</button>
-      <button class="relcat-tab" id="rct-diversos" onclick="setRelCat('diversos')">🛍️<br>Diversos</button>
-      <button class="relcat-tab" id="rct-parcelas" onclick="setRelCat('parcelas')">📦<br>Parcelas</button>
+      <button class="relcat-tab" id="rct-mercado"    onclick="setRelCat('mercado')">🛒<br>Mercado</button>
+      <button class="relcat-tab" id="rct-carro"      onclick="setRelCat('carro')">🚗<br>Carro</button>
+      <button class="relcat-tab" id="rct-diversos"   onclick="setRelCat('diversos')">🛍️<br>Diversos</button>
+      <button class="relcat-tab" id="rct-parcelados" onclick="setRelCat('parcelados')">📦<br>Parcelados</button>
+      <button class="relcat-tab" id="rct-parcelas"   onclick="setRelCat('parcelas')">📊<br>Planos</button>
     </div>
     <!-- Período -->
     <div class="card rel-periodo-card">
@@ -1211,8 +1235,8 @@ setTimeout(function() {
 // DADOS
 // ─────────────────────────────
 var WA = '14379718925';
-var NOMES = { carro:'Carro', diversos:'Diversos', mercado:'Supermercado' };
-var CORES = { carro:'#e53935', diversos:'#fb8c00', mercado:'#43a047' };
+var NOMES = { carro:'Carro', diversos:'Diversos', mercado:'Supermercado', parcelados:'Parcelados' };
+var CORES = { carro:'#e53935', diversos:'#fb8c00', mercado:'#43a047', parcelados:'#7c3aed' };
 var SUBS  = { gas:'⛽ Gasolina', oleo:'🛢️ Óleo', div:'🔧 Diversos', 'gas-rr':'⛽ Gasolina (Range Rover)', 'gas-pilot':'⛽ Gasolina (Pilot)', pneu:'🔧 Pneu', pecas:'🔩 Peças', outros:'🔖 Outros' };
 var LOJAS = { walmart:'Walmart', superstore:'Superstore', shoppers:'Shoppers', nofrills:'No Frills', costco:'Costco', vine:'On the Vine', outros:'Outros' };
 
@@ -1546,8 +1570,8 @@ function renderizar() {
   var d = getDados(), p = d.periodo;
   var lista = lancamentosPeriodo(d.lancamentos, p);
 
-  var tots = { carro:0, diversos:0, mercado:0 };
-  var qtds = { carro:0, diversos:0, mercado:0 };
+  var tots = { carro:0, diversos:0, mercado:0, parcelados:0 };
+  var qtds = { carro:0, diversos:0, mercado:0, parcelados:0 };
   var total = 0;
   lista.forEach(function(l) {
     tots[l.cat] = (tots[l.cat]||0) + parseFloat(l.valor||0);
@@ -1586,8 +1610,8 @@ function renderizar() {
   }
 
   // Cards categoria
-  var cores = { carro:'#e53935', diversos:'#fb8c00', mercado:'#43a047' };
-  ['carro','diversos','mercado'].forEach(function(c) {
+  var cores = { carro:'#e53935', diversos:'#fb8c00', mercado:'#43a047', parcelados:'#7c3aed' };
+  ['carro','diversos','mercado','parcelados'].forEach(function(c) {
     var gasto = tots[c]||0;
     var orc   = d.orcamentos[c]||0;
     var qtd   = qtds[c]||0;
@@ -1626,7 +1650,7 @@ function renderizar() {
 
 function renderizarPizza(tots, total) {
   var el = document.getElementById('pizza-wrap');
-  var cats = ['carro','diversos','mercado'];
+  var cats = ['carro','diversos','mercado','parcelados'];
   var html = '<div class="pizza-legenda">';
   cats.forEach(function(c) {
     var v = tots[c]||0;
@@ -1789,9 +1813,9 @@ function irParaCategoria(cat) {
   lista.sort(function(a,b){ return b.data.localeCompare(a.data); });
   var total = lista.reduce(function(s,l){ return s+parseFloat(l.valor||0); }, 0);
 
-  var cores = { carro:'#1565c0', diversos:'#e65100', mercado:'#2e7d32' };
+  var cores = { carro:'#1565c0', diversos:'#e65100', mercado:'#2e7d32', parcelados:'#5b21b6' };
   document.getElementById('topo-categoria').style.background = 'linear-gradient(160deg,'+cores[cat]+','+CORES[cat]+')';
-  document.getElementById('titulo-categoria').textContent = {carro:'🚗 Carro', diversos:'🛍️ Diversos', mercado:'🛒 Supermercado'}[cat];
+  document.getElementById('titulo-categoria').textContent = {carro:'🚗 Carro', diversos:'🛍️ Diversos', mercado:'🛒 Supermercado', parcelados:'📦 Parcelados'}[cat];
 
   document.getElementById('resumo-categoria').innerHTML =
     '<div style="text-align:center;padding:8px 0 12px">' +
@@ -1902,8 +1926,8 @@ function exportarPDF() {
   var porDia = {};
   lista.forEach(function(l){ if(!porDia[l.data]) porDia[l.data]=[]; porDia[l.data].push(l); });
 
-  var cores = { mercado:'#16a34a', carro:'#dc2626', diversos:'#ea580c' };
-  var nomes = { mercado:'Supermercado', carro:'Carro', diversos:'Diversos' };
+  var cores = { mercado:'#16a34a', carro:'#dc2626', diversos:'#ea580c', parcelados:'#7c3aed' };
+  var nomes = { mercado:'Supermercado', carro:'Carro', diversos:'Diversos', parcelados:'Parcelados' };
 
   var linhas = Object.keys(porDia).sort(function(a,b){ return b.localeCompare(a); }).map(function(data) {
     var totDia = porDia[data].reduce(function(s,l){ return s+parseFloat(l.valor||0); }, 0);
@@ -1925,14 +1949,15 @@ function exportarPDF() {
   }).join('');
 
   // resumo por categoria
-  var totCat = { mercado:0, carro:0, diversos:0 };
+  var totCat = { mercado:0, carro:0, diversos:0, parcelados:0 };
   lista.forEach(function(l){ totCat[l.cat] = (totCat[l.cat]||0) + parseFloat(l.valor||0); });
-  var resumoCats = ['mercado','carro','diversos'].map(function(cat) {
+  var catBgs  = { mercado:'#f0fdf4', carro:'#fef2f2', diversos:'#fff7ed', parcelados:'#f5f3ff' };
+  var catIcos = { mercado:'🛒', carro:'🚗', diversos:'🛍️', parcelados:'📦' };
+  var resumoCats = ['mercado','carro','diversos','parcelados'].map(function(cat) {
     if (!totCat[cat]) return '';
     return '<div style="display:inline-block;margin:0 10px 8px 0;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:700;background:' +
-      (cat==='mercado'?'#f0fdf4':cat==='carro'?'#fef2f2':'#fff7ed') +
-      ';color:' + (cores[cat]||'#111') + ';border:1.5px solid ' + (cores[cat]||'#ccc') + '">' +
-      (cat==='mercado'?'🛒':cat==='carro'?'🚗':'🛍️') + ' ' + nomes[cat] + ': ' + formatar(totCat[cat]) +
+      catBgs[cat] + ';color:' + (cores[cat]||'#111') + ';border:1.5px solid ' + (cores[cat]||'#ccc') + '">' +
+      catIcos[cat] + ' ' + nomes[cat] + ': ' + formatar(totCat[cat]) +
     '</div>';
   }).join('');
 
@@ -2133,10 +2158,10 @@ var _rcTipo = 'periodo';
 
 function setRelCat(cat) {
   _rcCat = cat;
-  ['mercado','carro','diversos','parcelas'].forEach(function(c) {
+  ['mercado','carro','diversos','parcelados','parcelas'].forEach(function(c) {
     document.getElementById('rct-'+c).className = 'relcat-tab' + (c===cat ? ' ativo-'+c : '');
   });
-  // Esconde seletor de período no modo parcelas
+  // Esconde seletor de período no modo parcelas (overview)
   document.querySelector('.rel-periodo-card').style.display = cat==='parcelas' ? 'none' : '';
   renderizarRelcat();
 }
@@ -2303,9 +2328,9 @@ function renderizarParcelas() {
     return '<div class="vazio" style="text-align:center;padding:48px 0;color:#9ca3af;font-size:15px">📭<br><br>Nenhum lançamento parcelado encontrado</div>';
   }
 
-  var COR  = { mercado:'#16a34a', carro:'#dc2626', diversos:'#ea580c' };
-  var ICO  = { mercado:'🛒',      carro:'🚗',      diversos:'🛍️'      };
-  var NOME = { mercado:'Mercado', carro:'Carro',   diversos:'Diversos' };
+  var COR  = { mercado:'#16a34a', carro:'#dc2626', diversos:'#ea580c', parcelados:'#7c3aed' };
+  var ICO  = { mercado:'🛒',      carro:'🚗',      diversos:'🛍️',      parcelados:'📦'      };
+  var NOME = { mercado:'Mercado', carro:'Carro',   diversos:'Diversos', parcelados:'Parcelados' };
 
   // ── Calcula dados por grupo ──
   var totalGeralMensal = 0, totalGeralRestante = 0, totalGeralCompromisso = 0;
@@ -2445,8 +2470,8 @@ function exportarPDFParcelas() {
     grupos[gid].lancs[l.parcela.n] = l;
   });
   var keys = Object.keys(grupos);
-  var COR = { mercado:'#16a34a', carro:'#dc2626', diversos:'#ea580c' };
-  var ICO = { mercado:'🛒', carro:'🚗', diversos:'🛍️' };
+  var COR = { mercado:'#16a34a', carro:'#dc2626', diversos:'#ea580c', parcelados:'#7c3aed' };
+  var ICO = { mercado:'🛒', carro:'🚗', diversos:'🛍️', parcelados:'📦' };
 
   function _contarPagas(g, hj) {
     var pagas = 0;
@@ -2527,10 +2552,10 @@ function exportarPDFRelcat() {
   var per = getRelCatPer();
   if (!per) { mostrarToast('⚠️', 'Selecione o período'); return; }
   var d    = getDados();
-  var cor  = { mercado:'#16a34a', carro:'#dc2626', diversos:'#ea580c' }[_rcCat];
-  var bgCor= { mercado:'#f0fdf4', carro:'#fef2f2', diversos:'#fff7ed' }[_rcCat];
-  var icone= { mercado:'🛒', carro:'🚗', diversos:'🛍️' }[_rcCat];
-  var nome = { mercado:'Supermercado', carro:'Carro', diversos:'Diversos' }[_rcCat];
+  var cor  = { mercado:'#16a34a', carro:'#dc2626', diversos:'#ea580c', parcelados:'#7c3aed' }[_rcCat];
+  var bgCor= { mercado:'#f0fdf4', carro:'#fef2f2', diversos:'#fff7ed', parcelados:'#f5f3ff' }[_rcCat];
+  var icone= { mercado:'🛒', carro:'🚗', diversos:'🛍️', parcelados:'📦' }[_rcCat];
+  var nome = { mercado:'Supermercado', carro:'Carro', diversos:'Diversos', parcelados:'Parcelados' }[_rcCat];
   var orc  = (d.orcamentos && d.orcamentos[_rcCat]) || 0;
 
   var lista = lancamentosPeriodo(d.lancamentos, per)
@@ -2636,8 +2661,8 @@ function compartilharRelcat() {
   var per = getRelCatPer();
   if (!per) { mostrarToast('⚠️', 'Selecione o período'); return; }
   var d    = getDados();
-  var icone= { mercado:'🛒', carro:'🚗', diversos:'🛍️' }[_rcCat];
-  var nome = { mercado:'SUPERMERCADO', carro:'CARRO', diversos:'DIVERSOS' }[_rcCat];
+  var icone= { mercado:'🛒', carro:'🚗', diversos:'🛍️', parcelados:'📦' }[_rcCat];
+  var nome = { mercado:'SUPERMERCADO', carro:'CARRO', diversos:'DIVERSOS', parcelados:'PARCELADOS' }[_rcCat];
   var orc  = (d.orcamentos && d.orcamentos[_rcCat]) || 0;
 
   var lista = lancamentosPeriodo(d.lancamentos, per)
@@ -2698,7 +2723,7 @@ function compartilharRelcat() {
 var _loja = '', _lojaOutros = '', _divSub = '', _divOutros = '', _carroSub = '', _carroOutros = '';
 function selecionarCat(c) {
   _cat = c;
-  ['carro','diversos','mercado'].forEach(function(k) {
+  ['carro','diversos','mercado','parcelados'].forEach(function(k) {
     document.getElementById('sel-'+k).className = 'opt-cat' + (k===c ? ' sel-'+k : '');
   });
   document.getElementById('grupo-sub').style.display  = c==='carro'   ? 'block' : 'none';
@@ -2811,7 +2836,7 @@ function salvarLancamento() {
   var desc = document.getElementById('inp-desc').value.trim();
 
   if (_numParcelas > 1) {
-    // Lançamento parcelado: cria parcelas do _parcelaInicial até o total
+    // Lançamento parcelado: sempre usa categoria 'parcelados'
     var parcValor = Math.round(valor / _numParcelas * 100) / 100;
     var grupoId = Date.now().toString();
     var lancs = [];
@@ -2819,10 +2844,10 @@ function salvarLancamento() {
     for (var i = _parcelaInicial - 1; i < _numParcelas; i++) {
       lancs.push({
         id:     grupoId + '-' + (i + 1),
-        cat:    _cat,
-        sub:    carroFinal || null,
-        loja:   lojaFinal  || null,
-        divsub: divFinal   || null,
+        cat:    'parcelados',
+        sub:    null,
+        loja:   null,
+        divsub: null,
         valor:  parcValor,
         data:   addMeses(data, offset),
         desc:   desc,
@@ -2849,7 +2874,7 @@ function salvarLancamento() {
   var dups = verificarDuplicataMain(valor, data, _cat);
   if (dups.length > 0) {
     var dup = dups[0];
-    var catNome = { mercado:'🛒 Mercado', carro:'🚗 Carro', diversos:'🔖 Diversos' }[dup.cat] || dup.cat;
+    var catNome = { mercado:'🛒 Mercado', carro:'🚗 Carro', diversos:'🔖 Diversos', parcelados:'📦 Parcelados' }[dup.cat] || dup.cat;
     var subStr = dup.loja || dup.divsub || dup.sub || '';
     var p = (dup.data||'').split('-');
     var dataFmt = p.length===3 ? p[2]+'/'+p[1]+'/'+p[0] : dup.data;
