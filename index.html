@@ -1090,6 +1090,14 @@ body {
 </nav>
 
 <script>
+// Safety net — evita tela branca em caso de erro JS inesperado
+window.onerror = function(msg, src, line, col, err) {
+  var el = document.getElementById('tela-inicio');
+  if (el && !el.classList.contains('ativa')) { el.classList.add('ativa'); }
+  console.error('App error:', msg, 'line', line, err);
+  return false;
+};
+
 // ─────────────────────────────
 // DADOS
 // ─────────────────────────────
