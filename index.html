@@ -741,6 +741,10 @@ body {
           <option value="11">11x</option><option value="12">12x</option><option value="15">15x</option>
           <option value="18">18x</option><option value="24">24x</option>
         </select>
+        <div id="grupo-parc-ini" style="display:none;margin-top:8px">
+          <label style="font-size:12px;color:#6366f1;font-weight:600;display:block;margin-bottom:4px">De qual parcela começa? (para lançar só as pendentes)</label>
+          <select class="sel-parcelas" id="sel-parcela-ini" onchange="onChangeParcIni(this.value)"></select>
+        </div>
       </div>
 
       <div class="form-group">
@@ -1262,19 +1266,43 @@ function addMeses(dataStr, meses) {
   return novoAno + '-' + ((novoMes + 1) + '').padStart(2, '0') + '-' + (dia + '').padStart(2, '0');
 }
 var _numParcelas = 1;
+var _parcelaInicial = 1;
+
+function populateParcelaIni(total) {
+  var sel = document.getElementById('sel-parcela-ini');
+  sel.innerHTML = '';
+  for (var i = 1; i <= total; i++) {
+    var opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = i + '/' + total + (i === 1 ? ' — do início' : '');
+    sel.appendChild(opt);
+  }
+  _parcelaInicial = 1;
+  sel.value = 1;
+}
+function onChangeParcIni(v) {
+  _parcelaInicial = parseInt(v) || 1;
+  atualizarPreviewParcela();
+}
 function toggleParcelamento() {
   var btn = document.getElementById('btn-parcela-toggle');
   var sel = document.getElementById('sel-parcelas');
+  var grpIni = document.getElementById('grupo-parc-ini');
   if (_numParcelas === 1) {
     _numParcelas = 2;
+    _parcelaInicial = 1;
     sel.value = '2';
     sel.style.display = 'block';
+    grpIni.style.display = 'block';
+    populateParcelaIni(2);
     btn.classList.add('ativo');
     btn.textContent = 'Parcelado';
     atualizarPreviewParcela();
   } else {
     _numParcelas = 1;
+    _parcelaInicial = 1;
     sel.style.display = 'none';
+    grpIni.style.display = 'none';
     btn.classList.remove('ativo');
     btn.textContent = 'À vista';
     document.getElementById('parcela-preview').textContent = '';
@@ -1282,17 +1310,23 @@ function toggleParcelamento() {
 }
 function onChangeParcelas(v) {
   _numParcelas = parseInt(v) || 1;
+  populateParcelaIni(_numParcelas);
   atualizarPreviewParcela();
 }
 function atualizarPreviewParcela() {
   var prev = document.getElementById('parcela-preview');
   if (_numParcelas <= 1) { prev.textContent = ''; return; }
   var valor = parseFloat(document.getElementById('inp-valor').value);
+  var restantes = _numParcelas - _parcelaInicial + 1;
   if (valor > 0) {
     var parcValor = Math.round(valor / _numParcelas * 100) / 100;
-    prev.textContent = _numParcelas + 'x de CA$ ' + parcValor.toFixed(2);
+    var txt = _numParcelas + 'x de CA$ ' + parcValor.toFixed(2) + '/mês';
+    if (_parcelaInicial > 1) {
+      txt += ' · lançando ' + _parcelaInicial + '/' + _numParcelas + ' → ' + _numParcelas + '/' + _numParcelas + ' (' + restantes + ' meses)';
+    }
+    prev.textContent = txt;
   } else {
-    prev.textContent = _numParcelas + 'x';
+    prev.textContent = _numParcelas + 'x' + (_parcelaInicial > 1 ? ' · a partir de ' + _parcelaInicial + '/' + _numParcelas : '');
   }
 }
 
@@ -1971,9 +2005,11 @@ function _executarSalvar(lancs) {
   _loja = ''; _lojaOutros = ''; _divSub = ''; _divOutros = ''; _carroSub = ''; _carroOutros = '';
   // Reset parcelamento
   _numParcelas = 1;
+  _parcelaInicial = 1;
   document.getElementById('btn-parcela-toggle').classList.remove('ativo');
   document.getElementById('btn-parcela-toggle').textContent = 'À vista';
   document.getElementById('sel-parcelas').style.display = 'none';
+  document.getElementById('grupo-parc-ini').style.display = 'none';
   document.getElementById('parcela-preview').textContent = '';
   irPara('inicio');
   renderizar();
@@ -1999,11 +2035,12 @@ function salvarLancamento() {
   var desc = document.getElementById('inp-desc').value.trim();
 
   if (_numParcelas > 1) {
-    // Lançamento parcelado: cria N lancamentos mensais
+    // Lançamento parcelado: cria parcelas do _parcelaInicial até o total
     var parcValor = Math.round(valor / _numParcelas * 100) / 100;
     var grupoId = Date.now().toString();
     var lancs = [];
-    for (var i = 0; i < _numParcelas; i++) {
+    var offset = 0;
+    for (var i = _parcelaInicial - 1; i < _numParcelas; i++) {
       lancs.push({
         id:     grupoId + '-' + (i + 1),
         cat:    _cat,
@@ -2011,10 +2048,11 @@ function salvarLancamento() {
         loja:   lojaFinal  || null,
         divsub: divFinal   || null,
         valor:  parcValor,
-        data:   addMeses(data, i),
+        data:   addMeses(data, offset),
         desc:   desc,
         parcela: { n: i + 1, total: _numParcelas, grupoId: grupoId, valorTotal: valor }
       });
+      offset++;
     }
     _executarSalvar(lancs);
     return;

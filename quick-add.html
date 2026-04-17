@@ -552,6 +552,10 @@
     <option value="11">11x</option><option value="12">12x</option><option value="15">15x</option>
     <option value="18">18x</option><option value="24">24x</option>
   </select>
+  <div id="parc-ini-wrap" style="display:none;margin-top:12px">
+    <div style="font-size:11px;color:#818cf8;font-weight:700;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">De qual parcela começa?</div>
+    <select class="parc-select" id="parc-ini-select" onchange="onParcIniSelect(this.value)" style="margin-top:0"></select>
+  </div>
   <div class="parc-preview" id="parc-preview"></div>
 </div>
 
@@ -613,7 +617,8 @@ var _cat = null, _sub = null, _fbRef = null;
 var _lancamentos = [];
 var _lancPendente = null;
 var _dupIgnorado = false; // usuário escolheu salvar mesmo assim
-var _numParc = 1; // 1 = à vista, >1 = parcelado
+var _numParc = 1;    // 1 = à vista, >1 = parcelado
+var _parcIni = 1;   // parcela inicial (para lançar só as pendentes)
 
 // ── Init ────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', function() {
@@ -682,21 +687,43 @@ function addMeses(dataStr, n) {
   dia = Math.min(dia, ult);
   return na + '-' + ((nm + 1) + '').padStart(2, '0') + '-' + (dia + '').padStart(2, '0');
 }
+function populateParcIni(total) {
+  var sel = document.getElementById('parc-ini-select');
+  sel.innerHTML = '';
+  for (var i = 1; i <= total; i++) {
+    var opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = i + '/' + total + (i === 1 ? ' — do início' : '');
+    sel.appendChild(opt);
+  }
+  _parcIni = 1;
+  sel.value = 1;
+}
+function onParcIniSelect(v) {
+  _parcIni = parseInt(v) || 1;
+  atualizarParcPreview();
+}
 function toggleParc() {
   var btn = document.getElementById('btn-parc-toggle');
   var sel = document.getElementById('parc-select');
   var xBadge = document.getElementById('parc-x');
+  var iniWrap = document.getElementById('parc-ini-wrap');
   if (_numParc === 1) {
     _numParc = 2;
+    _parcIni = 1;
     sel.value = '2';
     sel.style.display = 'block';
+    iniWrap.style.display = 'block';
+    populateParcIni(2);
     btn.classList.add('ativo');
     btn.textContent = 'Parcelado';
     xBadge.style.display = '';
     atualizarParcPreview();
   } else {
     _numParc = 1;
+    _parcIni = 1;
     sel.style.display = 'none';
+    iniWrap.style.display = 'none';
     btn.classList.remove('ativo');
     btn.textContent = 'À vista';
     xBadge.style.display = 'none';
@@ -705,6 +732,7 @@ function toggleParc() {
 }
 function onParcSelect(v) {
   _numParc = parseInt(v) || 1;
+  populateParcIni(_numParc);
   atualizarParcPreview();
 }
 function atualizarParcPreview() {
@@ -714,11 +742,16 @@ function atualizarParcPreview() {
   xBadge.textContent = _numParc + 'x';
   xBadge.style.display = '';
   var valor = parseFloat(document.getElementById('inp-valor').value);
+  var restantes = _numParc - _parcIni + 1;
   if (valor > 0) {
     var parcValor = Math.round(valor / _numParc * 100) / 100;
-    prev.textContent = _numParc + 'x de CA$ ' + parcValor.toFixed(2) + ' = CA$ ' + valor.toFixed(2) + ' total';
+    var txt = _numParc + 'x de CA$ ' + parcValor.toFixed(2) + '/mês';
+    if (_parcIni > 1) {
+      txt += ' · ' + _parcIni + '/' + _numParc + ' → ' + _numParc + '/' + _numParc + ' (' + restantes + ' meses)';
+    }
+    prev.textContent = txt;
   } else {
-    prev.textContent = _numParc + ' parcelas mensais';
+    prev.textContent = _numParc + 'x' + (_parcIni > 1 ? ' · a partir de ' + _parcIni + '/' + _numParc : '');
   }
 }
 
@@ -824,11 +857,12 @@ function salvar() {
   var desc = (document.getElementById('inp-desc').value || '').trim();
 
   if (_numParc > 1) {
-    // Lançamento parcelado — grava N parcelas mensais
+    // Lançamento parcelado — grava parcelas do _parcIni até o total
     var parcValor = Math.round(valor / _numParc * 100) / 100;
     var grupoId = Date.now().toString();
     var lancs = [];
-    for (var i = 0; i < _numParc; i++) {
+    var offset = 0;
+    for (var i = _parcIni - 1; i < _numParc; i++) {
       lancs.push({
         id:     grupoId + '-' + (i + 1),
         cat:    _cat,
@@ -836,10 +870,11 @@ function salvar() {
         loja:   (_cat === 'mercado'  ? _sub : null) || null,
         divsub: (_cat === 'diversos' ? _sub : null) || null,
         valor:  parcValor,
-        data:   addMeses(data, i),
+        data:   addMeses(data, offset),
         desc:   desc,
         parcela: { n: i + 1, total: _numParc, grupoId: grupoId, valorTotal: valor }
       });
+      offset++;
     }
     gravarLancamentos(lancs);
     return;
@@ -938,9 +973,11 @@ function resetForm() {
   _cat = null; _sub = null;
   // Reset parcelamento
   _numParc = 1;
+  _parcIni = 1;
   document.getElementById('btn-parc-toggle').classList.remove('ativo');
   document.getElementById('btn-parc-toggle').textContent = 'À vista';
   document.getElementById('parc-select').style.display = 'none';
+  document.getElementById('parc-ini-wrap').style.display = 'none';
   document.getElementById('parc-x').style.display = 'none';
   document.getElementById('parc-preview').textContent = '';
 }
