@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260417-006">
+<meta name="app-version" content="20260417-007">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -313,6 +313,22 @@ body {
 .relcat-tab.ativo-mercado  { border-color:#43a047; background:#f0fdf4; color:#2e7d32; }
 .relcat-tab.ativo-carro    { border-color:#e53935; background:#fef2f2; color:#c62828; }
 .relcat-tab.ativo-diversos { border-color:#fb8c00; background:#fff7ed; color:#c05900; }
+.relcat-tab.ativo-parcelas { border-color:#7c3aed; background:#f5f3ff; color:#5b21b6; }
+/* ── PARCELAS REPORT ── */
+.parc-grupo-card { background:#fff; border-radius:16px; padding:16px; margin-bottom:14px; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+.parc-grupo-hdr  { display:flex; justify-content:space-between; align-items:flex-start; padding-left:10px; margin-bottom:12px; }
+.parc-grupo-desc { font-size:15px; font-weight:700; color:#111827; }
+.parc-grupo-sub  { font-size:12px; color:#6b7280; margin-top:2px; }
+.parc-grupo-val  { font-size:14px; font-weight:700; color:#374151; text-align:right; white-space:nowrap; }
+.parc-barra-wrap { height:8px; background:#f3f4f6; border-radius:99px; overflow:hidden; margin-bottom:10px; }
+.parc-barra-fill { height:100%; border-radius:99px; transition:width .4s; }
+.parc-stats      { display:flex; justify-content:space-between; font-size:12px; color:#6b7280; margin-bottom:12px; }
+.parc-stats strong { color:#111827; }
+.parc-numeros    { display:flex; flex-wrap:wrap; gap:5px; }
+.parc-num        { width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; }
+.parc-num-paga   { background:#dcfce7; color:#166534; }
+.parc-num-futura { background:#ede9fe; color:#5b21b6; border:1.5px dashed #a78bfa; }
+.parc-num-ausente{ background:#f3f4f6; color:#9ca3af; }
 .relcat-hero { text-align:center; padding:14px 0 10px; }
 .relcat-hero-val { font-size:34px; font-weight:900; letter-spacing:-.5px; }
 .relcat-hero-sub { font-size:12px; color:#9ca3af; margin-top:2px; }
@@ -1114,6 +1130,7 @@ body {
       <button class="relcat-tab" id="rct-mercado"  onclick="setRelCat('mercado')">🛒<br>Mercado</button>
       <button class="relcat-tab" id="rct-carro"    onclick="setRelCat('carro')">🚗<br>Carro</button>
       <button class="relcat-tab" id="rct-diversos" onclick="setRelCat('diversos')">🛍️<br>Diversos</button>
+      <button class="relcat-tab" id="rct-parcelas" onclick="setRelCat('parcelas')">📦<br>Parcelas</button>
     </div>
     <!-- Período -->
     <div class="card rel-periodo-card">
@@ -2092,9 +2109,11 @@ var _rcTipo = 'periodo';
 
 function setRelCat(cat) {
   _rcCat = cat;
-  ['mercado','carro','diversos'].forEach(function(c) {
+  ['mercado','carro','diversos','parcelas'].forEach(function(c) {
     document.getElementById('rct-'+c).className = 'relcat-tab' + (c===cat ? ' ativo-'+c : '');
   });
+  // Esconde seletor de período no modo parcelas
+  document.querySelector('.rel-periodo-card').style.display = cat==='parcelas' ? 'none' : '';
   renderizarRelcat();
 }
 
@@ -2123,6 +2142,7 @@ function getRelCatPer() {
 
 function renderizarRelcat() {
   var el = document.getElementById('corpo-relcat');
+  if (_rcCat === 'parcelas') { el.innerHTML = renderizarParcelas(); return; }
   var per = getRelCatPer();
   if (!per) { el.innerHTML = '<div class="vazio">Selecione as datas do período</div>'; return; }
 
@@ -2229,6 +2249,93 @@ function renderizarRelcat() {
     '</div>';
 
   el.innerHTML = heroHtml + statsHtml + subHtml + acoesHtml + listaHtml;
+}
+
+function renderizarParcelas() {
+  var d   = getDados();
+  var hj  = hoje();
+  var grupos = {};
+
+  d.lancamentos.forEach(function(l) {
+    if (!l.parcela) return;
+    var gid = l.parcela.grupoId;
+    if (!grupos[gid]) {
+      grupos[gid] = {
+        total: l.parcela.total,
+        valorTotal: l.parcela.valorTotal || (l.valor * l.parcela.total),
+        valorParc: parseFloat(l.valor) || 0,
+        desc: l.desc || '',
+        cat: l.cat || '',
+        sub: l.sub || '',
+        lancs: {}
+      };
+    }
+    grupos[gid].lancs[l.parcela.n] = l;
+  });
+
+  var keys = Object.keys(grupos);
+  if (keys.length === 0) {
+    return '<div class="vazio" style="text-align:center;padding:40px 0;color:#9ca3af">Nenhum lançamento parcelado encontrado</div>';
+  }
+
+  // Ordena: mais recente primeiro (pela parcela mais alta paga)
+  keys.sort(function(a, b) {
+    var la = grupos[a], lb = grupos[b];
+    var maxA = Math.max.apply(null, Object.keys(la.lancs).map(Number));
+    var maxB = Math.max.apply(null, Object.keys(lb.lancs).map(Number));
+    return maxB - maxA;
+  });
+
+  var COR  = { mercado:'#16a34a', carro:'#dc2626', diversos:'#ea580c' };
+  var ICO  = { mercado:'🛒', carro:'🚗', diversos:'🛍️' };
+  var html = '';
+
+  keys.forEach(function(gid) {
+    var g   = grupos[gid];
+    var cor = COR[g.cat] || '#7c3aed';
+    var ico = ICO[g.cat] || '📦';
+    var pagas = 0, futuras = 0;
+    for (var n = 1; n <= g.total; n++) {
+      var l = g.lancs[n];
+      if (l) { if (l.data <= hj) pagas++; else futuras++; }
+    }
+    var ausentes  = g.total - pagas - futuras;
+    var pct       = Math.round((pagas / g.total) * 100);
+    var totalPago = pagas * g.valorParc;
+    var restante  = (g.total - pagas) * g.valorParc;
+    var quitado   = pagas >= g.total;
+
+    html += '<div class="parc-grupo-card">' +
+      '<div class="parc-grupo-hdr" style="border-left:4px solid '+cor+'">' +
+        '<div>' +
+          '<div class="parc-grupo-desc">' + ico + ' ' + (g.desc || 'Parcelamento') + '</div>' +
+          (g.sub ? '<div class="parc-grupo-sub">' + g.sub + '</div>' : '') +
+        '</div>' +
+        '<div class="parc-grupo-val">' + formatar(g.valorParc) + '/mês</div>' +
+      '</div>' +
+      '<div class="parc-barra-wrap"><div class="parc-barra-fill" style="width:'+pct+'%;background:'+cor+'"></div></div>' +
+      '<div class="parc-stats">' +
+        '<span><strong>' + pagas + '/' + g.total + '</strong> pagas</span>' +
+        '<span>' + formatar(totalPago) + ' pago</span>' +
+        (quitado
+          ? '<span style="color:#16a34a;font-weight:700">✓ Quitado</span>'
+          : '<span>' + formatar(restante) + ' restante</span>') +
+      '</div>' +
+      '<div class="parc-numeros">';
+
+    for (var i = 1; i <= g.total; i++) {
+      var l = g.lancs[i];
+      var cls, lbl;
+      if (l) {
+        if (l.data <= hj) { cls = 'paga';   lbl = '✓'; }
+        else               { cls = 'futura'; lbl = i;   }
+      } else               { cls = 'ausente'; lbl = i;  }
+      html += '<div class="parc-num parc-num-'+cls+'" title="Parcela '+i+'/'+g.total+'">'+lbl+'</div>';
+    }
+    html += '</div></div>';
+  });
+
+  return html;
 }
 
 function exportarPDFRelcat() {
