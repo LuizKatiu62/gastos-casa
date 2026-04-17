@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260417-029">
+<meta name="app-version" content="20260417-030">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -462,9 +462,10 @@ body {
   box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 4px 12px rgba(0,0,0,.04);
   border-left: 4px solid;
 }
-.rel-cat-bloco.carro    { border-color: #ef4444; }
-.rel-cat-bloco.diversos { border-color: #f97316; }
-.rel-cat-bloco.mercado  { border-color: #22c55e; }
+.rel-cat-bloco.carro       { border-color: #ef4444; }
+.rel-cat-bloco.diversos    { border-color: #f97316; }
+.rel-cat-bloco.mercado     { border-color: #22c55e; }
+.rel-cat-bloco.parcelados  { border-color: #7c3aed; }
 .rel-cat-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
 .rel-cat-nome { font-size: 14px; font-weight: 800; color: #111827; }
 .rel-cat-pct-total { font-size: 11px; color: #9ca3af; font-weight: 700; }
@@ -1677,7 +1678,7 @@ function renderizarBarras(lista, p) {
   // Agrupar por dia e categoria
   var porDia = {};
   lista.forEach(function(l) {
-    if (!porDia[l.data]) porDia[l.data] = { carro:0, diversos:0, mercado:0, total:0 };
+    if (!porDia[l.data]) porDia[l.data] = { carro:0, diversos:0, mercado:0, parcelados:0, total:0 };
     var v = parseFloat(l.valor||0);
     porDia[l.data][l.cat] = (porDia[l.data][l.cat]||0) + v;
     porDia[l.data].total  += v;
@@ -1735,22 +1736,24 @@ function renderizarBarras(lista, p) {
   var CHART_H = 140;
   var barsHtml = '';
   dias.forEach(function(d) {
-    var data = porDia[d] || { carro:0, diversos:0, mercado:0, total:0 };
+    var data = porDia[d] || { carro:0, diversos:0, mercado:0, parcelados:0, total:0 };
     var total = data.total;
     var isHoje = d === hj;
     var totalH = total > 0 ? Math.max(6, Math.round(total/maxVal*CHART_H)) : 0;
-    var hCarro    = total > 0 ? Math.round(data.carro/total*totalH)    : 0;
-    var hDiversos = total > 0 ? Math.round(data.diversos/total*totalH) : 0;
-    var hMercado  = totalH - hCarro - hDiversos;
+    var hCarro      = total > 0 ? Math.round(data.carro/total*totalH)      : 0;
+    var hDiversos   = total > 0 ? Math.round(data.diversos/total*totalH)   : 0;
+    var hParcelados = total > 0 ? Math.round(data.parcelados/total*totalH) : 0;
+    var hMercado    = totalH - hCarro - hDiversos - hParcelados;
     if (hMercado < 0) hMercado = 0;
     var dia = parseInt(d.split('-')[2]);
     var valLabel = total > 0 ? (total >= 1000 ? (total/1000).toFixed(1)+'k' : Math.round(total)+'') : '';
     barsHtml += '<div class="bar-col'+(isHoje?' bar-hoje':'')+'">' +
       '<div class="bar-val">'+valLabel+'</div>' +
       '<div class="bar-stack" style="height:'+totalH+'px">' +
-        (hMercado  > 0 ? '<div class="bar-seg" style="height:'+hMercado+'px;background:#43a047"></div>'  : '') +
-        (hDiversos > 0 ? '<div class="bar-seg" style="height:'+hDiversos+'px;background:#fb8c00"></div>' : '') +
-        (hCarro    > 0 ? '<div class="bar-seg" style="height:'+hCarro+'px;background:#e53935"></div>'    : '') +
+        (hMercado    > 0 ? '<div class="bar-seg" style="height:'+hMercado+'px;background:#43a047"></div>'    : '') +
+        (hParcelados > 0 ? '<div class="bar-seg" style="height:'+hParcelados+'px;background:#7c3aed"></div>' : '') +
+        (hDiversos   > 0 ? '<div class="bar-seg" style="height:'+hDiversos+'px;background:#fb8c00"></div>'   : '') +
+        (hCarro      > 0 ? '<div class="bar-seg" style="height:'+hCarro+'px;background:#e53935"></div>'      : '') +
         (total === 0   ? '<div style="height:4px;background:#eee;border-radius:2px 2px 0 0"></div>' : '') +
       '</div>' +
       '<div class="bar-dia">'+dia+'</div>' +
@@ -2048,7 +2051,7 @@ function renderizarRelatorio() {
   if (!per) { el.innerHTML = '<div class="vazio">Selecione as datas do período</div>'; return; }
 
   var lista = lancamentosPeriodo(d.lancamentos, per);
-  var tots  = { carro:0, diversos:0, mercado:0 };
+  var tots  = { carro:0, diversos:0, mercado:0, parcelados:0 };
   var stots = {};
   var grand = 0;
   var porDia = {};
@@ -2128,9 +2131,10 @@ function renderizarRelatorio() {
 
   var catsHtml =
     '<div style="font-size:11px;font-weight:800;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin:12px 0 8px">Por Categoria</div>' +
-    catBloco('carro',   'carro',   '🚗', '#e53935', true) +
-    catBloco('diversos','diversos','🛍️', '#fb8c00', false) +
-    catBloco('mercado', 'mercado', '🛒', '#43a047', false);
+    catBloco('carro',      'carro',      '🚗', '#e53935', true) +
+    catBloco('diversos',   'diversos',   '🛍️', '#fb8c00', false) +
+    catBloco('mercado',    'mercado',    '🛒', '#43a047', false) +
+    catBloco('parcelados', 'parcelados', '📦', '#7c3aed', false);
 
   // ── Top 5 gastos ──
   var top5 = lista.slice().sort(function(a,b){ return parseFloat(b.valor)-parseFloat(a.valor); }).slice(0,5);
