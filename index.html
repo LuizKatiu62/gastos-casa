@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260417-010">
+<meta name="app-version" content="20260417-011">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -2308,7 +2308,7 @@ function renderizarParcelas() {
         '</div>' +
         '<div style="width:1px;background:rgba(255,255,255,.2)"></div>' +
         '<div style="text-align:center;flex:1">' +
-          '<div style="font-size:11px;opacity:.75;margin-bottom:2px">Já pago</div>' +
+          '<div style="font-size:11px;opacity:.75;margin-bottom:2px">Valor Mês/Período</div>' +
           '<div style="font-size:16px;font-weight:800;color:#bbf7d0">'+formatar(totalGeralPago)+'</div>' +
         '</div>' +
         '<div style="width:1px;background:rgba(255,255,255,.2)"></div>' +
@@ -2441,7 +2441,7 @@ function exportarPDFParcelas() {
     '<div style="background:#7c3aed;color:#fff;border-radius:12px;padding:14px;margin-bottom:20px;display:flex;justify-content:space-between;gap:8px">' +
       '<div style="text-align:center;flex:1"><div style="font-size:10px;opacity:.75;margin-bottom:2px">Compromisso total</div><div style="font-size:15px;font-weight:800">'+formatar(totComp)+'</div></div>' +
       '<div style="width:1px;background:rgba(255,255,255,.25)"></div>' +
-      '<div style="text-align:center;flex:1"><div style="font-size:10px;opacity:.75;margin-bottom:2px">Já pago</div><div style="font-size:15px;font-weight:800;color:#bbf7d0">'+formatar(totPago)+'</div></div>' +
+      '<div style="text-align:center;flex:1"><div style="font-size:10px;opacity:.75;margin-bottom:2px">Valor Mês/Período</div><div style="font-size:15px;font-weight:800;color:#bbf7d0">'+formatar(totPago)+'</div></div>' +
       '<div style="width:1px;background:rgba(255,255,255,.25)"></div>' +
       '<div style="text-align:center;flex:1"><div style="font-size:10px;opacity:.75;margin-bottom:2px">Restante</div><div style="font-size:15px;font-weight:800;color:#fde68a">'+formatar(totRest)+'</div></div>' +
     '</div>' +
