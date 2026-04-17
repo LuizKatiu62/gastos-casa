@@ -277,6 +277,27 @@ body {
 .parcela-preview { font-size: 12px; color: #6366f1; font-weight: 600; }
 .sel-parcelas { font-size: 15px; margin-top: 8px; width: 100%; padding: 8px; border-radius: 10px; border: 1.5px solid #d1d5db; background: #fff; }
 
+/* ── RELATÓRIO POR CATEGORIA ── */
+.relcat-tabs { display:flex; gap:8px; margin-bottom:14px; }
+.relcat-tab { flex:1; padding:10px 6px; border:2px solid #e5e7eb; background:#f9fafb; border-radius:16px; font-size:12px; font-weight:700; color:#6b7280; cursor:pointer; text-align:center; line-height:1.4; transition:all .2s; font-family:inherit; }
+.relcat-tab.ativo-mercado  { border-color:#43a047; background:#f0fdf4; color:#2e7d32; }
+.relcat-tab.ativo-carro    { border-color:#e53935; background:#fef2f2; color:#c62828; }
+.relcat-tab.ativo-diversos { border-color:#fb8c00; background:#fff7ed; color:#c05900; }
+.relcat-hero { text-align:center; padding:14px 0 10px; }
+.relcat-hero-val { font-size:34px; font-weight:900; letter-spacing:-.5px; }
+.relcat-hero-sub { font-size:12px; color:#9ca3af; margin-top:2px; }
+.relcat-orc-row { display:flex; justify-content:space-between; font-size:12px; margin-top:10px; }
+.relcat-sub-row { display:flex; align-items:center; gap:8px; padding:7px 0; border-top:1px solid #f3f4f6; }
+.relcat-sub-nome { width:88px; font-size:12px; color:#374151; font-weight:600; flex-shrink:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.relcat-sub-bar-wrap { flex:1; background:#f3f4f6; border-radius:4px; height:7px; }
+.relcat-sub-bar-fill { height:7px; border-radius:4px; }
+.relcat-sub-val { font-size:12px; font-weight:800; flex-shrink:0; min-width:72px; text-align:right; }
+.relcat-sub-pct { font-size:11px; color:#9ca3af; width:30px; text-align:right; flex-shrink:0; }
+.relcat-stats { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px; }
+.relcat-stat { background:#f9fafb; border-radius:12px; padding:10px 12px; }
+.relcat-stat-val { font-size:16px; font-weight:900; }
+.relcat-stat-lbl { font-size:11px; color:#9ca3af; margin-top:2px; }
+
 /* ── TOPO TELAS INTERNAS ── */
 .topo-add {
   background: linear-gradient(150deg, #0f172a 0%, #1e3a8a 100%);
@@ -1025,11 +1046,46 @@ body {
   </div>
 </div>
 
+<!-- ════════════════════════════
+     RELATÓRIO POR CATEGORIA
+════════════════════════════ -->
+<div class="tela" id="tela-relcat">
+  <div class="topo-add">
+    <h2>📂 Por Categoria</h2>
+    <button class="btn-voltar" onclick="irPara('inicio')">✕</button>
+  </div>
+  <div class="conteudo">
+    <!-- Tabs categoria -->
+    <div class="relcat-tabs">
+      <button class="relcat-tab" id="rct-mercado"  onclick="setRelCat('mercado')">🛒<br>Mercado</button>
+      <button class="relcat-tab" id="rct-carro"    onclick="setRelCat('carro')">🚗<br>Carro</button>
+      <button class="relcat-tab" id="rct-diversos" onclick="setRelCat('diversos')">🛍️<br>Diversos</button>
+    </div>
+    <!-- Período -->
+    <div class="card rel-periodo-card">
+      <div class="rel-per-btns">
+        <button class="rel-per-btn ativo" id="rcper-periodo" onclick="setRelCatPer('periodo')">Período</button>
+        <button class="rel-per-btn"       id="rcper-mes"     onclick="setRelCatPer('mes')">Mês atual</button>
+        <button class="rel-per-btn"       id="rcper-custom"  onclick="setRelCatPer('custom')">Personalizado</button>
+      </div>
+      <div id="relcat-custom-datas" style="display:none;margin-top:10px">
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="date" id="relcat-ini" onchange="renderizarRelcat()" style="flex:1;padding:8px;border:2px solid #e0e0e0;border-radius:8px;font-size:14px">
+          <span style="color:#aaa">→</span>
+          <input type="date" id="relcat-fim" onchange="renderizarRelcat()" style="flex:1;padding:8px;border:2px solid #e0e0e0;border-radius:8px;font-size:14px">
+        </div>
+      </div>
+    </div>
+    <div id="corpo-relcat"></div>
+  </div>
+</div>
+
 <!-- NAV -->
 <nav class="nav">
   <button id="nb-inicio" class="active" onclick="irPara('inicio')"><span>🏠</span>Início</button>
   <button id="nb-add" onclick="irPara('add')"><span>➕</span>Registrar</button>
   <button id="nb-historico" onclick="irPara('historico')"><span>📋</span>Histórico</button>
+  <button id="nb-relcat" onclick="irPara('relcat')"><span>📂</span>Por Cat.</button>
   <button id="nb-relatorio" onclick="irPara('relatorio')"><span>📊</span>Relatório</button>
 </nav>
 
@@ -1922,6 +1978,149 @@ function renderizarRelatorio() {
 }
 
 // ─────────────────────────────
+// RELATÓRIO POR CATEGORIA
+// ─────────────────────────────
+var _rcCat  = 'mercado';
+var _rcTipo = 'periodo';
+
+function setRelCat(cat) {
+  _rcCat = cat;
+  ['mercado','carro','diversos'].forEach(function(c) {
+    document.getElementById('rct-'+c).className = 'relcat-tab' + (c===cat ? ' ativo-'+c : '');
+  });
+  renderizarRelcat();
+}
+
+function setRelCatPer(tipo) {
+  _rcTipo = tipo;
+  ['periodo','mes','custom'].forEach(function(t) {
+    document.getElementById('rcper-'+t).className = 'rel-per-btn' + (t===tipo?' ativo':'');
+  });
+  document.getElementById('relcat-custom-datas').style.display = tipo==='custom' ? 'block' : 'none';
+  if (tipo !== 'custom') renderizarRelcat();
+}
+
+function getRelCatPer() {
+  var d = getDados();
+  if (_rcTipo === 'periodo') return { inicio: d.periodo.inicio, fim: d.periodo.fim };
+  if (_rcTipo === 'mes') {
+    var n = new Date(), y = n.getFullYear(), m = (n.getMonth()+1+'').padStart(2,'0');
+    var ul = new Date(y, n.getMonth()+1, 0).getDate();
+    return { inicio: y+'-'+m+'-01', fim: y+'-'+m+'-'+(ul+'').padStart(2,'0') };
+  }
+  var ini = document.getElementById('relcat-ini').value;
+  var fim = document.getElementById('relcat-fim').value;
+  if (!ini || !fim) return null;
+  return { inicio: ini, fim: fim };
+}
+
+function renderizarRelcat() {
+  var el = document.getElementById('corpo-relcat');
+  var per = getRelCatPer();
+  if (!per) { el.innerHTML = '<div class="vazio">Selecione as datas do período</div>'; return; }
+
+  var d    = getDados();
+  var cor  = CORES[_rcCat];
+  var orc  = (d.orcamentos && d.orcamentos[_rcCat]) || 0;
+  var lista = lancamentosPeriodo(d.lancamentos, per).filter(function(l){ return l.cat === _rcCat; });
+  lista.sort(function(a,b){ return b.data.localeCompare(a.data); });
+
+  var total = lista.reduce(function(s,l){ return s + parseFloat(l.valor||0); }, 0);
+
+  // Sub-categorias
+  var subTots = {};
+  lista.forEach(function(l) {
+    var v = parseFloat(l.valor||0);
+    var k = l.loja || l.divsub || l.sub || '—';
+    subTots[k] = (subTots[k]||0) + v;
+  });
+  var subKeys = Object.keys(subTots).sort(function(a,b){ return subTots[b]-subTots[a]; });
+  var maxSub = subKeys.length ? subTots[subKeys[0]] : 1;
+
+  // Stats
+  var porDia = {};
+  lista.forEach(function(l){ porDia[l.data] = (porDia[l.data]||0) + parseFloat(l.valor||0); });
+  var diasComGasto = Object.keys(porDia).length;
+  var mediaDia = diasComGasto > 0 ? total/diasComGasto : 0;
+  var maiorItem = lista.reduce(function(mx,l){ return parseFloat(l.valor||0)>parseFloat(mx.valor||0)?l:mx; }, lista[0]||{});
+
+  // Pct orçamento
+  var pctOrc = orc > 0 ? Math.min(total/orc*100, 100) : 0;
+  var corB   = total>orc&&orc>0 ? '#f44336' : pctOrc>=80 ? '#ff9800' : cor;
+
+  if (!lista.length) {
+    el.innerHTML = '<div class="vazio">📭 Nenhum lançamento neste período</div>';
+    return;
+  }
+
+  // ── Hero ──
+  var heroHtml =
+    '<div class="card" style="margin-bottom:10px">' +
+    '<div class="relcat-hero">' +
+      '<div class="relcat-hero-val" style="color:'+cor+'">'+formatar(total)+'</div>' +
+      '<div class="relcat-hero-sub">'+lista.length+' lançamentos · '+formatarData(per.inicio)+' → '+formatarData(per.fim)+'</div>' +
+    '</div>' +
+    (orc>0 ?
+      '<div class="orc-barra-fundo" style="height:10px;margin-top:8px"><div class="orc-barra-fill" style="width:'+pctOrc.toFixed(1)+'%;background:'+corB+'"></div></div>' +
+      '<div class="relcat-orc-row">' +
+        '<span style="color:#aaa">Orçado: '+formatar(orc)+'</span>' +
+        '<span style="color:'+corB+';font-weight:800">'+pctOrc.toFixed(1)+'% utilizado</span>' +
+        '<span style="color:'+(total>orc?'#f44336':'#43a047')+';font-weight:700">'+(total>orc?'Excedeu ':'Sobra ')+formatar(Math.abs(orc-total))+'</span>' +
+      '</div>'
+    : '') +
+    '</div>';
+
+  // ── Stats ──
+  var statsHtml =
+    '<div class="relcat-stats">' +
+    '<div class="relcat-stat"><div class="relcat-stat-val" style="color:'+cor+'">'+formatar(mediaDia)+'</div><div class="relcat-stat-lbl">Média por dia c/ gasto</div></div>' +
+    '<div class="relcat-stat"><div class="relcat-stat-val" style="color:#374151">'+diasComGasto+'</div><div class="relcat-stat-lbl">Dias com gasto</div></div>' +
+    (maiorItem.valor ? '<div class="relcat-stat"><div class="relcat-stat-val" style="color:#e53935">'+formatar(maiorItem.valor)+'</div><div class="relcat-stat-lbl">Maior gasto · '+formatarData(maiorItem.data)+'</div></div>' : '') +
+    '<div class="relcat-stat"><div class="relcat-stat-val" style="color:#374151">'+formatar(total/lista.length)+'</div><div class="relcat-stat-lbl">Ticket médio</div></div>' +
+    '</div>';
+
+  // ── Subcategorias ──
+  var subHtml = '';
+  if (subKeys.length > 0) {
+    subHtml = '<div class="card" style="margin-bottom:10px"><div class="card-titulo">Por Subcategoria</div>';
+    subKeys.forEach(function(k) {
+      var v   = subTots[k];
+      var pct = total > 0 ? (v/total*100) : 0;
+      var w   = maxSub > 0 ? (v/maxSub*100) : 0;
+      subHtml +=
+        '<div class="relcat-sub-row">' +
+        '<div class="relcat-sub-nome">'+k+'</div>' +
+        '<div class="relcat-sub-bar-wrap"><div class="relcat-sub-bar-fill" style="width:'+w.toFixed(1)+'%;background:'+cor+'"></div></div>' +
+        '<div class="relcat-sub-val" style="color:'+cor+'">'+formatar(v)+'</div>' +
+        '<div class="relcat-sub-pct">'+pct.toFixed(0)+'%</div>' +
+        '</div>';
+    });
+    subHtml += '</div>';
+  }
+
+  // ── Lista ──
+  var listaHtml =
+    '<div class="card"><div class="card-titulo">Lançamentos ('+lista.length+')</div>' +
+    lista.map(function(l) {
+      var parcBadge = l.parcela ? '<span class="lanc-parcela">'+l.parcela.n+'/'+l.parcela.total+'</span>' : '';
+      var subInfo   = l.loja || l.divsub || l.sub || '';
+      return '<div class="lancamento">' +
+        '<div class="lanc-ponto" style="background:'+cor+'"></div>' +
+        '<div class="lanc-info">' +
+          '<div class="lanc-desc">'+(l.desc||NOMES[_rcCat])+parcBadge+'</div>' +
+          '<div class="lanc-meta">'+formatarData(l.data)+(subInfo?' · '+subInfo:'')+'</div>' +
+        '</div>' +
+        '<div class="lanc-valor" style="color:'+cor+'">'+formatar(l.valor)+'</div>' +
+        '<button class="lanc-edit" onclick="editarLancamento(\''+l.id+'\')">✏️</button>' +
+        '<button class="lanc-del" onclick="excluir(\''+l.id+'\');renderizarRelcat()">✕</button>' +
+      '</div>';
+    }).join('') +
+    '</div>';
+
+  el.innerHTML = heroHtml + statsHtml + subHtml + listaHtml;
+}
+
+// ─────────────────────────────
 // ADICIONAR
 // ─────────────────────────────
 var _loja = '', _lojaOutros = '', _divSub = '', _divOutros = '', _carroSub = '', _carroOutros = '';
@@ -2341,6 +2540,10 @@ function irPara(tela) {
   if (tela==='relatorio') {
     setRelPeriodo(_relTipo);
     renderizarRelatorio();
+  }
+  if (tela==='relcat') {
+    setRelCat(_rcCat);
+    setRelCatPer(_rcTipo);
   }
   window.scrollTo(0,0);
 }
