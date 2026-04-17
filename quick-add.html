@@ -10,331 +10,511 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
-      background: #0f1923;
-      color: #fff;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      padding: env(safe-area-inset-top, 20px) 16px env(safe-area-inset-bottom, 16px);
-      padding-top: max(env(safe-area-inset-top), 20px);
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    :root {
+      --bg:      #07101c;
+      --surface: #0f1e30;
+      --border:  rgba(255,255,255,.07);
+      --text:    #ffffff;
+      --muted:   #5a7080;
+      --sub:     #8899aa;
+
+      --green:  #22c55e;
+      --red:    #ef4444;
+      --orange: #f97316;
+      --blue:   #3b82f6;
+
+      --safe-top:    env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
     }
 
-    /* ── Header ── */
+    html, body { height: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100%;
+      display: flex;
+      flex-direction: column;
+      padding-top: max(var(--safe-top), 16px);
+      padding-bottom: calc(90px + var(--safe-bottom));
+      padding-left: 16px;
+      padding-right: 16px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ─── HEADER ─────────────────────────── */
     .header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 8px 0 20px;
+      padding: 4px 0 20px;
     }
-    .header h1 { font-size: 18px; font-weight: 700; color: #fff; }
-    .header-date { font-size: 13px; color: #8899aa; }
-
-    /* ── Valor ── */
-    .valor-wrap {
-      background: #1a2535;
-      border-radius: 20px;
-      padding: 20px;
-      margin-bottom: 16px;
-      text-align: center;
-    }
-    .valor-label { font-size: 12px; color: #8899aa; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
-    .valor-input {
-      width: 100%;
-      background: none;
-      border: none;
-      outline: none;
-      font-size: 44px;
-      font-weight: 700;
-      color: #fff;
-      text-align: center;
-      caret-color: #4fc3f7;
-    }
-    .valor-input::placeholder { color: #2a3a4a; }
-
-    /* ── Categorias ── */
-    .section-label {
-      font-size: 12px;
-      color: #8899aa;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-bottom: 10px;
-    }
-    .cats {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 10px;
-      margin-bottom: 16px;
-    }
-    .cat-btn {
-      background: #1a2535;
-      border: 2px solid transparent;
-      border-radius: 16px;
-      padding: 16px 8px;
-      text-align: center;
-      cursor: pointer;
-      transition: all .15s;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .cat-btn .icon { font-size: 26px; display: block; margin-bottom: 4px; }
-    .cat-btn .name { font-size: 12px; font-weight: 600; color: #8899aa; }
-    .cat-btn.active-mercado { border-color: #43a047; background: #0e2212; }
-    .cat-btn.active-mercado .name { color: #66bb6a; }
-    .cat-btn.active-carro   { border-color: #e53935; background: #220d0d; }
-    .cat-btn.active-carro   .name { color: #ef5350; }
-    .cat-btn.active-diversos{ border-color: #fb8c00; background: #221608; }
-    .cat-btn.active-diversos .name { color: #ffa726; }
-
-    /* ── Subcategorias ── */
-    .subcats {
-      display: none;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 16px;
-    }
-    .subcats.visible { display: flex; }
-    .sub-btn {
-      background: #1a2535;
-      border: 2px solid transparent;
-      border-radius: 50px;
-      padding: 10px 16px;
-      font-size: 14px;
-      color: #aabbcc;
-      cursor: pointer;
-      white-space: nowrap;
-      -webkit-tap-highlight-color: transparent;
-      transition: all .15s;
-    }
-    .sub-btn.active { border-color: #4fc3f7; background: #0d2030; color: #4fc3f7; }
-
-    /* ── Descrição ── */
-    .desc-wrap {
-      margin-bottom: 16px;
-    }
-    .desc-label {
-      display: block;
-      font-size: 12px;
-      color: #8899aa;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-bottom: 8px;
-    }
-    .desc-input {
-      width: 100%;
-      background: #1a2535;
-      border: 1.5px solid transparent;
-      border-radius: 14px;
-      padding: 13px 14px;
-      font-size: 15px;
-      font-family: inherit;
-      color: #fff;
-      resize: none;
-      outline: none;
-      transition: border-color .15s;
-    }
-    .desc-input::placeholder { color: #2a3a4a; }
-    .desc-input:focus { border-color: #4fc3f7; }
-
-    /* ── Data ── */
-    .data-wrap {
+    .header-left {
       display: flex;
       align-items: center;
       gap: 10px;
-      background: #1a2535;
-      border-radius: 14px;
-      padding: 14px 16px;
-      margin-bottom: 20px;
     }
-    .data-wrap label { font-size: 13px; color: #8899aa; flex-shrink: 0; }
-    .data-input {
+    .header-logo {
+      font-size: 26px;
+      line-height: 1;
+    }
+    .header-title {
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: -.3px;
+    }
+    .header-date {
+      font-size: 12px;
+      color: var(--sub);
+      margin-top: 1px;
+    }
+    .header-badge {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--sub);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 4px 10px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .sync-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--muted);
+      display: inline-block;
+      transition: background .3s;
+    }
+    .sync-dot.ok  { background: var(--green); }
+    .sync-dot.err { background: var(--red); }
+
+    /* ─── CARD BASE ──────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 18px 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 20px rgba(0,0,0,.25);
+    }
+    .card-label {
+      font-size: 10px;
+      font-weight: 800;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      margin-bottom: 14px;
+    }
+
+    /* ─── VALOR CARD ─────────────────────── */
+    .valor-card {
+      text-align: center;
+      padding: 22px 16px 18px;
+      position: relative;
+      transition: border-color .2s;
+    }
+    .valor-card.focused {
+      border-color: rgba(59,130,246,.4);
+      box-shadow: 0 2px 20px rgba(59,130,246,.12);
+    }
+    .valor-card.has-mercado { border-color: rgba(34,197,94,.35); box-shadow: 0 2px 20px rgba(34,197,94,.1); }
+    .valor-card.has-carro   { border-color: rgba(239,68,68,.35); box-shadow: 0 2px 20px rgba(239,68,68,.1); }
+    .valor-card.has-diversos{ border-color: rgba(249,115,22,.35); box-shadow: 0 2px 20px rgba(249,115,22,.1); }
+
+    .valor-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .valor-prefix {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--sub);
+      padding-top: 8px;
+      flex-shrink: 0;
+    }
+    .valor-input {
       background: none;
       border: none;
       outline: none;
-      color: #fff;
-      font-size: 15px;
-      font-weight: 600;
-      width: 100%;
-      text-align: right;
+      font-size: 54px;
+      font-weight: 900;
+      color: var(--text);
+      text-align: left;
+      caret-color: var(--blue);
+      width: 190px;
+      letter-spacing: -2px;
+      line-height: 1;
     }
+    .valor-input::placeholder { color: rgba(255,255,255,.1); }
+    /* hide number spinners */
+    .valor-input::-webkit-inner-spin-button,
+    .valor-input::-webkit-outer-spin-button { -webkit-appearance: none; }
 
-    /* ── Botão Salvar ── */
+    /* ─── CATEGORIAS ─────────────────────── */
+    .cats {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+    }
+    .cat-btn {
+      background: rgba(255,255,255,.04);
+      border: 1.5px solid rgba(255,255,255,.08);
+      border-radius: 16px;
+      padding: 14px 6px 12px;
+      text-align: center;
+      cursor: pointer;
+      transition: all .15s;
+      position: relative;
+      overflow: hidden;
+    }
+    .cat-btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 14px;
+      opacity: 0;
+      transition: opacity .15s;
+    }
+    .cat-btn.active-mercado { border-color: var(--green); background: rgba(34,197,94,.08); }
+    .cat-btn.active-mercado .cat-name { color: var(--green); }
+    .cat-btn.active-carro   { border-color: var(--red);   background: rgba(239,68,68,.08); }
+    .cat-btn.active-carro   .cat-name { color: var(--red); }
+    .cat-btn.active-diversos{ border-color: var(--orange); background: rgba(249,115,22,.08); }
+    .cat-btn.active-diversos .cat-name { color: var(--orange); }
+
+    .cat-icon { font-size: 28px; display: block; margin-bottom: 6px; line-height: 1; }
+    .cat-name { font-size: 11px; font-weight: 700; color: var(--sub); transition: color .15s; letter-spacing: .2px; }
+
+    /* ─── SUBCATEGORIAS ──────────────────── */
+    .subcats-wrap {
+      overflow: hidden;
+      max-height: 0;
+      transition: max-height .25s ease, margin-top .25s ease;
+      margin-top: 0;
+    }
+    .subcats-wrap.visible {
+      max-height: 500px;
+      margin-top: 14px;
+    }
+    .sub-scroll {
+      display: flex;
+      gap: 7px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 4px;
+      scrollbar-width: none;
+    }
+    .sub-scroll::-webkit-scrollbar { display: none; }
+    .sub-btn {
+      background: rgba(255,255,255,.05);
+      border: 1.5px solid rgba(255,255,255,.1);
+      border-radius: 50px;
+      padding: 9px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--sub);
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: all .15s;
+      font-family: inherit;
+    }
+    .sub-btn.active-mercado { border-color: var(--green);  background: rgba(34,197,94,.12);  color: var(--green); }
+    .sub-btn.active-carro   { border-color: var(--red);    background: rgba(239,68,68,.12);   color: var(--red); }
+    .sub-btn.active-diversos{ border-color: var(--orange); background: rgba(249,115,22,.12);  color: var(--orange); }
+
+    /* ─── DETALHES ───────────────────────── */
+    .field {
+      position: relative;
+      margin-bottom: 14px;
+    }
+    .field:last-child { margin-bottom: 0; }
+    .field-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      margin-bottom: 7px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .field-label span { font-weight: 500; color: rgba(255,255,255,.22); text-transform: none; letter-spacing: 0; font-size: 11px; }
+    .field-textarea {
+      width: 100%;
+      background: rgba(255,255,255,.04);
+      border: 1.5px solid rgba(255,255,255,.08);
+      border-radius: 13px;
+      padding: 12px 14px;
+      font-size: 15px;
+      font-family: inherit;
+      color: var(--text);
+      resize: none;
+      outline: none;
+      transition: border-color .15s;
+      line-height: 1.5;
+    }
+    .field-textarea::placeholder { color: var(--muted); font-size: 14px; }
+    .field-textarea:focus { border-color: rgba(59,130,246,.45); }
+
+    .field-date-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(255,255,255,.04);
+      border: 1.5px solid rgba(255,255,255,.08);
+      border-radius: 13px;
+      padding: 12px 14px;
+      transition: border-color .15s;
+    }
+    .field-date-row:focus-within { border-color: rgba(59,130,246,.45); }
+    .field-date-label {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--sub);
+    }
+    .field-date-input {
+      background: none;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-size: 15px;
+      font-weight: 700;
+      font-family: inherit;
+      text-align: right;
+      min-width: 0;
+    }
+    /* iOS date input color fix */
+    input[type="date"]::-webkit-date-and-time-value { color: var(--text); }
+
+    /* ─── SAVE BUTTON (fixed bottom) ─────── */
+    .btn-salvar-wrap {
+      position: fixed;
+      bottom: 0;
+      left: 0; right: 0;
+      padding: 12px 16px calc(12px + var(--safe-bottom));
+      background: linear-gradient(to top, var(--bg) 60%, transparent);
+      z-index: 50;
+    }
     .btn-salvar {
       width: 100%;
-      padding: 18px;
-      border-radius: 18px;
+      padding: 17px;
+      border-radius: 16px;
       border: none;
-      font-size: 18px;
-      font-weight: 700;
+      font-size: 17px;
+      font-weight: 800;
       cursor: pointer;
-      background: #1565c0;
+      background: var(--blue);
       color: #fff;
-      -webkit-tap-highlight-color: transparent;
-      transition: opacity .15s, transform .1s;
-      margin-top: auto;
+      font-family: inherit;
+      letter-spacing: -.2px;
+      transition: opacity .15s, transform .1s, background .2s;
+      box-shadow: 0 4px 20px rgba(59,130,246,.35);
     }
-    .btn-salvar:active { opacity: .8; transform: scale(.98); }
-    .btn-salvar:disabled { background: #1a2535; color: #4a5a6a; }
+    .btn-salvar:active { opacity: .85; transform: scale(.98); }
+    .btn-salvar:disabled { background: var(--surface); color: var(--muted); box-shadow: none; }
+    .btn-salvar.cat-mercado  { background: var(--green);  box-shadow: 0 4px 20px rgba(34,197,94,.35); }
+    .btn-salvar.cat-carro    { background: var(--red);    box-shadow: 0 4px 20px rgba(239,68,68,.35); }
+    .btn-salvar.cat-diversos { background: var(--orange); box-shadow: 0 4px 20px rgba(249,115,22,.35); }
 
-    /* ── Modal Duplicata ── */
+    /* ─── MODAL DUPLICATA ────────────────── */
     .dup-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,.72);
+      background: rgba(0,0,0,.75);
       z-index: 998;
       display: none;
-      align-items: center;
+      align-items: flex-end;
       justify-content: center;
-      padding: 20px;
+      padding: 0;
     }
     .dup-overlay.show { display: flex; }
     .dup-modal {
-      background: #1a2535;
-      border: 2px solid #f59e0b;
-      border-radius: 22px;
-      padding: 26px 22px 22px;
+      background: #0f1e30;
+      border: 1.5px solid rgba(245,158,11,.4);
+      border-radius: 28px 28px 0 0;
+      padding: 28px 22px calc(28px + var(--safe-bottom));
       width: 100%;
-      max-width: 360px;
-      text-align: center;
-      animation: dup-pop .2s ease;
+      max-width: 480px;
+      animation: slide-up .22s cubic-bezier(.34,1.56,.64,1);
     }
-    @keyframes dup-pop { from { transform: scale(.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-    .dup-icon { font-size: 44px; line-height: 1; margin-bottom: 10px; }
-    .dup-title { font-size: 20px; font-weight: 900; color: #f59e0b; margin-bottom: 6px; }
-    .dup-desc { font-size: 13px; color: #8899aa; margin-bottom: 14px; }
+    @keyframes slide-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .dup-handle { width: 36px; height: 4px; background: rgba(255,255,255,.15); border-radius: 2px; margin: 0 auto 20px; }
+    .dup-icon { font-size: 40px; text-align: center; margin-bottom: 8px; }
+    .dup-title { font-size: 20px; font-weight: 900; color: #f59e0b; text-align: center; margin-bottom: 5px; }
+    .dup-desc { font-size: 13px; color: var(--sub); text-align: center; margin-bottom: 16px; }
     .dup-info {
-      background: rgba(245,158,11,.1);
-      border: 1.5px solid rgba(245,158,11,.3);
-      border-radius: 12px;
-      padding: 13px 14px;
+      background: rgba(245,158,11,.08);
+      border: 1.5px solid rgba(245,158,11,.25);
+      border-radius: 14px;
+      padding: 14px 16px;
       font-size: 14px;
-      color: #fff;
-      text-align: left;
+      color: var(--text);
       margin-bottom: 20px;
-      line-height: 1.7;
+      line-height: 1.75;
     }
-    .dup-info strong { color: #f59e0b; }
+    .dup-info strong { color: #f59e0b; font-weight: 700; }
     .dup-btns { display: flex; gap: 10px; }
     .dup-btn-cancel {
-      flex: 1; padding: 13px; border-radius: 13px;
-      border: 1.5px solid #334455; background: #0f1923;
-      color: #8899aa; font-size: 14px; font-weight: 700; cursor: pointer;
+      flex: 1; padding: 14px; border-radius: 14px;
+      border: 1.5px solid rgba(255,255,255,.1); background: rgba(255,255,255,.05);
+      color: var(--sub); font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit;
     }
     .dup-btn-confirm {
-      flex: 1; padding: 13px; border-radius: 13px;
+      flex: 1; padding: 14px; border-radius: 14px;
       border: none; background: #f59e0b;
-      color: #000; font-size: 14px; font-weight: 800; cursor: pointer;
+      color: #000; font-size: 15px; font-weight: 800; cursor: pointer; font-family: inherit;
     }
 
-    /* ── Toast ── */
+    /* ─── TOAST ──────────────────────────── */
     .toast {
       position: fixed;
-      bottom: calc(env(safe-area-inset-bottom, 0px) + 30px);
-      left: 50%;
-      transform: translateX(-50%) translateY(20px);
-      background: #1b5e20;
+      top: calc(var(--safe-top) + 16px);
+      left: 16px; right: 16px;
+      background: #111827;
       color: #fff;
-      padding: 14px 28px;
-      border-radius: 50px;
-      font-size: 16px;
+      border-radius: 16px;
+      padding: 14px 18px;
+      font-size: 15px;
       font-weight: 700;
-      opacity: 0;
-      transition: opacity .3s, transform .3s;
-      pointer-events: none;
-      white-space: nowrap;
       z-index: 999;
+      transform: translateY(-120px);
+      opacity: 0;
+      transition: all .3s cubic-bezier(.34,1.56,.64,1);
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.4);
     }
-    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-
-    /* ── Erro ── */
-    .toast-err { background: #b71c1c; }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast-ok  { background: #14532d; border: 1px solid rgba(34,197,94,.3); }
+    .toast-err { background: #7f1d1d; border: 1px solid rgba(239,68,68,.3); }
   </style>
 </head>
 <body>
 
+<!-- Header -->
 <div class="header">
-  <h1>💸 Gasto Rápido</h1>
-  <span class="header-date" id="hdr-date"></span>
+  <div class="header-left">
+    <div class="header-logo">💳</div>
+    <div>
+      <div class="header-title">Gasto Rápido</div>
+      <div class="header-date" id="hdr-date"></div>
+    </div>
+  </div>
+  <div class="header-badge">
+    <span class="sync-dot" id="sync-dot"></span>
+    <span id="sync-txt">conectando</span>
+  </div>
 </div>
 
 <!-- Valor -->
-<div class="valor-wrap">
-  <div class="valor-label">Valor</div>
-  <input id="inp-valor" class="valor-input" type="number" inputmode="decimal"
-         placeholder="0.00" step="0.01" min="0" autofocus>
+<div class="card valor-card" id="valor-card">
+  <div class="card-label">Valor do Gasto</div>
+  <div class="valor-row">
+    <span class="valor-prefix">CA$</span>
+    <input id="inp-valor" class="valor-input" type="number" inputmode="decimal"
+           placeholder="0,00" step="0.01" min="0" autocomplete="off">
+  </div>
 </div>
 
-<!-- Categoria -->
-<div class="section-label">Categoria</div>
-<div class="cats">
-  <button class="cat-btn" id="cat-mercado" onclick="selecionarCat('mercado')">
-    <span class="icon">🛒</span>
-    <span class="name">Mercado</span>
-  </button>
-  <button class="cat-btn" id="cat-carro" onclick="selecionarCat('carro')">
-    <span class="icon">🚗</span>
-    <span class="name">Carro</span>
-  </button>
-  <button class="cat-btn" id="cat-diversos" onclick="selecionarCat('diversos')">
-    <span class="icon">🔖</span>
-    <span class="name">Diversos</span>
-  </button>
+<!-- Categoria + Subcategorias -->
+<div class="card" id="cat-card">
+  <div class="card-label">Categoria</div>
+  <div class="cats">
+    <button class="cat-btn" id="cat-mercado" onclick="selecionarCat('mercado')">
+      <span class="cat-icon">🛒</span>
+      <span class="cat-name">Mercado</span>
+    </button>
+    <button class="cat-btn" id="cat-carro" onclick="selecionarCat('carro')">
+      <span class="cat-icon">🚗</span>
+      <span class="cat-name">Carro</span>
+    </button>
+    <button class="cat-btn" id="cat-diversos" onclick="selecionarCat('diversos')">
+      <span class="cat-icon">🔖</span>
+      <span class="cat-name">Diversos</span>
+    </button>
+  </div>
+
+  <!-- Subcategorias Mercado -->
+  <div class="subcats-wrap" id="subs-mercado">
+    <div class="sub-scroll">
+      <button class="sub-btn" onclick="selecionarSub('Walmart')">🛒 Walmart</button>
+      <button class="sub-btn" onclick="selecionarSub('Superstore')">🛍️ Superstore</button>
+      <button class="sub-btn" onclick="selecionarSub('Shoppers')">💊 Shoppers</button>
+      <button class="sub-btn" onclick="selecionarSub('No Frills')">🏷️ No Frills</button>
+      <button class="sub-btn" onclick="selecionarSub('Costco')">📦 Costco</button>
+      <button class="sub-btn" onclick="selecionarSub('On the Vine')">🥦 On the Vine</button>
+      <button class="sub-btn" onclick="selecionarSub('Outros')">• Outros</button>
+    </div>
+  </div>
+
+  <!-- Subcategorias Carro -->
+  <div class="subcats-wrap" id="subs-carro">
+    <div class="sub-scroll">
+      <button class="sub-btn" onclick="selecionarSub('⛽ Gasolina (Range Rover)')">⛽ Gasolina RR</button>
+      <button class="sub-btn" onclick="selecionarSub('⛽ Gasolina (Pilot)')">⛽ Gasolina Pilot</button>
+      <button class="sub-btn" onclick="selecionarSub('🛢️ Óleo')">🛢️ Óleo</button>
+      <button class="sub-btn" onclick="selecionarSub('🔧 Pneu')">🔧 Pneu</button>
+      <button class="sub-btn" onclick="selecionarSub('🔩 Peças')">🔩 Peças</button>
+      <button class="sub-btn" onclick="selecionarSub('Outros')">• Outros</button>
+    </div>
+  </div>
+
+  <!-- Subcategorias Diversos -->
+  <div class="subcats-wrap" id="subs-diversos">
+    <div class="sub-scroll">
+      <button class="sub-btn" onclick="selecionarSub('🍽️ Restaurantes')">🍽️ Restaurantes</button>
+      <button class="sub-btn" onclick="selecionarSub('📦 Amazon')">📦 Amazon</button>
+      <button class="sub-btn" onclick="selecionarSub('👕 Roupas')">👕 Roupas</button>
+      <button class="sub-btn" onclick="selecionarSub('🏪 Dollarama')">🏪 Dollarama</button>
+      <button class="sub-btn" onclick="selecionarSub('💪 Academia')">💪 Academia</button>
+      <button class="sub-btn" onclick="selecionarSub('🏃 Esportes')">🏃 Esportes</button>
+      <button class="sub-btn" onclick="selecionarSub('🎉 Lazer')">🎉 Lazer</button>
+      <button class="sub-btn" onclick="selecionarSub('🖨️ Staples')">🖨️ Staples</button>
+      <button class="sub-btn" onclick="selecionarSub('🐾 Veterinário')">🐾 Veterinário</button>
+      <button class="sub-btn" onclick="selecionarSub('💊 Remédio')">💊 Remédio</button>
+      <button class="sub-btn" onclick="selecionarSub('Outros')">• Outros</button>
+    </div>
+  </div>
 </div>
 
-<!-- Subcategorias Mercado -->
-<div class="subcats" id="subs-mercado">
-  <button class="sub-btn" onclick="selecionarSub('Walmart')">Walmart</button>
-  <button class="sub-btn" onclick="selecionarSub('Superstore')">Superstore</button>
-  <button class="sub-btn" onclick="selecionarSub('Shoppers')">Shoppers</button>
-  <button class="sub-btn" onclick="selecionarSub('No Frills')">No Frills</button>
-  <button class="sub-btn" onclick="selecionarSub('Costco')">Costco</button>
-  <button class="sub-btn" onclick="selecionarSub('On the Vine')">On the Vine</button>
-  <button class="sub-btn" onclick="selecionarSub('Outros')">Outros</button>
+<!-- Detalhes -->
+<div class="card">
+  <div class="card-label">Detalhes</div>
+
+  <div class="field">
+    <div class="field-label">O que foi gasto? <span>(opcional)</span></div>
+    <textarea id="inp-desc" class="field-textarea" rows="2"
+      placeholder="Ex: Gasolina no Petro-Canada, compras no Costco…"></textarea>
+  </div>
+
+  <div class="field">
+    <div class="field-label">Data</div>
+    <div class="field-date-row">
+      <span class="field-date-label">📅 Data do gasto</span>
+      <input id="inp-data" class="field-date-input" type="date">
+    </div>
+  </div>
 </div>
 
-<!-- Subcategorias Carro -->
-<div class="subcats" id="subs-carro">
-  <button class="sub-btn" onclick="selecionarSub('⛽ Gasolina (Range Rover)')">Gasolina RR</button>
-  <button class="sub-btn" onclick="selecionarSub('⛽ Gasolina (Pilot)')">Gasolina Pilot</button>
-  <button class="sub-btn" onclick="selecionarSub('🛢️ Óleo')">Óleo</button>
-  <button class="sub-btn" onclick="selecionarSub('🔧 Pneu')">Pneu</button>
-  <button class="sub-btn" onclick="selecionarSub('🔩 Peças')">Peças</button>
-  <button class="sub-btn" onclick="selecionarSub('Outros')">Outros</button>
+<!-- Botão Salvar (fixed) -->
+<div class="btn-salvar-wrap">
+  <button class="btn-salvar" id="btn-salvar" onclick="salvar()">Salvar Lançamento</button>
 </div>
-
-<!-- Subcategorias Diversos -->
-<div class="subcats" id="subs-diversos">
-  <button class="sub-btn" onclick="selecionarSub('🍽️ Restaurantes')">Restaurantes</button>
-  <button class="sub-btn" onclick="selecionarSub('📦 Amazon')">Amazon</button>
-  <button class="sub-btn" onclick="selecionarSub('👕 Roupas')">Roupas</button>
-  <button class="sub-btn" onclick="selecionarSub('🏪 Dollarama')">Dollarama</button>
-  <button class="sub-btn" onclick="selecionarSub('💪 Academia')">Academia</button>
-  <button class="sub-btn" onclick="selecionarSub('🏃 Esportes')">Esportes</button>
-  <button class="sub-btn" onclick="selecionarSub('🎉 Lazer')">Lazer</button>
-  <button class="sub-btn" onclick="selecionarSub('🖨️ Staples')">Staples</button>
-  <button class="sub-btn" onclick="selecionarSub('🐾 Veterinário')">Veterinário</button>
-  <button class="sub-btn" onclick="selecionarSub('💊 Remédio')">Remédio</button>
-  <button class="sub-btn" onclick="selecionarSub('Outros')">Outros</button>
-</div>
-
-<!-- Descrição -->
-<div class="desc-wrap">
-  <label class="desc-label">O que foi gasto? <span style="opacity:.45">(opcional)</span></label>
-  <textarea id="inp-desc" class="desc-input" placeholder="Ex: Gasolina no Petro-Canada, compras no Costco…" rows="2"></textarea>
-</div>
-
-<!-- Data -->
-<div class="data-wrap">
-  <label>Data</label>
-  <input id="inp-data" class="data-input" type="date">
-</div>
-
-<button class="btn-salvar" id="btn-salvar" onclick="salvar()">Salvar</button>
 
 <!-- Modal duplicata -->
 <div class="dup-overlay" id="dup-overlay">
   <div class="dup-modal">
+    <div class="dup-handle"></div>
     <div class="dup-icon">⚠️</div>
     <div class="dup-title">Lançamento duplicado!</div>
     <div class="dup-desc">Este valor já foi registrado com os mesmos dados:</div>
@@ -346,7 +526,7 @@
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast"><span id="toast-icon"></span><span id="toast-msg"></span></div>
 
 <script>
 // ── Config ──────────────────────────────────────────
@@ -362,8 +542,8 @@ var FB_CONFIG = {
 var FB_PATH = 'gastos/lk62-gastos-9f3a7b2e';
 
 var _cat = null, _sub = null, _fbRef = null;
-var _lancamentos = [];   // cache de lançamentos existentes para checar duplicata
-var _lancPendente = null; // lançamento aguardando confirmação de duplicata
+var _lancamentos = [];
+var _lancPendente = null;
 
 // ── Init ────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', function() {
@@ -374,12 +554,13 @@ window.addEventListener('DOMContentLoaded', function() {
   var d = String(hoje.getDate()).padStart(2, '0');
   document.getElementById('inp-data').value = y + '-' + m + '-' + d;
   document.getElementById('hdr-date').textContent =
-    hoje.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' });
+    hoje.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'short' });
 
-  // Firebase + carrega lançamentos para checar duplicatas
+  // Firebase
   try {
     firebase.initializeApp(FB_CONFIG);
     _fbRef = firebase.database().ref(FB_PATH);
+    setSyncStatus('connecting');
     _fbRef.once('value').then(function(snap) {
       var fbData = snap.val() || {};
       _lancamentos = fbData.lancamentos || [];
@@ -388,31 +569,65 @@ window.addEventListener('DOMContentLoaded', function() {
           if (fbData.pending[k]) _lancamentos.push(fbData.pending[k]);
         });
       }
-    }).catch(function() {});
-  } catch(e) { console.warn('Firebase:', e); }
+      setSyncStatus('ok');
+    }).catch(function() { setSyncStatus('err'); });
+  } catch(e) {
+    console.warn('Firebase:', e);
+    setSyncStatus('err');
+  }
 
-  document.getElementById('inp-valor').focus();
+  // Valor focus + valor card feedback
+  var inpValor = document.getElementById('inp-valor');
+  inpValor.focus();
+  inpValor.addEventListener('focus', function() {
+    document.getElementById('valor-card').classList.add('focused');
+  });
+  inpValor.addEventListener('blur', function() {
+    document.getElementById('valor-card').classList.remove('focused');
+  });
 });
+
+function setSyncStatus(s) {
+  var dot = document.getElementById('sync-dot');
+  var txt = document.getElementById('sync-txt');
+  if (s === 'ok')          { dot.className = 'sync-dot ok';  txt.textContent = 'online'; }
+  else if (s === 'err')    { dot.className = 'sync-dot err'; txt.textContent = 'offline'; }
+  else                     { dot.className = 'sync-dot';     txt.textContent = 'conectando'; }
+}
 
 // ── Selecionar categoria ─────────────────────────────
 function selecionarCat(cat) {
   _cat = cat;
   _sub = null;
 
-  ['mercado','carro','diversos'].forEach(function(c) {
-    document.getElementById('cat-' + c).className = 'cat-btn' + (c === cat ? ' active-' + c : '');
+  var cores = { mercado: 'active-mercado', carro: 'active-carro', diversos: 'active-diversos' };
+
+  ['mercado', 'carro', 'diversos'].forEach(function(c) {
+    document.getElementById('cat-' + c).className = 'cat-btn' + (c === cat ? ' ' + cores[c] : '');
     document.getElementById('subs-' + c).classList.toggle('visible', c === cat);
   });
 
-  // Limpar seleção de sub
-  document.querySelectorAll('.sub-btn').forEach(function(b) { b.classList.remove('active'); });
+  // Update valor card accent
+  var vc = document.getElementById('valor-card');
+  vc.className = 'card valor-card has-' + cat;
+
+  // Update save button color
+  var btn = document.getElementById('btn-salvar');
+  btn.className = 'btn-salvar cat-' + cat;
+
+  // Reset sub buttons
+  document.querySelectorAll('.sub-btn').forEach(function(b) {
+    b.className = 'sub-btn';
+  });
 }
 
 // ── Selecionar subcategoria ──────────────────────────
 function selecionarSub(sub) {
   _sub = sub;
-  document.querySelectorAll('.sub-btn').forEach(function(b) {
-    b.classList.toggle('active', b.textContent.trim() === sub || b.getAttribute('onclick').includes("'" + sub + "'"));
+  var activeClass = 'sub-btn active-' + _cat;
+  document.querySelectorAll('#subs-' + _cat + ' .sub-btn').forEach(function(b) {
+    var matches = b.getAttribute('onclick').includes("'" + sub + "'");
+    b.className = matches ? activeClass : 'sub-btn';
   });
 }
 
@@ -427,11 +642,6 @@ function verificarDuplicata(valor, data, cat, sub) {
   });
 }
 
-function subLabel(cat, sub) {
-  if (!sub) return '';
-  return ' · ' + sub;
-}
-
 function formatarDataBr(iso) {
   if (!iso) return '';
   var p = iso.split('-');
@@ -443,9 +653,9 @@ function salvar() {
   var valor = parseFloat(document.getElementById('inp-valor').value);
   var data  = document.getElementById('inp-data').value;
 
-  if (!valor || valor <= 0) { toast('Informe o valor', true); return; }
-  if (!_cat)                { toast('Escolha a categoria', true); return; }
-  if (!data)                { toast('Informe a data', true); return; }
+  if (!valor || valor <= 0) { toast('⚠️', 'Informe o valor'); return; }
+  if (!_cat)                { toast('⚠️', 'Escolha a categoria'); return; }
+  if (!data)                { toast('⚠️', 'Informe a data'); return; }
 
   var desc = (document.getElementById('inp-desc').value || '').trim();
   var lanc = {
@@ -462,14 +672,14 @@ function salvar() {
   // Checar duplicata
   var dups = verificarDuplicata(valor, data, _cat, _sub);
   if (dups.length > 0) {
-    var d = dups[0];
-    var catNome = { mercado: '🛒 Mercado', carro: '🚗 Carro', diversos: '🔖 Diversos' }[d.cat] || d.cat;
-    var subStr  = d.loja || d.divsub || d.sub || '';
+    var dup = dups[0];
+    var catNome = { mercado: '🛒 Mercado', carro: '🚗 Carro', diversos: '🔖 Diversos' }[dup.cat] || dup.cat;
+    var subStr  = dup.loja || dup.divsub || dup.sub || '';
     document.getElementById('dup-info').innerHTML =
-      '<strong>Valor:</strong> CA$ ' + parseFloat(d.valor).toFixed(2) + '<br>' +
-      '<strong>Data:</strong> ' + formatarDataBr(d.data) + '<br>' +
+      '<strong>Valor:</strong> CA$ ' + parseFloat(dup.valor).toFixed(2) + '<br>' +
+      '<strong>Data:</strong> ' + formatarDataBr(dup.data) + '<br>' +
       '<strong>Categoria:</strong> ' + catNome + (subStr ? ' · ' + subStr : '') +
-      (d.desc ? '<br><strong>Descrição:</strong> ' + d.desc : '');
+      (dup.desc ? '<br><strong>Descrição:</strong> ' + dup.desc : '');
     _lancPendente = lanc;
     document.getElementById('dup-overlay').classList.add('show');
     return;
@@ -484,11 +694,11 @@ function fecharDup() {
   _lancPendente = null;
 }
 
-// ── Salvar mesmo assim (confirmado pelo usuário) ──────
+// ── Salvar mesmo assim ────────────────────────────────
 function salvarForcado() {
   fecharDup();
   if (_lancPendente) {
-    _lancPendente.id = Date.now().toString(); // novo ID para não colidir
+    _lancPendente.id = Date.now().toString();
     gravarLancamento(_lancPendente);
   }
 }
@@ -497,40 +707,47 @@ function salvarForcado() {
 function gravarLancamento(lanc) {
   var btn = document.getElementById('btn-salvar');
   btn.disabled = true;
-  btn.textContent = 'Salvando...';
+  btn.textContent = 'Salvando…';
 
   if (!_fbRef) {
-    toast('Sem conexão com Firebase', true);
-    btn.disabled = false; btn.textContent = 'Salvar';
+    toast('❌', 'Sem conexão com Firebase');
+    btn.disabled = false; btn.textContent = 'Salvar Lançamento';
     return;
   }
 
   _fbRef.child('pending/' + lanc.id).set(lanc).then(function() {
-    _lancamentos.push(lanc); // atualiza cache local
-    toast('✅  CA$ ' + parseFloat(lanc.valor).toFixed(2) + ' salvo!');
-    // Reset
-    document.getElementById('inp-valor').value = '';
-    document.getElementById('inp-desc').value = '';
-    document.getElementById('inp-valor').focus();
-    ['mercado','carro','diversos'].forEach(function(c) {
-      document.getElementById('cat-' + c).className = 'cat-btn';
-      document.getElementById('subs-' + c).classList.remove('visible');
-    });
-    document.querySelectorAll('.sub-btn').forEach(function(b) { b.classList.remove('active'); });
-    _cat = null; _sub = null;
-    btn.disabled = false; btn.textContent = 'Salvar';
+    _lancamentos.push(lanc);
+    toast('✅', 'CA$ ' + parseFloat(lanc.valor).toFixed(2) + ' salvo!', true);
+    resetForm();
+    btn.disabled = false;
+    btn.textContent = 'Salvar Lançamento';
+    btn.className = 'btn-salvar';
   }).catch(function(e) {
-    toast('Erro ao salvar: ' + e.message, true);
-    btn.disabled = false; btn.textContent = 'Salvar';
+    toast('❌', 'Erro ao salvar: ' + e.message);
+    btn.disabled = false; btn.textContent = 'Salvar Lançamento';
   });
 }
 
+function resetForm() {
+  document.getElementById('inp-valor').value = '';
+  document.getElementById('inp-desc').value  = '';
+  document.getElementById('inp-valor').focus();
+  ['mercado', 'carro', 'diversos'].forEach(function(c) {
+    document.getElementById('cat-' + c).className = 'cat-btn';
+    document.getElementById('subs-' + c).classList.remove('visible');
+  });
+  document.querySelectorAll('.sub-btn').forEach(function(b) { b.className = 'sub-btn'; });
+  document.getElementById('valor-card').className = 'card valor-card';
+  _cat = null; _sub = null;
+}
+
 // ── Toast ────────────────────────────────────────────
-function toast(msg, err) {
+function toast(icon, msg, ok) {
   var el = document.getElementById('toast');
-  el.textContent = msg;
-  el.className = 'toast' + (err ? ' toast-err' : '') + ' show';
-  setTimeout(function() { el.classList.remove('show'); }, 2500);
+  document.getElementById('toast-icon').textContent = icon;
+  document.getElementById('toast-msg').textContent  = msg;
+  el.className = 'toast ' + (ok ? 'toast-ok' : 'toast-err') + ' show';
+  setTimeout(function() { el.classList.remove('show'); }, 2800);
 }
 </script>
 </body>
