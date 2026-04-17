@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260417-027">
+<meta name="app-version" content="20260417-028">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -49,6 +49,7 @@
 *, *::before, *::after { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
 /* Previne zoom automático no iOS em inputs/selects */
 input, select, textarea { font-size: max(16px, 1em) !important; touch-action: manipulation; }
+button, a, [onclick] { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 html { height: 100%; }
 body {
   margin: 0;
@@ -3144,6 +3145,10 @@ function irPara(tela) {
   var todas = document.querySelectorAll('.tela');
   for (var i=0; i<todas.length; i++) todas[i].classList.remove('ativa');
   document.getElementById('tela-'+tela).classList.add('ativa');
+  // iOS: força reset do viewport ao trocar de tela
+  window.scrollTo(0, 0);
+  var mv = document.querySelector('meta[name="viewport"]');
+  if (mv) { var c = mv.content; mv.content = c + ',maximum-scale=1'; setTimeout(function(){ mv.content = c; }, 50); }
 
   var bts = document.querySelectorAll('.nav button');
   for (var j=0; j<bts.length; j++) bts[j].classList.remove('active');
