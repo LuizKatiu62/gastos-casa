@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260417-017">
+<meta name="app-version" content="20260417-018">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -1110,6 +1110,28 @@ body {
     <div class="edit-group">
       <label>Descrição (opcional)</label>
       <input type="text" id="edit-desc" placeholder="Ex: conta de luz, compras...">
+    </div>
+    <!-- Parcelamento -->
+    <div class="edit-group">
+      <label>Parcelamento</label>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <input type="checkbox" id="edit-is-parcela" onchange="editParcelaToggle()" style="width:20px;height:20px;cursor:pointer">
+        <span style="font-size:14px;color:#374151">Este lançamento é parcelado</span>
+      </div>
+      <div id="edit-parcela-campos" style="display:none">
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <div style="flex:1">
+            <div style="font-size:11px;font-weight:700;color:#6b7280;margin-bottom:4px">PARCELA Nº</div>
+            <input type="number" id="edit-parc-n" min="1" max="99" value="1" style="width:100%;padding:10px;border:1.5px solid #e5e7eb;border-radius:10px">
+          </div>
+          <div style="flex:1">
+            <div style="font-size:11px;font-weight:700;color:#6b7280;margin-bottom:4px">TOTAL DE PARCELAS</div>
+            <input type="number" id="edit-parc-total" min="1" max="99" value="12" style="width:100%;padding:10px;border:1.5px solid #e5e7eb;border-radius:10px">
+          </div>
+        </div>
+        <div style="font-size:11px;font-weight:700;color:#6b7280;margin-bottom:4px">CÓDIGO DO GRUPO <span style="font-weight:400;text-transform:none;font-size:11px;color:#9ca3af">(mesmo código vincula parcelas do mesmo plano)</span></div>
+        <input type="text" id="edit-parc-grupo" placeholder="Auto-gerado" style="width:100%;padding:10px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:13px;font-family:monospace;box-sizing:border-box">
+      </div>
     </div>
     <div class="edit-btns">
       <button class="edit-btn-cancel" onclick="fecharModalEdicao()">Cancelar</button>
@@ -2860,7 +2882,24 @@ function editarLancamento(id) {
     editDivSubChange(divKey);
     if (divKey === 'outros') document.getElementById('edit-div-outros').value = l.divsub || '';
   }
+  // Parcelamento
+  var temParcela = !!(l.parcela && l.parcela.total);
+  document.getElementById('edit-is-parcela').checked = temParcela;
+  document.getElementById('edit-parcela-campos').style.display = temParcela ? '' : 'none';
+  document.getElementById('edit-parc-n').value     = temParcela ? l.parcela.n     : 1;
+  document.getElementById('edit-parc-total').value = temParcela ? l.parcela.total : 12;
+  document.getElementById('edit-parc-grupo').value = temParcela ? (l.parcela.grupoId || '') : '';
+
   document.getElementById('modal-edicao').style.display = 'flex';
+}
+
+function editParcelaToggle() {
+  var on = document.getElementById('edit-is-parcela').checked;
+  document.getElementById('edit-parcela-campos').style.display = on ? '' : 'none';
+  if (on && !document.getElementById('edit-parc-grupo').value) {
+    // Gera um código de grupo novo se não tiver
+    document.getElementById('edit-parc-grupo').value = 'grp-' + Date.now().toString(36);
+  }
 }
 
 function fecharModalEdicao() {
@@ -2907,14 +2946,23 @@ function salvarEdicao() {
   var d = getDados();
   var idx = d.lancamentos.findIndex(function(x){ return x.id === _editId; });
   if (idx === -1) { mostrarToast('⚠️', 'Lançamento não encontrado'); return; }
+  var isParcela  = document.getElementById('edit-is-parcela').checked;
+  var parcN      = parseInt(document.getElementById('edit-parc-n').value) || 1;
+  var parcTotal  = parseInt(document.getElementById('edit-parc-total').value) || 1;
+  var parcGrupo  = document.getElementById('edit-parc-grupo').value.trim() || ('grp-' + Date.now().toString(36));
+  var parcelaObj = isParcela
+    ? { n: parcN, total: parcTotal, grupoId: parcGrupo, valorTotal: valor * parcTotal }
+    : null;
+
   d.lancamentos[idx] = Object.assign({}, d.lancamentos[idx], {
-    data:   data,
-    valor:  valor,
-    cat:    cat,
-    sub:    carroFinal || null,
-    loja:   lojaFinal  || null,
-    divsub: divFinal   || null,
-    desc:   document.getElementById('edit-desc').value.trim()
+    data:    data,
+    valor:   valor,
+    cat:     cat,
+    sub:     carroFinal || null,
+    loja:    lojaFinal  || null,
+    divsub:  divFinal   || null,
+    desc:    document.getElementById('edit-desc').value.trim(),
+    parcela: parcelaObj
   });
   salvarDados(d);
   fecharModalEdicao();
