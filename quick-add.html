@@ -177,6 +177,56 @@
     .btn-salvar:active { opacity: .8; transform: scale(.98); }
     .btn-salvar:disabled { background: #1a2535; color: #4a5a6a; }
 
+    /* ── Modal Duplicata ── */
+    .dup-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.72);
+      z-index: 998;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .dup-overlay.show { display: flex; }
+    .dup-modal {
+      background: #1a2535;
+      border: 2px solid #f59e0b;
+      border-radius: 22px;
+      padding: 26px 22px 22px;
+      width: 100%;
+      max-width: 360px;
+      text-align: center;
+      animation: dup-pop .2s ease;
+    }
+    @keyframes dup-pop { from { transform: scale(.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .dup-icon { font-size: 44px; line-height: 1; margin-bottom: 10px; }
+    .dup-title { font-size: 20px; font-weight: 900; color: #f59e0b; margin-bottom: 6px; }
+    .dup-desc { font-size: 13px; color: #8899aa; margin-bottom: 14px; }
+    .dup-info {
+      background: rgba(245,158,11,.1);
+      border: 1.5px solid rgba(245,158,11,.3);
+      border-radius: 12px;
+      padding: 13px 14px;
+      font-size: 14px;
+      color: #fff;
+      text-align: left;
+      margin-bottom: 20px;
+      line-height: 1.7;
+    }
+    .dup-info strong { color: #f59e0b; }
+    .dup-btns { display: flex; gap: 10px; }
+    .dup-btn-cancel {
+      flex: 1; padding: 13px; border-radius: 13px;
+      border: 1.5px solid #334455; background: #0f1923;
+      color: #8899aa; font-size: 14px; font-weight: 700; cursor: pointer;
+    }
+    .dup-btn-confirm {
+      flex: 1; padding: 13px; border-radius: 13px;
+      border: none; background: #f59e0b;
+      color: #000; font-size: 14px; font-weight: 800; cursor: pointer;
+    }
+
     /* ── Toast ── */
     .toast {
       position: fixed;
@@ -282,6 +332,20 @@
 
 <button class="btn-salvar" id="btn-salvar" onclick="salvar()">Salvar</button>
 
+<!-- Modal duplicata -->
+<div class="dup-overlay" id="dup-overlay">
+  <div class="dup-modal">
+    <div class="dup-icon">⚠️</div>
+    <div class="dup-title">Lançamento duplicado!</div>
+    <div class="dup-desc">Este valor já foi registrado com os mesmos dados:</div>
+    <div class="dup-info" id="dup-info"></div>
+    <div class="dup-btns">
+      <button class="dup-btn-cancel" onclick="fecharDup()">Cancelar</button>
+      <button class="dup-btn-confirm" onclick="salvarForcado()">Salvar mesmo assim</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -298,6 +362,8 @@ var FB_CONFIG = {
 var FB_PATH = 'gastos/lk62-gastos-9f3a7b2e';
 
 var _cat = null, _sub = null, _fbRef = null;
+var _lancamentos = [];   // cache de lançamentos existentes para checar duplicata
+var _lancPendente = null; // lançamento aguardando confirmação de duplicata
 
 // ── Init ────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', function() {
@@ -310,10 +376,19 @@ window.addEventListener('DOMContentLoaded', function() {
   document.getElementById('hdr-date').textContent =
     hoje.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' });
 
-  // Firebase
+  // Firebase + carrega lançamentos para checar duplicatas
   try {
     firebase.initializeApp(FB_CONFIG);
     _fbRef = firebase.database().ref(FB_PATH);
+    _fbRef.once('value').then(function(snap) {
+      var fbData = snap.val() || {};
+      _lancamentos = fbData.lancamentos || [];
+      if (fbData.pending && typeof fbData.pending === 'object') {
+        Object.keys(fbData.pending).forEach(function(k) {
+          if (fbData.pending[k]) _lancamentos.push(fbData.pending[k]);
+        });
+      }
+    }).catch(function() {});
   } catch(e) { console.warn('Firebase:', e); }
 
   document.getElementById('inp-valor').focus();
@@ -341,6 +416,28 @@ function selecionarSub(sub) {
   });
 }
 
+// ── Verificar duplicata ───────────────────────────────
+function verificarDuplicata(valor, data, cat, sub) {
+  return _lancamentos.filter(function(l) {
+    if (Math.abs(parseFloat(l.valor) - valor) > 0.001) return false;
+    if (l.data !== data) return false;
+    if (l.cat  !== cat)  return false;
+    var lSub = l.loja || l.divsub || l.sub || null;
+    return lSub === sub;
+  });
+}
+
+function subLabel(cat, sub) {
+  if (!sub) return '';
+  return ' · ' + sub;
+}
+
+function formatarDataBr(iso) {
+  if (!iso) return '';
+  var p = iso.split('-');
+  return p[2] + '/' + p[1] + '/' + p[0];
+}
+
 // ── Salvar ───────────────────────────────────────────
 function salvar() {
   var valor = parseFloat(document.getElementById('inp-valor').value);
@@ -350,10 +447,9 @@ function salvar() {
   if (!_cat)                { toast('Escolha a categoria', true); return; }
   if (!data)                { toast('Informe a data', true); return; }
 
-  var id = Date.now().toString();
   var desc = (document.getElementById('inp-desc').value || '').trim();
   var lanc = {
-    id:     id,
+    id:     Date.now().toString(),
     cat:    _cat,
     sub:    (_cat === 'carro'    ? _sub : null) || null,
     loja:   (_cat === 'mercado'  ? _sub : null) || null,
@@ -363,6 +459,42 @@ function salvar() {
     desc:   desc
   };
 
+  // Checar duplicata
+  var dups = verificarDuplicata(valor, data, _cat, _sub);
+  if (dups.length > 0) {
+    var d = dups[0];
+    var catNome = { mercado: '🛒 Mercado', carro: '🚗 Carro', diversos: '🔖 Diversos' }[d.cat] || d.cat;
+    var subStr  = d.loja || d.divsub || d.sub || '';
+    document.getElementById('dup-info').innerHTML =
+      '<strong>Valor:</strong> CA$ ' + parseFloat(d.valor).toFixed(2) + '<br>' +
+      '<strong>Data:</strong> ' + formatarDataBr(d.data) + '<br>' +
+      '<strong>Categoria:</strong> ' + catNome + (subStr ? ' · ' + subStr : '') +
+      (d.desc ? '<br><strong>Descrição:</strong> ' + d.desc : '');
+    _lancPendente = lanc;
+    document.getElementById('dup-overlay').classList.add('show');
+    return;
+  }
+
+  gravarLancamento(lanc);
+}
+
+// ── Fechar modal duplicata ────────────────────────────
+function fecharDup() {
+  document.getElementById('dup-overlay').classList.remove('show');
+  _lancPendente = null;
+}
+
+// ── Salvar mesmo assim (confirmado pelo usuário) ──────
+function salvarForcado() {
+  fecharDup();
+  if (_lancPendente) {
+    _lancPendente.id = Date.now().toString(); // novo ID para não colidir
+    gravarLancamento(_lancPendente);
+  }
+}
+
+// ── Gravar no Firebase ────────────────────────────────
+function gravarLancamento(lanc) {
   var btn = document.getElementById('btn-salvar');
   btn.disabled = true;
   btn.textContent = 'Salvando...';
@@ -373,9 +505,9 @@ function salvar() {
     return;
   }
 
-  // Grava na fila pending — o app principal importa ao abrir
-  _fbRef.child('pending/' + id).set(lanc).then(function() {
-    toast('✅  CA$ ' + valor.toFixed(2) + ' salvo!');
+  _fbRef.child('pending/' + lanc.id).set(lanc).then(function() {
+    _lancamentos.push(lanc); // atualiza cache local
+    toast('✅  CA$ ' + parseFloat(lanc.valor).toFixed(2) + ' salvo!');
     // Reset
     document.getElementById('inp-valor').value = '';
     document.getElementById('inp-desc').value = '';
