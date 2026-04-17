@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260417-021">
+<meta name="app-version" content="20260417-022">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -2303,7 +2303,7 @@ function renderizarParcelas() {
         valorParc: parseFloat(l.valor) || 0,
         desc: l.desc || '',
         cat: l.cat || '',
-        sub: l.sub || '',
+        sub: l.sub || l.loja || l.divsub || '',
         lancs: {}
       };
     }
@@ -2312,94 +2312,134 @@ function renderizarParcelas() {
 
   var keys = Object.keys(grupos);
   if (keys.length === 0) {
-    return '<div class="vazio" style="text-align:center;padding:40px 0;color:#9ca3af">Nenhum lançamento parcelado encontrado</div>';
+    return '<div class="vazio" style="text-align:center;padding:48px 0;color:#9ca3af;font-size:15px">📭<br><br>Nenhum lançamento parcelado encontrado</div>';
   }
 
-  // Ordena: mais recente primeiro (pela parcela mais alta paga)
-  keys.sort(function(a, b) {
-    var la = grupos[a], lb = grupos[b];
-    var maxA = Math.max.apply(null, Object.keys(la.lancs).map(Number));
-    var maxB = Math.max.apply(null, Object.keys(lb.lancs).map(Number));
-    return maxB - maxA;
-  });
+  var COR  = { mercado:'#16a34a', carro:'#dc2626', diversos:'#ea580c' };
+  var ICO  = { mercado:'🛒',      carro:'🚗',      diversos:'🛍️'      };
+  var NOME = { mercado:'Mercado', carro:'Carro',   diversos:'Diversos' };
 
-  var COR = { mercado:'#16a34a', carro:'#dc2626', diversos:'#ea580c' };
-  var ICO = { mercado:'🛒', carro:'🚗', diversos:'🛍️' };
-
-  // Calcula pct e totais para cada grupo
-  var totalGeralPago = 0, totalGeralRestante = 0, totalGeralCompromisso = 0;
+  // ── Calcula dados por grupo ──
+  var totalGeralMensal = 0, totalGeralRestante = 0, totalGeralCompromisso = 0;
   var gruposDados = keys.map(function(gid) {
     var g = grupos[gid];
-    // Usa o maior n com data <= hoje como número de parcelas pagas
-    // (funciona tanto quando todas as parcelas são lançadas individualmente
-    //  quanto quando apenas a parcela atual é lançada, ex: 11/12)
     var pagas = 0;
     Object.keys(g.lancs).forEach(function(nStr) {
       var l = g.lancs[nStr]; var n = parseInt(nStr);
       if (l && l.data <= hj && n > pagas) pagas = n;
     });
-    var pct = Math.round((pagas / g.total) * 100);
-    totalGeralPago        += pagas < g.total ? g.valorParc : 0; // valor a pagar no período (só grupos não quitados)
-    totalGeralRestante    += (g.total - pagas) * g.valorParc;
-    totalGeralCompromisso += g.total * g.valorParc;
-    return { gid:gid, g:g, pagas:pagas, pct:pct };
+    var restante = g.total - pagas;
+    var pct      = Math.round((pagas / g.total) * 100);
+    var quitado  = pagas >= g.total;
+    totalGeralMensal      += quitado ? 0 : g.valorParc;
+    totalGeralRestante    += restante * g.valorParc;
+    totalGeralCompromisso += g.total  * g.valorParc;
+    return { gid:gid, g:g, pagas:pagas, restante:restante, pct:pct, quitado:quitado };
   });
 
-  // Ordena por % decrescente
-  gruposDados.sort(function(a,b){ return b.pct - a.pct; });
+  // Separa ativos e quitados; ordena ativos por % desc
+  var ativos   = gruposDados.filter(function(x){ return !x.quitado; }).sort(function(a,b){ return b.pct - a.pct; });
+  var quitados = gruposDados.filter(function(x){ return  x.quitado; });
+  var totalAtivos = ativos.length;
 
-  // Banner resumo
+  // ── Banner ──
   var html =
-    '<div class="card" style="background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;border-radius:16px;padding:16px;margin-bottom:12px">' +
-      '<div style="font-size:12px;opacity:.8;margin-bottom:10px;font-weight:600">RESUMO PARCELAMENTOS</div>' +
-      '<div style="display:flex;justify-content:space-between;gap:8px">' +
-        '<div style="text-align:center;flex:1"><div style="font-size:11px;opacity:.75;margin-bottom:2px">Compromisso total</div><div style="font-size:16px;font-weight:800">'+formatar(totalGeralCompromisso)+'</div></div>' +
-        '<div style="width:1px;background:rgba(255,255,255,.2)"></div>' +
-        '<div style="text-align:center;flex:1"><div style="font-size:11px;opacity:.75;margin-bottom:2px">Valor Mês/Período</div><div style="font-size:16px;font-weight:800;color:#bbf7d0">'+formatar(totalGeralPago)+'</div></div>' +
-        '<div style="width:1px;background:rgba(255,255,255,.2)"></div>' +
-        '<div style="text-align:center;flex:1"><div style="font-size:11px;opacity:.75;margin-bottom:2px">Restante</div><div style="font-size:16px;font-weight:800;color:#fde68a">'+formatar(totalGeralRestante)+'</div></div>' +
+    '<div style="background:linear-gradient(135deg,#4f46e5,#7c3aed,#5b21b6);border-radius:20px;padding:20px 16px;margin-bottom:14px;box-shadow:0 8px 24px rgba(99,102,241,.3)">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">' +
+        '<div>' +
+          '<div style="font-size:18px;font-weight:800;color:#fff;letter-spacing:-.3px">Parcelamentos</div>' +
+          '<div style="font-size:12px;color:rgba(255,255,255,.65);margin-top:1px">'+totalAtivos+' plano'+(totalAtivos===1?'':'s')+' ativo'+(totalAtivos===1?'':'s')+(quitados.length?' · '+quitados.length+' quitado'+(quitados.length===1?'':'s'):'')+'</div>' +
+        '</div>' +
+        '<div style="background:rgba(255,255,255,.15);border-radius:12px;padding:8px 14px;text-align:center">' +
+          '<div style="font-size:10px;color:rgba(255,255,255,.7);font-weight:600;text-transform:uppercase;letter-spacing:.5px">Mensal</div>' +
+          '<div style="font-size:18px;font-weight:900;color:#fff">'+formatar(totalGeralMensal)+'</div>' +
+        '</div>' +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1px 1fr;gap:0;background:rgba(255,255,255,.1);border-radius:12px;overflow:hidden">' +
+        '<div style="padding:10px 12px;text-align:center">' +
+          '<div style="font-size:10px;color:rgba(255,255,255,.65);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Compromisso total</div>' +
+          '<div style="font-size:15px;font-weight:800;color:#fff">'+formatar(totalGeralCompromisso)+'</div>' +
+        '</div>' +
+        '<div style="background:rgba(255,255,255,.2)"></div>' +
+        '<div style="padding:10px 12px;text-align:center">' +
+          '<div style="font-size:10px;color:rgba(255,255,255,.65);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">A quitar</div>' +
+          '<div style="font-size:15px;font-weight:800;color:#fde68a">'+formatar(totalGeralRestante)+'</div>' +
+        '</div>' +
       '</div>' +
     '</div>';
 
-  // Botão PDF
-  html += '<div class="card" style="display:flex;gap:10px;margin-bottom:12px">' +
-    '<button style="flex:1;padding:13px 8px;border:none;border-radius:14px;font-size:14px;font-weight:700;cursor:pointer;background:#7c3aed;color:#fff;font-family:inherit" onclick="exportarPDFParcelas()">🖨️ PDF</button>' +
-    '</div>';
+  // ── Botão PDF ──
+  html += '<button onclick="exportarPDFParcelas()" style="width:100%;padding:13px;border:none;border-radius:14px;font-size:14px;font-weight:700;cursor:pointer;background:#4f46e5;color:#fff;font-family:inherit;margin-bottom:16px;box-shadow:0 4px 12px rgba(79,70,229,.3)">🖨️ Exportar PDF</button>';
 
-  // Cards individuais com % em destaque
-  gruposDados.forEach(function(gd) {
+  // ── Função para renderizar um card ──
+  function cardParcela(gd) {
     var g = gd.g; var pagas = gd.pagas; var pct = gd.pct;
-    var cor = COR[g.cat] || '#7c3aed'; var ico = ICO[g.cat] || '📦';
-    var restante = g.total - pagas;
-    var quitado  = pct === 100;
+    var cor  = COR[g.cat]  || '#4f46e5';
+    var ico  = ICO[g.cat]  || '📦';
+    var cat  = NOME[g.cat] || g.cat;
+    var restante = gd.restante;
+    var quitado  = gd.quitado;
 
-    // Cor da % baseada no progresso
-    var pctCor = pct === 100 ? '#16a34a' : pct >= 80 ? '#0891b2' : pct >= 50 ? '#d97706' : '#6b7280';
+    var barCor   = quitado ? '#16a34a' : pct >= 80 ? '#0891b2' : pct >= 50 ? '#d97706' : '#6366f1';
+    var tagBg    = quitado ? '#dcfce7' : pct >= 80 ? '#e0f2fe' : pct >= 50 ? '#fef3c7' : '#f3f4f6';
+    var tagTxt   = quitado ? '#166534' : pct >= 80 ? '#0c4a6e' : pct >= 50 ? '#92400e' : '#4b5563';
+    var tagLabel = quitado ? '✓ Quitado' : pct >= 80 ? 'Quase lá' : pct >= 50 ? 'Metade' : 'Em andamento';
 
-    html +=
-      '<div class="parc-grupo-card" style="margin-bottom:10px">' +
-        '<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">' +
-          // Círculo com %
-          '<div style="width:56px;height:56px;border-radius:50%;background:'+pctCor+';display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0">' +
-            '<div style="font-size:16px;font-weight:900;color:#fff;line-height:1">'+pct+'%</div>' +
-            (quitado ? '' : '<div style="font-size:9px;color:rgba(255,255,255,.8);line-height:1">pago</div>') +
-          '</div>' +
-          // Descrição
-          '<div style="flex:1;min-width:0">' +
-            '<div style="font-size:15px;font-weight:700;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+ico+' '+(g.desc||'Parcelamento')+'</div>' +
-            (g.sub ? '<div style="font-size:12px;color:#6b7280">'+g.sub+'</div>' : '') +
-            '<div style="font-size:12px;color:#6b7280;margin-top:2px">'+pagas+'/'+g.total+' parcelas · '+(quitado ? '<span style="color:#16a34a;font-weight:700">Quitado</span>' : restante+' restante'+(restante===1?'':'s'))+'</div>' +
-          '</div>' +
-          // Valor/mês
-          '<div style="text-align:right;flex-shrink:0">' +
-            '<div style="font-size:14px;font-weight:700;color:#374151">'+formatar(g.valorParc)+'</div>' +
-            '<div style="font-size:11px;color:#9ca3af">/mês</div>' +
-          '</div>' +
+    var valorPago     = pagas * g.valorParc;
+    var valorRestante = restante * g.valorParc;
+
+    return '<div style="background:#fff;border-radius:16px;padding:16px;margin-bottom:10px;box-shadow:0 2px 12px rgba(0,0,0,.07);border:1px solid #f1f5f9">' +
+      // ── Linha 1: ícone + nome + tag status ──
+      '<div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:12px">' +
+        '<div style="width:44px;height:44px;border-radius:12px;background:'+cor+'1a;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">'+ico+'</div>' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="font-size:15px;font-weight:700;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(g.desc||'Parcelamento')+'</div>' +
+          '<div style="font-size:12px;color:#6b7280;margin-top:2px">'+cat+(g.sub?' · '+g.sub:'')+'</div>' +
         '</div>' +
-        // Barra de progresso
-        '<div class="parc-barra-wrap"><div class="parc-barra-fill" style="width:'+pct+'%;background:'+pctCor+'"></div></div>' +
-      '</div>';
-  });
+        '<span style="background:'+tagBg+';color:'+tagTxt+';font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;white-space:nowrap;flex-shrink:0">'+tagLabel+'</span>' +
+      '</div>' +
+      // ── Linha 2: barra de progresso com rótulos ──
+      '<div style="margin-bottom:10px">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">' +
+          '<span style="font-size:12px;color:#6b7280;font-weight:600">Parcela '+pagas+' de '+g.total+'</span>' +
+          '<span style="font-size:13px;font-weight:800;color:'+barCor+'">'+pct+'%</span>' +
+        '</div>' +
+        '<div style="height:10px;background:#f1f5f9;border-radius:99px;overflow:hidden">' +
+          '<div style="height:100%;width:'+pct+'%;background:'+barCor+';border-radius:99px;transition:width .4s"></div>' +
+        '</div>' +
+        (!quitado ? '<div style="font-size:11px;color:#9ca3af;margin-top:4px">'+restante+' parcela'+(restante===1?'':' s')+' restante'+(restante===1?'':'s')+'</div>' : '') +
+      '</div>' +
+      // ── Linha 3: valores ──
+      '<div style="display:grid;grid-template-columns:1fr 1px 1fr 1px 1fr;gap:0;background:#f8fafc;border-radius:10px;overflow:hidden">' +
+        '<div style="padding:8px 6px;text-align:center">' +
+          '<div style="font-size:9px;color:#9ca3af;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">Mensal</div>' +
+          '<div style="font-size:13px;font-weight:800;color:#374151">'+formatar(g.valorParc)+'</div>' +
+        '</div>' +
+        '<div style="background:#e2e8f0"></div>' +
+        '<div style="padding:8px 6px;text-align:center">' +
+          '<div style="font-size:9px;color:#9ca3af;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">Pago</div>' +
+          '<div style="font-size:13px;font-weight:800;color:#16a34a">'+formatar(valorPago)+'</div>' +
+        '</div>' +
+        '<div style="background:#e2e8f0"></div>' +
+        '<div style="padding:8px 6px;text-align:center">' +
+          '<div style="font-size:9px;color:#9ca3af;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">Restante</div>' +
+          '<div style="font-size:13px;font-weight:800;color:'+(quitado?'#16a34a':'#dc2626')+'">'+formatar(valorRestante)+'</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  // ── Seção: Em andamento ──
+  if (ativos.length) {
+    html += '<div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;padding-left:2px">Em andamento · '+ativos.length+'</div>';
+    ativos.forEach(function(gd){ html += cardParcela(gd); });
+  }
+
+  // ── Seção: Quitados ──
+  if (quitados.length) {
+    html += '<div style="font-size:11px;font-weight:700;color:#16a34a;text-transform:uppercase;letter-spacing:.6px;margin:16px 0 8px;padding-left:2px">Quitados · '+quitados.length+'</div>';
+    quitados.forEach(function(gd){ html += cardParcela(gd); });
+  }
 
   return html;
 }
