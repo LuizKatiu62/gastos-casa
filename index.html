@@ -268,7 +268,14 @@ body {
 .lanc-valor { font-size: 14px; font-weight: 800; flex-shrink: 0; color: #111827; }
 .lanc-del { background: none; border: none; color: #d1d5db; font-size: 15px; cursor: pointer; padding: 4px; }
 .lanc-del:hover { color: #ef4444; }
+.lanc-parcela { font-size: 10px; font-weight: 700; background: rgba(99,102,241,.12); color: #6366f1; border: 1px solid rgba(99,102,241,.25); border-radius: 9px; padding: 1px 6px; margin-left: 6px; vertical-align: middle; white-space: nowrap; }
 .vazio { text-align: center; padding: 28px 16px; color: #9ca3af; font-size: 14px; line-height: 1.5; }
+/* ── PARCELAMENTO ── */
+.parcela-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.btn-parcela-toggle { font-size: 13px; font-weight: 700; padding: 6px 14px; border-radius: 20px; border: 2px solid #e5e7eb; background: #f9fafb; color: #374151; cursor: pointer; transition: all .2s; }
+.btn-parcela-toggle.ativo { border-color: #6366f1; background: #eef2ff; color: #4338ca; }
+.parcela-preview { font-size: 12px; color: #6366f1; font-weight: 600; }
+.sel-parcelas { font-size: 15px; margin-top: 8px; width: 100%; padding: 8px; border-radius: 10px; border: 1.5px solid #d1d5db; background: #fff; }
 
 /* ── TOPO TELAS INTERNAS ── */
 .topo-add {
@@ -722,7 +729,22 @@ body {
       </div>
 
       <div class="form-group">
-        <label>4. O que foi gasto? (opcional)</label>
+        <label>4. Parcelamento</label>
+        <div class="parcela-row">
+          <button type="button" class="btn-parcela-toggle" id="btn-parcela-toggle" onclick="toggleParcelamento()">À vista</button>
+          <span class="parcela-preview" id="parcela-preview"></span>
+        </div>
+        <select class="sel-parcelas" id="sel-parcelas" style="display:none" onchange="onChangeParcelas(this.value)">
+          <option value="2">2x</option><option value="3">3x</option><option value="4">4x</option>
+          <option value="5">5x</option><option value="6">6x</option><option value="7">7x</option>
+          <option value="8">8x</option><option value="9">9x</option><option value="10">10x</option>
+          <option value="11">11x</option><option value="12">12x</option><option value="15">15x</option>
+          <option value="18">18x</option><option value="24">24x</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>5. O que foi gasto? (opcional)</label>
         <textarea id="inp-desc" placeholder="Ex: Gasolina no Petro-Canada, compras no Costco, farmácia…"></textarea>
       </div>
 
@@ -1227,6 +1249,54 @@ function lancamentosMes(lista, mes) {
 }
 
 // ─────────────────────────────
+// PARCELAMENTO HELPERS
+// ─────────────────────────────
+function addMeses(dataStr, meses) {
+  var p = dataStr.split('-');
+  var ano = parseInt(p[0]), mes = parseInt(p[1]) - 1, dia = parseInt(p[2]);
+  var novoMes = mes + meses;
+  var novoAno = ano + Math.floor(novoMes / 12);
+  novoMes = novoMes % 12;
+  var ultimoDia = new Date(novoAno, novoMes + 1, 0).getDate();
+  dia = Math.min(dia, ultimoDia);
+  return novoAno + '-' + ((novoMes + 1) + '').padStart(2, '0') + '-' + (dia + '').padStart(2, '0');
+}
+var _numParcelas = 1;
+function toggleParcelamento() {
+  var btn = document.getElementById('btn-parcela-toggle');
+  var sel = document.getElementById('sel-parcelas');
+  if (_numParcelas === 1) {
+    _numParcelas = 2;
+    sel.value = '2';
+    sel.style.display = 'block';
+    btn.classList.add('ativo');
+    btn.textContent = 'Parcelado';
+    atualizarPreviewParcela();
+  } else {
+    _numParcelas = 1;
+    sel.style.display = 'none';
+    btn.classList.remove('ativo');
+    btn.textContent = 'À vista';
+    document.getElementById('parcela-preview').textContent = '';
+  }
+}
+function onChangeParcelas(v) {
+  _numParcelas = parseInt(v) || 1;
+  atualizarPreviewParcela();
+}
+function atualizarPreviewParcela() {
+  var prev = document.getElementById('parcela-preview');
+  if (_numParcelas <= 1) { prev.textContent = ''; return; }
+  var valor = parseFloat(document.getElementById('inp-valor').value);
+  if (valor > 0) {
+    var parcValor = Math.round(valor / _numParcelas * 100) / 100;
+    prev.textContent = _numParcelas + 'x de CA$ ' + parcValor.toFixed(2);
+  } else {
+    prev.textContent = _numParcelas + 'x';
+  }
+}
+
+// ─────────────────────────────
 // ESTADO
 // ─────────────────────────────
 var _cat = 'carro', _sub = 'gas', _mesHist = mesAtual(), _relTipo = 'periodo';
@@ -1457,10 +1527,11 @@ function renderizarRecentes(todos) {
     return;
   }
   el.innerHTML = rec.map(function(l) {
+    var parcBadge = l.parcela ? '<span class="lanc-parcela">'+l.parcela.n+'/'+l.parcela.total+'</span>' : '';
     return '<div class="lancamento">' +
       '<div class="lanc-ponto" style="background:'+CORES[l.cat]+'"></div>' +
       '<div class="lanc-info">' +
-        '<div class="lanc-desc">'+(l.desc||(l.loja||l.divsub||NOMES[l.cat]))+'</div>' +
+        '<div class="lanc-desc">'+(l.desc||(l.loja||l.divsub||NOMES[l.cat]))+parcBadge+'</div>' +
         '<div class="lanc-meta">'+formatarData(l.data)+' · '+NOMES[l.cat]+(l.loja?' · '+l.loja:'')+(l.divsub?' · '+l.divsub:'')+(l.sub&&l.cat==='carro'?' · '+(SUBS[l.sub]||l.sub):'')+'</div>' +
       '</div>' +
       '<div class="lanc-valor" style="color:'+CORES[l.cat]+'">'+formatar(l.valor)+'</div>' +
@@ -1493,10 +1564,11 @@ function irParaCategoria(cat) {
     document.getElementById('lista-categoria').innerHTML = '<div class="vazio">📭 Sem lançamentos neste período</div>';
   } else {
     document.getElementById('lista-categoria').innerHTML = lista.map(function(l) {
+      var parcBadge = l.parcela ? '<span class="lanc-parcela">'+l.parcela.n+'/'+l.parcela.total+'</span>' : '';
       return '<div class="lancamento">' +
         '<div class="lanc-ponto" style="background:'+CORES[cat]+'"></div>' +
         '<div class="lanc-info">' +
-          '<div class="lanc-desc">'+(l.desc||NOMES[cat])+'</div>' +
+          '<div class="lanc-desc">'+(l.desc||NOMES[cat])+parcBadge+'</div>' +
           '<div class="lanc-meta">'+formatarData(l.data)+(l.sub?' · '+SUBS[l.sub]:'')+'</div>' +
         '</div>' +
         '<div class="lanc-valor" style="color:'+CORES[cat]+'">'+formatar(l.valor)+'</div>' +
@@ -1532,10 +1604,11 @@ function renderizarHistorico() {
         '<span class="hist-dia-total">'+formatar(totDia)+'</span>' +
       '</div>' +
       porDia[data].map(function(l) {
+        var parcBadge = l.parcela ? '<span class="lanc-parcela">'+l.parcela.n+'/'+l.parcela.total+'</span>' : '';
         return '<div class="hist-linha">' +
           '<div class="lanc-ponto" style="background:'+CORES[l.cat]+';flex-shrink:0"></div>' +
           '<div class="lanc-info">' +
-            '<div class="lanc-desc">'+(l.desc||NOMES[l.cat])+'</div>' +
+            '<div class="lanc-desc">'+(l.desc||NOMES[l.cat])+parcBadge+'</div>' +
             '<div class="lanc-meta">'+NOMES[l.cat]+(l.loja?' · '+l.loja:'')+(l.divsub?' · '+l.divsub:'')+(l.sub&&l.cat==='carro'?' · '+(SUBS[l.sub]||l.sub):'')+'</div>' +
           '</div>' +
           '<div class="lanc-valor" style="color:'+CORES[l.cat]+'">'+formatar(l.valor)+'</div>' +
@@ -1881,9 +1954,11 @@ function salvarForcadoMain() {
   }
 }
 
-function _executarSalvar(lanc) {
+function _executarSalvar(lancs) {
+  // Aceita array ou objeto único
+  if (!Array.isArray(lancs)) lancs = [lancs];
   var d = getDados();
-  d.lancamentos.push(lanc);
+  lancs.forEach(function(l) { d.lancamentos.push(l); });
   salvarDados(d);
   document.getElementById('inp-valor').value = '';
   document.getElementById('inp-desc').value = '';
@@ -1894,10 +1969,20 @@ function _executarSalvar(lanc) {
   document.getElementById('sel-div').value = '';
   document.getElementById('inp-div-outros').style.display = 'none';
   _loja = ''; _lojaOutros = ''; _divSub = ''; _divOutros = ''; _carroSub = ''; _carroOutros = '';
+  // Reset parcelamento
+  _numParcelas = 1;
+  document.getElementById('btn-parcela-toggle').classList.remove('ativo');
+  document.getElementById('btn-parcela-toggle').textContent = 'À vista';
+  document.getElementById('sel-parcelas').style.display = 'none';
+  document.getElementById('parcela-preview').textContent = '';
   irPara('inicio');
   renderizar();
   setTimeout(renderizar, 300);
-  mostrarToast('✅', 'Lançamento salvo!');
+  if (lancs.length > 1) {
+    mostrarToast('✅', lancs.length + 'x parcelas salvas até ' + formatarData(lancs[lancs.length-1].data) + '!');
+  } else {
+    mostrarToast('✅', 'Lançamento salvo!');
+  }
   verificarAlerta();
 }
 
@@ -1911,6 +1996,30 @@ function salvarLancamento() {
   var carroFinal = _cat==='carro'   ? (_carroSub==='outros' ? (_carroOutros||'Outros') : (_carroSub ? CARRO_LABELS[_carroSub] : '')) : null;
   var lojaFinal  = _cat==='mercado'  ? (_loja==='outros'   ? (_lojaOutros||'Outros')  : (_loja   ? LOJAS[_loja]        : '')) : null;
   var divFinal   = _cat==='diversos' ? (_divSub==='outros' ? (_divOutros||'Outros')   : (_divSub ? DIV_LABELS[_divSub] : '')) : null;
+  var desc = document.getElementById('inp-desc').value.trim();
+
+  if (_numParcelas > 1) {
+    // Lançamento parcelado: cria N lancamentos mensais
+    var parcValor = Math.round(valor / _numParcelas * 100) / 100;
+    var grupoId = Date.now().toString();
+    var lancs = [];
+    for (var i = 0; i < _numParcelas; i++) {
+      lancs.push({
+        id:     grupoId + '-' + (i + 1),
+        cat:    _cat,
+        sub:    carroFinal || null,
+        loja:   lojaFinal  || null,
+        divsub: divFinal   || null,
+        valor:  parcValor,
+        data:   addMeses(data, i),
+        desc:   desc,
+        parcela: { n: i + 1, total: _numParcelas, grupoId: grupoId, valorTotal: valor }
+      });
+    }
+    _executarSalvar(lancs);
+    return;
+  }
+
   var lanc = {
     id:     Date.now().toString(),
     cat:    _cat,
@@ -1919,10 +2028,10 @@ function salvarLancamento() {
     divsub: divFinal   || null,
     valor:  valor,
     data:   data,
-    desc:   document.getElementById('inp-desc').value.trim()
+    desc:   desc
   };
 
-  // Checar duplicata (valor + data + categoria)
+  // Checar duplicata (valor + data + categoria) — só para lançamento à vista
   var dups = verificarDuplicataMain(valor, data, _cat);
   if (dups.length > 0) {
     var dup = dups[0];
@@ -1943,12 +2052,35 @@ function salvarLancamento() {
   _executarSalvar(lanc);
 }
 function excluir(id) {
-  if (!confirm('Excluir este lançamento?')) return;
   var d = getDados();
-  d.lancamentos = d.lancamentos.filter(function(l){ return l.id !== id; });
+  var l = d.lancamentos.find(function(x){ return x.id === id; });
+  if (!l) return;
+
+  if (l.parcela) {
+    var restantes = d.lancamentos.filter(function(x) {
+      return x.parcela && x.parcela.grupoId === l.parcela.grupoId && x.parcela.n >= l.parcela.n;
+    }).length;
+    var msg = 'Parcela ' + l.parcela.n + '/' + l.parcela.total + ' — CA$ ' + parseFloat(l.valor).toFixed(2) + '/mês\n\n' +
+              'OK → Excluir esta + ' + (restantes - 1) + ' parcela(s) restante(s)\n' +
+              'Cancelar → Excluir só esta parcela';
+    var excluirTodas = confirm(msg);
+    if (excluirTodas) {
+      d.lancamentos = d.lancamentos.filter(function(x) {
+        if (!x.parcela || x.parcela.grupoId !== l.parcela.grupoId) return true;
+        return x.parcela.n < l.parcela.n;
+      });
+      mostrarToast('🗑️', restantes + ' parcela(s) excluída(s)');
+    } else {
+      d.lancamentos = d.lancamentos.filter(function(x){ return x.id !== id; });
+      mostrarToast('🗑️', 'Parcela ' + l.parcela.n + '/' + l.parcela.total + ' excluída');
+    }
+  } else {
+    if (!confirm('Excluir este lançamento?')) return;
+    d.lancamentos = d.lancamentos.filter(function(x){ return x.id !== id; });
+    mostrarToast('🗑️', 'Excluído');
+  }
   salvarDados(d);
   renderizar();
-  mostrarToast('🗑️', 'Excluído');
 }
 
 // ─────────────────────────────
@@ -2432,6 +2564,9 @@ window.onload = function() {
   if (d.orcamentos.diversos) document.getElementById('orc-diversos').value = d.orcamentos.diversos;
   if (d.orcamentos.mercado)  document.getElementById('orc-mercado').value  = d.orcamentos.mercado;
   renderizar();
+
+  // Atualiza preview de parcelamento ao digitar valor
+  document.getElementById('inp-valor').addEventListener('input', atualizarPreviewParcela);
 
   // Inicializar sincronização Firebase
   inicializarFirebase();
