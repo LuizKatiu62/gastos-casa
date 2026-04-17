@@ -2,11 +2,11 @@
 <html lang="pt">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no, maximum-scale=1.0">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260417-013">
+<meta name="app-version" content="20260417-014">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -47,6 +47,8 @@
 
 /* ── RESET & BASE ── */
 *, *::before, *::after { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+/* Previne zoom automático no iOS em inputs/selects */
+input, select, textarea { font-size: max(16px, 1em) !important; touch-action: manipulation; }
 html { height: 100%; }
 body {
   margin: 0;
