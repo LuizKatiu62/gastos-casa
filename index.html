@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260417-004">
+<meta name="app-version" content="20260417-005">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -1105,11 +1105,25 @@ body {
 <script>
 // Safety net — evita tela branca em caso de erro JS inesperado
 window.onerror = function(msg, src, line, col, err) {
+  // Se der qualquer erro JS, esconde o loading e mostra o app
+  var ld = document.getElementById('app-loading');
+  if (ld) ld.style.display = 'none';
   var el = document.getElementById('tela-inicio');
   if (el && !el.classList.contains('ativa')) { el.classList.add('ativa'); }
   console.error('App error:', msg, 'line', line, err);
   return false;
 };
+
+// Segurança: se window.onload demorar demais, esconde loading após 6s
+setTimeout(function() {
+  var ld = document.getElementById('app-loading');
+  if (ld && ld.style.display !== 'none') {
+    ld.style.display = 'none';
+    var el = document.getElementById('tela-inicio');
+    if (el && !el.classList.contains('ativa')) { el.classList.add('ativa'); }
+    try { renderizar(); } catch(e) {}
+  }
+}, 6000);
 
 // ─────────────────────────────
 // DADOS
@@ -2972,8 +2986,8 @@ function salvarLancamentoFoto() {
 // ─────────────────────────────
 // INÍCIO
 // ─────────────────────────────
-document.addEventListener('DOMContentLoaded', function() {
-  // Esconder tela de loading (DOMContentLoaded é mais rápido que window.onload)
+window.onload = function() {
+  // Esconder tela de loading
   var ld = document.getElementById('app-loading');
   if (ld) ld.style.display = 'none';
 
