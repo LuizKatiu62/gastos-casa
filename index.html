@@ -6,15 +6,23 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260417-002">
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<meta name="app-version" content="20260417-003">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
 <meta name="mobile-web-app-capable" content="yes">
 <title>Gastos da Casa</title>
 <style>
+/* ── LOADING SCREEN ── */
+#app-loading {
+  position: fixed; inset: 0; z-index: 9999;
+  background: #f8fafc;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+}
+#app-loading .ld-icon { font-size: 48px; animation: ld-pulse 1.2s ease-in-out infinite; }
+#app-loading .ld-txt  { font-size: 15px; font-weight: 600; color: #6b7280; font-family: -apple-system, sans-serif; }
+@keyframes ld-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.92)} }
+
 /* ── RESET & BASE ── */
 *, *::before, *::after { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
 html { height: 100%; }
@@ -479,6 +487,11 @@ body {
 </style>
 </head>
 <body>
+
+<div id="app-loading">
+  <div class="ld-icon">💳</div>
+  <div class="ld-txt">Carregando…</div>
+</div>
 
 <div class="toast" id="toast"><span id="ti"></span><span id="tm"></span></div>
 
@@ -2957,6 +2970,10 @@ function salvarLancamentoFoto() {
 // INÍCIO
 // ─────────────────────────────
 window.onload = function() {
+  // Esconder tela de loading
+  var ld = document.getElementById('app-loading');
+  if (ld) ld.style.display = 'none';
+
   // Verificar se localStorage está disponível
   if (!_storageOk()) {
     document.getElementById('aviso-storage').style.display = 'block';
@@ -3028,5 +3045,9 @@ function forcarAtualizacao() {
   window.location.href = window.location.pathname + '?v=' + Date.now();
 }
 </script>
+
+<!-- Firebase carregado no fim do body para não bloquear o render -->
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 </body>
 </html>
