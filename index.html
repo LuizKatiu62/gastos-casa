@@ -2117,7 +2117,179 @@ function renderizarRelcat() {
     }).join('') +
     '</div>';
 
-  el.innerHTML = heroHtml + statsHtml + subHtml + listaHtml;
+  var acoesHtml =
+    '<div class="card" style="display:flex;gap:10px;margin-bottom:10px">' +
+    '<button style="flex:1;padding:13px 8px;border:none;border-radius:14px;font-size:14px;font-weight:700;cursor:pointer;background:'+cor+';color:#fff;font-family:inherit" onclick="exportarPDFRelcat()">🖨️ PDF</button>' +
+    '<button style="flex:1;padding:13px 8px;border:none;border-radius:14px;font-size:14px;font-weight:700;cursor:pointer;background:#25d366;color:#fff;font-family:inherit" onclick="compartilharRelcat()">📱 WhatsApp</button>' +
+    '</div>';
+
+  el.innerHTML = heroHtml + statsHtml + subHtml + acoesHtml + listaHtml;
+}
+
+function exportarPDFRelcat() {
+  var per = getRelCatPer();
+  if (!per) { mostrarToast('⚠️', 'Selecione o período'); return; }
+  var d    = getDados();
+  var cor  = { mercado:'#16a34a', carro:'#dc2626', diversos:'#ea580c' }[_rcCat];
+  var bgCor= { mercado:'#f0fdf4', carro:'#fef2f2', diversos:'#fff7ed' }[_rcCat];
+  var icone= { mercado:'🛒', carro:'🚗', diversos:'🛍️' }[_rcCat];
+  var nome = { mercado:'Supermercado', carro:'Carro', diversos:'Diversos' }[_rcCat];
+  var orc  = (d.orcamentos && d.orcamentos[_rcCat]) || 0;
+
+  var lista = lancamentosPeriodo(d.lancamentos, per)
+    .filter(function(l){ return l.cat === _rcCat; })
+    .sort(function(a,b){ return b.data.localeCompare(a.data); });
+  if (!lista.length) { mostrarToast('⚠️', 'Sem lançamentos neste período'); return; }
+
+  var total = lista.reduce(function(s,l){ return s+parseFloat(l.valor||0); }, 0);
+  var pctOrc = orc > 0 ? (total/orc*100) : 0;
+
+  // Subcategory totals
+  var subTots = {};
+  lista.forEach(function(l) {
+    var k = l.loja || l.divsub || l.sub || '—';
+    subTots[k] = (subTots[k]||0) + parseFloat(l.valor||0);
+  });
+  var subKeys = Object.keys(subTots).sort(function(a,b){ return subTots[b]-subTots[a]; });
+
+  // Group by date
+  var porDia = {};
+  lista.forEach(function(l){ if(!porDia[l.data]) porDia[l.data]=[]; porDia[l.data].push(l); });
+
+  var subRows = subKeys.map(function(k) {
+    var pct = total > 0 ? (subTots[k]/total*100).toFixed(1) : '0';
+    return '<tr>' +
+      '<td style="padding:7px 10px;border-bottom:1px solid #f3f4f6;font-size:13px;color:#374151">'+k+'</td>' +
+      '<td style="padding:7px 10px;border-bottom:1px solid #f3f4f6;font-size:13px;font-weight:700;color:'+cor+';text-align:right">'+formatar(subTots[k])+'</td>' +
+      '<td style="padding:7px 10px;border-bottom:1px solid #f3f4f6;font-size:12px;color:#9ca3af;text-align:right">'+pct+'%</td>' +
+    '</tr>';
+  }).join('');
+
+  var linhas = Object.keys(porDia).sort(function(a,b){ return b.localeCompare(a); }).map(function(data) {
+    var totDia = porDia[data].reduce(function(s,l){ return s+parseFloat(l.valor||0); }, 0);
+    var rows = porDia[data].map(function(l) {
+      var sub  = l.loja || l.divsub || l.sub || '';
+      var desc = l.desc ? l.desc : (sub || '—');
+      var parc = l.parcela ? ' ('+l.parcela.n+'/'+l.parcela.total+')' : '';
+      return '<tr>' +
+        '<td style="padding:7px 10px;border-bottom:1px solid #f3f4f6;font-size:13px;color:#374151">'+desc+parc+'</td>' +
+        '<td style="padding:7px 10px;border-bottom:1px solid #f3f4f6;font-size:12px;color:#6b7280">'+sub+'</td>' +
+        '<td style="padding:7px 10px;border-bottom:1px solid #f3f4f6;font-size:13px;font-weight:700;color:'+cor+';text-align:right;white-space:nowrap">'+formatar(l.valor)+'</td>' +
+      '</tr>';
+    }).join('');
+    return '<tr style="background:#f8fafc">' +
+      '<td colspan="2" style="padding:8px 10px;font-size:12px;font-weight:800;color:#475569;text-transform:uppercase;letter-spacing:.5px">'+formatarData(data)+'</td>' +
+      '<td style="padding:8px 10px;font-size:13px;font-weight:800;color:#1d4ed8;text-align:right">'+formatar(totDia)+'</td>' +
+    '</tr>' + rows;
+  }).join('');
+
+  var perLabel = formatarData(per.inicio) + ' → ' + formatarData(per.fim);
+  var orcHtml = orc > 0
+    ? '<div style="margin-top:10px;font-size:13px;color:#6b7280">Orçamento: <strong>'+formatar(orc)+'</strong> · Utilizado: <strong style="color:'+cor+'">'+pctOrc.toFixed(1)+'%</strong> · '+(total>orc?'<strong style="color:#dc2626">Excedeu '+formatar(total-orc)+'</strong>':'<strong style="color:#16a34a">Sobra '+formatar(orc-total)+'</strong>')+'</div>'
+    : '';
+
+  var html = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">' +
+    '<title>'+icone+' '+nome+' — '+perLabel+'</title>' +
+    '<style>' +
+      'body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;color:#111827;background:#fff}' +
+      '@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}' +
+      '.page{max-width:680px;margin:0 auto;padding:32px 24px}' +
+      'h1{margin:0 0 4px;font-size:22px;font-weight:900;color:#0f172a}' +
+      '.sub{font-size:13px;color:#6b7280;margin-bottom:20px}' +
+      '.hero{background:'+bgCor+';border:2px solid '+cor+';border-radius:14px;padding:18px 20px;margin-bottom:20px}' +
+      '.hero-val{font-size:32px;font-weight:900;color:'+cor+';margin-bottom:4px}' +
+      '.section-title{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#9ca3af;margin:20px 0 8px}' +
+      'table{width:100%;border-collapse:collapse;border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:24px}' +
+      'th{padding:9px 10px;background:'+cor+';color:#fff;font-size:11px;text-transform:uppercase;letter-spacing:.5px;font-weight:700;text-align:left}' +
+      'th:last-child{text-align:right}' +
+      '.rodape{margin-top:24px;font-size:11px;color:#9ca3af;text-align:center}' +
+      '.btn-print{display:block;width:100%;padding:14px;background:'+cor+';color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;margin-bottom:20px}' +
+      '@media print{.btn-print{display:none}}' +
+    '</style></head><body>' +
+    '<div class="page">' +
+      '<button class="btn-print" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>' +
+      '<h1>'+icone+' '+nome+'</h1>' +
+      '<div class="sub">Relatório por categoria · '+perLabel+'</div>' +
+      '<div class="hero">' +
+        '<div class="hero-val">'+formatar(total)+'</div>' +
+        '<div style="font-size:13px;color:#6b7280">'+lista.length+' lançamento(s)</div>' +
+        orcHtml +
+      '</div>' +
+      (subKeys.length > 1 ?
+        '<div class="section-title">Por subcategoria</div>' +
+        '<table><thead><tr><th>Subcategoria</th><th style="text-align:right">Total</th><th style="text-align:right">%</th></tr></thead><tbody>'+subRows+'</tbody></table>'
+      : '') +
+      '<div class="section-title">Lançamentos</div>' +
+      '<table>' +
+        '<thead><tr><th>Descrição</th><th>Sub</th><th style="text-align:right">Valor</th></tr></thead>' +
+        '<tbody>'+linhas+'</tbody>' +
+      '</table>' +
+      '<div class="rodape">Gerado em '+new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'})+' · Gastos da Casa</div>' +
+    '</div></body></html>';
+
+  var win = window.open('', '_blank');
+  if (!win) { mostrarToast('⚠️', 'Permita pop-ups para gerar o PDF'); return; }
+  win.document.open(); win.document.write(html); win.document.close();
+}
+
+function compartilharRelcat() {
+  var per = getRelCatPer();
+  if (!per) { mostrarToast('⚠️', 'Selecione o período'); return; }
+  var d    = getDados();
+  var icone= { mercado:'🛒', carro:'🚗', diversos:'🛍️' }[_rcCat];
+  var nome = { mercado:'SUPERMERCADO', carro:'CARRO', diversos:'DIVERSOS' }[_rcCat];
+  var orc  = (d.orcamentos && d.orcamentos[_rcCat]) || 0;
+
+  var lista = lancamentosPeriodo(d.lancamentos, per)
+    .filter(function(l){ return l.cat === _rcCat; })
+    .sort(function(a,b){ return b.data.localeCompare(a.data); });
+  if (!lista.length) { mostrarToast('⚠️', 'Sem lançamentos neste período'); return; }
+
+  var total = lista.reduce(function(s,l){ return s+parseFloat(l.valor||0); }, 0);
+  var perLabel = formatarData(per.inicio) + ' → ' + formatarData(per.fim);
+
+  var subTots = {};
+  lista.forEach(function(l) {
+    var k = l.loja || l.divsub || l.sub || '—';
+    subTots[k] = (subTots[k]||0) + parseFloat(l.valor||0);
+  });
+  var subKeys = Object.keys(subTots).sort(function(a,b){ return subTots[b]-subTots[a]; });
+
+  var msg = icone + ' *RELATÓRIO — ' + nome + '*\n';
+  msg += '📅 ' + perLabel + '\n';
+  msg += '━━━━━━━━━━━━━━━━\n\n';
+
+  if (subKeys.length > 1) {
+    msg += '*Por subcategoria:*\n';
+    subKeys.forEach(function(k) {
+      var pct = (subTots[k]/total*100).toFixed(0);
+      msg += '  • ' + k + ': ' + formatar(subTots[k]) + ' (' + pct + '%)\n';
+    });
+    msg += '\n';
+  }
+
+  msg += '*Lançamentos:*\n';
+  var porDia = {};
+  lista.forEach(function(l){ if(!porDia[l.data]) porDia[l.data]=[]; porDia[l.data].push(l); });
+  Object.keys(porDia).sort(function(a,b){ return b.localeCompare(a); }).forEach(function(data) {
+    var totDia = porDia[data].reduce(function(s,l){ return s+parseFloat(l.valor||0); }, 0);
+    msg += '\n📅 *' + formatarData(data) + '* — ' + formatar(totDia) + '\n';
+    porDia[data].forEach(function(l) {
+      var sub  = l.loja || l.divsub || l.sub || '';
+      var parc = l.parcela ? ' ['+l.parcela.n+'/'+l.parcela.total+']' : '';
+      msg += '  • ' + (l.desc || sub || '—') + (sub && l.desc ? ' ('+sub+')' : '') + parc + ': ' + formatar(l.valor) + '\n';
+    });
+  });
+
+  msg += '\n━━━━━━━━━━━━━━━━\n';
+  msg += '💰 *Total: ' + formatar(total) + '*';
+  if (orc > 0) {
+    var pctOrc = (total/orc*100).toFixed(1);
+    msg += ' (' + pctOrc + '% do orçamento de ' + formatar(orc) + ')';
+  }
+  msg += '\n\n_Enviado via Gastos da Casa_';
+
+  window.open('https://wa.me/' + WA + '?text=' + encodeURIComponent(msg), '_blank');
 }
 
 // ─────────────────────────────
