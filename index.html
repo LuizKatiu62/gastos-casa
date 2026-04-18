@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260418-037">
+<meta name="app-version" content="20260418-038">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -825,6 +825,7 @@ body {
           <option value="roupas">👕 Roupas</option>
           <option value="amazon">📦 Amazon</option>
           <option value="restaurantes">🍽️ Restaurantes</option>
+          <option value="mcdonalds">🍔 McDonald's</option>
           <option value="dollarama">🏪 Dollarama</option>
           <option value="staples">🖨️ Staples</option>
           <option value="academia">💪 Academia</option>
@@ -1004,6 +1005,7 @@ body {
           <option value="roupas">👕 Roupas</option>
           <option value="amazon">📦 Amazon</option>
           <option value="restaurantes">🍽️ Restaurantes</option>
+          <option value="mcdonalds">🍔 McDonald's</option>
           <option value="dollarama">🏪 Dollarama</option>
           <option value="staples">🖨️ Staples</option>
           <option value="academia">💪 Academia</option>
@@ -1127,6 +1129,7 @@ body {
         <option value="roupas">👕 Roupas</option>
         <option value="amazon">📦 Amazon</option>
         <option value="restaurantes">🍽️ Restaurantes</option>
+        <option value="mcdonalds">🍔 McDonald's</option>
         <option value="dollarama">🏪 Dollarama</option>
         <option value="staples">🖨️ Staples</option>
         <option value="academia">💪 Academia</option>
@@ -2847,7 +2850,7 @@ function salvarLancamento() {
   if (!valor || valor <= 0) { mostrarToast('⚠️', 'Informe o valor gasto'); return; }
   if (!data) { mostrarToast('⚠️', 'Selecione a data'); return; }
   var CARRO_LABELS = { 'gas-rr':'⛽ Gasolina (Range Rover)', 'gas-pilot':'⛽ Gasolina (Pilot)', oleo:'🛢️ Óleo', pneu:'🔧 Pneu', pecas:'🔩 Peças', outros:'Outros' };
-  var DIV_LABELS = { roupas:'👕 Roupas', amazon:'📦 Amazon', restaurantes:'🍽️ Restaurantes', dollarama:'🏪 Dollarama', staples:'🖨️ Staples', academia:'💪 Academia', esportes:'🏃 Esportes', veterinario:'🐾 Veterinário', remedio:'💊 Remédio', subscription:'📱 Subscription', lazer:'🎉 Lazer', outros:'Outros' };
+  var DIV_LABELS = { roupas:'👕 Roupas', amazon:'📦 Amazon', restaurantes:'🍽️ Restaurantes', mcdonalds:"🍔 McDonald's", dollarama:'🏪 Dollarama', staples:'🖨️ Staples', academia:'💪 Academia', esportes:'🏃 Esportes', veterinario:'🐾 Veterinário', remedio:'💊 Remédio', subscription:'📱 Subscription', lazer:'🎉 Lazer', outros:'Outros' };
   var carroFinal = _cat==='carro'   ? (_carroSub==='outros' ? (_carroOutros||'Outros') : (_carroSub ? CARRO_LABELS[_carroSub] : '')) : null;
   var lojaFinal  = _cat==='mercado'  ? (_loja==='outros'   ? (_lojaOutros||'Outros')  : (_loja   ? LOJAS[_loja]        : '')) : null;
   var divFinal   = _cat==='diversos' ? (_divSub==='outros' ? (_divOutros||'Outros')   : (_divSub ? DIV_LABELS[_divSub] : '')) : null;
@@ -2948,7 +2951,7 @@ function excluir(id) {
 // ─────────────────────────────
 var _editId = null;
 var CARRO_LABELS_E = { 'gas-rr':'⛽ Gasolina (Range Rover)', 'gas-pilot':'⛽ Gasolina (Pilot)', oleo:'🛢️ Óleo', pneu:'🔧 Pneu', pecas:'🔩 Peças', outros:'Outros' };
-var DIV_LABELS_E   = { roupas:'👕 Roupas', amazon:'📦 Amazon', restaurantes:'🍽️ Restaurantes', dollarama:'🏪 Dollarama', staples:'🖨️ Staples', academia:'💪 Academia', esportes:'🏃 Esportes', veterinario:'🐾 Veterinário', remedio:'💊 Remédio', subscription:'📱 Subscription', lazer:'🎉 Lazer', outros:'Outros' };
+var DIV_LABELS_E   = { roupas:'👕 Roupas', amazon:'📦 Amazon', restaurantes:'🍽️ Restaurantes', mcdonalds:"🍔 McDonald's", dollarama:'🏪 Dollarama', staples:'🖨️ Staples', academia:'💪 Academia', esportes:'🏃 Esportes', veterinario:'🐾 Veterinário', remedio:'💊 Remédio', subscription:'📱 Subscription', lazer:'🎉 Lazer', outros:'Outros' };
 var LOJAS_INV = {};
 (function(){ Object.keys(LOJAS).forEach(function(k){ LOJAS_INV[LOJAS[k]] = k; }); })();
 var CARRO_INV = {};
@@ -3454,7 +3457,7 @@ function salvarLancamentoFoto() {
   var desc  = document.getElementById('foto-desc').value.trim();
   if (!valor || valor <= 0) { mostrarToast('⚠️', 'Informe o valor'); return; }
   if (!data)                { mostrarToast('⚠️', 'Informe a data');  return; }
-  var DIV_LABELS = { roupas:'👕 Roupas', amazon:'📦 Amazon', restaurantes:'🍽️ Restaurantes', dollarama:'🏪 Dollarama', staples:'🖨️ Staples', academia:'💪 Academia', esportes:'🏃 Esportes', veterinario:'🐾 Veterinário', remedio:'💊 Remédio', subscription:'📱 Subscription', lazer:'🎉 Lazer', outros:'Outros' };
+  var DIV_LABELS = { roupas:'👕 Roupas', amazon:'📦 Amazon', restaurantes:'🍽️ Restaurantes', mcdonalds:"🍔 McDonald's", dollarama:'🏪 Dollarama', staples:'🖨️ Staples', academia:'💪 Academia', esportes:'🏃 Esportes', veterinario:'🐾 Veterinário', remedio:'💊 Remédio', subscription:'📱 Subscription', lazer:'🎉 Lazer', outros:'Outros' };
   var lojaFinal  = _fotoCat==='mercado'  ? (_fotoLoja==='outros'   ? (_fotoLojaOutros||'Outros') : (_fotoLoja   ? LOJAS[_fotoLoja]        : '')) : null;
   var divFinal   = _fotoCat==='diversos' ? (_fotoDivSub==='outros' ? (_fotoDivOutros||'Outros')  : (_fotoDivSub ? DIV_LABELS[_fotoDivSub] : '')) : null;
   var d = getDados();
