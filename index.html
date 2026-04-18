@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260418-038">
+<meta name="app-version" content="20260418-039">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -412,6 +412,95 @@ body {
   font-family: inherit; letter-spacing: -.2px;
   box-shadow: 0 4px 12px rgba(29,78,216,.3);
 }
+
+/* ── TELA ADD REDESIGN ── */
+.add-header {
+  background: linear-gradient(150deg, #0f172a 0%, #1e3a8a 100%);
+  color: white; padding: 16px;
+  display: flex; justify-content: space-between; align-items: center;
+  padding-top: calc(16px + env(safe-area-inset-top, 0));
+  transition: background .35s;
+}
+.add-header.cat-carro     { background: linear-gradient(150deg, #7f1d1d, #dc2626); }
+.add-header.cat-mercado   { background: linear-gradient(150deg, #14532d, #16a34a); }
+.add-header.cat-diversos  { background: linear-gradient(150deg, #7c2d12, #ea580c); }
+.add-header.cat-parcelados{ background: linear-gradient(150deg, #3b0764, #7c3aed); }
+.add-hdr-left { display: flex; align-items: center; gap: 12px; }
+.add-hdr-icon { font-size: 28px; line-height: 1; }
+.add-hdr-title { font-size: 18px; font-weight: 800; letter-spacing: -.3px; }
+.add-hdr-sub { font-size: 12px; opacity: .7; margin-top: 2px; }
+
+.add-body { padding: 14px; padding-bottom: 4px; }
+.add-card { background: white; border-radius: 16px; padding: 16px; margin-bottom: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 4px 12px rgba(0,0,0,.04); }
+.add-card-title { font-size: 10px; font-weight: 800; color: #9ca3af; text-transform: uppercase;
+  letter-spacing: .8px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.add-step-n { width: 18px; height: 18px; border-radius: 50%; background: #1d4ed8;
+  color: white; font-size: 10px; font-weight: 800; display: inline-flex; align-items: center;
+  justify-content: center; flex-shrink: 0; }
+
+.cat-grid-pro { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.cat-tile { border: 2px solid #e5e7eb; border-radius: 14px; padding: 18px 8px;
+  text-align: center; cursor: pointer; background: #fafafa; transition: all .15s; }
+.cat-tile-ic { font-size: 28px; margin-bottom: 6px; }
+.cat-tile-nm { font-size: 12px; font-weight: 700; color: #9ca3af; }
+.cat-tile.sel-carro      { border-color: #ef4444; background: #fef2f2; box-shadow: 0 0 0 3px #fee2e2; }
+.cat-tile.sel-carro .cat-tile-nm    { color: #dc2626; }
+.cat-tile.sel-diversos   { border-color: #f97316; background: #fff7ed; box-shadow: 0 0 0 3px #ffedd5; }
+.cat-tile.sel-diversos .cat-tile-nm { color: #ea580c; }
+.cat-tile.sel-mercado    { border-color: #22c55e; background: #f0fdf4; box-shadow: 0 0 0 3px #dcfce7; }
+.cat-tile.sel-mercado .cat-tile-nm  { color: #16a34a; }
+.cat-tile.sel-parcelados { border-color: #7c3aed; background: #f5f3ff; box-shadow: 0 0 0 3px #ede9fe; }
+.cat-tile.sel-parcelados .cat-tile-nm { color: #6d28d9; }
+
+.valor-big-wrap { position: relative; }
+.valor-big-pre { position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
+  font-size: 18px; font-weight: 700; color: #9ca3af; pointer-events: none; }
+.valor-big-input { width: 100%; padding: 16px 16px 16px 64px; font-size: 30px; font-weight: 800;
+  letter-spacing: -1px; border: 2px solid #e5e7eb; border-radius: 14px; background: #fafafa;
+  box-sizing: border-box; font-family: inherit; color: #111827; transition: border-color .2s, background .2s; }
+.valor-big-input:focus { border-color: #1d4ed8; background: white; outline: none; }
+
+.data-row-pro { display: flex; gap: 8px; align-items: stretch; }
+.btn-hoje { flex-shrink: 0; padding: 0 18px; background: #eff6ff; color: #1d4ed8;
+  border: 2px solid #bfdbfe; border-radius: 12px; font-size: 14px; font-weight: 700;
+  cursor: pointer; white-space: nowrap; font-family: inherit; }
+.data-row-pro input[type="date"] { flex: 1; padding: 13px 14px; border: 1.5px solid #e5e7eb;
+  border-radius: 12px; font-size: 16px; font-family: inherit; color: #111827; background: #fafafa;
+  box-sizing: border-box; transition: border-color .2s; }
+.data-row-pro input[type="date"]:focus { border-color: #1d4ed8; background: white; outline: none; }
+
+.parc-toggle { display: flex; gap: 8px; }
+.parc-toggle-btn { flex: 1; padding: 13px 8px; border: 2px solid #e5e7eb; border-radius: 12px;
+  font-size: 14px; font-weight: 700; background: #fafafa; color: #9ca3af; cursor: pointer;
+  text-align: center; transition: all .15s; font-family: inherit; }
+.parc-toggle-btn.ativo { border-color: #6366f1; background: #eef2ff; color: #4338ca; }
+
+.opt-badge { font-size: 10px; font-weight: 600; color: #9ca3af; background: #f3f4f6;
+  border-radius: 20px; padding: 2px 8px; margin-left: 2px; text-transform: none; letter-spacing: 0; }
+.add-textarea { width: 100%; padding: 13px 14px; border: 1.5px solid #e5e7eb; border-radius: 12px;
+  font-size: 16px; font-family: inherit; background: #fafafa; resize: none; height: 80px;
+  box-sizing: border-box; color: #111827; transition: border-color .2s, background .2s; }
+.add-textarea:focus { border-color: #1d4ed8; background: white; outline: none; }
+.add-select { width: 100%; padding: 13px 14px; border: 1.5px solid #e5e7eb; border-radius: 12px;
+  font-size: 16px; font-family: inherit; background: #fafafa; color: #111827; box-sizing: border-box; }
+.add-select:focus { border-color: #1d4ed8; background: white; outline: none; }
+.add-input-text { width: 100%; padding: 13px 14px; border: 1.5px solid #e5e7eb; border-radius: 12px;
+  font-size: 16px; font-family: inherit; background: #fafafa; color: #111827; box-sizing: border-box; margin-top: 8px; }
+.add-input-text:focus { border-color: #1d4ed8; background: white; outline: none; }
+
+.add-sticky-footer { position: sticky; bottom: 0; background: white;
+  padding: 12px 14px; padding-bottom: calc(12px + env(safe-area-inset-bottom, 0));
+  border-top: 1px solid #f3f4f6; }
+.btn-salvar-pro { width: 100%; background: linear-gradient(135deg, #1d4ed8, #2563eb);
+  color: white; border: none; border-radius: 14px; padding: 18px;
+  font-size: 17px; font-weight: 800; cursor: pointer; font-family: inherit;
+  letter-spacing: -.3px; transition: background .35s, box-shadow .35s;
+  box-shadow: 0 4px 14px rgba(29,78,216,.35); }
+.btn-salvar-pro.cat-carro     { background: linear-gradient(135deg, #dc2626, #ef4444); box-shadow: 0 4px 14px rgba(220,38,38,.35); }
+.btn-salvar-pro.cat-mercado   { background: linear-gradient(135deg, #16a34a, #22c55e); box-shadow: 0 4px 14px rgba(22,163,74,.35); }
+.btn-salvar-pro.cat-diversos  { background: linear-gradient(135deg, #ea580c, #f97316); box-shadow: 0 4px 14px rgba(234,88,12,.35); }
+.btn-salvar-pro.cat-parcelados{ background: linear-gradient(135deg, #7c3aed, #8b5cf6); box-shadow: 0 4px 14px rgba(124,58,237,.35); }
 .btn-foto-label {
   display: flex; align-items: center; justify-content: center;
   width: 100%; padding: 17px;
@@ -763,123 +852,165 @@ body {
      REGISTRAR GASTO
 ════════════════════════════ -->
 <div class="tela" id="tela-add">
-  <div class="topo-add">
-    <h2>➕ Registrar Gasto</h2>
+
+  <!-- Header dinâmico -->
+  <div class="add-header" id="add-header">
+    <div class="add-hdr-left">
+      <div class="add-hdr-icon" id="add-hdr-icon">➕</div>
+      <div>
+        <div class="add-hdr-title">Registrar Gasto</div>
+        <div class="add-hdr-sub" id="add-hdr-sub">Selecione a categoria</div>
+      </div>
+    </div>
     <button class="btn-voltar" onclick="irPara('inicio')">✕</button>
   </div>
-  <div class="conteudo">
-    <div class="card">
 
-      <div class="form-group">
-        <label>1. Categoria</label>
-        <div class="grid-sel">
-          <div class="opt-cat" id="sel-carro" onclick="selecionarCat('carro')">
-            <div class="ic">🚗</div><div class="nm">Carro</div>
-          </div>
-          <div class="opt-cat" id="sel-diversos" onclick="selecionarCat('diversos')">
-            <div class="ic">🛍️</div><div class="nm">Diversos</div>
-          </div>
-          <div class="opt-cat" id="sel-mercado" onclick="selecionarCat('mercado')">
-            <div class="ic">🛒</div><div class="nm">Mercado</div>
-          </div>
-          <div class="opt-cat" id="sel-parcelados" onclick="selecionarCat('parcelados')">
-            <div class="ic">📦</div><div class="nm">Parcelados</div>
-          </div>
+  <div class="add-body">
+
+    <!-- 1. Categoria -->
+    <div class="add-card">
+      <div class="add-card-title">
+        <span class="add-step-n">1</span>Categoria
+      </div>
+      <div class="cat-grid-pro">
+        <div class="cat-tile" id="sel-carro" onclick="selecionarCat('carro')">
+          <div class="cat-tile-ic">🚗</div>
+          <div class="cat-tile-nm">Carro</div>
+        </div>
+        <div class="cat-tile" id="sel-diversos" onclick="selecionarCat('diversos')">
+          <div class="cat-tile-ic">🛍️</div>
+          <div class="cat-tile-nm">Diversos</div>
+        </div>
+        <div class="cat-tile" id="sel-mercado" onclick="selecionarCat('mercado')">
+          <div class="cat-tile-ic">🛒</div>
+          <div class="cat-tile-nm">Mercado</div>
+        </div>
+        <div class="cat-tile" id="sel-parcelados" onclick="selecionarCat('parcelados')">
+          <div class="cat-tile-ic">📦</div>
+          <div class="cat-tile-nm">Parcelados</div>
         </div>
       </div>
-
-      <div class="form-group" id="grupo-sub" style="display:none">
-        <label>Subcategoria — Carro</label>
-        <select id="sel-carro-sub" onchange="selecionarCarroSub(this.value)" style="font-size:16px">
-          <option value="">— Selecione —</option>
-          <option value="gas-rr">⛽ Gasolina (Range Rover)</option>
-          <option value="gas-pilot">⛽ Gasolina (Pilot)</option>
-          <option value="oleo">🛢️ Óleo</option>
-          <option value="pneu">🔧 Pneu</option>
-          <option value="pecas">🔩 Peças</option>
-          <option value="outros">🔖 Outros</option>
-        </select>
-        <input type="text" id="inp-carro-outros" placeholder="Especifique..." style="display:none;margin-top:8px;font-size:16px" oninput="atualizarCarroOutros(this.value)">
-      </div>
-
-      <div class="form-group" id="grupo-loja" style="display:none">
-        <label>Local de Compra</label>
-        <select id="sel-loja" onchange="selecionarLoja(this.value)" style="font-size:16px">
-          <option value="">— Selecione o local —</option>
-          <option value="walmart">Walmart</option>
-          <option value="superstore">Superstore</option>
-          <option value="shoppers">Shoppers</option>
-          <option value="nofrills">No Frills</option>
-          <option value="costco">Costco</option>
-          <option value="dollarama">🏪 Dollarama</option>
-          <option value="vine">On the Vine</option>
-          <option value="outros">Outros</option>
-        </select>
-        <input type="text" id="inp-loja-outros" placeholder="Qual supermercado?" style="display:none;margin-top:8px;font-size:16px" oninput="atualizarLojaOutros(this.value)">
-      </div>
-
-      <div class="form-group" id="grupo-div" style="display:none">
-        <label>Subcategoria — Diversos</label>
-        <select id="sel-div" onchange="selecionarDivSub(this.value)" style="font-size:16px">
-          <option value="">— Selecione —</option>
-          <option value="roupas">👕 Roupas</option>
-          <option value="amazon">📦 Amazon</option>
-          <option value="restaurantes">🍽️ Restaurantes</option>
-          <option value="mcdonalds">🍔 McDonald's</option>
-          <option value="dollarama">🏪 Dollarama</option>
-          <option value="staples">🖨️ Staples</option>
-          <option value="academia">💪 Academia</option>
-          <option value="esportes">🏃 Esportes</option>
-          <option value="veterinario">🐾 Veterinário</option>
-          <option value="remedio">💊 Remédio</option>
-          <option value="subscription">📱 Subscription</option>
-          <option value="lazer">🎉 Lazer</option>
-          <option value="outros">🔖 Outros</option>
-        </select>
-        <input type="text" id="inp-div-outros" placeholder="Qual categoria?" style="display:none;margin-top:8px;font-size:16px" oninput="atualizarDivOutros(this.value)">
-      </div>
-
-      <div class="form-group">
-        <label>2. Valor Gasto</label>
-        <div class="wrap-valor">
-          <span class="prefixo">CA$</span>
-          <input type="number" id="inp-valor" placeholder="0.00" step="0.01" min="0" inputmode="decimal">
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label>3. Data do Gasto</label>
-        <input type="date" id="inp-data">
-        <div class="dica">Toque no campo para abrir o calendário</div>
-      </div>
-
-      <div class="form-group">
-        <label>4. Parcelamento</label>
-        <div class="parcela-row">
-          <button type="button" class="btn-parcela-toggle" id="btn-parcela-toggle" onclick="toggleParcelamento()">À vista</button>
-          <span class="parcela-preview" id="parcela-preview"></span>
-        </div>
-        <select class="sel-parcelas" id="sel-parcelas" style="display:none" onchange="onChangeParcelas(this.value)">
-          <option value="2">2x</option><option value="3">3x</option><option value="4">4x</option>
-          <option value="5">5x</option><option value="6">6x</option><option value="7">7x</option>
-          <option value="8">8x</option><option value="9">9x</option><option value="10">10x</option>
-          <option value="11">11x</option><option value="12">12x</option><option value="15">15x</option>
-          <option value="18">18x</option><option value="24">24x</option>
-        </select>
-        <div id="grupo-parc-ini" style="display:none;margin-top:8px">
-          <label style="font-size:12px;color:#6366f1;font-weight:600;display:block;margin-bottom:4px">De qual parcela começa? (para lançar só as pendentes)</label>
-          <select class="sel-parcelas" id="sel-parcela-ini" onchange="onChangeParcIni(this.value)"></select>
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label>5. O que foi gasto? (opcional)</label>
-        <textarea id="inp-desc" placeholder="Ex: Gasolina no Petro-Canada, compras no Costco, farmácia…"></textarea>
-      </div>
-
-      <button class="btn-salvar" onclick="salvarLancamento()">💾 Salvar Lançamento</button>
     </div>
+
+    <!-- Subcategoria Carro -->
+    <div class="add-card" id="grupo-sub" style="display:none">
+      <div class="add-card-title">
+        <span class="add-step-n" style="background:#dc2626">↳</span>Subcategoria — Carro
+      </div>
+      <select id="sel-carro-sub" class="add-select" onchange="selecionarCarroSub(this.value)">
+        <option value="">— Selecione —</option>
+        <option value="gas-rr">⛽ Gasolina (Range Rover)</option>
+        <option value="gas-pilot">⛽ Gasolina (Pilot)</option>
+        <option value="oleo">🛢️ Óleo</option>
+        <option value="pneu">🔧 Pneu</option>
+        <option value="pecas">🔩 Peças</option>
+        <option value="outros">🔖 Outros</option>
+      </select>
+      <input type="text" id="inp-carro-outros" class="add-input-text" placeholder="Especifique..." style="display:none" oninput="atualizarCarroOutros(this.value)">
+    </div>
+
+    <!-- Subcategoria Mercado -->
+    <div class="add-card" id="grupo-loja" style="display:none">
+      <div class="add-card-title">
+        <span class="add-step-n" style="background:#16a34a">↳</span>Local de Compra
+      </div>
+      <select id="sel-loja" class="add-select" onchange="selecionarLoja(this.value)">
+        <option value="">— Selecione o local —</option>
+        <option value="walmart">Walmart</option>
+        <option value="superstore">Superstore</option>
+        <option value="shoppers">Shoppers</option>
+        <option value="nofrills">No Frills</option>
+        <option value="costco">Costco</option>
+        <option value="dollarama">🏪 Dollarama</option>
+        <option value="vine">On the Vine</option>
+        <option value="outros">Outros</option>
+      </select>
+      <input type="text" id="inp-loja-outros" class="add-input-text" placeholder="Qual supermercado?" style="display:none" oninput="atualizarLojaOutros(this.value)">
+    </div>
+
+    <!-- Subcategoria Diversos -->
+    <div class="add-card" id="grupo-div" style="display:none">
+      <div class="add-card-title">
+        <span class="add-step-n" style="background:#ea580c">↳</span>Subcategoria — Diversos
+      </div>
+      <select id="sel-div" class="add-select" onchange="selecionarDivSub(this.value)">
+        <option value="">— Selecione —</option>
+        <option value="roupas">👕 Roupas</option>
+        <option value="amazon">📦 Amazon</option>
+        <option value="restaurantes">🍽️ Restaurantes</option>
+        <option value="mcdonalds">🍔 McDonald's</option>
+        <option value="dollarama">🏪 Dollarama</option>
+        <option value="staples">🖨️ Staples</option>
+        <option value="academia">💪 Academia</option>
+        <option value="esportes">🏃 Esportes</option>
+        <option value="veterinario">🐾 Veterinário</option>
+        <option value="remedio">💊 Remédio</option>
+        <option value="subscription">📱 Subscription</option>
+        <option value="lazer">🎉 Lazer</option>
+        <option value="outros">🔖 Outros</option>
+      </select>
+      <input type="text" id="inp-div-outros" class="add-input-text" placeholder="Qual categoria?" style="display:none" oninput="atualizarDivOutros(this.value)">
+    </div>
+
+    <!-- 2. Valor -->
+    <div class="add-card">
+      <div class="add-card-title">
+        <span class="add-step-n">2</span>Valor Gasto
+      </div>
+      <div class="valor-big-wrap">
+        <span class="valor-big-pre">CA$</span>
+        <input type="number" id="inp-valor" class="valor-big-input" placeholder="0.00" step="0.01" min="0" inputmode="decimal">
+      </div>
+    </div>
+
+    <!-- 3. Data -->
+    <div class="add-card">
+      <div class="add-card-title">
+        <span class="add-step-n">3</span>Data do Gasto
+      </div>
+      <div class="data-row-pro">
+        <button class="btn-hoje" type="button" onclick="setHoje()">Hoje</button>
+        <input type="date" id="inp-data">
+      </div>
+    </div>
+
+    <!-- 4. Parcelamento -->
+    <div class="add-card">
+      <div class="add-card-title">
+        <span class="add-step-n">4</span>Parcelamento
+      </div>
+      <div class="parc-toggle">
+        <button type="button" class="parc-toggle-btn" id="btn-parcela-toggle" onclick="toggleParcelamento()">💳 À vista</button>
+      </div>
+      <span class="parcela-preview" id="parcela-preview" style="display:block;margin-top:8px;font-size:13px;color:#6366f1;font-weight:600"></span>
+      <select class="sel-parcelas" id="sel-parcelas" style="display:none;margin-top:10px" onchange="onChangeParcelas(this.value)">
+        <option value="2">2x</option><option value="3">3x</option><option value="4">4x</option>
+        <option value="5">5x</option><option value="6">6x</option><option value="7">7x</option>
+        <option value="8">8x</option><option value="9">9x</option><option value="10">10x</option>
+        <option value="11">11x</option><option value="12">12x</option><option value="15">15x</option>
+        <option value="18">18x</option><option value="24">24x</option>
+      </select>
+      <div id="grupo-parc-ini" style="display:none;margin-top:10px">
+        <label style="font-size:12px;color:#6366f1;font-weight:600;display:block;margin-bottom:4px">De qual parcela começa?</label>
+        <select class="sel-parcelas" id="sel-parcela-ini" onchange="onChangeParcIni(this.value)"></select>
+      </div>
+    </div>
+
+    <!-- 5. Descrição -->
+    <div class="add-card">
+      <div class="add-card-title">
+        <span class="add-step-n">5</span>Descrição<span class="opt-badge">opcional</span>
+      </div>
+      <textarea id="inp-desc" class="add-textarea" placeholder="Ex: Gasolina no Petro-Canada, compras no Costco…"></textarea>
+    </div>
+
   </div>
+
+  <!-- Botão salvar fixo no rodapé -->
+  <div class="add-sticky-footer">
+    <button class="btn-salvar-pro" id="btn-salvar-pro" onclick="salvarLancamento()">💾 Salvar Lançamento</button>
+  </div>
+
 </div>
 
 <!-- ════════════════════════════
@@ -2744,8 +2875,20 @@ var _loja = '', _lojaOutros = '', _divSub = '', _divOutros = '', _carroSub = '',
 function selecionarCat(c) {
   _cat = c;
   ['carro','diversos','mercado','parcelados'].forEach(function(k) {
-    document.getElementById('sel-'+k).className = 'opt-cat' + (k===c ? ' sel-'+k : '');
+    document.getElementById('sel-'+k).className = 'cat-tile' + (k===c ? ' sel-'+k : '');
   });
+  // Atualiza header dinâmico
+  var hdr = document.getElementById('add-header');
+  if (hdr) {
+    hdr.className = 'add-header cat-'+c;
+    var icons = {carro:'🚗', diversos:'🛍️', mercado:'🛒', parcelados:'📦'};
+    var subs  = {carro:'Carro · subcategoria e valor', diversos:'Diversos · subcategoria e valor', mercado:'Supermercado · local e valor', parcelados:'Parcelados · valor e parcelas'};
+    document.getElementById('add-hdr-icon').textContent = icons[c];
+    document.getElementById('add-hdr-sub').textContent  = subs[c];
+  }
+  // Atualiza cor do botão salvar
+  var btn = document.getElementById('btn-salvar-pro');
+  if (btn) btn.className = 'btn-salvar-pro cat-'+c;
   document.getElementById('grupo-sub').style.display  = c==='carro'   ? 'block' : 'none';
   document.getElementById('grupo-loja').style.display = c==='mercado' ? 'block' : 'none';
   document.getElementById('grupo-div').style.display  = c==='diversos'? 'block' : 'none';
@@ -2783,6 +2926,9 @@ function selecionarDivSub(v) {
   if (v !== 'outros') _divOutros = '';
 }
 function atualizarDivOutros(v) { _divOutros = v.trim(); }
+function setHoje() {
+  document.getElementById('inp-data').value = new Date().toISOString().slice(0,10);
+}
 // ── Duplicata ─────────────────────────────────────────
 var _lancPendenteMain = null;
 
