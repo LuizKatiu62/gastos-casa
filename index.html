@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260417-035">
+<meta name="app-version" content="20260417-036">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -2924,14 +2924,17 @@ function excluir(id) {
         return x.parcela.n < l.parcela.n;
       });
       mostrarToast('🗑️', restantes + ' parcela(s) excluída(s)');
+      enviarNotifExclusao(l, true, restantes);
     } else {
       d.lancamentos = d.lancamentos.filter(function(x){ return x.id !== id; });
       mostrarToast('🗑️', 'Parcela ' + l.parcela.n + '/' + l.parcela.total + ' excluída');
+      enviarNotifExclusao(l, false, 1);
     }
   } else {
     if (!confirm('Excluir este lançamento?')) return;
     d.lancamentos = d.lancamentos.filter(function(x){ return x.id !== id; });
     mostrarToast('🗑️', 'Excluído');
+    enviarNotifExclusao(l, false, 1);
   }
   salvarDados(d);
   renderizar();
@@ -3103,6 +3106,31 @@ function enviarSMS(lancs) {
       tags:     ['moneybag']
     })
   }).catch(function(){});  // falha silenciosa — não bloqueia o app
+}
+
+function enviarNotifExclusao(l, todasParcelas, qtd) {
+  var catNomes = { mercado:'Supermercado', carro:'Carro', diversos:'Diversos', parcelados:'Parcelados' };
+  var cat = catNomes[l.cat] || l.cat;
+  var sub = l.loja || l.divsub || l.sub || '';
+  var desc = l.desc || sub || cat;
+  var p = (l.data||'').split('-');
+  var dataFmt = p.length===3 ? p[2]+'/'+p[1]+'/'+p[0] : (l.data||'');
+  var titulo, msg;
+  if (todasParcelas && l.parcela) {
+    titulo = '🗑️ ' + qtd + ' parcela(s) cancelada(s) — CA$ ' + (parseFloat(l.valor)*qtd).toFixed(2);
+    msg = cat+(sub?' · '+sub:'')+' — '+desc+'\nParcelas '+l.parcela.n+'/'+l.parcela.total+' em diante canceladas\nCA$ '+parseFloat(l.valor).toFixed(2)+'/mês ('+dataFmt+')';
+  } else if (l.parcela) {
+    titulo = '🗑️ Parcela cancelada — CA$ ' + parseFloat(l.valor).toFixed(2);
+    msg = cat+(sub?' · '+sub:'')+' — '+desc+'\nParcela '+l.parcela.n+'/'+l.parcela.total+' cancelada ('+dataFmt+')';
+  } else {
+    titulo = '🗑️ Lançamento cancelado — CA$ ' + parseFloat(l.valor).toFixed(2);
+    msg = cat+(sub?' · '+sub:'')+' — '+desc+' — CA$ '+parseFloat(l.valor).toFixed(2)+' ('+dataFmt+')';
+  }
+  fetch('https://ntfy.sh/', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ topic: NTFY_TOPIC, title: titulo, message: msg, priority: 3, tags: ['wastebasket'] })
+  }).catch(function(){});
 }
 
 // ─────────────────────────────
