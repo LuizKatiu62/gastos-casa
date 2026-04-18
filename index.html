@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260417-033">
+<meta name="app-version" content="20260417-034">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -3070,13 +3070,11 @@ function salvarEdicao() {
 }
 
 // ─────────────────────────────
-// NOTIFICAÇÕES SMS
+// NOTIFICAÇÕES (ntfy.sh — gratuito)
 // ─────────────────────────────
-// Preencha com a URL do seu Cloudflare Worker após configurá-lo
-var SMS_WORKER_URL = '';  // ex: 'https://sms-gastos.SEU-USUARIO.workers.dev'
+var NTFY_TOPIC = 'gastos-luiz';
 
 function enviarSMS(lancs) {
-  if (!SMS_WORKER_URL) return;
   if (!Array.isArray(lancs)) lancs = [lancs];
   var catNomes = { mercado:'Supermercado', carro:'Carro', diversos:'Diversos', parcelados:'Parcelados' };
   var linhas = lancs.map(function(l) {
@@ -3085,16 +3083,23 @@ function enviarSMS(lancs) {
     var sub = l.loja || l.divsub || l.sub || '';
     var cat = catNomes[l.cat] || l.cat;
     var desc = l.desc || sub || cat;
-    var parcInfo = l.parcela ? ' (parcela '+l.parcela.n+'/'+l.parcela.total+')' : '';
-    return dataFmt+' · '+cat+(sub?' · '+sub:'')+' · '+desc+parcInfo+' · CA$ '+parseFloat(l.valor).toFixed(2);
+    var parcInfo = l.parcela ? ' parcela '+l.parcela.n+'/'+l.parcela.total : '';
+    return cat+(sub?' · '+sub:'')+' — '+desc+parcInfo+' — CA$ '+parseFloat(l.valor).toFixed(2)+' ('+dataFmt+')';
   });
   var total = lancs.reduce(function(s,l){ return s+parseFloat(l.valor||0); }, 0);
-  var msg = '💳 Gastos da Casa\n' + linhas.join('\n');
+  var titulo = lancs.length > 1
+    ? '💳 '+lancs.length+'x parcelas — CA$ '+total.toFixed(2)
+    : '💳 Novo lançamento — CA$ '+parseFloat(lancs[0].valor).toFixed(2);
+  var msg = linhas.join('\n');
   if (lancs.length > 1) msg += '\nTotal: CA$ '+total.toFixed(2);
-  fetch(SMS_WORKER_URL, {
+  fetch('https://ntfy.sh/' + NTFY_TOPIC, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ msg: msg })
+    headers: {
+      'Title':    titulo,
+      'Priority': 'default',
+      'Tags':     'moneybag'
+    },
+    body: msg
   }).catch(function(){});  // falha silenciosa — não bloqueia o app
 }
 
