@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260418-042">
+<meta name="app-version" content="20260418-043">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -243,30 +243,32 @@ body {
 .orc-barra-fill { height: 100%; border-radius: 4px; transition: width .4s; }
 
 /* ── GRÁFICO BARRAS ── */
-.chart-wrap { overflow-x: auto; overflow-y: visible; padding-bottom: 4px; }
-.chart-inner { display: flex; gap: 0; min-width: 100%; }
-.chart-yaxis { display: flex; flex-direction: column; justify-content: space-between; align-items: flex-end; padding-right: 6px; padding-bottom: 22px; flex-shrink: 0; width: 52px; }
-.chart-ylabel { font-size: 9px; color: #9ca3af; white-space: nowrap; }
+.chart-wrap { overflow-x: auto; overflow-y: visible; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.chart-wrap::-webkit-scrollbar { display: none; }
+.chart-inner { display: inline-flex; gap: 0; min-width: 100%; }
+.chart-yaxis { display: flex; flex-direction: column; justify-content: space-between; align-items: flex-end; padding-right: 6px; padding-bottom: 26px; flex-shrink: 0; width: 38px; }
+.chart-ylabel { font-size: 9px; color: #b0b8c8; white-space: nowrap; font-weight: 600; }
 .chart-body { flex: 1; position: relative; min-width: 0; }
-.chart-grid { position: absolute; left: 0; right: 0; top: 0; bottom: 22px; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none; }
-.chart-gridline { border-top: 1px dashed #f3f4f6; width: 100%; }
-.chart-media-line { position: absolute; left: 0; right: 0; border-top: 2px dashed #1d4ed8; pointer-events: none; }
-.chart-media-label { position: absolute; right: 2px; background: white; font-size: 9px; color: #1d4ed8; font-weight: 700; padding: 0 2px; transform: translateY(-50%); }
-.chart-bars { display: flex; align-items: flex-end; height: 140px; gap: 2px; padding: 0 2px; }
-.bar-col { flex: 1; min-width: 14px; max-width: 32px; display: flex; flex-direction: column; align-items: center; }
-.bar-val { font-size: 8px; color: #6b7280; font-weight: 700; margin-bottom: 2px; white-space: nowrap; }
+.chart-grid { position: absolute; left: 0; right: 0; top: 0; bottom: 26px; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none; }
+.chart-gridline { border-top: 1px solid #f1f5f9; width: 100%; }
+.chart-media-line { position: absolute; left: 0; right: 0; border-top: 2px dashed rgba(29,78,216,.45); pointer-events: none; }
+.chart-media-label { position: absolute; right: 0; background: #eff6ff; color: #1d4ed8; font-size: 8px; font-weight: 700; padding: 1px 5px; transform: translateY(-50%); border-radius: 4px; white-space: nowrap; }
+.chart-bars { display: flex; align-items: flex-end; gap: 3px; padding: 0 2px; }
+.bar-col { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; }
+.bar-val { font-size: 7px; color: #6b7280; font-weight: 700; margin-bottom: 2px; white-space: nowrap; line-height: 1.1; }
 .bar-stack { width: 100%; display: flex; flex-direction: column; justify-content: flex-end; border-radius: 4px 4px 0 0; overflow: hidden; }
-.bar-seg { width: 100%; transition: height .4s; }
-.bar-dia { font-size: 9px; color: #9ca3af; font-weight: 600; margin-top: 3px; text-align: center; width: 100%; }
+.bar-seg { width: 100%; }
+.bar-empty { height: 3px; background: #e2e8f0; border-radius: 2px 2px 0 0; width: 100%; }
+.bar-dia { font-size: 9px; color: #94a3b8; font-weight: 500; margin-top: 4px; line-height: 1; }
 .bar-hoje .bar-dia { color: #1d4ed8; font-weight: 800; }
-.bar-hoje .bar-stack { outline: 2px solid #1d4ed8; border-radius: 4px 4px 0 0; outline-offset: -1px; }
-.chart-legenda { display: flex; gap: 10px; justify-content: center; margin-top: 10px; flex-wrap: wrap; }
-.chart-leg-item { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #6b7280; font-weight: 600; }
-.chart-leg-cor { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
-.chart-stats { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 11px; }
-.chart-stat { text-align: center; }
-.chart-stat-val { font-weight: 800; color: #1d4ed8; font-size: 13px; }
-.chart-stat-label { color: #9ca3af; font-size: 10px; }
+.bar-hoje .bar-stack { box-shadow: 0 0 0 2px #1d4ed8; border-radius: 4px 4px 0 0; }
+.chart-legenda { display: flex; gap: 8px; justify-content: center; margin-top: 10px; flex-wrap: wrap; }
+.chart-leg-item { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #64748b; font-weight: 600; }
+.chart-leg-cor { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.chart-stats { display: flex; justify-content: space-around; margin-bottom: 12px; background: #f8fafc; border-radius: 12px; padding: 10px 6px; }
+.chart-stat { text-align: center; flex: 1; }
+.chart-stat-val { font-weight: 800; color: #1d4ed8; font-size: 14px; }
+.chart-stat-label { color: #94a3b8; font-size: 10px; margin-top: 2px; }
 
 /* ── PIZZA ── */
 .pizza-wrap { display: flex; gap: 12px; align-items: center; }
@@ -1869,8 +1871,13 @@ function renderizarBarras(lista, p) {
     '<div class="chart-ylabel">'+fmtY(y1)+'</div>' +
     '<div class="chart-ylabel">'+fmtY(y0)+'</div>';
 
-  // Barras
-  var CHART_H = 140;
+  // Barras — largura dinâmica: adapta ao espaço, mín 12px, scroll quando necessário
+  var CHART_H = 160;
+  var Y_AXIS_W = 38;
+  var GAP = 3;
+  var AVAIL_W = 300; // estimativa conservadora da área útil do card
+  var barW = Math.max(12, Math.floor((AVAIL_W - Y_AXIS_W - GAP * dias.length) / dias.length));
+
   var barsHtml = '';
   dias.forEach(function(d) {
     var data = porDia[d] || { carro:0, diversos:0, mercado:0, parcelados:0, total:0 };
@@ -1883,15 +1890,19 @@ function renderizarBarras(lista, p) {
     var hMercado    = totalH - hCarro - hDiversos - hParcelados;
     if (hMercado < 0) hMercado = 0;
     var dia = parseInt(d.split('-')[2]);
-    var valLabel = total > 0 ? (total >= 1000 ? (total/1000).toFixed(1)+'k' : Math.round(total)+'') : '';
-    barsHtml += '<div class="bar-col'+(isHoje?' bar-hoje':'')+'">' +
+    // Mostrar valor só se barra alta o suficiente e barra larga o suficiente
+    var valLabel = (total > 0 && totalH > 20 && barW >= 14)
+      ? (total >= 1000 ? (total/1000).toFixed(1)+'k' : Math.round(total)+'') : '';
+    barsHtml += '<div class="bar-col'+(isHoje?' bar-hoje':'')+'" style="width:'+barW+'px">' +
       '<div class="bar-val">'+valLabel+'</div>' +
-      '<div class="bar-stack" style="height:'+totalH+'px">' +
-        (hMercado    > 0 ? '<div class="bar-seg" style="height:'+hMercado+'px;background:#43a047"></div>'    : '') +
-        (hParcelados > 0 ? '<div class="bar-seg" style="height:'+hParcelados+'px;background:#7c3aed"></div>' : '') +
-        (hDiversos   > 0 ? '<div class="bar-seg" style="height:'+hDiversos+'px;background:#fb8c00"></div>'   : '') +
-        (hCarro      > 0 ? '<div class="bar-seg" style="height:'+hCarro+'px;background:#e53935"></div>'      : '') +
-        (total === 0   ? '<div style="height:4px;background:#eee;border-radius:2px 2px 0 0"></div>' : '') +
+      '<div class="bar-stack" style="height:'+CHART_H+'px">' +
+        (total > 0
+          ? (hMercado    > 0 ? '<div class="bar-seg" style="height:'+hMercado+'px;background:#43a047"></div>'    : '') +
+            (hParcelados > 0 ? '<div class="bar-seg" style="height:'+hParcelados+'px;background:#7c3aed"></div>' : '') +
+            (hDiversos   > 0 ? '<div class="bar-seg" style="height:'+hDiversos+'px;background:#fb8c00"></div>'   : '') +
+            (hCarro      > 0 ? '<div class="bar-seg" style="height:'+hCarro+'px;background:#e53935"></div>'      : '')
+          : '<div class="bar-empty"></div>'
+        ) +
       '</div>' +
       '<div class="bar-dia">'+dia+'</div>' +
     '</div>';
@@ -1899,7 +1910,6 @@ function renderizarBarras(lista, p) {
 
   // Linha de média
   var mediaPosBottom = Math.round(media/maxVal*CHART_H);
-  var mediaTopPct    = ((CHART_H - mediaPosBottom) / CHART_H * 100).toFixed(1);
 
   var html =
     statsHtml +
@@ -1908,8 +1918,8 @@ function renderizarBarras(lista, p) {
         '<div class="chart-yaxis">'+yHtml+'</div>' +
         '<div class="chart-body">' +
           '<div class="chart-grid"><div class="chart-gridline"></div><div class="chart-gridline"></div><div class="chart-gridline"></div></div>' +
-          (media > 0 ? '<div class="chart-media-line" style="bottom:'+(22+mediaPosBottom)+'px"><span class="chart-media-label">méd '+fmtY(media)+'</span></div>' : '') +
-          '<div class="chart-bars">'+barsHtml+'</div>' +
+          (media > 0 ? '<div class="chart-media-line" style="bottom:'+(26+mediaPosBottom)+'px"><span class="chart-media-label">méd '+fmtY(media)+'</span></div>' : '') +
+          '<div class="chart-bars" style="height:'+(CHART_H+26)+'px">'+barsHtml+'</div>' +
         '</div>' +
       '</div>' +
     '</div>' +
@@ -1918,7 +1928,7 @@ function renderizarBarras(lista, p) {
       '<div class="chart-leg-item"><div class="chart-leg-cor" style="background:#fb8c00"></div>Diversos</div>' +
       '<div class="chart-leg-item"><div class="chart-leg-cor" style="background:#43a047"></div>Mercado</div>' +
       '<div class="chart-leg-item"><div class="chart-leg-cor" style="background:#7c3aed"></div>Parcelados</div>' +
-      '<div class="chart-leg-item"><div style="width:10px;border-top:2px dashed #1565c0"></div>Média</div>' +
+      '<div class="chart-leg-item"><div style="width:14px;border-top:2px dashed rgba(29,78,216,.6)"></div>Média</div>' +
     '</div>';
 
   el.innerHTML = html;
