@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260418-040">
+<meta name="app-version" content="20260418-041">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -2011,7 +2011,7 @@ function renderizarHistorico() {
     porDia[data].sort(function(a, b) {
       var na = (a.desc || a.loja || a.divsub || (a.sub ? (SUBS[a.sub]||a.sub) : '') || NOMES[a.cat] || '').toLowerCase();
       var nb = (b.desc || b.loja || b.divsub || (b.sub ? (SUBS[b.sub]||b.sub) : '') || NOMES[b.cat] || '').toLowerCase();
-      return na.localeCompare(nb, 'pt');
+      return na < nb ? -1 : na > nb ? 1 : 0;
     });
   });
   el.innerHTML = Object.keys(porDia).sort(function(a,b){ return b.localeCompare(a); }).map(function(data) {
