@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260417-034">
+<meta name="app-version" content="20260417-035">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -3092,14 +3092,16 @@ function enviarSMS(lancs) {
     : '💳 Novo lançamento — CA$ '+parseFloat(lancs[0].valor).toFixed(2);
   var msg = linhas.join('\n');
   if (lancs.length > 1) msg += '\nTotal: CA$ '+total.toFixed(2);
-  fetch('https://ntfy.sh/' + NTFY_TOPIC, {
+  fetch('https://ntfy.sh/', {
     method: 'POST',
-    headers: {
-      'Title':    titulo,
-      'Priority': 'default',
-      'Tags':     'moneybag'
-    },
-    body: msg
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      topic:    NTFY_TOPIC,
+      title:    titulo,
+      message:  msg,
+      priority: 3,
+      tags:     ['moneybag']
+    })
   }).catch(function(){});  // falha silenciosa — não bloqueia o app
 }
 
