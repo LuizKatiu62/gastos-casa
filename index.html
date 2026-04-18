@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260418-041">
+<meta name="app-version" content="20260418-042">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -2022,10 +2022,11 @@ function renderizarHistorico() {
       '</div>' +
       porDia[data].map(function(l) {
         var parcBadge = l.parcela ? '<span class="lanc-parcela">'+l.parcela.n+'/'+l.parcela.total+'</span>' : '';
+        var descPrincipal = l.desc || l.loja || l.divsub || (l.sub ? (SUBS[l.sub]||l.sub) : '') || NOMES[l.cat];
         return '<div class="hist-linha">' +
           '<div class="lanc-ponto" style="background:'+CORES[l.cat]+';flex-shrink:0"></div>' +
           '<div class="lanc-info">' +
-            '<div class="lanc-desc">'+(l.desc||NOMES[l.cat])+parcBadge+'</div>' +
+            '<div class="lanc-desc">'+descPrincipal+parcBadge+'</div>' +
             '<div class="lanc-meta">'+NOMES[l.cat]+(l.loja?' · '+l.loja:'')+(l.divsub?' · '+l.divsub:'')+(l.sub&&l.cat==='carro'?' · '+(SUBS[l.sub]||l.sub):'')+'</div>' +
           '</div>' +
           '<div class="lanc-valor" style="color:'+CORES[l.cat]+'">'+formatar(l.valor)+'</div>' +
