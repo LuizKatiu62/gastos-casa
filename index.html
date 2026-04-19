@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260419-056">
+<meta name="app-version" content="20260419-057">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -3901,11 +3901,9 @@ function mostrarToast(ic, msg, ms) {
 }
 
 // ─────────────────────────────
-// AVISO CIBC (Web Share Target)
+// AVISO CIBC (Shortcuts / Share)
 // ─────────────────────────────
 function _parseCIBCAmount(text) {
-  // Tenta extrair valor monetário do texto do SMS do CIBC
-  // Formatos comuns: "$45.23", "$ 45.23", "45.23 CAD", "CAD 45.23"
   var m = text.match(/\$\s*([\d,]+\.?\d*)/);
   if (m) return parseFloat(m[1].replace(',', ''));
   m = text.match(/([\d,]+\.\d{2})\s*CAD/i);
@@ -3916,49 +3914,46 @@ function _parseCIBCAmount(text) {
 }
 
 function _parseCIBCMerchant(text) {
-  // Tenta extrair o nome do estabelecimento
-  var m = text.match(/at\s+([A-Z0-9 &'\-\/\.]+?)(?:\s+on|\s+\d|\.?\s*$)/i);
+  var m = text.match(/at\s+([A-Z0-9 &'\-\/\.]+?)(?:\s+on\b|\s+\d|[.!]\s*$|\s*$)/i);
   if (m) return m[1].trim();
   return '';
 }
 
 function processarCompartilhamentoCIBC() {
   var sp = new URLSearchParams(window.location.search);
-  var txt = sp.get('share_text') || sp.get('share_title') || sp.get('share_url') || '';
-  if (!txt) return;
 
-  // Limpar parâmetro da URL sem recarregar (evita re-trigger em refresh)
-  try {
-    var cleanUrl = window.location.pathname;
-    window.history.replaceState({}, '', cleanUrl);
-  } catch(e) {}
+  // Suporta dois modos:
+  //   1. iOS Shortcut: ?cibc=<texto+da+notificação>
+  //   2. Web Share Target: ?share_text=<texto>
+  var txt = sp.get('cibc') || sp.get('share_text') || sp.get('share_title') || '';
+  var forcarCIBC = sp.has('cibc'); // veio do Shortcut — sempre tratar como CIBC
 
-  var isCIBC = /cibc/i.test(txt);
-  var amount = _parseCIBCAmount(txt);
-  var merchant = _parseCIBCMerchant(txt);
+  if (!txt && !forcarCIBC) return;
+
+  // Limpar da URL para não re-disparar no próximo reload
+  try { window.history.replaceState({}, '', window.location.pathname); } catch(e) {}
+
+  var amount   = txt ? _parseCIBCAmount(txt) : null;
+  var merchant = txt ? _parseCIBCMerchant(txt) : '';
+  var isCIBC   = forcarCIBC || /cibc/i.test(txt);
 
   if (isCIBC) {
-    var toastMsg = amount
-      ? '🏦 CIBC: compra de CA$' + amount.toFixed(2) + (merchant ? ' em ' + merchant : '')
-      : '🏦 Aviso do banco CIBC recebido';
-    mostrarToast('🏦', toastMsg.replace(/^🏦\s*/, ''), 5000);
+    var linha1 = amount ? 'Compra de CA$' + amount.toFixed(2) : 'Aviso recebido';
+    var linha2 = merchant ? ' — ' + merchant : '';
+    mostrarToast('🏦', 'CIBC: ' + linha1 + linha2, 5000);
 
-    // Navegar para o form de adicionar e pré-preencher
     setTimeout(function() {
       irPara('add');
       if (amount) {
         document.getElementById('inp-valor').value = amount.toFixed(2);
-        atualizarPreviewParcela && atualizarPreviewParcela();
+        if (typeof atualizarPreviewParcela === 'function') atualizarPreviewParcela();
       }
-      if (merchant) {
-        document.getElementById('inp-desc').value = merchant;
-      }
+      if (merchant) document.getElementById('inp-desc').value = merchant;
       selecionarCat('diversos');
-    }, 300);
+    }, 400);
   } else if (txt) {
-    // Texto compartilhado que não é CIBC — abre o form limpo
     irPara('add');
-    if (txt.length < 100) document.getElementById('inp-desc').value = txt;
+    if (txt.length < 120) document.getElementById('inp-desc').value = txt;
   }
 }
 
