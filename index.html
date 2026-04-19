@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260419-070">
+<meta name="app-version" content="20260419-071">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -3084,6 +3084,7 @@ function renderizarParcelas() {
 
   // ── Função para renderizar um card ──
   function cardParcela(gd) {
+    var gid = gd.gid;
     var g = gd.g; var pagas = gd.pagas; var pct = gd.pct;
     var cor  = COR[g.cat]  || '#4f46e5';
     var ico  = ICO[g.cat]  || '📦';
