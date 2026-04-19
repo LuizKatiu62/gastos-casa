@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260418-045">
+<meta name="app-version" content="20260418-046">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -906,12 +906,13 @@ body {
 
       <div class="proj-footer">
         <div>
-          <div class="proj-fitem-label">Recomendado para os dias restantes</div>
+          <div class="proj-fitem-label">Recomendado p/ dias restantes</div>
           <div class="proj-fitem-val" id="proj-rec">—</div>
         </div>
         <div>
-          <div class="proj-fitem-label">Projeção ao fim do período</div>
+          <div class="proj-fitem-label">Saldo projetado no fim</div>
           <div class="proj-fitem-val" id="proj-final">—</div>
+          <div style="font-size:10px;opacity:.5;margin-top:3px" id="proj-final-sub"></div>
         </div>
       </div>
     </div>
@@ -1953,9 +1954,19 @@ function renderizarProjecao(d, p, tots, total, hj) {
     recEl.textContent = (recDiario < 0 ? '−' : '') + fmtD(recDiario) + '/dia';
     recEl.style.color = recDiario < 0 ? '#f87171' : 'white';
   }
-  var finalEl = document.getElementById('proj-final');
-  finalEl.textContent = formatar(projecaoFinal);
-  finalEl.style.color = projecaoFinal > dispDiario ? '#f87171' : '#4ade80';
+  // Saldo projetado = disponível (sem parcelados) − projeção de gasto comum
+  var saldoProj = dispDiario - projecaoFinal;
+  var finalEl   = document.getElementById('proj-final');
+  var finalSub  = document.getElementById('proj-final-sub');
+  if (saldoProj >= 0) {
+    finalEl.textContent = '+ ' + formatar(saldoProj);
+    finalEl.style.color = '#4ade80';
+    finalSub.textContent = 'sobrando ao fim do período';
+  } else {
+    finalEl.textContent = '− ' + formatar(-saldoProj);
+    finalEl.style.color = '#f87171';
+    finalSub.textContent = 'excedendo o orçamento livre';
+  }
 }
 
 function renderizarPizza(tots, total) {
