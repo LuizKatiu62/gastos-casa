@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260419-060">
+<meta name="app-version" content="20260419-069">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -1148,8 +1148,9 @@ body {
       </div>
       <div style="display:flex;gap:8px;margin-top:10px">
         <button class="btn-whatsapp" onclick="compartilharHistorico()" style="flex:1;margin-top:0;padding:10px;font-size:16px">📱 WhatsApp</button>
-        <button onclick="exportarPDF()" style="flex:1;padding:10px;background:#1d4ed8;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">📄 Exportar PDF</button>
+        <button onclick="exportarPDF()" style="flex:1;padding:10px;background:#1d4ed8;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">📄 PDF</button>
       </div>
+      <button onclick="repararParcelamentos()" style="width:100%;margin-top:8px;padding:10px;background:#059669;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">🔧 Gerar parcelas faltantes</button>
     </div>
     <div id="corpo-historico"></div>
   </div>
@@ -1406,6 +1407,29 @@ body {
     <div class="edit-btns">
       <button class="edit-btn-cancel" onclick="fecharModalEdicao()">Cancelar</button>
       <button class="edit-btn-save" onclick="salvarEdicao()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════
+     MODAL EDITAR GRUPO PARCELA
+════════════════════════════ -->
+<div id="modal-grupo-parc" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.5);align-items:center;justify-content:center;padding:20px" onclick="if(event.target===this)fecharModalGrupoParcela()">
+  <div style="background:#fff;border-radius:20px;padding:24px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+    <div style="font-size:17px;font-weight:800;color:#111827;margin-bottom:4px">✏️ Editar plano de parcelas</div>
+    <div style="font-size:12px;color:#6b7280;margin-bottom:20px">A descrição e total serão aplicados a <strong>todas as parcelas</strong> deste plano.</div>
+    <div style="margin-bottom:14px">
+      <div style="font-size:11px;font-weight:700;color:#6b7280;margin-bottom:4px">DESCRIÇÃO</div>
+      <input type="text" id="gp-desc" placeholder="Ex: iPhone 15, Sofá, Netflix..." style="width:100%;padding:12px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:16px;box-sizing:border-box">
+    </div>
+    <div style="margin-bottom:20px">
+      <div style="font-size:11px;font-weight:700;color:#6b7280;margin-bottom:4px">TOTAL DE PARCELAS</div>
+      <input type="number" id="gp-total" min="1" max="120" style="width:100%;padding:12px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:16px;box-sizing:border-box">
+    </div>
+    <input type="hidden" id="gp-grupo-id">
+    <div style="display:flex;gap:10px">
+      <button onclick="fecharModalGrupoParcela()" style="flex:1;padding:13px;border:1.5px solid #e5e7eb;border-radius:12px;font-size:15px;font-weight:600;background:#fff;color:#374151;cursor:pointer">Cancelar</button>
+      <button onclick="salvarGrupoParcela()" style="flex:1;padding:13px;border:none;border-radius:12px;font-size:15px;font-weight:700;background:#4f46e5;color:#fff;cursor:pointer">💾 Salvar tudo</button>
     </div>
   </div>
 </div>
@@ -1836,6 +1860,53 @@ function addMeses(dataStr, meses) {
   dia = Math.min(dia, ultimoDia);
   return novoAno + '-' + ((novoMes + 1) + '').padStart(2, '0') + '-' + (dia + '').padStart(2, '0');
 }
+// Calcula o total mensal real de parcelamentos: soma valorParc de planos ativos (não quitados)
+// Esta é a fonte de verdade — não depende de período nem de datas de lançamentos
+function calcularMensalParcelados(lancamentos) {
+  var hj = hoje();
+  var grupos = resolverGrupos(lancamentos);
+  var total = 0;
+  Object.keys(grupos).forEach(function(gid) {
+    var g = grupos[gid];
+    // Conta parcelas pagas até hoje
+    var pagas = 0;
+    Object.keys(g.lancs).forEach(function(nStr) {
+      var l = g.lancs[nStr]; var n = parseInt(nStr);
+      if (l && l.data <= hj && n > pagas) pagas = n;
+    });
+    var quitado = pagas >= g.total;
+    if (!quitado) total += g.valorParc;
+  });
+  return total;
+}
+
+// Resolve desc e total corretos para cada grupoId de parcelamento
+// Retorna mapa: grupoId → { desc, total, valorParc }
+function resolverGrupos(lancamentos) {
+  var grupos = {};
+  lancamentos.forEach(function(l) {
+    if (!l.parcela) return;
+    var gid = l.parcela.grupoId;
+    if (!grupos[gid]) grupos[gid] = { total: l.parcela.total, valorParc: parseFloat(l.valor)||0, desc: l.desc||'', lancs: {} };
+    grupos[gid].lancs[l.parcela.n] = l;
+  });
+  Object.keys(grupos).forEach(function(gid) {
+    var g = grupos[gid];
+    var nums = Object.keys(g.lancs).map(Number).sort(function(a,b){ return b - a; });
+    if (!nums.length) return;
+    var latest = g.lancs[nums[0]];
+    g.total     = latest.parcela.total || g.total;
+    g.valorParc = parseFloat(latest.valor) || g.valorParc;
+    var bestDesc = '';
+    nums.forEach(function(n) {
+      var d2 = (g.lancs[n].desc || '').trim();
+      if (!bestDesc && d2 && d2 !== 'Identificar') bestDesc = d2;
+    });
+    if (bestDesc) g.desc = bestDesc;
+  });
+  return grupos;
+}
+
 var _numParcelas = 1;
 var _parcelaInicial = 1;
 
@@ -1922,10 +1993,14 @@ function renderizar() {
     total += parseFloat(l.valor||0);
   });
 
+  // Parcelados: usa total mensal real dos planos ativos (ignora período para não perder planos com data fora do ciclo)
+  tots.parcelados = calcularMensalParcelados(d.lancamentos);
+
   var hj = hoje();
   var totalHoje = d.lancamentos.filter(function(l){ return l.data===hj; }).reduce(function(s,l){ return s+parseFloat(l.valor||0); }, 0);
 
-  var totalComum = total - (tots.parcelados || 0);
+  // Gastos comuns = apenas carro + diversos + mercado (exclui parcelados)
+  var totalComum = (tots.carro||0) + (tots.diversos||0) + (tots.mercado||0);
   document.getElementById('txt-total').textContent = formatar(totalComum);
   // Badge parcelados
   (function() {
@@ -2430,6 +2505,8 @@ function renderizarHistorico() {
     el.innerHTML = '<div class="vazio">📭 Sem lançamentos neste mês</div>';
     return;
   }
+  // Resolve desc e total corretos para parcelamentos
+  var grupos = resolverGrupos(d.lancamentos);
   var porDia = {};
   lista.forEach(function(l){ if(!porDia[l.data]) porDia[l.data]=[]; porDia[l.data].push(l); });
   Object.keys(porDia).forEach(function(data) {
@@ -2446,8 +2523,14 @@ function renderizarHistorico() {
         '<span class="hist-dia-total">'+formatar(totDia)+'</span>' +
       '</div>' +
       porDia[data].map(function(l) {
-        var parcBadge = l.parcela ? '<span class="lanc-parcela">'+l.parcela.n+'/'+l.parcela.total+'</span>' : '';
-        var descPrincipal = l.desc || l.loja || l.divsub || (l.sub ? (SUBS[l.sub]||l.sub) : '') || NOMES[l.cat];
+        // Para parcelados, usa desc e total resolvidos (corrige "Identificar" e total errado)
+        var gInfo = (l.parcela && grupos[l.parcela.grupoId]) ? grupos[l.parcela.grupoId] : null;
+        var totalParcela = gInfo ? gInfo.total : (l.parcela ? l.parcela.total : 0);
+        var parcBadge = l.parcela ? '<span class="lanc-parcela">'+l.parcela.n+'/'+totalParcela+'</span>' : '';
+        var descRaw = (gInfo && gInfo.desc) ? gInfo.desc : (l.desc || '');
+        var descPrincipal = (descRaw && descRaw !== 'Identificar')
+          ? descRaw
+          : (l.loja || l.divsub || (l.sub ? (SUBS[l.sub]||l.sub) : '') || NOMES[l.cat]);
         return '<div class="hist-linha">' +
           '<div class="lanc-ponto" style="background:'+CORES[l.cat]+';flex-shrink:0"></div>' +
           '<div class="lanc-info">' +
@@ -2793,7 +2876,10 @@ function renderizarRelcat() {
   var lista = lancamentosPeriodo(d.lancamentos, per).filter(function(l){ return l.cat === _rcCat; });
   lista.sort(function(a,b){ return b.data.localeCompare(a.data); });
 
-  var total = lista.reduce(function(s,l){ return s + parseFloat(l.valor||0); }, 0);
+  // Para parcelados: total real = soma mensal dos planos ativos (não depende de período)
+  var total = _rcCat === 'parcelados'
+    ? calcularMensalParcelados(d.lancamentos)
+    : lista.reduce(function(s,l){ return s + parseFloat(l.valor||0); }, 0);
 
   // Sub-categorias
   function abreviarSub(s) {
@@ -2825,11 +2911,14 @@ function renderizarRelcat() {
   }
 
   // ── Hero ──
+  var heroSubtitle = _rcCat === 'parcelados'
+    ? (lista.length + ' lançamentos no período · compromisso mensal')
+    : (lista.length + ' lançamentos · ' + formatarData(per.inicio) + ' → ' + formatarData(per.fim));
   var heroHtml =
     '<div class="card" style="margin-bottom:10px">' +
     '<div class="relcat-hero">' +
       '<div class="relcat-hero-val" style="color:'+cor+'">'+formatar(total)+'</div>' +
-      '<div class="relcat-hero-sub">'+lista.length+' lançamentos · '+formatarData(per.inicio)+' → '+formatarData(per.fim)+'</div>' +
+      '<div class="relcat-hero-sub">'+heroSubtitle+'</div>' +
     '</div>' +
     (orc>0 ?
       '<div class="orc-barra-fundo" style="height:10px;margin-top:8px"><div class="orc-barra-fill" style="width:'+pctOrc.toFixed(1)+'%;background:'+corB+'"></div></div>' +
@@ -2917,33 +3006,13 @@ function renderizarParcelas() {
     grupos[gid].lancs[l.parcela.n] = l;
   });
 
-  // Segunda passagem: corrige desc, total e valorParc usando os dados mais atuais
-  Object.keys(grupos).forEach(function(gid) {
-    var g = grupos[gid];
-    var nums = Object.keys(g.lancs).map(Number).sort(function(a,b){ return b - a; }); // desc
-    if (!nums.length) return;
-
-    // Total de parcelas e valor mensal: usar a parcela mais alta (mais atual)
-    var latestL = g.lancs[nums[0]];
-    g.total    = latestL.parcela.total || g.total;
-    g.valorParc = parseFloat(latestL.valor) || g.valorParc;
-
-    // Melhor descrição: primeiro valor não-vazio e diferente de "Identificar"
-    var bestDesc = '';
-    nums.forEach(function(n) {
-      var d2 = (g.lancs[n].desc || '').trim();
-      if (!bestDesc && d2 && d2 !== 'Identificar') bestDesc = d2;
-    });
-    if (bestDesc) g.desc = bestDesc;
-
-    // Melhor sub: idem
-    var bestSub = g.sub;
-    nums.forEach(function(n) {
-      var l2 = g.lancs[n];
-      var s = (l2.loja || l2.divsub || l2.sub || '').trim();
-      if (!bestSub && s) bestSub = s;
-    });
-    g.sub = bestSub;
+  // Usa helper centralizado para corrigir desc, total e valorParc
+  var gResolv = resolverGrupos(d.lancamentos);
+  Object.keys(gResolv).forEach(function(gid) {
+    if (!grupos[gid]) return;
+    grupos[gid].desc     = gResolv[gid].desc;
+    grupos[gid].total    = gResolv[gid].total;
+    grupos[gid].valorParc = gResolv[gid].valorParc;
   });
 
   var keys = Object.keys(grupos);
@@ -3004,8 +3073,11 @@ function renderizarParcelas() {
       '</div>' +
     '</div>';
 
-  // ── Botão PDF ──
-  html += '<button onclick="exportarPDFParcelas()" style="width:100%;padding:13px;border:none;border-radius:14px;font-size:14px;font-weight:700;cursor:pointer;background:#4f46e5;color:#fff;font-family:inherit;margin-bottom:16px;box-shadow:0 4px 12px rgba(79,70,229,.3)">🖨️ Exportar PDF</button>';
+  // ── Botões de ação ──
+  html += '<div style="display:flex;gap:8px;margin-bottom:16px">' +
+    '<button onclick="repararParcelamentos()" style="flex:1;padding:13px;border:none;border-radius:14px;font-size:14px;font-weight:700;cursor:pointer;background:#059669;color:#fff;font-family:inherit;box-shadow:0 4px 12px rgba(5,150,105,.3)">🔧 Reparar parcelas</button>' +
+    '<button onclick="exportarPDFParcelas()" style="flex:1;padding:13px;border:none;border-radius:14px;font-size:14px;font-weight:700;cursor:pointer;background:#4f46e5;color:#fff;font-family:inherit;box-shadow:0 4px 12px rgba(79,70,229,.3)">🖨️ PDF</button>' +
+  '</div>';
 
   // ── Função para renderizar um card ──
   function cardParcela(gd) {
@@ -3024,14 +3096,16 @@ function renderizarParcelas() {
     var valorPago     = pagas * g.valorParc;
     var valorRestante = restante * g.valorParc;
 
-    return '<div style="background:#fff;border-radius:16px;padding:16px;margin-bottom:10px;box-shadow:0 2px 12px rgba(0,0,0,.07);border:1px solid #f1f5f9">' +
-      // ── Linha 1: ícone + nome + tag status ──
+    var descDisplay = (!g.desc || g.desc === 'Identificar') ? '<span style="color:#f59e0b;font-style:italic">⚠️ Identificar</span>' : g.desc;
+    return '<div style="background:#fff;border-radius:16px;padding:16px;margin-bottom:10px;box-shadow:0 2px 12px rgba(0,0,0,.07);border:1px solid '+( (!g.desc||g.desc==='Identificar') ? '#fde68a' : '#f1f5f9' )+'">' +
+      // ── Linha 1: ícone + nome + tag status + editar ──
       '<div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:12px">' +
         '<div style="width:44px;height:44px;border-radius:12px;background:'+cor+'1a;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">'+ico+'</div>' +
         '<div style="flex:1;min-width:0">' +
-          '<div style="font-size:15px;font-weight:700;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(g.desc||'Parcelamento')+'</div>' +
+          '<div style="font-size:15px;font-weight:700;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+descDisplay+'</div>' +
           '<div style="font-size:12px;color:#6b7280;margin-top:2px">'+cat+(g.sub?' · '+g.sub:'')+'</div>' +
         '</div>' +
+        '<button onclick="editarGrupoParcela(\''+gid+'\')" style="background:#f1f5f9;border:none;border-radius:8px;padding:5px 10px;font-size:13px;cursor:pointer;color:#374151;flex-shrink:0;margin-right:4px">✏️</button>' +
         '<span style="background:'+tagBg+';color:'+tagTxt+';font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;white-space:nowrap;flex-shrink:0">'+tagLabel+'</span>' +
       '</div>' +
       // ── Linha 2: barra de progresso com rótulos ──
@@ -3495,6 +3569,31 @@ function salvarLancamento() {
   if (_numParcelas > 1) {
     // Lançamento parcelado: sempre usa categoria 'parcelados'
     var parcValor = Math.round(valor / _numParcelas * 100) / 100;
+    // Checar duplicata na primeira parcela (mesmo valor + mesma data + parcelados)
+    var dupsParc = verificarDuplicataMain(parcValor, data, 'parcelados');
+    if (dupsParc.length > 0) {
+      var dupP = dupsParc[0];
+      var p0 = (dupP.data||'').split('-');
+      var dataFmtP = p0.length===3 ? p0[2]+'/'+p0[1]+'/'+p0[0] : dupP.data;
+      document.getElementById('dup2-info').innerHTML =
+        '<strong>Valor:</strong> CA$ ' + parseFloat(dupP.valor).toFixed(2) + '<br>' +
+        '<strong>Data:</strong> ' + dataFmtP + '<br>' +
+        '<strong>Categoria:</strong> 📦 Parcelados' +
+        (dupP.desc ? '<br><strong>Descrição:</strong> ' + dupP.desc : '');
+      // Guarda os lançamentos pendentes para salvar se usuário confirmar
+      var grupoIdPend = Date.now().toString();
+      var lancsPend = [];
+      var offsetPend = 0;
+      for (var ip = _parcelaInicial - 1; ip < _numParcelas; ip++) {
+        lancsPend.push({ id: grupoIdPend+'-'+(ip+1), cat:'parcelados', sub:null, loja:null, divsub:null,
+          valor: parcValor, data: addMeses(data, offsetPend), desc: desc,
+          parcela: { n: ip+1, total: _numParcelas, grupoId: grupoIdPend, valorTotal: valor } });
+        offsetPend++;
+      }
+      _lancPendenteMain = lancsPend;
+      document.getElementById('modal-duplicata').classList.add('show');
+      return;
+    }
     var grupoId = Date.now().toString();
     var lancs = [];
     var offset = 0;
@@ -3645,6 +3744,146 @@ function editParcelaToggle() {
 function fecharModalEdicao() {
   document.getElementById('modal-edicao').style.display = 'none';
   _editId = null;
+}
+
+// ── Editar grupo de parcelas (descrição + total para todo o grupo) ──
+function editarGrupoParcela(gid) {
+  var grupos = resolverGrupos(getDados().lancamentos);
+  var g = grupos[gid];
+  if (!g) return;
+  document.getElementById('gp-grupo-id').value = gid;
+  document.getElementById('gp-desc').value  = (g.desc && g.desc !== 'Identificar') ? g.desc : '';
+  document.getElementById('gp-total').value = g.total || '';
+  document.getElementById('modal-grupo-parc').style.display = 'flex';
+  setTimeout(function(){ document.getElementById('gp-desc').focus(); }, 100);
+}
+
+function fecharModalGrupoParcela() {
+  document.getElementById('modal-grupo-parc').style.display = 'none';
+}
+
+function salvarGrupoParcela() {
+  var gid   = document.getElementById('gp-grupo-id').value;
+  var desc  = document.getElementById('gp-desc').value.trim();
+  var total = parseInt(document.getElementById('gp-total').value) || 0;
+  if (!desc)  { mostrarToast('⚠️', 'Informe a descrição'); return; }
+  if (total < 1) { mostrarToast('⚠️', 'Informe o total de parcelas'); return; }
+  var d = getDados();
+  var count = 0;
+  d.lancamentos.forEach(function(l) {
+    if (!l.parcela || l.parcela.grupoId !== gid) return;
+    l.desc = desc;
+    l.parcela = Object.assign({}, l.parcela, { total: total });
+    count++;
+  });
+  salvarDados(d);
+  fecharModalGrupoParcela();
+  mostrarToast('✅', count + ' parcela' + (count===1?'':'s') + ' atualizadas');
+  renderizarRelcat();
+}
+
+// ── Reparo silencioso (sem toast) — roda automaticamente na abertura do Histórico ──
+function repararParcelamentosSilencioso() {
+  var d = getDados();
+  var grupos = {};
+  d.lancamentos.forEach(function(l) {
+    if (!l.parcela || !l.parcela.grupoId) return;
+    var gid = l.parcela.grupoId;
+    if (!grupos[gid]) grupos[gid] = { lancs: {}, ref: l, latestN: 0 };
+    grupos[gid].lancs[l.parcela.n] = l;
+    if (l.parcela.n > grupos[gid].latestN) { grupos[gid].latestN = l.parcela.n; grupos[gid].ref = l; }
+  });
+  var novos = [];
+  Object.keys(grupos).forEach(function(gid) {
+    var g = grupos[gid];
+    var ref = g.ref;
+    var total = ref.parcela.total;
+    if (!total || total <= 1) return;
+    var ns = Object.keys(g.lancs).map(Number).sort(function(a,b){ return a-b; });
+    var primeiroL = g.lancs[ns[0]];
+    var dataBase = primeiroL.data;
+    var primeiroN = ns[0];
+    for (var n = 1; n <= total; n++) {
+      if (g.lancs[n]) continue;
+      novos.push({
+        id: gid+'-'+n+'-rep', cat: ref.cat||'parcelados', sub: ref.sub||null,
+        loja: ref.loja||null, divsub: ref.divsub||null, valor: ref.valor,
+        data: addMeses(dataBase, n - primeiroN), desc: ref.desc||'',
+        parcela: { n: n, total: total, grupoId: gid, valorTotal: ref.parcela.valorTotal||(parseFloat(ref.valor)*total) }
+      });
+    }
+  });
+  if (novos.length > 0) {
+    novos.forEach(function(l){ d.lancamentos.push(l); });
+    salvarDados(d);
+  }
+}
+
+// ── Reparo de parcelamentos incompletos ──
+// Detecta grupos com menos entradas do que o total declarado e gera as parcelas faltantes
+function repararParcelamentos() {
+  var d = getDados();
+
+  // Monta mapa de grupos com todas as parcelas existentes
+  var grupos = {};
+  d.lancamentos.forEach(function(l) {
+    if (!l.parcela || !l.parcela.grupoId) return;
+    var gid = l.parcela.grupoId;
+    if (!grupos[gid]) grupos[gid] = { lancs: {}, ref: l };
+    grupos[gid].lancs[l.parcela.n] = l;
+    // Mantém referência ao lançamento com total mais recente (maior n)
+    if (!grupos[gid].latestN || l.parcela.n > grupos[gid].latestN) {
+      grupos[gid].latestN = l.parcela.n;
+      grupos[gid].ref = l;
+    }
+  });
+
+  var novos = [];
+  Object.keys(grupos).forEach(function(gid) {
+    var g = grupos[gid];
+    var ref = g.ref;
+    var total = ref.parcela.total;
+    if (!total || total <= 1) return;
+
+    // Encontra a parcela com menor número para usar como base de data
+    var ns = Object.keys(g.lancs).map(Number).sort(function(a,b){ return a-b; });
+    var primeiroN = ns[0];
+    var primeiroL = g.lancs[primeiroN];
+    var dataBase  = primeiroL.data; // data da parcela mais antiga do grupo
+
+    // Gera as parcelas faltantes
+    for (var n = 1; n <= total; n++) {
+      if (g.lancs[n]) continue; // já existe
+      var offsetMeses = n - primeiroN;
+      var novaData = addMeses(dataBase, offsetMeses);
+      novos.push({
+        id:     gid + '-' + n + '-rep',
+        cat:    ref.cat    || 'parcelados',
+        sub:    ref.sub    || null,
+        loja:   ref.loja   || null,
+        divsub: ref.divsub || null,
+        valor:  ref.valor,
+        data:   novaData,
+        desc:   ref.desc   || '',
+        parcela: {
+          n:          n,
+          total:      total,
+          grupoId:    gid,
+          valorTotal: ref.parcela.valorTotal || (parseFloat(ref.valor) * total)
+        }
+      });
+    }
+  });
+
+  if (novos.length === 0) {
+    mostrarToast('✅', 'Todos os parcelamentos estão completos');
+    return;
+  }
+
+  novos.forEach(function(l) { d.lancamentos.push(l); });
+  salvarDados(d);
+  mostrarToast('✅', novos.length + ' parcela' + (novos.length===1?'':'s') + ' gerada' + (novos.length===1?'':'s') + ' com sucesso');
+  renderizarRelcat();
 }
 
 function editCatChange() {
@@ -3908,7 +4147,14 @@ function irPara(tela) {
     document.getElementById('inp-foto').value = '';
   }
   if (tela==='inicio')    renderizar();
-  if (tela==='historico') renderizarHistorico();
+  if (tela==='historico') {
+    // Reparo silencioso na primeira abertura do Histórico: gera parcelas faltantes sem toast
+    if (!window._parcelasReparadas) {
+      window._parcelasReparadas = true;
+      repararParcelamentosSilencioso();
+    }
+    renderizarHistorico();
+  }
   if (tela==='projecao') {
     var _d = getDados(), _p = _d.periodo, _hj = hoje();
     var _lista = lancamentosPeriodo(_d.lancamentos, _p);
@@ -4207,6 +4453,19 @@ function salvarLancamentoFoto() {
 // INÍCIO
 // ─────────────────────────────
 window.onload = function() {
+  // Verificar versão — força reload se o browser carregou versão antiga do cache
+  (function() {
+    var meta = document.querySelector('meta[name="app-version"]');
+    var currentVer = meta ? meta.getAttribute('content') : '';
+    var cachedVer  = localStorage.getItem('gastos_app_ver');
+    if (currentVer && cachedVer && cachedVer !== currentVer) {
+      localStorage.setItem('gastos_app_ver', currentVer);
+      window.location.reload(true);
+      return;
+    }
+    if (currentVer) localStorage.setItem('gastos_app_ver', currentVer);
+  })();
+
   // Esconder tela de loading
   var ld = document.getElementById('app-loading');
   if (ld) ld.style.display = 'none';
@@ -4289,16 +4548,12 @@ window.onload = function() {
     }
   }
 
-  // Remove service workers antigos que possam estar causando tela branca
+  // Registrar service worker (garante atualização automática no iPhone)
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.getRegistrations().then(function(regs) {
-      regs.forEach(function(r) { r.unregister(); });
-    });
+    navigator.serviceWorker.register('./sw.js').catch(function() {});
     navigator.serviceWorker.addEventListener('message', function(e) {
-      if (e.data && e.data.type === 'SW_UNREGISTER') {
-        navigator.serviceWorker.getRegistrations().then(function(regs) {
-          regs.forEach(function(r) { r.unregister(); });
-        });
+      if (e.data && e.data.type === 'SW_UPDATED') {
+        window.location.reload();
       }
     });
   }
