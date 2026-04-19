@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260418-043">
+<meta name="app-version" content="20260418-044">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -576,6 +576,35 @@ body {
 .linha-rel .rotulo { color: #6b7280; }
 .linha-rel .numero { font-weight: 800; color: #111827; }
 
+/* ── CARD PROJEÇÃO ── */
+.proj-card { background: linear-gradient(150deg, #0f172a 0%, #1e3a8a 100%); border-radius: 18px; padding: 18px; margin-bottom: 14px; color: white; }
+.proj-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
+.proj-title { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; opacity: .55; margin-bottom: 3px; }
+.proj-subtitle { font-size: 11px; opacity: .45; line-height: 1.5; }
+.proj-badge { font-size: 10px; font-weight: 700; padding: 4px 10px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; margin-top: 2px; }
+.proj-badge.ok   { background: rgba(74,222,128,.2); color: #4ade80; }
+.proj-badge.warn { background: rgba(251,191,36,.2);  color: #fbbf24; }
+.proj-badge.over { background: rgba(248,113,113,.2); color: #f87171; }
+
+.proj-metrics { display: flex; align-items: stretch; background: rgba(255,255,255,.07); border-radius: 12px; padding: 14px 8px; margin-bottom: 16px; }
+.proj-metric { flex: 1; text-align: center; }
+.proj-m-label { font-size: 10px; opacity: .5; text-transform: uppercase; letter-spacing: .3px; margin-bottom: 6px; }
+.proj-m-val { font-size: 16px; font-weight: 800; line-height: 1; }
+.proj-m-sub { font-size: 9px; opacity: .45; margin-top: 3px; }
+.proj-m-sep { width: 1px; background: rgba(255,255,255,.12); margin: 0 6px; flex-shrink: 0; }
+
+.proj-barras { margin-bottom: 16px; display: flex; flex-direction: column; gap: 10px; }
+.proj-brow { display: flex; align-items: center; gap: 10px; }
+.proj-blabel { font-size: 10px; opacity: .5; width: 40px; flex-shrink: 0; letter-spacing: .3px; text-transform: uppercase; }
+.proj-bbg { flex: 1; height: 8px; background: rgba(255,255,255,.1); border-radius: 4px; overflow: hidden; }
+.proj-bfill { height: 100%; border-radius: 4px; transition: width .5s ease; }
+.proj-bfill-tempo { background: rgba(255,255,255,.4); }
+.proj-bpct { font-size: 10px; font-weight: 700; width: 32px; text-align: right; opacity: .75; }
+
+.proj-footer { border-top: 1px solid rgba(255,255,255,.1); padding-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.proj-fitem-label { font-size: 10px; opacity: .45; margin-bottom: 5px; line-height: 1.3; }
+.proj-fitem-val { font-size: 15px; font-weight: 800; }
+
 /* ── TOAST ── */
 .toast {
   position: fixed; top: 16px; left: 12px; right: 12px;
@@ -829,6 +858,61 @@ body {
         </div>
         <div class="cat-barra-fundo" id="bfundo-parcelados" style="display:none"><div class="cat-barra-fill" id="bfill-parcelados" style="width:0%;background:#7c3aed"></div></div>
         <div class="cat-orc" id="corc-parcelados"></div>
+      </div>
+    </div>
+
+    <!-- ── PROJEÇÃO DO PERÍODO ── -->
+    <div class="proj-card" id="proj-card" style="display:none">
+      <div class="proj-top">
+        <div>
+          <div class="proj-title">📊 Projeção do Período</div>
+          <div class="proj-subtitle" id="proj-subtitle"></div>
+        </div>
+        <div class="proj-badge" id="proj-badge"></div>
+      </div>
+
+      <div class="proj-metrics">
+        <div class="proj-metric">
+          <div class="proj-m-label">Padrão/dia</div>
+          <div class="proj-m-val" id="proj-padrao">—</div>
+          <div class="proj-m-sub">orçamento</div>
+        </div>
+        <div class="proj-m-sep"></div>
+        <div class="proj-metric">
+          <div class="proj-m-label">Real/dia</div>
+          <div class="proj-m-val" id="proj-real">—</div>
+          <div class="proj-m-sub">média atual</div>
+        </div>
+        <div class="proj-m-sep"></div>
+        <div class="proj-metric">
+          <div class="proj-m-label">Desvio</div>
+          <div class="proj-m-val" id="proj-desvio">—</div>
+          <div class="proj-m-sub" id="proj-desvio-sub"></div>
+        </div>
+      </div>
+
+      <div class="proj-barras">
+        <div class="proj-brow">
+          <span class="proj-blabel">Tempo</span>
+          <div class="proj-bbg"><div class="proj-bfill proj-bfill-tempo" id="proj-btempo" style="width:0%"></div></div>
+          <span class="proj-bpct" id="proj-ptempo">0%</span>
+        </div>
+        <div class="proj-brow">
+          <span class="proj-blabel">Gasto</span>
+          <div class="proj-bbg"><div class="proj-bfill" id="proj-bgasto" style="width:0%"></div></div>
+          <span class="proj-bpct" id="proj-pgasto">0%</span>
+        </div>
+      </div>
+
+      <div class="proj-footer">
+        <div>
+          <div class="proj-fitem-label">Recomendado para os dias restantes</div>
+          <div class="proj-fitem-val" id="proj-rec">—</div>
+        </div>
+        <div>
+          <div class="proj-fitem-label">Projeção ao fim do período</div>
+          <div class="proj-fitem-val" id="proj-final">—</div>
+        </div>
       </div>
     </div>
 
@@ -1792,6 +1876,85 @@ function renderizar() {
   renderizarPizza(tots, total);
   renderizarBarras(lista, p);
   renderizarRecentes(d.lancamentos);
+  renderizarProjecao(d, p, tots, total, hj);
+}
+
+function renderizarProjecao(d, p, tots, total, hj) {
+  var card = document.getElementById('proj-card');
+  var limite = d.limite || 0;
+  var orcParc = d.orcamentos.parcelados || 0;
+  if (limite <= 0) { card.style.display = 'none'; return; }
+  card.style.display = 'block';
+
+  var dispDiario = Math.max(0, limite - orcParc); // orçamento p/ gastos comuns
+
+  // Dias do período
+  var dInicio = new Date(p.inicio + 'T12:00:00');
+  var dFim    = new Date(p.fim    + 'T12:00:00');
+  var dHj     = new Date(hj       + 'T12:00:00');
+  var totalDias    = Math.max(1, Math.round((dFim - dInicio) / 86400000) + 1);
+  var diasPassados = Math.min(totalDias, Math.max(1, Math.round((dHj - dInicio) / 86400000) + 1));
+  var diasRestantes = Math.max(0, totalDias - diasPassados);
+
+  var gastoComum   = Math.max(0, total - (tots.parcelados || 0));
+  var padraoDiario = dispDiario / totalDias;
+  var realDiario   = diasPassados > 0 ? gastoComum / diasPassados : 0;
+  var desvio       = realDiario - padraoDiario;
+  var projecaoFinal = (tots.parcelados || 0) + realDiario * totalDias;
+  var orcRestante  = dispDiario - gastoComum;
+  var recDiario    = diasRestantes > 0 ? orcRestante / diasRestantes : 0;
+  var pctTempo     = diasPassados / totalDias * 100;
+  var pctGasto     = dispDiario > 0 ? Math.min(120, gastoComum / dispDiario * 100) : 0;
+
+  function fmtD(v) { return 'CA$ ' + Math.abs(v).toFixed(2); }
+
+  // Subtitle
+  document.getElementById('proj-subtitle').textContent =
+    'Limite ' + formatar(limite) + ' · Parcelados ' + formatar(orcParc) + ' · Livre ' + formatar(dispDiario);
+
+  // Badge de status
+  var badge = document.getElementById('proj-badge');
+  if (projecaoFinal > limite) {
+    badge.textContent = '⚠️ Vai exceder'; badge.className = 'proj-badge over';
+  } else if (desvio > padraoDiario * 0.15) {
+    badge.textContent = '📈 Acima'; badge.className = 'proj-badge warn';
+  } else {
+    badge.textContent = '✅ No controle'; badge.className = 'proj-badge ok';
+  }
+
+  // Métricas
+  document.getElementById('proj-padrao').textContent = fmtD(padraoDiario);
+  document.getElementById('proj-real').textContent   = fmtD(realDiario);
+
+  var desvEl  = document.getElementById('proj-desvio');
+  var desvSub = document.getElementById('proj-desvio-sub');
+  var sinal = desvio >= 0 ? '+' : '−';
+  desvEl.textContent  = sinal + fmtD(Math.abs(desvio));
+  desvEl.style.color  = desvio > 0 ? '#f87171' : '#4ade80';
+  desvSub.textContent = desvio > 0 ? 'acima/dia' : 'abaixo/dia';
+
+  // Barras duplas
+  document.getElementById('proj-btempo').style.width = pctTempo.toFixed(1) + '%';
+  document.getElementById('proj-ptempo').textContent = Math.round(pctTempo) + '%';
+  var corG = pctGasto > 100 ? '#f87171' : pctGasto > 85 ? '#fbbf24' : '#4ade80';
+  document.getElementById('proj-bgasto').style.width      = Math.min(100, pctGasto).toFixed(1) + '%';
+  document.getElementById('proj-bgasto').style.background = corG;
+  var pgEl = document.getElementById('proj-pgasto');
+  pgEl.textContent  = Math.round(pctGasto) + '%';
+  pgEl.style.color  = corG;
+
+  // Rodapé
+  var recEl = document.getElementById('proj-rec');
+  if (diasRestantes <= 0) {
+    recEl.textContent = 'Período encerrado';
+    recEl.style.color = 'rgba(255,255,255,.5)';
+  } else {
+    recEl.textContent = (recDiario < 0 ? '−' : '') + fmtD(recDiario) + '/dia';
+    recEl.style.color = recDiario < 0 ? '#f87171' : 'white';
+  }
+  var finalEl = document.getElementById('proj-final');
+  finalEl.textContent = formatar(projecaoFinal);
+  finalEl.style.color = projecaoFinal > limite ? '#f87171' : '#4ade80';
 }
 
 function renderizarPizza(tots, total) {
