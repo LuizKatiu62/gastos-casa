@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260419-053">
+<meta name="app-version" content="20260419-054">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -1941,15 +1941,16 @@ function renderizar() {
       el.textContent = iniStr + ' – ' + fimStr;
     }
   })();
-  var rest = d.limite - total;
+  // Parcelados NÃO entram no limite de CA$2.500 — tudo calculado com totalComum
+  var rest = d.limite - totalComum;
   document.getElementById('txt-disponivel').textContent = d.limite > 0 ? (rest >= 0 ? formatar(rest) : '-'+formatar(-rest)) : 'CA$ 0,00';
   document.getElementById('txt-disponivel').style.color = (d.limite > 0 && rest < 0) ? '#ff6b6b' : 'white';
   document.getElementById('txt-restante').textContent = d.limite > 0 ? ('Limite: ' + formatar(d.limite)) : '';
   document.getElementById('txt-restante').style.color = 'rgba(255,255,255,0.6)';
   document.getElementById('txt-hoje').textContent = 'Hoje: ' + formatar(totalHoje);
 
-  var pct = d.limite > 0 ? Math.min(total/d.limite*100, 100) : 0;
-  var excedeu = d.limite > 0 && total > d.limite;
+  var pct = d.limite > 0 ? Math.min(totalComum/d.limite*100, 100) : 0;
+  var excedeu = d.limite > 0 && totalComum > d.limite;
   document.getElementById('barra').style.width = pct + '%';
   document.getElementById('barra').style.background = excedeu ? '#f44336' : pct >= d.alertaPct ? '#ff9800' : '#4caf50';
   document.getElementById('txt-pct').textContent = pct.toFixed(1) + '% utilizado';
@@ -1958,7 +1959,7 @@ function renderizar() {
   var al = document.getElementById('alerta');
   if (excedeu) {
     al.className = 'alerta excedido';
-    al.textContent = '🚨 LIMITE EXCEDIDO! Você gastou ' + formatar(total-d.limite) + ' além do limite.';
+    al.textContent = '🚨 LIMITE EXCEDIDO! Você gastou ' + formatar(totalComum-d.limite) + ' além do limite.';
   } else if (d.limite > 0 && pct >= d.alertaPct) {
     al.className = 'alerta atencao';
     al.textContent = '⚠️ Atenção: ' + pct.toFixed(0) + '% do limite utilizado. Restam ' + formatar(rest) + '.';
