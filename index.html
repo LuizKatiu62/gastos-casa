@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260418-047">
+<meta name="app-version" content="20260418-048">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -79,13 +79,13 @@ body {
 }
 .nav button {
   flex: 1; border: none; background: none;
-  padding: 10px 4px 12px;
-  font-size: 10px; font-weight: 600;
+  padding: 8px 2px 10px;
+  font-size: 9px; font-weight: 600;
   color: #9ca3af; cursor: pointer;
-  display: flex; flex-direction: column; align-items: center; gap: 4px;
-  min-height: 54px; transition: color .2s; letter-spacing: .2px;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  min-height: 52px; transition: color .2s; letter-spacing: .1px;
 }
-.nav button span { font-size: 22px; line-height: 1; }
+.nav button span { font-size: 20px; line-height: 1; }
 .nav button.active { color: #1d4ed8; }
 .nav button.active span { filter: drop-shadow(0 0 6px rgba(29,78,216,.35)); }
 
@@ -861,63 +861,6 @@ body {
       </div>
     </div>
 
-    <!-- ── PROJEÇÃO DO PERÍODO ── -->
-    <div class="proj-card" id="proj-card" style="display:none">
-      <div class="proj-top">
-        <div>
-          <div class="proj-title">📊 Projeção do Período</div>
-          <div class="proj-subtitle" id="proj-subtitle"></div>
-        </div>
-        <div class="proj-badge" id="proj-badge"></div>
-      </div>
-
-      <div class="proj-metrics">
-        <div class="proj-metric">
-          <div class="proj-m-label">Padrão/dia</div>
-          <div class="proj-m-val" id="proj-padrao">—</div>
-          <div class="proj-m-sub">orçamento</div>
-        </div>
-        <div class="proj-m-sep"></div>
-        <div class="proj-metric">
-          <div class="proj-m-label">Real/dia</div>
-          <div class="proj-m-val" id="proj-real">—</div>
-          <div class="proj-m-sub">média atual</div>
-        </div>
-        <div class="proj-m-sep"></div>
-        <div class="proj-metric">
-          <div class="proj-m-label">Desvio</div>
-          <div class="proj-m-val" id="proj-desvio">—</div>
-          <div class="proj-m-sub" id="proj-desvio-sub"></div>
-        </div>
-      </div>
-
-      <div class="proj-barras">
-        <div class="proj-brow">
-          <span class="proj-blabel">Tempo</span>
-          <div class="proj-bbg"><div class="proj-bfill proj-bfill-tempo" id="proj-btempo" style="width:0%"></div></div>
-          <span class="proj-bpct" id="proj-ptempo">0%</span>
-        </div>
-        <div class="proj-brow">
-          <span class="proj-blabel">Gasto</span>
-          <div class="proj-bbg"><div class="proj-bfill" id="proj-bgasto" style="width:0%"></div></div>
-          <span class="proj-bpct" id="proj-pgasto">0%</span>
-        </div>
-      </div>
-
-      <div class="proj-footer">
-        <div>
-          <div class="proj-fitem-label">Saldo real agora</div>
-          <div class="proj-fitem-val" id="proj-saldo-atual">—</div>
-          <div style="font-size:10px;opacity:.45;margin-top:3px" id="proj-saldo-atual-sub"></div>
-        </div>
-        <div>
-          <div class="proj-fitem-label">Saldo no fim do período</div>
-          <div class="proj-fitem-val" id="proj-final">—</div>
-          <div style="font-size:10px;opacity:.45;margin-top:3px" id="proj-final-sub"></div>
-        </div>
-      </div>
-    </div>
-
     <div class="card">
       <div class="card-titulo">Distribuição por Categoria</div>
       <div class="pizza-wrap" id="pizza-wrap"></div>
@@ -1431,12 +1374,86 @@ body {
 </div>
 
 <!-- NAV -->
+<!-- ════════════════════════════
+     TELA PROJEÇÃO
+════════════════════════════ -->
+<div class="tela" id="tela-projecao">
+  <div class="add-header" id="proj-header" style="background:linear-gradient(150deg,#0f172a,#1e3a8a)">
+    <div class="add-hdr-left">
+      <div class="add-hdr-icon">📈</div>
+      <div>
+        <div class="add-hdr-title">Projeção do Período</div>
+        <div class="add-hdr-sub" id="proj-subtitle">—</div>
+      </div>
+    </div>
+    <div class="proj-badge" id="proj-badge" style="margin-top:0"></div>
+  </div>
+  <div class="conteudo">
+
+    <div class="proj-card" style="margin-top:0">
+      <div class="proj-metrics">
+        <div class="proj-metric">
+          <div class="proj-m-label">Padrão/dia</div>
+          <div class="proj-m-val" id="proj-padrao">—</div>
+          <div class="proj-m-sub">orçamento</div>
+        </div>
+        <div class="proj-m-sep"></div>
+        <div class="proj-metric">
+          <div class="proj-m-label">Real/dia</div>
+          <div class="proj-m-val" id="proj-real">—</div>
+          <div class="proj-m-sub">média atual</div>
+        </div>
+        <div class="proj-m-sep"></div>
+        <div class="proj-metric">
+          <div class="proj-m-label">Desvio</div>
+          <div class="proj-m-val" id="proj-desvio">—</div>
+          <div class="proj-m-sub" id="proj-desvio-sub"></div>
+        </div>
+      </div>
+
+      <div class="proj-barras" style="margin-top:16px">
+        <div class="proj-brow">
+          <span class="proj-blabel">Tempo</span>
+          <div class="proj-bbg"><div class="proj-bfill proj-bfill-tempo" id="proj-btempo" style="width:0%"></div></div>
+          <span class="proj-bpct" id="proj-ptempo">0%</span>
+        </div>
+        <div class="proj-brow">
+          <span class="proj-blabel">Gasto</span>
+          <div class="proj-bbg"><div class="proj-bfill" id="proj-bgasto" style="width:0%"></div></div>
+          <span class="proj-bpct" id="proj-pgasto">0%</span>
+        </div>
+      </div>
+
+      <div class="proj-footer">
+        <div>
+          <div class="proj-fitem-label">Saldo real agora</div>
+          <div class="proj-fitem-val" id="proj-saldo-atual">—</div>
+          <div style="font-size:10px;opacity:.45;margin-top:3px" id="proj-saldo-atual-sub"></div>
+        </div>
+        <div>
+          <div class="proj-fitem-label">Saldo no fim do período</div>
+          <div class="proj-fitem-val" id="proj-final">—</div>
+          <div style="font-size:10px;opacity:.45;margin-top:3px" id="proj-final-sub"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Detalhes -->
+    <div class="card" id="proj-detalhe" style="display:none">
+      <div class="card-titulo">Detalhes do Período</div>
+      <div id="proj-detalhe-body"></div>
+    </div>
+
+  </div>
+</div>
+
 <nav class="nav">
   <button id="nb-inicio" class="active" onclick="irPara('inicio')"><span>🏠</span>Início</button>
   <button id="nb-add" onclick="irPara('add')"><span>➕</span>Registrar</button>
   <button id="nb-historico" onclick="irPara('historico')"><span>📋</span>Histórico</button>
   <button id="nb-relcat" onclick="irPara('relcat')"><span>📂</span>Por Cat.</button>
   <button id="nb-relatorio" onclick="irPara('relatorio')"><span>📊</span>Relatório</button>
+  <button id="nb-projecao" onclick="irPara('projecao')"><span>📈</span>Projeção</button>
 </nav>
 
 <script>
@@ -1878,15 +1895,12 @@ function renderizar() {
   renderizarPizza(tots, total);
   renderizarBarras(lista, p);
   renderizarRecentes(d.lancamentos);
-  renderizarProjecao(d, p, tots, total, hj);
 }
 
 function renderizarProjecao(d, p, tots, total, hj) {
-  var card = document.getElementById('proj-card');
   var limite = d.limite || 0;
   var orcParc = d.orcamentos.parcelados || 0;
-  if (limite <= 0) { card.style.display = 'none'; return; }
-  card.style.display = 'block';
+  if (limite <= 0) return;
 
   var dispDiario = Math.max(0, limite - orcParc); // orçamento p/ gastos comuns
 
@@ -3601,6 +3615,14 @@ function irPara(tela) {
   }
   if (tela==='inicio')    renderizar();
   if (tela==='historico') renderizarHistorico();
+  if (tela==='projecao') {
+    var _d = getDados(), _p = _d.periodo, _hj = hoje();
+    var _lista = lancamentosPeriodo(_d.lancamentos, _p);
+    var _tots = { carro:0, diversos:0, mercado:0, parcelados:0 };
+    var _total = 0;
+    _lista.forEach(function(l){ _tots[l.cat]=(_tots[l.cat]||0)+parseFloat(l.valor||0); _total+=parseFloat(l.valor||0); });
+    renderizarProjecao(_d, _p, _tots, _total, _hj);
+  }
   if (tela==='relatorio') {
     setRelPeriodo(_relTipo);
     renderizarRelatorio();
