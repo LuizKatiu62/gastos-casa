@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260419-058">
+<meta name="app-version" content="20260419-059">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -2615,22 +2615,29 @@ function renderizarRelatorio() {
   var lista = lancamentosPeriodo(d.lancamentos, per);
   var tots  = { carro:0, diversos:0, mercado:0, parcelados:0 };
   var stots = {};
-  var grand = 0;
   var porDia = {};
   lista.forEach(function(l) {
     var v = parseFloat(l.valor||0);
     tots[l.cat] = (tots[l.cat]||0) + v;
-    grand += v;
-    if (l.sub) { var subKey = SUBS[l.sub] || l.sub; stots[subKey] = (stots[subKey]||0) + v; }
-    porDia[l.data] = (porDia[l.data]||0) + v;
+    // porDia e stots apenas para gastos comuns (sem parcelados)
+    if (l.cat !== 'parcelados') {
+      if (l.sub) { var subKey = SUBS[l.sub] || l.sub; stots[subKey] = (stots[subKey]||0) + v; }
+      porDia[l.data] = (porDia[l.data]||0) + v;
+    }
   });
 
-  // Métricas gerais
+  // Total gasto = apenas categorias comuns (sem parcelados)
+  var grand = (tots.carro||0) + (tots.diversos||0) + (tots.mercado||0);
+
+  // Limite disponível para gastos comuns = limite do cartão − orçamento de parcelados
   var orc = d.orcamentos;
-  var pctLimite = d.limite > 0 ? (grand/d.limite*100) : 0;
-  var dispLimite = d.limite - grand;
+  var orcParc   = orc.parcelados || 0;
+  var limComum  = Math.max(0, d.limite - orcParc);   // ex: 3050 − 550 = 2500
+  var dispLimite = limComum - grand;
+  var pctLimite  = limComum > 0 ? (grand / limComum * 100) : 0;
+
   var diasComGasto = Object.keys(porDia).length;
-  var mediaDia = diasComGasto > 0 ? grand/diasComGasto : 0;
+  var mediaDia = diasComGasto > 0 ? grand / diasComGasto : 0;
   var maiorDia = '', maiorVal = 0;
   Object.keys(porDia).forEach(function(dt) { if(porDia[dt]>maiorVal){maiorVal=porDia[dt];maiorDia=dt;} });
 
@@ -2643,22 +2650,25 @@ function renderizarRelatorio() {
   // Período label
   var perLabel = formatarData(per.inicio) + ' → ' + formatarData(per.fim);
 
+  // Contagem de lançamentos comuns (sem parcelados)
+  var nLancComuns = lista.filter(function(l){ return l.cat !== 'parcelados'; }).length;
+
   // ── Métricas cards ──
   var corLimite = pctLimite>100?'#f44336':pctLimite>=80?'#ff9800':'#1565c0';
   var metHtml =
     '<div class="rel-metricas">' +
     '<div class="rel-met-card"><div class="rel-met-val" style="color:#1565c0">'+formatar(grand)+'</div><div class="rel-met-lbl">Total Gasto</div><div class="rel-met-sub">'+diasComGasto+' dias c/ gasto</div></div>' +
-    '<div class="rel-met-card"><div class="rel-met-val" style="color:'+(dispLimite<0?'#f44336':'#43a047')+'">'+formatar(dispLimite)+'</div><div class="rel-met-lbl">Disponível</div><div class="rel-met-sub">Limite: '+formatar(d.limite)+'</div></div>' +
-    '<div class="rel-met-card"><div class="rel-met-val" style="color:'+corLimite+'">'+pctLimite.toFixed(1)+'%</div><div class="rel-met-lbl">% do Limite</div><div class="rel-met-sub">'+lista.length+' lançamentos</div></div>' +
+    '<div class="rel-met-card"><div class="rel-met-val" style="color:'+(dispLimite<0?'#f44336':'#43a047')+'">'+formatar(dispLimite)+'</div><div class="rel-met-lbl">Disponível</div><div class="rel-met-sub">Limite comum: '+formatar(limComum)+'</div></div>' +
+    '<div class="rel-met-card"><div class="rel-met-val" style="color:'+corLimite+'">'+pctLimite.toFixed(1)+'%</div><div class="rel-met-lbl">% do Limite</div><div class="rel-met-sub">'+nLancComuns+' lançamentos</div></div>' +
     '<div class="rel-met-card"><div class="rel-met-val" style="color:#555">'+formatar(mediaDia)+'</div><div class="rel-met-lbl">Média / dia</div><div class="rel-met-sub">Projeção: '+formatar(projecao)+'</div></div>' +
     (maiorDia?'<div class="rel-met-card" style="grid-column:1/-1"><div class="rel-met-val" style="color:#e53935;font-size:15px">'+formatar(maiorVal)+'</div><div class="rel-met-lbl">Maior gasto — '+formatarData(maiorDia)+'</div></div>':'') +
     '</div>';
 
   // ── Barra limite ──
-  var barLimHtml = d.limite > 0 ?
-    '<div class="card" style="margin-bottom:8px"><div class="card-titulo">Utilização do Limite</div>' +
+  var barLimHtml = limComum > 0 ?
+    '<div class="card" style="margin-bottom:8px"><div class="card-titulo">Utilização do Limite (sem parcelados)</div>' +
     '<div class="orc-barra-fundo" style="height:12px"><div class="orc-barra-fill" style="width:'+Math.min(pctLimite,100).toFixed(1)+'%;background:'+corLimite+'"></div></div>' +
-    '<div style="display:flex;justify-content:space-between;font-size:11px;margin-top:5px"><span style="color:#aaa">CA$ 0</span><span style="color:'+corLimite+';font-weight:800">'+pctLimite.toFixed(1)+'%</span><span style="color:#aaa">'+formatar(d.limite)+'</span></div>' +
+    '<div style="display:flex;justify-content:space-between;font-size:11px;margin-top:5px"><span style="color:#aaa">CA$ 0</span><span style="color:'+corLimite+';font-weight:800">'+pctLimite.toFixed(1)+'%</span><span style="color:#aaa">'+formatar(limComum)+'</span></div>' +
     '</div>' : '';
 
   // ── Categorias ──
