@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260419-057">
+<meta name="app-version" content="20260419-058">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -2898,6 +2898,35 @@ function renderizarParcelas() {
     grupos[gid].lancs[l.parcela.n] = l;
   });
 
+  // Segunda passagem: corrige desc, total e valorParc usando os dados mais atuais
+  Object.keys(grupos).forEach(function(gid) {
+    var g = grupos[gid];
+    var nums = Object.keys(g.lancs).map(Number).sort(function(a,b){ return b - a; }); // desc
+    if (!nums.length) return;
+
+    // Total de parcelas e valor mensal: usar a parcela mais alta (mais atual)
+    var latestL = g.lancs[nums[0]];
+    g.total    = latestL.parcela.total || g.total;
+    g.valorParc = parseFloat(latestL.valor) || g.valorParc;
+
+    // Melhor descrição: primeiro valor não-vazio e diferente de "Identificar"
+    var bestDesc = '';
+    nums.forEach(function(n) {
+      var d2 = (g.lancs[n].desc || '').trim();
+      if (!bestDesc && d2 && d2 !== 'Identificar') bestDesc = d2;
+    });
+    if (bestDesc) g.desc = bestDesc;
+
+    // Melhor sub: idem
+    var bestSub = g.sub;
+    nums.forEach(function(n) {
+      var l2 = g.lancs[n];
+      var s = (l2.loja || l2.divsub || l2.sub || '').trim();
+      if (!bestSub && s) bestSub = s;
+    });
+    g.sub = bestSub;
+  });
+
   var keys = Object.keys(grupos);
   if (keys.length === 0) {
     return '<div class="vazio" style="text-align:center;padding:48px 0;color:#9ca3af;font-size:15px">📭<br><br>Nenhum lançamento parcelado encontrado</div>';
@@ -3040,9 +3069,27 @@ function exportarPDFParcelas() {
     if (!l.parcela) return;
     var gid = l.parcela.grupoId;
     if (!grupos[gid]) {
-      grupos[gid] = { total:l.parcela.total, valorParc:parseFloat(l.valor)||0, desc:l.desc||'', cat:l.cat||'', sub:l.sub||'', lancs:{} };
+      grupos[gid] = { total:l.parcela.total, valorParc:parseFloat(l.valor)||0, desc:l.desc||'', cat:l.cat||'', sub:l.sub||l.loja||l.divsub||'', lancs:{} };
     }
     grupos[gid].lancs[l.parcela.n] = l;
+  });
+  // Corrige desc/total/valorParc com dados mais atuais (mesma lógica do renderizarParcelas)
+  Object.keys(grupos).forEach(function(gid) {
+    var g = grupos[gid];
+    var nums = Object.keys(g.lancs).map(Number).sort(function(a,b){ return b-a; });
+    if (!nums.length) return;
+    var latestL = g.lancs[nums[0]];
+    g.total     = latestL.parcela.total || g.total;
+    g.valorParc = parseFloat(latestL.valor) || g.valorParc;
+    var bestDesc = '', bestSub = g.sub;
+    nums.forEach(function(n) {
+      var d2 = (g.lancs[n].desc || '').trim();
+      if (!bestDesc && d2 && d2 !== 'Identificar') bestDesc = d2;
+      var s = (g.lancs[n].loja || g.lancs[n].divsub || g.lancs[n].sub || '').trim();
+      if (!bestSub && s) bestSub = s;
+    });
+    if (bestDesc) g.desc = bestDesc;
+    g.sub = bestSub;
   });
   var keys = Object.keys(grupos);
   var COR = { mercado:'#16a34a', carro:'#dc2626', diversos:'#ea580c', parcelados:'#7c3aed' };
@@ -3628,6 +3675,7 @@ function salvarEdicao() {
     ? { n: parcN, total: parcTotal, grupoId: parcGrupo, valorTotal: valor * parcTotal }
     : null;
 
+  var novaDesc = document.getElementById('edit-desc').value.trim();
   d.lancamentos[idx] = Object.assign({}, d.lancamentos[idx], {
     data:    data,
     valor:   valor,
@@ -3635,9 +3683,22 @@ function salvarEdicao() {
     sub:     carroFinal || null,
     loja:    lojaFinal  || null,
     divsub:  divFinal   || null,
-    desc:    document.getElementById('edit-desc').value.trim(),
+    desc:    novaDesc,
     parcela: parcelaObj
   });
+
+  // Propagar descrição e total para todas as outras parcelas do mesmo grupo
+  if (parcelaObj && parcelaObj.grupoId) {
+    var propagarDesc  = novaDesc && novaDesc !== 'Identificar';
+    var propagarTotal = parcTotal > 1;
+    d.lancamentos.forEach(function(x, i) {
+      if (i === idx) return;
+      if (!x.parcela || x.parcela.grupoId !== parcelaObj.grupoId) return;
+      if (propagarDesc)  x.desc = novaDesc;
+      if (propagarTotal) x.parcela = Object.assign({}, x.parcela, { total: parcTotal });
+    });
+  }
+
   salvarDados(d);
   fecharModalEdicao();
   renderizar();
