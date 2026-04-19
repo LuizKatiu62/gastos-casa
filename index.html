@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260419-059">
+<meta name="app-version" content="20260419-060">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -86,9 +86,18 @@ body {
   display: flex; flex-direction: column; align-items: center; gap: 3px;
   min-height: 52px; transition: color .2s; letter-spacing: .1px;
 }
-.nav button span { font-size: 20px; line-height: 1; }
-.nav button.active { color: #1d4ed8; }
-.nav button.active span { filter: drop-shadow(0 0 6px rgba(29,78,216,.35)); }
+.nav button span { font-size: 20px; line-height: 1; transition: transform .2s; }
+/* Active state — pill highlight for regular buttons */
+.nav button:not(#nb-add).active {
+  color: #1d4ed8;
+}
+.nav button:not(#nb-add).active span {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 42px; height: 28px; border-radius: 14px;
+  background: rgba(29,78,216,.12);
+  filter: drop-shadow(0 0 5px rgba(29,78,216,.3));
+  transform: scale(1.08);
+}
 /* FAB — Registrar button */
 .nav button#nb-add {
   flex: 0 0 64px; position: relative; overflow: visible; padding: 0; color: white;
@@ -104,7 +113,7 @@ body {
 .nav button#nb-add .nav-fab-circle span { font-size: 22px; line-height: 1; }
 .nav button#nb-add .nav-fab-circle .nav-fab-lbl { font-size: 8px; font-weight: 700; letter-spacing: .2px; color: rgba(255,255,255,.85); line-height: 1; margin-top: 2px; }
 .nav button#nb-add:active .nav-fab-circle { transform: translateX(-50%) scale(.94); box-shadow: 0 2px 8px rgba(29,78,216,.4); }
-.nav button#nb-add.active .nav-fab-circle { background: linear-gradient(135deg, #1e40af, #1d4ed8); }
+.nav button#nb-add.active .nav-fab-circle { background: linear-gradient(135deg, #1e40af, #1d4ed8); box-shadow: 0 6px 18px rgba(29,78,216,.55); }
 
 /* ── TELAS ── */
 .tela { display: none; }
@@ -3879,7 +3888,10 @@ function irPara(tela) {
 
   var bts = document.querySelectorAll('.nav button');
   for (var j=0; j<bts.length; j++) bts[j].classList.remove('active');
-  var nb = document.getElementById('nb-'+tela);
+  // Mapeia telas que não têm botão próprio para o botão pai
+  var navMap = { categoria:'relcat', foto:'add' };
+  var nbId = 'nb-' + (navMap[tela] || tela);
+  var nb = document.getElementById(nbId);
   if (nb) nb.classList.add('active');
 
   if (tela==='add') {
