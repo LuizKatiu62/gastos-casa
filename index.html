@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260419-069">
+<meta name="app-version" content="20260419-070">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -2865,7 +2865,10 @@ function getRelCatPer() {
 
 function renderizarRelcat() {
   var el = document.getElementById('corpo-relcat');
-  if (_rcCat === 'parcelas') { el.innerHTML = renderizarParcelas(); return; }
+  if (_rcCat === 'parcelas') {
+    try { el.innerHTML = renderizarParcelas(); } catch(e) { el.innerHTML = '<div class="vazio">Erro ao carregar planos: ' + e.message + '</div>'; }
+    return;
+  }
   var per = getRelCatPer();
   if (!per) { el.innerHTML = '<div class="vazio">Selecione as datas do período</div>'; return; }
 
@@ -4168,8 +4171,8 @@ function irPara(tela) {
     renderizarRelatorio();
   }
   if (tela==='relcat') {
-    setRelCat(_rcCat);
-    setRelCatPer(_rcTipo);
+    try { setRelCat(_rcCat); } catch(e) { _rcCat = 'mercado'; try { setRelCat(_rcCat); } catch(e2) {} }
+    try { setRelCatPer(_rcTipo); } catch(e) {}
   }
   window.scrollTo(0,0);
 }
