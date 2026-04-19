@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260418-046">
+<meta name="app-version" content="20260418-047">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -906,13 +906,14 @@ body {
 
       <div class="proj-footer">
         <div>
-          <div class="proj-fitem-label">Recomendado p/ dias restantes</div>
-          <div class="proj-fitem-val" id="proj-rec">—</div>
+          <div class="proj-fitem-label">Saldo real agora</div>
+          <div class="proj-fitem-val" id="proj-saldo-atual">—</div>
+          <div style="font-size:10px;opacity:.45;margin-top:3px" id="proj-saldo-atual-sub"></div>
         </div>
         <div>
-          <div class="proj-fitem-label">Saldo projetado no fim</div>
+          <div class="proj-fitem-label">Saldo no fim do período</div>
           <div class="proj-fitem-val" id="proj-final">—</div>
-          <div style="font-size:10px;opacity:.5;margin-top:3px" id="proj-final-sub"></div>
+          <div style="font-size:10px;opacity:.45;margin-top:3px" id="proj-final-sub"></div>
         </div>
       </div>
     </div>
@@ -1945,27 +1946,32 @@ function renderizarProjecao(d, p, tots, total, hj) {
   pgEl.textContent  = Math.round(pctGasto) + '%';
   pgEl.style.color  = corG;
 
-  // Rodapé
-  var recEl = document.getElementById('proj-rec');
-  if (diasRestantes <= 0) {
-    recEl.textContent = 'Período encerrado';
-    recEl.style.color = 'rgba(255,255,255,.5)';
+  // Rodapé — Saldo real agora
+  var saldoAgora = dispDiario - gastoComum;  // quanto sobra hoje do orçamento livre
+  var saldoAgoraEl  = document.getElementById('proj-saldo-atual');
+  var saldoAgoraSub = document.getElementById('proj-saldo-atual-sub');
+  if (saldoAgora >= 0) {
+    saldoAgoraEl.textContent = '+ ' + formatar(saldoAgora);
+    saldoAgoraEl.style.color = '#4ade80';
+    saldoAgoraSub.textContent = 'disponível (gastos comuns)';
   } else {
-    recEl.textContent = (recDiario < 0 ? '−' : '') + fmtD(recDiario) + '/dia';
-    recEl.style.color = recDiario < 0 ? '#f87171' : 'white';
+    saldoAgoraEl.textContent = '− ' + formatar(-saldoAgora);
+    saldoAgoraEl.style.color = '#f87171';
+    saldoAgoraSub.textContent = 'acima do orçamento livre';
   }
-  // Saldo projetado = disponível (sem parcelados) − projeção de gasto comum
-  var saldoProj = dispDiario - projecaoFinal;
-  var finalEl   = document.getElementById('proj-final');
-  var finalSub  = document.getElementById('proj-final-sub');
-  if (saldoProj >= 0) {
-    finalEl.textContent = '+ ' + formatar(saldoProj);
+
+  // Saldo no fim = disponível − gasto projetado ao ritmo atual
+  var saldoFim = dispDiario - projecaoFinal;
+  var finalEl  = document.getElementById('proj-final');
+  var finalSub = document.getElementById('proj-final-sub');
+  if (saldoFim >= 0) {
+    finalEl.textContent = '+ ' + formatar(saldoFim);
     finalEl.style.color = '#4ade80';
-    finalSub.textContent = 'sobrando ao fim do período';
+    finalSub.textContent = 'sobrando se mantiver o ritmo';
   } else {
-    finalEl.textContent = '− ' + formatar(-saldoProj);
+    finalEl.textContent = '− ' + formatar(-saldoFim);
     finalEl.style.color = '#f87171';
-    finalSub.textContent = 'excedendo o orçamento livre';
+    finalSub.textContent = 'excedendo se mantiver o ritmo';
   }
 }
 
