@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260418-048">
+<meta name="app-version" content="20260418-049">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -1438,10 +1438,26 @@ body {
       </div>
     </div>
 
-    <!-- Detalhes -->
-    <div class="card" id="proj-detalhe" style="display:none">
-      <div class="card-titulo">Detalhes do Período</div>
-      <div id="proj-detalhe-body"></div>
+    <!-- Gráfico de linha -->
+    <div class="proj-card" style="padding-bottom:14px">
+      <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;opacity:.5;margin-bottom:12px">
+        Gasto acumulado vs Orçamento
+      </div>
+      <div id="proj-grafico"></div>
+      <div style="display:flex;gap:16px;margin-top:10px;justify-content:center">
+        <div style="display:flex;align-items:center;gap:6px;font-size:10px;opacity:.55">
+          <svg width="18" height="6"><line x1="0" y1="3" x2="18" y2="3" stroke="rgba(255,255,255,.5)" stroke-width="1.5" stroke-dasharray="4,2"/></svg>
+          Orçamento previsto
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:10px;opacity:.55">
+          <svg width="18" height="6"><line x1="0" y1="3" x2="18" y2="3" stroke="#4ade80" stroke-width="2"/></svg>
+          Gasto real
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:10px;opacity:.55">
+          <svg width="18" height="6"><line x1="0" y1="3" x2="18" y2="3" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="3,2"/></svg>
+          Limite livre
+        </div>
+      </div>
     </div>
 
   </div>
@@ -1987,6 +2003,104 @@ function renderizarProjecao(d, p, tots, total, hj) {
     finalEl.style.color = '#f87171';
     finalSub.textContent = 'excedendo se mantiver o ritmo';
   }
+
+  renderizarGraficoProjecao(d, p, dispDiario, hj);
+}
+
+function renderizarGraficoProjecao(d, p, dispDiario, hj) {
+  var el = document.getElementById('proj-grafico');
+  if (!el) return;
+
+  // Gastos comuns por dia (sem parcelados)
+  var gastosPorDia = {};
+  lancamentosPeriodo(d.lancamentos, p).forEach(function(l) {
+    if (l.cat !== 'parcelados') {
+      gastosPorDia[l.data] = (gastosPorDia[l.data] || 0) + parseFloat(l.valor || 0);
+    }
+  });
+
+  // Todos os dias do período
+  var dias = [];
+  var cur = new Date(p.inicio + 'T12:00:00');
+  var fim = new Date(p.fim + 'T12:00:00');
+  while (cur <= fim) { dias.push(cur.toISOString().slice(0, 10)); cur.setDate(cur.getDate() + 1); }
+  var N = dias.length;
+
+  // Gasto acumulado real (só até hoje)
+  var acum = 0;
+  var cumReal = dias.map(function(dt) {
+    if (dt <= hj) { acum += (gastosPorDia[dt] || 0); return acum; }
+    return null;
+  });
+
+  // Linha de orçamento proporcional
+  var cumOrc = dias.map(function(dt, i) { return dispDiario * (i + 1) / N; });
+
+  // Escala
+  var maxAcum = acum;
+  var maxY = Math.max(dispDiario * 1.08, maxAcum * 1.08, 1);
+  var todayIdx = dias.indexOf(hj);
+
+  // Dimensões SVG
+  var W = 320, H = 190;
+  var pL = 46, pR = 14, pT = 14, pB = 28;
+  var cW = W - pL - pR, cH = H - pT - pB;
+
+  function xp(i) { return pL + (N > 1 ? i / (N - 1) * cW : cW / 2); }
+  function yp(v) { return pT + cH - (v / maxY * cH); }
+  function fmtY(v) { return v >= 1000 ? '$' + (v / 1000).toFixed(1) + 'k' : '$' + Math.round(v); }
+
+  // Paths
+  var orcPath = dias.map(function(dt, i) { return (i === 0 ? 'M' : 'L') + xp(i).toFixed(1) + ',' + yp(cumOrc[i]).toFixed(1); }).join(' ');
+  var realPts = cumReal.map(function(v, i) { return v !== null ? { x: xp(i), y: yp(v), v: v } : null; }).filter(Boolean);
+  var realPath = realPts.map(function(pt, i) { return (i === 0 ? 'M' : 'L') + pt.x.toFixed(1) + ',' + pt.y.toFixed(1); }).join(' ');
+  var areaPath = realPts.length > 0
+    ? realPath + ' L' + realPts[realPts.length-1].x.toFixed(1) + ',' + (pT+cH) + ' L' + pL + ',' + (pT+cH) + ' Z'
+    : '';
+
+  // Cor da linha real (verde se abaixo do orçamento, vermelho se acima)
+  var corReal = maxAcum <= dispDiario ? '#4ade80' : '#f87171';
+  var corArea = maxAcum <= dispDiario ? 'rgba(74,222,128,.12)' : 'rgba(248,113,113,.12)';
+
+  // Y labels: 0, meio, limite
+  var yTicks = [0, dispDiario / 2, dispDiario];
+  // X labels: início, meio, fim
+  var xTicks = [0, Math.floor(N / 2), N - 1];
+
+  var svg =
+    '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;display:block">' +
+    // Grade horizontal
+    yTicks.map(function(v) {
+      var y = yp(v).toFixed(1);
+      return '<line x1="' + pL + '" y1="' + y + '" x2="' + (W - pR) + '" y2="' + y + '" stroke="rgba(255,255,255,.08)" stroke-width="1"/>' +
+             '<text x="' + (pL - 5) + '" y="' + (parseFloat(y) + 3.5) + '" text-anchor="end" font-size="8.5" fill="rgba(255,255,255,.4)" font-family="system-ui,sans-serif">' + fmtY(v) + '</text>';
+    }).join('') +
+    // Linha do limite livre (horizontal amarela)
+    '<line x1="' + pL + '" y1="' + yp(dispDiario).toFixed(1) + '" x2="' + (W - pR) + '" y2="' + yp(dispDiario).toFixed(1) + '" stroke="#fbbf24" stroke-width="1" stroke-dasharray="3,3" opacity=".6"/>' +
+    // Área sob a linha real
+    (areaPath ? '<path d="' + areaPath + '" fill="' + corArea + '"/>' : '') +
+    // Linha orçamento (tracejada branca)
+    '<path d="' + orcPath + '" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1.5" stroke-dasharray="5,3"/>' +
+    // Linha real
+    (realPath ? '<path d="' + realPath + '" fill="none" stroke="' + corReal + '" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>' : '') +
+    // Marcador de hoje
+    (todayIdx >= 0 ? '<line x1="' + xp(todayIdx).toFixed(1) + '" y1="' + pT + '" x2="' + xp(todayIdx).toFixed(1) + '" y2="' + (pT + cH) + '" stroke="rgba(255,255,255,.2)" stroke-width="1" stroke-dasharray="3,3"/>' : '') +
+    // Ponto atual
+    (todayIdx >= 0 && cumReal[todayIdx] !== null
+      ? '<circle cx="' + xp(todayIdx).toFixed(1) + '" cy="' + yp(cumReal[todayIdx]).toFixed(1) + '" r="4.5" fill="' + corReal + '" stroke="#0f172a" stroke-width="2"/>'
+      : '') +
+    // X labels
+    xTicks.map(function(i) {
+      var dt = dias[i]; var pts = dt.split('-');
+      return '<text x="' + xp(i).toFixed(1) + '" y="' + (H - 6) + '" text-anchor="middle" font-size="8.5" fill="rgba(255,255,255,.4)" font-family="system-ui,sans-serif">' + parseInt(pts[2]) + '/' + parseInt(pts[1]) + '</text>';
+    }).join('') +
+    // Label "Hoje"
+    (todayIdx >= 0
+      ? '<text x="' + xp(todayIdx).toFixed(1) + '" y="' + (pT - 3) + '" text-anchor="middle" font-size="8" fill="rgba(255,255,255,.5)" font-family="system-ui,sans-serif">hoje</text>'
+      : '') +
+    '</svg>';
+
+  el.innerHTML = svg;
 }
 
 function renderizarPizza(tots, total) {
