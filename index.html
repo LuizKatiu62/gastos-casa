@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260419-072">
+<meta name="app-version" content="20260419-073">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -4243,6 +4243,9 @@ function _parseCIBCAmount(text) {
   if (m) return parseFloat(m[1].replace(',', ''));
   m = text.match(/CAD\s*([\d,]+\.\d{2})/i);
   if (m) return parseFloat(m[1].replace(',', ''));
+  // Número puro (ex: "47.50" enviado pelo Shortcut)
+  var n = parseFloat(text.trim().replace(',', '.'));
+  if (!isNaN(n) && n > 0) return n;
   return null;
 }
 
