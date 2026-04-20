@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260419-076">
+<meta name="app-version" content="20260419-077">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -2802,7 +2802,7 @@ function renderizarRelatorio() {
     catBloco('parcelados', 'parcelados', '📦', '#7c3aed', false);
 
   // ── Top 5 gastos ──
-  var top5 = lista.slice().sort(function(a,b){ return parseFloat(b.valor)-parseFloat(a.valor); }).slice(0,5);
+  var top5 = lista.filter(function(l){ return l.cat !== 'parcelados'; }).sort(function(a,b){ return parseFloat(b.valor)-parseFloat(a.valor); }).slice(0,5);
   var topHtml = top5.length ?
     '<div class="card" style="margin-bottom:8px"><div class="card-titulo">Top 5 Maiores Gastos</div>' +
     top5.map(function(l,i){
