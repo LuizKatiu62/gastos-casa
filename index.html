@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260419-073">
+<meta name="app-version" content="20260419-074">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -4280,13 +4280,15 @@ function processarCompartilhamentoCIBC() {
 
     setTimeout(function() {
       irPara('foto');
-      // Mostra o formulário direto (sem precisar tirar foto)
-      document.getElementById('foto-form').style.display = '';
-      document.getElementById('foto-data').value = hoje();
-      if (amount) document.getElementById('foto-valor').value = amount.toFixed(2);
-      if (merchant) document.getElementById('foto-desc').value = merchant;
-      fotoSelecionarCat('diversos');
-    }, 400);
+      // Abre o formulário direto com os dados preenchidos
+      setTimeout(function() {
+        document.getElementById('foto-form').style.display = 'block';
+        document.getElementById('foto-data').value = hoje();
+        if (amount) document.getElementById('foto-valor').value = amount.toFixed(2);
+        if (merchant) document.getElementById('foto-desc').value = merchant;
+        fotoSelecionarCat('diversos');
+      }, 200);
+    }, 500);
   } else if (txt) {
     irPara('foto');
     document.getElementById('foto-form').style.display = '';
