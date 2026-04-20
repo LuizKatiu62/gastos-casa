@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260419-077">
+<meta name="app-version" content="20260420-078">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -4242,12 +4242,19 @@ function _abrirCibcFoto() {
   if (!p) return;
   window._cibcPendente = null;
   irPara('add');
+  selecionarCat('diversos');
   if (p.amount) {
     document.getElementById('inp-valor').value = p.amount.toFixed(2);
     if (typeof atualizarPreviewParcela === 'function') atualizarPreviewParcela();
+    if (p.merchant) document.getElementById('inp-desc').value = p.merchant;
+  } else {
+    // Valor não veio no link — foca o campo para o usuário digitar
+    setTimeout(function() {
+      var el = document.getElementById('inp-valor');
+      if (el) { el.focus(); el.select(); }
+    }, 300);
+    mostrarToast('🏦', 'CIBC detectado — insira o valor', 4000);
   }
-  if (p.merchant) document.getElementById('inp-desc').value = p.merchant;
-  selecionarCat('diversos');
 }
 
 function _parseCIBCAmount(text) {
