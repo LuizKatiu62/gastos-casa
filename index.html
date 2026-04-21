@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260421-087">
+<meta name="app-version" content="20260421-088">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -620,6 +620,31 @@ body {
 .linha-rel:last-child { border-bottom: none; }
 .linha-rel .rotulo { color: #6b7280; }
 .linha-rel .numero { font-weight: 800; color: #111827; }
+
+/* ── VISUAIS RELATÓRIO ── */
+.heatmap-card { background: white; border-radius: 14px; padding: 14px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 4px 12px rgba(0,0,0,.04); }
+.heatmap-dow-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; margin-bottom: 4px; }
+.heatmap-dow-cell { text-align: center; font-size: 9px; font-weight: 700; color: #9ca3af; text-transform: uppercase; }
+.heatmap-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+.heatmap-cell { border-radius: 4px; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; min-height: 30px; }
+.heatmap-empty { background: transparent; }
+.heatmap-zero  { background: #f3f4f6; color: #d1d5db; }
+.heatmap-low   { background: #bbf7d0; color: #166534; }
+.heatmap-mid   { background: #fde68a; color: #92400e; }
+.heatmap-high  { background: #fca5a5; color: #7f1d1d; }
+.heatmap-leg   { display: flex; align-items: center; gap: 8px; margin-top: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.heatmap-leg-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.heatmap-leg-lbl { font-size: 9px; color: #9ca3af; }
+.semana-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.semana-row:last-child { margin-bottom: 0; }
+.semana-lbl { min-width: 52px; font-size: 11px; font-weight: 700; color: #6b7280; }
+.semana-barra-bg { flex: 1; height: 22px; background: #f3f4f6; border-radius: 6px; overflow: hidden; }
+.semana-barra-fill { height: 100%; border-radius: 6px; transition: width .4s; }
+.semana-val { min-width: 72px; text-align: right; font-size: 12px; font-weight: 800; }
+.dias-limit-card { border-radius: 14px; padding: 16px; margin-bottom: 8px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 4px 12px rgba(0,0,0,.04); }
+.dias-limit-num { font-size: 52px; font-weight: 900; line-height: 1; letter-spacing: -2px; }
+.dias-limit-lbl { font-size: 12px; font-weight: 700; color: #6b7280; margin-top: 4px; text-transform: uppercase; letter-spacing: .5px; }
+.dias-limit-sub { font-size: 11px; color: #9ca3af; margin-top: 6px; }
 
 /* ── CARD PROJEÇÃO ── */
 .parc-proj-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid rgba(124,58,237,.13)}
@@ -2909,6 +2934,78 @@ function renderizarRelatorio() {
       '</div>';
     }).join('') + '</div>' : '';
 
+  // ── Mapa de Calor ──
+  var maxDia = 0;
+  Object.keys(porDia).forEach(function(dt){ if(porDia[dt]>maxDia) maxDia=porDia[dt]; });
+  var dowLabels = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  var heatDays = [];
+  var heatCur = new Date(per.inicio+'T12:00:00'), heatFim = new Date(per.fim+'T12:00:00');
+  while(heatCur<=heatFim){
+    var hds = heatCur.toISOString().slice(0,10);
+    heatDays.push({date:hds,dow:heatCur.getDay(),day:heatCur.getDate(),val:porDia[hds]||0});
+    heatCur.setDate(heatCur.getDate()+1);
+  }
+  var heatCells = '';
+  for(var hi=0;hi<heatDays[0].dow;hi++) heatCells+='<div class="heatmap-cell heatmap-empty"></div>';
+  heatDays.forEach(function(hd){
+    var cls = !hd.val?'heatmap-zero':hd.val<=maxDia*.33?'heatmap-low':hd.val<=maxDia*.67?'heatmap-mid':'heatmap-high';
+    heatCells+='<div class="heatmap-cell '+cls+'">'+hd.day+'</div>';
+  });
+  var heatmapHtml =
+    '<div class="heatmap-card">' +
+    '<div class="card-titulo">🗓️ Mapa de Calor — Gastos por Dia</div>' +
+    '<div class="heatmap-dow-row">'+dowLabels.map(function(l){return'<div class="heatmap-dow-cell">'+l+'</div>';}).join('')+'</div>'+
+    '<div class="heatmap-grid">'+heatCells+'</div>'+
+    '<div class="heatmap-leg">'+
+      '<div class="heatmap-leg-dot" style="background:#f3f4f6"></div><span class="heatmap-leg-lbl">Sem gasto</span>'+
+      '<div class="heatmap-leg-dot" style="background:#bbf7d0"></div><span class="heatmap-leg-lbl">Baixo</span>'+
+      '<div class="heatmap-leg-dot" style="background:#fde68a"></div><span class="heatmap-leg-lbl">Médio</span>'+
+      '<div class="heatmap-leg-dot" style="background:#fca5a5"></div><span class="heatmap-leg-lbl">Alto</span>'+
+    '</div></div>';
+
+  // ── Semana a Semana ──
+  var semanas = [];
+  var semTotal = 0;
+  heatDays.forEach(function(hd,i){
+    semTotal += hd.val;
+    if((i+1)%7===0||i===heatDays.length-1){
+      semanas.push({lbl:'Sem '+(semanas.length+1),total:semTotal});
+      semTotal=0;
+    }
+  });
+  var maxSemana = semanas.reduce(function(m,s){return s.total>m?s.total:m;},0);
+  var semanaHtml =
+    '<div class="card" style="margin-bottom:8px">'+
+    '<div class="card-titulo">📅 Semana a Semana</div>'+
+    semanas.map(function(s){
+      var pct=maxSemana>0?(s.total/maxSemana*100).toFixed(1):0;
+      var cor=s.total===maxSemana&&maxSemana>0?'#ef4444':'#1d4ed8';
+      return '<div class="semana-row">'+
+        '<div class="semana-lbl">'+s.lbl+'</div>'+
+        '<div class="semana-barra-bg"><div class="semana-barra-fill" style="width:'+pct+'%;background:'+cor+'"></div></div>'+
+        '<div class="semana-val" style="color:'+cor+'">'+formatar(s.total)+'</div>'+
+      '</div>';
+    }).join('')+
+    '</div>';
+
+  // ── Dias até o Limite ──
+  var diasLimHtml = '';
+  if(mediaDia>0&&limComum>0){
+    var jaExcedeu = dispLimite<=0;
+    var diasAteLimit = jaExcedeu?0:Math.floor(dispLimite/mediaDia);
+    var corDias = jaExcedeu?'#ef4444':diasAteLimit<=7?'#f97316':diasAteLimit<=15?'#eab308':'#22c55e';
+    var bgDias  = jaExcedeu?'#fef2f2':diasAteLimit<=7?'#fff7ed':diasAteLimit<=15?'#fefce8':'#f0fdf4';
+    diasLimHtml =
+      '<div class="dias-limit-card" style="background:'+bgDias+';border:1px solid '+corDias+'44;">'+
+      '<div class="card-titulo">⏱️ Dias até o Limite</div>'+
+      (jaExcedeu
+        ?'<div class="dias-limit-num" style="color:#ef4444">—</div><div class="dias-limit-lbl" style="color:#ef4444">Limite já excedido</div>'
+        :'<div class="dias-limit-num" style="color:'+corDias+'">'+diasAteLimit+'</div><div class="dias-limit-lbl" style="color:'+corDias+'">dias restantes</div>'
+      )+
+      '<div class="dias-limit-sub">Ritmo: '+formatar(mediaDia)+'/dia · Disponível: '+formatar(dispLimite)+'</div>'+
+      '</div>';
+  }
+
   // ── Ações ──
   var acoesHtml =
     '<div class="card">' +
@@ -2917,7 +3014,7 @@ function renderizarRelatorio() {
 
   el.innerHTML =
     '<div style="font-size:12px;color:#aaa;font-weight:600;margin-bottom:10px;text-align:center">📅 '+perLabel+'</div>' +
-    metHtml + barLimHtml + catsHtml + topHtml + acoesHtml;
+    metHtml + barLimHtml + catsHtml + topHtml + diasLimHtml + heatmapHtml + semanaHtml + acoesHtml;
 }
 
 // ─────────────────────────────
