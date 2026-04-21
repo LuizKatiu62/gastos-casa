@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260421-088">
+<meta name="app-version" content="20260421-089">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -656,6 +656,19 @@ body {
 .parc-proj-badge{font-size:.65rem;padding:1px 6px;border-radius:8px;font-weight:700;white-space:nowrap}
 .parc-proj-hoje{background:#ddd6fe;color:#5b21b6}
 .parc-proj-fim{background:#fce7f3;color:#9d174d}
+/* ── TERMÔMETRO DA DÍVIDA ── */
+.termo-total-row{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:10px}
+.termo-total-val{font-size:26px;font-weight:900;color:#dc2626;letter-spacing:-1px}
+.termo-total-pago{font-size:11px;color:#9ca3af;font-weight:600;text-align:right}
+.termo-prog-bg{height:10px;background:#fee2e2;border-radius:5px;overflow:hidden;margin-bottom:14px}
+.termo-prog-fill{height:100%;border-radius:5px;background:linear-gradient(90deg,#22c55e,#16a34a);transition:width .4s}
+.termo-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(220,38,38,.1)}
+.termo-row:last-child{border-bottom:none}
+.termo-mes{min-width:52px;font-size:.76rem;font-weight:700;color:#7f1d1d}
+.termo-barra-bg{flex:1;height:14px;background:#fee2e2;border-radius:4px;overflow:hidden}
+.termo-barra-fill{height:100%;background:#dc2626;border-radius:4px;transition:width .4s}
+.termo-val{min-width:80px;text-align:right;font-size:.8rem;font-weight:800;color:#dc2626}
+.termo-badge-ok{font-size:.65rem;padding:1px 6px;border-radius:8px;font-weight:700;background:#dcfce7;color:#166534;white-space:nowrap}
 .proj-card {
   background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #1d4ed8 100%);
   border-radius: 18px; padding: 18px; margin-bottom: 14px; color: white;
@@ -1591,6 +1604,9 @@ body {
       </div>
     </div>
 
+    <!-- Termômetro da Dívida -->
+    <div id="proj-termometro"></div>
+
     <!-- Projeção de Parcelados -->
     <div id="proj-parcelados"></div>
 
@@ -2197,6 +2213,88 @@ function renderizarProjecaoParcelados() {
       '<div class="parc-proj-val">' + formatar(l.total) + '</div>' +
       (badges ? '<div style="display:flex;gap:3px;flex-wrap:wrap">' + badges + '</div>' : '') +
     '</div>';
+  });
+
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function renderizarTermometroDivida() {
+  var el = document.getElementById('proj-termometro');
+  if (!el) return;
+  var d = getDados();
+  var grupos = resolverGrupos(d.lancamentos);
+  var hj = hoje();
+  var hjDate = new Date(hj + 'T12:00:00');
+  var MESES_PT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+  // Monta planos ativos (mesma lógica de renderizarProjecaoParcelados)
+  var planos = [];
+  Object.keys(grupos).forEach(function(gid) {
+    var g = grupos[gid];
+    var pagas = 0;
+    Object.keys(g.lancs).forEach(function(nStr) {
+      var l = g.lancs[nStr]; var n = parseInt(nStr);
+      if (l && l.data <= hj && n > pagas) pagas = n;
+    });
+    if (pagas >= g.total) return;
+    planos.push({ desc: g.desc || 'Parcelado', valorParc: g.valorParc, total: g.total, pagas: pagas });
+  });
+
+  if (!planos.length) { el.innerHTML = ''; return; }
+
+  // Saldo devedor: para cada mês i, quanto ainda falta pagar
+  // Mês i: restantes = max(0, total - pagas - i) parcelas ainda por pagar
+  var saldoHoje = planos.reduce(function(s, p) { return s + (p.total - p.pagas) * p.valorParc; }, 0);
+  var totalOriginal = planos.reduce(function(s, p) { return s + p.total * p.valorParc; }, 0);
+  var totalPago = totalOriginal - saldoHoje;
+  var pctPago = totalOriginal > 0 ? (totalPago / totalOriginal * 100) : 0;
+
+  // Projeta saldo mês a mês (24 meses)
+  var linhas = [];
+  for (var i = 0; i < 24; i++) {
+    var dt = new Date(hjDate);
+    dt.setDate(1);
+    dt.setMonth(dt.getMonth() + i);
+    var saldo = planos.reduce(function(s, p) {
+      var rest = p.total - p.pagas - i;
+      return s + (rest > 0 ? rest * p.valorParc : 0);
+    }, 0);
+    var quitandoMes = [];
+    planos.forEach(function(p) {
+      if (p.pagas + i < p.total && p.pagas + i + 1 === p.total) quitandoMes.push(p.desc);
+    });
+    linhas.push({ ano: dt.getFullYear(), mes: dt.getMonth(), saldo: saldo, quitando: quitandoMes, isHoje: i === 0 });
+    if (saldo <= 0) break;
+  }
+
+  var html =
+    '<div class="card" style="margin-bottom:14px;border-left:4px solid #dc2626">' +
+    '<div class="card-titulo" style="color:#7f1d1d">💳 Termômetro da Dívida</div>' +
+    '<div style="font-size:.72rem;color:#aaa;margin-bottom:10px">Total ainda a pagar em todos os planos ativos</div>' +
+    '<div class="termo-total-row">' +
+      '<div class="termo-total-val">' + formatar(saldoHoje) + '</div>' +
+      '<div class="termo-total-pago">' +
+        '<span style="color:#16a34a;font-weight:800">' + pctPago.toFixed(0) + '%</span> já pago<br>' +
+        '<span style="font-size:10px">Total original: ' + formatar(totalOriginal) + '</span>' +
+      '</div>' +
+    '</div>' +
+    '<div class="termo-prog-bg"><div class="termo-prog-fill" style="width:' + pctPago.toFixed(1) + '%"></div></div>';
+
+  linhas.forEach(function(l) {
+    if (l.saldo <= 0 && !l.isHoje) return;
+    var pct = saldoHoje > 0 ? (l.saldo / saldoHoje * 100).toFixed(1) : 0;
+    var badge = '';
+    if (l.isHoje) badge += '<span class="parc-proj-badge parc-proj-hoje">hoje</span> ';
+    l.quitando.forEach(function(desc) { badge += '<span class="termo-badge-ok">✓ ' + desc + '</span> '; });
+    if (l.saldo <= 0) badge += '<span class="termo-badge-ok">🎉 Quitado!</span>';
+    html +=
+      '<div class="termo-row">' +
+      '<div class="termo-mes">' + MESES_PT[l.mes] + '/' + String(l.ano).slice(2) + '</div>' +
+      '<div class="termo-barra-bg"><div class="termo-barra-fill" style="width:' + pct + '%"></div></div>' +
+      '<div class="termo-val">' + (l.saldo > 0 ? formatar(l.saldo) : '—') + '</div>' +
+      (badge ? '<div style="display:flex;gap:3px;flex-wrap:wrap">' + badge + '</div>' : '') +
+      '</div>';
   });
 
   html += '</div>';
@@ -4359,6 +4457,7 @@ function irPara(tela) {
     var _total = 0;
     _lista.forEach(function(l){ _tots[l.cat]=(_tots[l.cat]||0)+parseFloat(l.valor||0); _total+=parseFloat(l.valor||0); });
     renderizarProjecao(_d, _p, _tots, _total, _hj);
+    renderizarTermometroDivida();
     renderizarProjecaoParcelados();
   }
   if (tela==='relatorio') {
