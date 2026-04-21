@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260421-086">
+<meta name="app-version" content="20260421-087">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -1542,11 +1542,6 @@ body {
           <div style="font-size:10px;opacity:.45;margin-top:3px" id="proj-final-sub"></div>
         </div>
       </div>
-      <div id="proj-alerta-sms" style="display:none;margin-top:14px">
-        <button onclick="enviarAlertaSMS()" style="width:100%;padding:11px;background:#ef4444;color:#fff;border:none;border-radius:12px;font-size:.9rem;font-weight:700;cursor:pointer;font-family:inherit">
-          📲 Enviar Alerta por SMS
-        </button>
-      </div>
     </div>
 
     <!-- Gráfico de linha -->
@@ -2112,17 +2107,6 @@ function renderizar() {
   renderizarRecentes(d.lancamentos);
 }
 
-function enviarAlertaSMS() {
-  var btn = document.getElementById('proj-alerta-sms');
-  var msg = btn ? btn.getAttribute('data-msg') : '';
-  if (!msg) return;
-  var encoded = encodeURIComponent(msg);
-  // Abre SMS para o primeiro número; o usuário envia e volta para o segundo
-  window.location.href = 'sms:+15068981640&body=' + encoded;
-  setTimeout(function() {
-    window.location.href = 'sms:+14379718925&body=' + encoded;
-  }, 3000);
-}
 
 function renderizarProjecaoParcelados() {
   var el = document.getElementById('proj-parcelados');
@@ -2275,24 +2259,14 @@ function renderizarProjecao(d, p, tots, total, hj) {
   var saldoFim = dispDiario - projecaoFinal;
   var finalEl  = document.getElementById('proj-final');
   var finalSub = document.getElementById('proj-final-sub');
-  var btnAlerta = document.getElementById('proj-alerta-sms');
   if (saldoFim >= 0) {
     finalEl.textContent = '+ ' + formatar(saldoFim);
     finalEl.style.color = '#4ade80';
     finalSub.textContent = 'sobrando se mantiver o ritmo';
-    if (btnAlerta) btnAlerta.style.display = 'none';
   } else {
     finalEl.textContent = '− ' + formatar(-saldoFim);
     finalEl.style.color = '#f87171';
     finalSub.textContent = 'excedendo se mantiver o ritmo';
-    if (btnAlerta) {
-      btnAlerta.style.display = 'block';
-      var mesesPT2 = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-      var fp = p.fim.split('-');
-      var flbl = fp[2] + '/' + mesesPT2[parseInt(fp[1])-1];
-      var msg = '⚠️ Gastos da Casa: projeção negativa de CA$' + Math.abs(saldoFim).toFixed(2) + ' até ' + flbl;
-      btnAlerta.setAttribute('data-msg', msg);
-    }
   }
 
   // Salva alerta no Firebase para Shortcut diário ler
