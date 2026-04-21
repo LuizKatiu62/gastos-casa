@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260420-078">
+<meta name="app-version" content="20260420-079">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -4295,9 +4295,9 @@ function processarCompartilhamentoCIBC() {
   var isCIBC   = forcarCIBC || /cibc/i.test(txt);
 
   if (isCIBC) {
-    var linha1 = amount ? 'Compra de CA$' + amount.toFixed(2) : 'Aviso recebido';
+    var linha1 = amount ? 'CA$' + amount.toFixed(2) : 'valor: "' + txt + '"';
     var linha2 = merchant ? ' — ' + merchant : '';
-    mostrarToast('🏦', 'CIBC: ' + linha1 + linha2, 5000);
+    mostrarToast('🏦', 'CIBC recebido: ' + linha1 + linha2, 7000);
 
     // Guarda os dados para abrir o Custo Rápido após o Firebase terminar de sincronizar
     window._cibcPendente = { amount: amount, merchant: merchant };
