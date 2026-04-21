@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260421-083">
+<meta name="app-version" content="20260421-084">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -2267,6 +2267,18 @@ function renderizarProjecao(d, p, tots, total, hj) {
     finalEl.style.color = '#f87171';
     finalSub.textContent = 'excedendo se mantiver o ritmo';
   }
+
+  // Salva alerta no Firebase para Shortcut diário ler
+  try {
+    var db = firebase.database();
+    db.ref('gastos/' + FB_SECRET + '/alerta_projecao').set({
+      saldo: Math.round(saldoFim * 100) / 100,
+      negativo: saldoFim < 0,
+      projecao: Math.round(projecaoFinal * 100) / 100,
+      periodo_fim: p.fim,
+      atualizado: hj
+    });
+  } catch(e) {}
 
   renderizarGraficoProjecao(d, p, dispDiario, hj);
 }
