@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260421-089">
+<meta name="app-version" content="20260421-090">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -3401,6 +3401,7 @@ function renderizarParcelas() {
           '<div style="font-size:12px;color:#6b7280;margin-top:2px">'+cat+(g.sub?' · '+g.sub:'')+'</div>' +
         '</div>' +
         '<button onclick="editarGrupoParcela(\''+gid+'\')" style="background:#f1f5f9;border:none;border-radius:8px;padding:5px 10px;font-size:13px;cursor:pointer;color:#374151;flex-shrink:0;margin-right:4px">✏️</button>' +
+        (!quitado ? '<button onclick="confirmarCancelarPlano(\''+gid+'\',\''+g.desc.replace(/'/g,"\\'")+'\')" style="background:#fef2f2;border:none;border-radius:8px;padding:5px 10px;font-size:13px;cursor:pointer;color:#dc2626;flex-shrink:0;margin-right:4px" title="Cancelar plano">🗑️</button>' : '') +
         '<span style="background:'+tagBg+';color:'+tagTxt+';font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;white-space:nowrap;flex-shrink:0">'+tagLabel+'</span>' +
       '</div>' +
       // ── Linha 2: barra de progresso com rótulos ──
@@ -4074,6 +4075,26 @@ function salvarGrupoParcela() {
   salvarDados(d);
   fecharModalGrupoParcela();
   mostrarToast('✅', count + ' parcela' + (count===1?'':'s') + ' atualizadas');
+  renderizarRelcat();
+}
+
+function confirmarCancelarPlano(gid, desc) {
+  var nome = desc && desc !== 'Identificar' ? '"' + desc + '"' : 'este plano';
+  if (!confirm('Cancelar ' + nome + '?\n\nTodos os lançamentos deste parcelamento serão removidos. Esta ação não pode ser desfeita.')) return;
+  cancelarPlanoParcela(gid, desc);
+}
+
+function cancelarPlanoParcela(gid, desc) {
+  var d = getDados();
+  var antes = d.lancamentos.length;
+  d.lancamentos = d.lancamentos.filter(function(l) {
+    return !(l.parcela && l.parcela.grupoId === gid);
+  });
+  var removidos = antes - d.lancamentos.length;
+  if (removidos === 0) { mostrarToast('⚠️', 'Nenhum lançamento encontrado'); return; }
+  salvarDados(d);
+  var nome = desc && desc !== 'Identificar' ? desc : 'Plano';
+  mostrarToast('🗑️', nome + ' cancelado — ' + removidos + ' lançamento' + (removidos===1?'':'s') + ' removido' + (removidos===1?'':'s'));
   renderizarRelcat();
 }
 
