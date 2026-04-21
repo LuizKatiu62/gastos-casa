@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260421-081">
+<meta name="app-version" content="20260421-082">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -2116,35 +2116,24 @@ function renderizarProjecaoParcelados() {
   var hjDate = new Date(hj + 'T12:00:00');
   var MESES_PT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
-  // Monta lista de planos ativos com data de início
+  // Monta lista de planos com pagas já calculado (mesma lógica de calcularMensalParcelados)
   var planos = [];
   Object.keys(grupos).forEach(function(gid) {
     var g = grupos[gid];
-    // Descobre data de início via parcela 1, ou retrocede da mais antiga
-    var startData = null;
-    if (g.lancs[1]) {
-      startData = g.lancs[1].data;
-    } else {
-      var nums = Object.keys(g.lancs).map(Number).sort(function(a,b){return a-b;});
-      if (!nums.length) return;
-      var n0 = nums[0];
-      var d0 = new Date(g.lancs[n0].data + 'T12:00:00');
-      d0.setMonth(d0.getMonth() - (n0 - 1));
-      startData = d0.getFullYear() + '-' + String(d0.getMonth()+1).padStart(2,'0') + '-' + String(d0.getDate()).padStart(2,'0');
-    }
-    // Calcula parcelas pagas até hoje
     var pagas = 0;
     Object.keys(g.lancs).forEach(function(nStr) {
       var l = g.lancs[nStr]; var n = parseInt(nStr);
       if (l && l.data <= hj && n > pagas) pagas = n;
     });
     if (pagas >= g.total) return; // já quitado
-    planos.push({ desc: g.desc || 'Parcelado', valorParc: g.valorParc, total: g.total, startData: startData });
+    planos.push({ desc: g.desc || 'Parcelado', valorParc: g.valorParc, total: g.total, pagas: pagas });
   });
 
   if (!planos.length) { el.innerHTML = ''; return; }
 
-  // Calcula projeção para os próximos 24 meses
+  // Projeção: mês 0 = agora, mês i = daqui a i meses
+  // Plano ativo em mês i se: pagas + i < total  (ainda tem parcelas)
+  // Plano termina em mês i se: pagas + i + 1 === total (última parcela)
   var maxBar = 0;
   var linhas = [];
   for (var i = 0; i < 24; i++) {
@@ -2154,12 +2143,10 @@ function renderizarProjecaoParcelados() {
     var ano = dt.getFullYear(), mes = dt.getMonth();
     var totalMes = 0, nAtivos = 0, quitando = [];
     planos.forEach(function(p) {
-      var sd = new Date(p.startData + 'T12:00:00');
-      var nParc = (ano - sd.getFullYear()) * 12 + (mes - sd.getMonth()) + 1;
-      if (nParc >= 1 && nParc <= p.total) {
+      if (p.pagas + i < p.total) {
         totalMes += p.valorParc;
         nAtivos++;
-        if (nParc === p.total) quitando.push(p.desc);
+        if (p.pagas + i + 1 === p.total) quitando.push(p.desc);
       }
     });
     if (totalMes > maxBar) maxBar = totalMes;
