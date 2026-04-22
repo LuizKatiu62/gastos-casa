@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260421-093">
+<meta name="app-version" content="20260421-094">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -3016,7 +3016,7 @@ function renderizarRelatorio() {
   var barLimHtml = limComum > 0 ?
     '<div class="card" style="margin-bottom:8px"><div class="card-titulo">Utilização do Limite (sem parcelados)</div>' +
     '<div class="orc-barra-fundo" style="height:12px"><div class="orc-barra-fill" style="width:'+Math.min(pctLimite,100).toFixed(1)+'%;background:'+corLimite+'"></div></div>' +
-    '<div style="display:flex;justify-content:space-between;font-size:11px;margin-top:5px"><span style="color:#aaa">CA$ 0</span><span style="color:'+corLimite+';font-weight:800">'+pctLimite.toFixed(1)+'%</span><span style="color:#aaa">'+formatar(limComum)+'</span></div>' +
+    '<div style="display:flex;justify-content:space-between;font-size:11px;margin-top:5px"><span style="color:'+corLimite+';font-weight:700">'+formatar(grand)+'</span><span style="color:'+corLimite+';font-weight:800">'+pctLimite.toFixed(1)+'%</span><span style="color:#aaa">'+formatar(limComum)+'</span></div>' +
     '</div>' : '';
 
   // ── Categorias ──
