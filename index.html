@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260422-098">
+<meta name="app-version" content="20260422-099">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -3114,7 +3114,7 @@ function renderizarRelatorio() {
   // ── Top 5 gastos ──
   var top5 = lista.filter(function(l){ return l.cat !== 'parcelados'; }).sort(function(a,b){ return parseFloat(b.valor)-parseFloat(a.valor); }).slice(0,5);
   var topHtml = top5.length ?
-    '<div class="card" style="margin-bottom:8px"><div class="card-titulo">Top 5 Maiores Gastos</div>' +
+    '<div class="card" style="margin-bottom:8px;background:#e3f2fd;border:1px solid #90caf9"><div class="card-titulo">Top 5 Maiores Gastos</div>' +
     top5.map(function(l,i){
       return '<div class="rel-top-item">' +
         '<div class="rel-top-num">'+(i+1)+'</div>' +
