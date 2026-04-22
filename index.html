@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260421-096">
+<meta name="app-version" content="20260422-097">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -3017,12 +3017,14 @@ function renderizarRelatorio() {
   var tots  = { carro:0, diversos:0, mercado:0, parcelados:0 };
   var stots = {};
   var porDia = {};
+  var porDiaCat = { carro:{}, diversos:{}, mercado:{} };
   lista.forEach(function(l) {
     var v = parseFloat(l.valor||0);
     if (l.cat === 'parcelados') return; // parcelados calculado separadamente abaixo
     tots[l.cat] = (tots[l.cat]||0) + v;
     if (l.sub) { var subKey = SUBS[l.sub] || l.sub; stots[subKey] = (stots[subKey]||0) + v; }
     porDia[l.data] = (porDia[l.data]||0) + v;
+    if (porDiaCat[l.cat] !== undefined) porDiaCat[l.cat][l.data] = (porDiaCat[l.cat][l.data]||0) + v;
   });
   // Parcelados: usa total mensal real dos planos ativos (igual ao Categoria e hero)
   tots.parcelados = calcularMensalParcelados(d.lancamentos);
@@ -3176,21 +3178,48 @@ function renderizarRelatorio() {
     }).join('')+
     '</div>';
 
-  // ── Dias até o Limite ──
+  // ── Dias até o Limite por Categoria ──
   var diasLimHtml = '';
-  if(mediaDia>0&&limComum>0){
-    var jaExcedeu = dispLimite<=0;
-    var diasAteLimit = jaExcedeu?0:Math.floor(dispLimite/mediaDia);
-    var corDias = jaExcedeu?'#ef4444':diasAteLimit<=7?'#f97316':diasAteLimit<=15?'#eab308':'#22c55e';
-    var bgDias  = jaExcedeu?'#fef2f2':diasAteLimit<=7?'#fff7ed':diasAteLimit<=15?'#fefce8':'#f0fdf4';
+  var catsDias = [
+    { cat:'carro',    ico:'🚗', cor:'#e53935' },
+    { cat:'mercado',  ico:'🛒', cor:'#43a047' },
+    { cat:'diversos', ico:'🛍️', cor:'#fb8c00' }
+  ];
+  var temCatComOrc = catsDias.some(function(c){ return (orc[c.cat]||0) > 0; });
+  if (temCatComOrc) {
+    var linhasCat = catsDias.map(function(c) {
+      var orcCat  = orc[c.cat] || 0;
+      if (!orcCat) return '';
+      var gastoCat = tots[c.cat] || 0;
+      var dispCat  = orcCat - gastoCat;
+      var diasCom  = Object.keys(porDiaCat[c.cat]).length;
+      var mediaCat = diasCom > 0 ? gastoCat / diasCom : 0;
+      var jaExcedeu = dispCat <= 0;
+      var diasCat   = (!jaExcedeu && mediaCat > 0) ? Math.floor(dispCat / mediaCat) : 0;
+      var semRitmo  = mediaCat === 0;
+      var corD = jaExcedeu?'#ef4444':diasCat<=7?'#f97316':diasCat<=15?'#eab308':'#22c55e';
+      var numTxt = jaExcedeu ? '—' : semRitmo ? '∞' : String(diasCat);
+      var subTxt = jaExcedeu
+        ? 'Limite excedido em '+formatar(Math.abs(dispCat))
+        : semRitmo
+          ? 'Sem gastos no período'
+          : formatar(mediaCat)+'/dia · sobra '+formatar(dispCat);
+      return '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f3f4f6">' +
+        '<div style="font-size:22px;width:32px;text-align:center;flex-shrink:0">'+c.ico+'</div>' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="font-size:13px;font-weight:700;color:#111827">'+NOMES[c.cat]+'</div>' +
+          '<div style="font-size:10px;color:#9ca3af;margin-top:1px">'+subTxt+'</div>' +
+        '</div>' +
+        '<div style="text-align:right;flex-shrink:0">' +
+          '<div style="font-size:26px;font-weight:900;color:'+corD+';line-height:1;letter-spacing:-1px">'+numTxt+'</div>' +
+          '<div style="font-size:9px;font-weight:700;color:'+corD+';text-transform:uppercase;letter-spacing:.4px">'+(jaExcedeu||semRitmo?'':'dias')+'</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
     diasLimHtml =
-      '<div class="dias-limit-card" style="background:'+bgDias+';border:1px solid '+corDias+'44;">'+
-      '<div class="card-titulo">⏱️ Dias até o Limite</div>'+
-      (jaExcedeu
-        ?'<div class="dias-limit-num" style="color:#ef4444">—</div><div class="dias-limit-lbl" style="color:#ef4444">Limite já excedido</div>'
-        :'<div class="dias-limit-num" style="color:'+corDias+'">'+diasAteLimit+'</div><div class="dias-limit-lbl" style="color:'+corDias+'">dias restantes</div>'
-      )+
-      '<div class="dias-limit-sub">Ritmo: '+formatar(mediaDia)+'/dia · Disponível: '+formatar(dispLimite)+'</div>'+
+      '<div class="card" style="margin-bottom:8px">' +
+      '<div class="card-titulo">⏱️ Dias até o Limite — por Categoria</div>' +
+      linhasCat +
       '</div>';
   }
 
