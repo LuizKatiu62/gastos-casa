@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260421-094">
+<meta name="app-version" content="20260421-095">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -1553,7 +1553,7 @@ body {
         <div class="proj-metric">
           <div class="proj-m-label">Padrão/dia</div>
           <div class="proj-m-val" id="proj-padrao">—</div>
-          <div class="proj-m-sub">orçamento</div>
+          <div class="proj-m-sub">meta/dia restante</div>
         </div>
         <div class="proj-m-sep"></div>
         <div class="proj-metric">
@@ -2330,14 +2330,13 @@ function renderizarProjecao(d, p, tots, total, hj) {
   var diasPassados = Math.min(totalDias, Math.max(1, Math.round((dHj - dInicio) / 86400000) + 1));
   var diasRestantes = Math.max(0, totalDias - diasPassados);
 
-  var gastoComum   = Math.max(0, total - (tots.parcelados || 0));
-  var padraoDiario = dispDiario / totalDias;
-  var realDiario   = diasPassados > 0 ? gastoComum / diasPassados : 0;
-  var desvio       = realDiario - padraoDiario;
-  // Projeção e recomendação excluem parcelados — comparados contra dispDiario (limite − orcParc)
+  var gastoComum    = Math.max(0, total - (tots.parcelados || 0));
+  var realDiario    = diasPassados > 0 ? gastoComum / diasPassados : 0;
   var projecaoFinal = realDiario * totalDias;           // gasto comum projetado p/ todo o período
   var orcRestante   = dispDiario - gastoComum;           // orçamento livre restante (sem parcelados)
-  var recDiario     = diasRestantes > 0 ? orcRestante / diasRestantes : 0;
+  var recDiario     = diasRestantes > 0 ? orcRestante / diasRestantes : 0; // quanto pode gastar/dia nos dias restantes
+  var padraoDiario  = recDiario;  // padrão exibido = meta para os dias que restam
+  var desvio        = realDiario - recDiario;
   var pctTempo     = diasPassados / totalDias * 100;
   var pctGasto     = dispDiario > 0 ? Math.min(120, gastoComum / dispDiario * 100) : 0;
 
