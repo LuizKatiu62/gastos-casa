@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260422-099">
+<meta name="app-version" content="20260422-100">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -4705,6 +4705,19 @@ function _parseCIBCMerchant(text) {
 
 function processarCompartilhamentoCIBC() {
   var sp = new URLSearchParams(window.location.search);
+
+  // Modo direto: ?valor=14.71 — vindo do link enviado pelo Shortcut da Katiu
+  var valorDireto = sp.get('valor');
+  if (valorDireto) {
+    try { window.history.replaceState({}, '', window.location.pathname); } catch(e) {}
+    var vNum = parseFloat(valorDireto.replace(/[^0-9.]/g, ''));
+    if (!isNaN(vNum) && vNum > 0) {
+      mostrarToast('🏦', 'CIBC: CA$' + vNum.toFixed(2), 5000);
+      window._cibcPendente = { amount: vNum, merchant: '' };
+      setTimeout(function() { _abrirCibcFoto(); }, 800);
+    }
+    return;
+  }
 
   // Suporta dois modos:
   //   1. iOS Shortcut: ?cibc=<texto+da+notificação>
