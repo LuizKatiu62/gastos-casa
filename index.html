@@ -3191,6 +3191,11 @@ function renderizarRelatorio() {
       '</div>';
     }).join('')+
     (orcDiario>0?'<div style="font-size:11px;color:#9ca3af;margin-top:6px;text-align:right">Orç. comum: '+formatar(limComum)+' ÷ '+totalDias+' dias</div>':'')+
+    '<div style="display:flex;gap:12px;margin-top:8px;padding-top:8px;border-top:1px solid #f3f4f6;font-size:11px;color:#6b7280">'+
+      '<span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#22c55e;margin-right:4px;vertical-align:middle"></span>≤ 50%</span>'+
+      '<span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#f59e0b;margin-right:4px;vertical-align:middle"></span>51–85%</span>'+
+      '<span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#ef4444;margin-right:4px;vertical-align:middle"></span>> 85%</span>'+
+    '</div>'+
     '</div>';
 
   // ── Dias até o Limite por Categoria ──
