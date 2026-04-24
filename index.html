@@ -2173,7 +2173,7 @@ function renderizar() {
     }
   });
 
-  renderizarPizza(tots, total);
+  renderizarPizza(tots, total, d.orcamentos);
   renderizarBarras(lista, p);
   renderizarRecentes(d.lancamentos);
 }
@@ -2570,17 +2570,19 @@ function renderizarGraficoProjecao(d, p, dispDiario, hj) {
   el.innerHTML = svg;
 }
 
-function renderizarPizza(tots, total) {
+function renderizarPizza(tots, total, orcs) {
   var el = document.getElementById('pizza-wrap');
   var cats = ['carro','diversos','mercado','parcelados'];
   var html = '<div class="pizza-legenda">';
   cats.forEach(function(c) {
-    var v = tots[c]||0;
-    var pct = total > 0 ? (v/total*100).toFixed(0) : 0;
+    var v   = tots[c]||0;
+    var orc = (orcs&&orcs[c]) ? orcs[c] : 0;
+    var pct = orc > 0 ? (v/orc*100).toFixed(0) : (total > 0 ? (v/total*100).toFixed(0) : 0);
+    var cor = v > orc && orc > 0 ? '#f44336' : CORES[c];
     html += '<div class="pizza-item">';
-    html += '<div class="pizza-cor" style="background:'+CORES[c]+'"></div>';
-    html += '<div class="pizza-txt">' + NOMES[c] + ' <span style="color:#aaa;font-size:11px">('+pct+'%)</span></div>';
-    html += '<div class="pizza-val" style="color:'+CORES[c]+'">' + formatar(v) + '</div>';
+    html += '<div class="pizza-cor" style="background:'+cor+'"></div>';
+    html += '<div class="pizza-txt">' + NOMES[c] + ' <span style="color:#aaa;font-size:11px">('+pct+'% do orç.)</span></div>';
+    html += '<div class="pizza-val" style="color:'+cor+'">' + formatar(v) + '</div>';
     html += '</div>';
   });
   html += '</div>';
