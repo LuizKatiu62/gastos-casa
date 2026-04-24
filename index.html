@@ -3081,12 +3081,7 @@ function renderizarRelatorio() {
     (maiorDia?'<div class="rel-met-card" style="grid-column:1/-1"><div class="rel-met-val" style="color:#e53935;font-size:15px">'+formatar(maiorVal)+'</div><div class="rel-met-lbl">Maior gasto — '+formatarData(maiorDia)+'</div></div>':'') +
     '</div>';
 
-  // ── Barra limite ──
-  var barLimHtml = limComum > 0 ?
-    '<div class="card" style="margin-bottom:8px"><div class="card-titulo">Utilização do Limite (sem parcelados)</div>' +
-    '<div class="orc-barra-fundo" style="height:12px"><div class="orc-barra-fill" style="width:'+Math.min(pctLimite,100).toFixed(1)+'%;background:'+corLimite+'"></div></div>' +
-    '<div style="display:flex;justify-content:space-between;font-size:11px;margin-top:5px"><span style="color:'+corLimite+';font-weight:700">'+formatar(grand)+'</span><span style="color:'+corLimite+';font-weight:800">'+pctLimite.toFixed(1)+'%</span><span style="color:#aaa">'+formatar(limComum)+'</span></div>' +
-    '</div>' : '';
+  var barLimHtml = '';
 
   // ── Categorias ──
   function catBloco(cat, classe, icone, cor, subcats) {
