@@ -3168,7 +3168,7 @@ function renderizarRelatorio() {
   });
   var maxSemana = semanas.reduce(function(m,s){return s.total>m?s.total:m;},0);
   var totalDias = heatDays.length;
-  var orcDiario = d.limite > 0 && totalDias > 0 ? d.limite / totalDias : 0;
+  var orcDiario = limComum > 0 && totalDias > 0 ? limComum / totalDias : 0;
   var semanaHtml =
     '<div class="card" style="margin-bottom:8px">'+
     '<div class="card-titulo">📅 Semana a Semana</div>'+
@@ -3187,7 +3187,7 @@ function renderizarRelatorio() {
         orcPctHtml+
       '</div>';
     }).join('')+
-    (orcDiario>0?'<div style="font-size:11px;color:#9ca3af;margin-top:6px;text-align:right">Orç. diário: '+formatar(orcDiario)+' · '+totalDias+' dias</div>':'')+
+    (orcDiario>0?'<div style="font-size:11px;color:#9ca3af;margin-top:6px;text-align:right">Orç. comum: '+formatar(limComum)+' ÷ '+totalDias+' dias</div>':'')+
     '</div>';
 
   // ── Dias até o Limite por Categoria ──
