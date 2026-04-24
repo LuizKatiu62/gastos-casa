@@ -3166,18 +3166,26 @@ function renderizarRelatorio() {
     }
   });
   var maxSemana = semanas.reduce(function(m,s){return s.total>m?s.total:m;},0);
+  var orcTotal = (orc.carro||0)+(orc.diversos||0)+(orc.mercado||0)+(orc.parcelados||0);
+  var orcSemanal = semanas.length > 0 && orcTotal > 0 ? orcTotal / semanas.length : 0;
   var semanaHtml =
     '<div class="card" style="margin-bottom:8px">'+
     '<div class="card-titulo">📅 Semana a Semana</div>'+
     semanas.map(function(s){
       var pct=maxSemana>0?(s.total/maxSemana*100).toFixed(1):0;
       var cor=s.total===maxSemana&&maxSemana>0?'#ef4444':'#1d4ed8';
+      var orcPct = orcSemanal > 0 ? Math.round(s.total/orcSemanal*100) : null;
+      var orcPctHtml = orcPct !== null
+        ? '<span style="font-size:11px;font-weight:700;color:'+(orcPct>100?'#ef4444':orcPct>=80?'#f59e0b':'#6b7280')+';min-width:38px;text-align:right">'+orcPct+'%</span>'
+        : '';
       return '<div class="semana-row">'+
         '<div class="semana-lbl">'+s.lbl+'</div>'+
         '<div class="semana-barra-bg"><div class="semana-barra-fill" style="width:'+pct+'%;background:'+cor+'"></div></div>'+
         '<div class="semana-val" style="color:'+cor+'">'+formatar(s.total)+'</div>'+
+        orcPctHtml+
       '</div>';
     }).join('')+
+    (orcSemanal>0?'<div style="font-size:11px;color:#9ca3af;margin-top:6px;text-align:right">Orç. semanal: '+formatar(orcSemanal)+'</div>':'')+
     '</div>';
 
   // ── Dias até o Limite por Categoria ──
