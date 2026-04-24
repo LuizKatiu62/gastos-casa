@@ -68,10 +68,8 @@ body {
 /* ── NAV ── */
 .nav {
   position: fixed; bottom: 0; left: 0; right: 0;
-  background: rgba(255,255,255,0.96);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-top: 1px solid #e5e7eb;
+  background: #0f172a;
+  border-top: 2px solid #1e3a8a;
   display: flex;
   z-index: 100;
   padding-bottom: env(safe-area-inset-bottom);
@@ -80,33 +78,35 @@ body {
 }
 .nav button {
   flex: 1; border: none; background: none;
-  padding: 8px 2px 10px;
+  padding: 6px 2px 8px;
   font-size: 9px; font-weight: 600;
-  color: #64748b; cursor: pointer;
+  color: #94a3b8; cursor: pointer;
   display: flex; flex-direction: column; align-items: center; gap: 3px;
-  min-height: 52px; transition: color .2s; letter-spacing: .1px;
+  min-height: 52px; transition: background .18s, color .18s; letter-spacing: .2px;
+  border-radius: 0;
+  position: relative;
 }
-.nav button span { font-size: 20px; line-height: 1; transition: transform .2s; }
-/* Active state — pill highlight for regular buttons */
+.nav button span { font-size: 19px; line-height: 1; transition: transform .18s; }
+/* Active state — solid square fill */
 .nav button:not(#nb-add).active {
-  color: #1d4ed8;
+  background: #1d4ed8;
+  color: #fff;
 }
 .nav button:not(#nb-add).active span {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 42px; height: 28px; border-radius: 14px;
-  background: rgba(29,78,216,.12);
-  filter: drop-shadow(0 0 5px rgba(29,78,216,.3));
-  transform: scale(1.08);
+  transform: scale(1.1);
+}
+.nav button:not(#nb-add):not(.active):active {
+  background: rgba(29,78,216,.08);
 }
 /* FAB — Registrar button */
 .nav button#nb-add {
-  flex: 0 0 64px; position: relative; overflow: visible; padding: 0; color: white;
+  flex: 0 0 64px; position: relative; overflow: visible; padding: 0; color: white; background: none;
 }
 .nav button#nb-add .nav-fab-circle {
-  position: absolute; top: -14px; left: 50%; transform: translateX(-50%);
-  width: 50px; height: 50px; border-radius: 50%;
+  position: absolute; top: -16px; left: 50%; transform: translateX(-50%);
+  width: 52px; height: 52px; border-radius: 4px;
   background: linear-gradient(135deg, #1d4ed8, #2563eb);
-  box-shadow: 0 4px 14px rgba(29,78,216,.45);
+  box-shadow: 0 4px 14px rgba(29,78,216,.55);
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 0; transition: transform .15s, box-shadow .15s;
 }
