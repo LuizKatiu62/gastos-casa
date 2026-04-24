@@ -3116,7 +3116,7 @@ function renderizarRelatorio() {
   // ── Top 5 gastos ──
   var top5 = lista.filter(function(l){ return l.cat !== 'parcelados'; }).sort(function(a,b){ return parseFloat(b.valor)-parseFloat(a.valor); }).slice(0,5);
   var topHtml = top5.length ?
-    '<div class="card" style="margin-bottom:8px;background:#e3f2fd;border:1px solid #90caf9"><div class="card-titulo">Top 5 Maiores Gastos</div>' +
+    '<div class="card" style="margin-bottom:8px"><div class="card-titulo">Top 5 Maiores Gastos</div>' +
     top5.map(function(l,i){
       return '<div class="rel-top-item">' +
         '<div class="rel-top-num">'+(i+1)+'</div>' +
