@@ -3174,11 +3174,14 @@ function renderizarRelatorio() {
     '<div class="card-titulo">📅 Semana a Semana</div>'+
     semanas.map(function(s){
       var pct=maxSemana>0?(s.total/maxSemana*100).toFixed(1):0;
-      var cor=s.total===maxSemana&&maxSemana>0?'#ef4444':'#1d4ed8';
       var orcSem = orcDiario * s.dias;
       var orcPct = orcSem > 0 ? Math.round(s.total/orcSem*100) : null;
+      var cor = orcPct === null ? '#1d4ed8'
+              : orcPct <= 50  ? '#22c55e'
+              : orcPct <= 85  ? '#f59e0b'
+              :                 '#ef4444';
       var orcPctHtml = orcPct !== null
-        ? '<span style="font-size:11px;font-weight:700;color:'+(orcPct>100?'#ef4444':orcPct>=80?'#f59e0b':'#6b7280')+';min-width:38px;text-align:right">'+orcPct+'%</span>'
+        ? '<span style="font-size:11px;font-weight:700;color:'+(orcPct>85?'#ef4444':orcPct>50?'#f59e0b':'#22c55e')+';min-width:38px;text-align:right">'+orcPct+'%</span>'
         : '';
       return '<div class="semana-row">'+
         '<div class="semana-lbl">'+s.lbl+(s.dias<7?' <span style="font-size:10px;color:#aaa">('+s.dias+'d)</span>':'')+'</div>'+
