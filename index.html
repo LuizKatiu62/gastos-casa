@@ -3166,8 +3166,7 @@ function renderizarRelatorio() {
     }
   });
   var maxSemana = semanas.reduce(function(m,s){return s.total>m?s.total:m;},0);
-  var orcTotal = (orc.carro||0)+(orc.diversos||0)+(orc.mercado||0)+(orc.parcelados||0);
-  var orcSemanal = semanas.length > 0 && orcTotal > 0 ? orcTotal / semanas.length : 0;
+  var orcSemanal = semanas.length > 0 && d.limite > 0 ? d.limite / semanas.length : 0;
   var semanaHtml =
     '<div class="card" style="margin-bottom:8px">'+
     '<div class="card-titulo">📅 Semana a Semana</div>'+
