@@ -3065,7 +3065,19 @@ function renderizarRelatorio() {
     '<div class="rel-met-card"><div class="rel-met-val" style="color:#1565c0">'+formatar(grand)+'</div><div class="rel-met-lbl">Total Gasto</div><div class="rel-met-sub">'+diasComGasto+' dias c/ gasto</div></div>' +
     '<div class="rel-met-card"><div class="rel-met-val" style="color:'+(dispLimite<0?'#f44336':'#43a047')+'">'+formatar(dispLimite)+'</div><div class="rel-met-lbl">Disponível</div><div class="rel-met-sub">Limite comum: '+formatar(limComum)+'</div></div>' +
     '<div class="rel-met-card"><div class="rel-met-val" style="color:'+corLimite+'">'+pctLimite.toFixed(1)+'%</div><div class="rel-met-lbl">% do Limite</div><div class="rel-met-sub">'+nLancComuns+' lançamentos</div></div>' +
-    '<div class="rel-met-card"><div class="rel-met-val" style="color:#555">'+formatar(mediaDia)+'</div><div class="rel-met-lbl">Média / dia</div><div class="rel-met-sub">Projeção: '+formatar(projecao)+'</div></div>' +
+    (function(){
+      var excede = projecao > 0 && limComum > 0 && projecao > limComum;
+      var dentro = projecao > 0 && limComum > 0 && projecao <= limComum;
+      var bgCard  = excede ? '#fef2f2' : dentro ? '#f0fdf4' : 'white';
+      var brdCard = excede ? '2px solid #ef4444' : dentro ? '2px solid #22c55e' : 'none';
+      var corVal  = excede ? '#ef4444' : dentro ? '#16a34a' : '#555';
+      var corSub  = excede ? '#ef4444' : dentro ? '#16a34a' : '#9ca3af';
+      return '<div class="rel-met-card" style="background:'+bgCard+';border:'+brdCard+'">'+
+        '<div class="rel-met-val" style="color:'+corVal+'">'+formatar(mediaDia)+'</div>'+
+        '<div class="rel-met-lbl">Média / dia</div>'+
+        '<div class="rel-met-sub" style="color:'+corSub+';font-weight:'+(excede||dentro?'700':'400')+'">Projeção: '+formatar(projecao)+'</div>'+
+        '</div>';
+    })()+
     (maiorDia?'<div class="rel-met-card" style="grid-column:1/-1"><div class="rel-met-val" style="color:#e53935;font-size:15px">'+formatar(maiorVal)+'</div><div class="rel-met-lbl">Maior gasto — '+formatarData(maiorDia)+'</div></div>':'') +
     '</div>';
 
