@@ -2139,10 +2139,13 @@ function renderizar() {
       el.textContent = iniStr + ' – ' + fimStr;
     }
   })();
-  // Disponível = (Limite − Orç.Parcelados) − Gastos Comuns
-  var orcParc = d.orcamentos.parcelados || 0;
-  var dispComum = Math.max(0, d.limite - orcParc); // orçamento disponível p/ gastos comuns
-  var rest = dispComum - totalComum;
+  // Disponível = Soma dos orçamentos por categoria − Gastos Comuns
+  // (se não houver orçamentos por categoria, usa Limite − Orç.Parcelados como fallback)
+  var orcParc  = d.orcamentos.parcelados || 0;
+  var dispComum = Math.max(0, d.limite - orcParc);
+  var orcComum = (d.orcamentos.carro||0) + (d.orcamentos.diversos||0) + (d.orcamentos.mercado||0);
+  var baseDisp = orcComum > 0 ? orcComum : dispComum;
+  var rest = baseDisp - totalComum;
   document.getElementById('txt-disponivel').textContent = d.limite > 0 ? (rest >= 0 ? formatar(rest) : '-'+formatar(-rest)) : 'CA$ 0,00';
   document.getElementById('txt-disponivel').style.color = (d.limite > 0 && rest < 0) ? '#ff6b6b' : 'white';
   document.getElementById('txt-restante').textContent = d.limite > 0 ? ('Limite: ' + formatar(d.limite)) : '';
