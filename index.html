@@ -1775,13 +1775,15 @@ function inicializarFirebase() {
         _fbRef.set(local);
         syncStatus('#43a047', 'sincronizado');
       } else if (fbTs > localTs + 1000) {
-        // Firebase mais recente — usar dados da nuvem (já sem pending)
+        // Firebase mais recente — mesclar com entradas locais que não estão na nuvem
         var d = Object.assign({}, fbData); delete d._ts;
-        // Mesclar com pendentes já importados
         var localNow = getDados();
-        if (_pendingImportados > 0) {
-          d.lancamentos = localNow.lancamentos;
-        }
+        // Mesclar: incluir entradas locais que não existem no Firebase
+        localNow.lancamentos.forEach(function(l) {
+          if (l.id && !d.lancamentos.some(function(fl){ return fl.id === l.id; })) {
+            d.lancamentos.push(l);
+          }
+        });
         localStorage.setItem('gastos', JSON.stringify(d));
         localStorage.setItem('gastos_ts', new Date().toISOString());
         if (d.periodo) {
@@ -1794,8 +1796,18 @@ function inicializarFirebase() {
         if (_pendingImportados === 0) mostrarToast('☁️', 'Dados atualizados da nuvem!');
         _abrirCibcFoto(); // Abre Custo Rápido do CIBC se houver pendente
       } else {
-        // Local mais recente — enviar para nuvem
-        var local = getDados(); local._ts = Date.now();
+        // Local mais recente — mesclar com entradas do Firebase antes de enviar
+        var local = getDados();
+        if (fbData && fbData.lancamentos) {
+          fbData.lancamentos.forEach(function(l) {
+            if (l.id && !local.lancamentos.some(function(ll){ return ll.id === l.id; })) {
+              local.lancamentos.push(l);
+            }
+          });
+          localStorage.setItem('gastos', JSON.stringify(local));
+          localStorage.setItem('gastos_ts', new Date().toISOString());
+        }
+        local._ts = Date.now();
         _fbRef.set(local);
         syncStatus('#43a047', 'sincronizado');
       }
@@ -1844,6 +1856,13 @@ function inicializarFirebase() {
         // Só aplica dados do Firebase se for genuinamente mais recente (diferença > 5s) ou tiver mais lançamentos
         if (fbTs > localTs + 5000 || (fbCount > localCount && fbTs > localTs)) {
           var d = Object.assign({}, fbData); delete d._ts;
+          // Mesclar: preservar entradas locais que não estão no Firebase
+          var localNowRT = getDados();
+          localNowRT.lancamentos.forEach(function(l) {
+            if (l.id && !d.lancamentos.some(function(fl){ return fl.id === l.id; })) {
+              d.lancamentos.push(l);
+            }
+          });
           localStorage.setItem('gastos', JSON.stringify(d));
           localStorage.setItem('gastos_ts', new Date(fbTs).toISOString());
           renderizar();
