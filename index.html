@@ -1727,6 +1727,7 @@ var FB_CONFIG = {
 };
 var FB_SECRET = 'lk62-gastos-9f3a7b2e';
 var _fbRef = null, _fbAtivo = false, _fbSalvando = false, _fbIniciado = false;
+var _fbLatest = []; // cache dos lançamentos mais recentes conhecidos do Firebase
 
 function syncStatus(cor, txt) {
   document.getElementById('sync-dot').style.background = cor;
@@ -1776,9 +1777,9 @@ function inicializarFirebase() {
         syncStatus('#43a047', 'sincronizado');
       } else if (fbTs > localTs + 1000) {
         // Firebase mais recente — mesclar com entradas locais que não estão na nuvem
+        _fbLatest = fbData.lancamentos.slice();
         var d = Object.assign({}, fbData); delete d._ts;
         var localNow = getDados();
-        // Mesclar: incluir entradas locais que não existem no Firebase
         localNow.lancamentos.forEach(function(l) {
           if (l.id && !d.lancamentos.some(function(fl){ return fl.id === l.id; })) {
             d.lancamentos.push(l);
@@ -1797,6 +1798,7 @@ function inicializarFirebase() {
         _abrirCibcFoto(); // Abre Custo Rápido do CIBC se houver pendente
       } else {
         // Local mais recente — mesclar com entradas do Firebase antes de enviar
+        _fbLatest = fbData.lancamentos ? fbData.lancamentos.slice() : [];
         var local = getDados();
         if (fbData && fbData.lancamentos) {
           fbData.lancamentos.forEach(function(l) {
@@ -1849,6 +1851,7 @@ function inicializarFirebase() {
         }
 
         if (!fbData.lancamentos) return;
+        _fbLatest = fbData.lancamentos.slice();
         var localTs = localStorage.getItem('gastos_ts') ? new Date(localStorage.getItem('gastos_ts')).getTime() : 0;
         var fbTs = fbData._ts || 0;
         var localCount = getDados().lancamentos.length;
@@ -1893,7 +1896,14 @@ function salvarDados(d) {
     if (_fbAtivo && _fbRef) {
       _fbSalvando = true;
       syncStatus('#ffb300', 'salvando...');
-      var fbData = Object.assign({}, d, { _ts: Date.now() });
+      // Mesclar com _fbLatest para nunca apagar entradas que existem só no Firebase
+      var merged = d.lancamentos ? d.lancamentos.slice() : [];
+      _fbLatest.forEach(function(l) {
+        if (l.id && !merged.some(function(ml){ return ml.id === l.id; })) {
+          merged.push(l);
+        }
+      });
+      var fbData = Object.assign({}, d, { lancamentos: merged, _ts: Date.now() });
       _fbRef.set(fbData).then(function() {
         syncStatus('#43a047', 'sincronizado ✓');
         setTimeout(function() { _fbSalvando = false; }, 2000);
