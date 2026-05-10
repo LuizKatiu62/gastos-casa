@@ -701,15 +701,16 @@ function importarGarmin(input) {
       var novos = json.treinos || [];
       if (!novos.length) { toast('⚠️ Nenhum treino encontrado'); return; }
       var d = getDados();
-      var ids = new Set(d.treinos.map(function(t){ return t.id; }));
-      var adicionados = 0;
+      var adicionados = 0, atualizados = 0;
       novos.forEach(function(t) {
-        if (!ids.has(t.id)) { d.treinos.push(t); adicionados++; }
+        var idx = d.treinos.findIndex(function(x){ return x.id === t.id; });
+        if (idx >= 0) { d.treinos[idx] = t; atualizados++; }
+        else { d.treinos.push(t); adicionados++; }
       });
       salvarDados(d);
       renderTreinos();
       renderSemana();
-      toast('✅ ' + adicionados + ' treinos importados do Garmin!');
+      toast('✅ ' + adicionados + ' novos + ' + atualizados + ' atualizados');
     } catch(e) {
       toast('❌ Arquivo inválido');
     }
