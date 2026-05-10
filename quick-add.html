@@ -39,7 +39,7 @@
       display: flex;
       flex-direction: column;
       padding-top: max(var(--safe-top), 16px);
-      padding-bottom: calc(90px + var(--safe-bottom));
+      padding-bottom: calc(140px + var(--safe-bottom));
       padding-left: 16px;
       padding-right: 16px;
       -webkit-font-smoothing: antialiased;
@@ -566,18 +566,19 @@
   <div class="card-label">Detalhes</div>
 
   <div class="field">
-    <div class="field-label">O que foi gasto? <span>(opcional)</span></div>
-    <textarea id="inp-desc" class="field-textarea" rows="2"
-      placeholder="Ex: Gasolina no Petro-Canada, compras no Costco…"></textarea>
-  </div>
-
-  <div class="field">
     <div class="field-label">Data</div>
     <div class="field-date-row">
       <span class="field-date-label">📅 Data do gasto</span>
       <input id="inp-data" class="field-date-input" type="date">
     </div>
   </div>
+
+  <div class="field">
+    <div class="field-label">O que foi gasto? <span>(opcional)</span></div>
+    <textarea id="inp-desc" class="field-textarea" rows="2"
+      placeholder="Ex: Gasolina no Petro-Canada, compras no Costco…"></textarea>
+  </div>
+
 </div>
 
 <!-- Botão Salvar (fixed) -->
