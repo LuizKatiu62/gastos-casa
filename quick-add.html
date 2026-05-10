@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Gasto Rápido">
+  <title>Gasto Rápido</title>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    :root {
+      --bg:      #07101c;
+      --surface: #0f1e30;
+      --border:  rgba(255,255,255,.07);
+      --text:    #ffffff;
+      --muted:   #5a7080;
+      --sub:     #8899aa;
+
+      --green:  #22c55e;
+      --red:    #ef4444;
+      --orange: #f97316;
+      --blue:   #3b82f6;
+
+      --safe-top:    env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    html, body { height: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100%;
+      display: flex;
+      flex-direction: column;
+      padding-top: max(var(--safe-top), 16px);
+      padding-bottom: calc(90px + var(--safe-bottom));
+      padding-left: 16px;
+      padding-right: 16px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ─── HEADER ─────────────────────────── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 0 20px;
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .header-logo {
+      font-size: 26px;
+      line-height: 1;
+    }
+    .header-title {
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: -.3px;
+    }
+    .header-date {
+      font-size: 12px;
+      color: var(--sub);
+      margin-top: 1px;
+    }
+    .header-badge {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--sub);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 4px 10px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .sync-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--muted);
+      display: inline-block;
+      transition: background .3s;
+    }
+    .sync-dot.ok  { background: var(--green); }
+    .sync-dot.err { background: var(--red); }
+
+    /* ─── CARD BASE ──────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 18px 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 20px rgba(0,0,0,.25);
+    }
+    .card-label {
+      font-size: 10px;
+      font-weight: 800;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      margin-bottom: 14px;
+    }
+
+    /* ─── VALOR CARD ─────────────────────── */
+    .valor-card {
+      text-align: center;
+      padding: 22px 16px 18px;
+      position: relative;
+      transition: border-color .2s;
+    }
+    .valor-card.focused {
+      border-color: rgba(59,130,246,.4);
+      box-shadow: 0 2px 20px rgba(59,130,246,.12);
+    }
+    .valor-card.has-mercado { border-color: rgba(34,197,94,.35); box-shadow: 0 2px 20px rgba(34,197,94,.1); }
+    .valor-card.has-carro   { border-color: rgba(239,68,68,.35); box-shadow: 0 2px 20px rgba(239,68,68,.1); }
+    .valor-card.has-diversos{ border-color: rgba(249,115,22,.35); box-shadow: 0 2px 20px rgba(249,115,22,.1); }
+
+    .valor-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .valor-prefix {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--sub);
+      padding-top: 8px;
+      flex-shrink: 0;
+    }
+    .valor-input {
+      background: none;
+      border: none;
+      outline: none;
+      font-size: 54px;
+      font-weight: 900;
+      color: var(--text);
+      text-align: left;
+      caret-color: var(--blue);
+      width: 190px;
+      letter-spacing: -2px;
+      line-height: 1;
+    }
+    .valor-input::placeholder { color: rgba(255,255,255,.1); }
+    /* hide number spinners */
+    .valor-input::-webkit-inner-spin-button,
+    .valor-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+    /* ─── CATEGORIAS ─────────────────────── */
+    .cats {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+    }
+    .cat-btn {
+      background: rgba(255,255,255,.04);
+      border: 1.5px solid rgba(255,255,255,.08);
+      border-radius: 16px;
+      padding: 14px 6px 12px;
+      text-align: center;
+      cursor: pointer;
+      transition: all .15s;
+      position: relative;
+      overflow: hidden;
+    }
+    .cat-btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 14px;
+      opacity: 0;
+      transition: opacity .15s;
+    }
+    .cat-btn.active-mercado { border-color: var(--green); background: rgba(34,197,94,.08); }
+    .cat-btn.active-mercado .cat-name { color: var(--green); }
+    .cat-btn.active-carro   { border-color: var(--red);   background: rgba(239,68,68,.08); }
+    .cat-btn.active-carro   .cat-name { color: var(--red); }
+    .cat-btn.active-diversos{ border-color: var(--orange); background: rgba(249,115,22,.08); }
+    .cat-btn.active-diversos .cat-name { color: var(--orange); }
+
+    .cat-icon { font-size: 28px; display: block; margin-bottom: 6px; line-height: 1; }
+    .cat-name { font-size: 11px; font-weight: 700; color: var(--sub); transition: color .15s; letter-spacing: .2px; }
+
+    /* ─── SUBCATEGORIAS ──────────────────── */
+    .subcats-wrap {
+      overflow: hidden;
+      max-height: 0;
+      transition: max-height .25s ease, margin-top .25s ease;
+      margin-top: 0;
+    }
+    .subcats-wrap.visible {
+      max-height: 500px;
+      margin-top: 14px;
+    }
+    .sub-scroll {
+      display: flex;
+      gap: 7px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 4px;
+      scrollbar-width: none;
+    }
+    .sub-scroll::-webkit-scrollbar { display: none; }
+    .sub-btn {
+      background: rgba(255,255,255,.05);
+      border: 1.5px solid rgba(255,255,255,.1);
+      border-radius: 50px;
+      padding: 9px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--sub);
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: all .15s;
+      font-family: inherit;
+    }
+    .sub-btn.active-mercado { border-color: var(--green);  background: rgba(34,197,94,.12);  color: var(--green); }
+    .sub-btn.active-carro   { border-color: var(--red);    background: rgba(239,68,68,.12);   color: var(--red); }
+    .sub-btn.active-diversos{ border-color: var(--orange); background: rgba(249,115,22,.12);  color: var(--orange); }
+
+    /* ─── DETALHES ───────────────────────── */
+    .field {
+      position: relative;
+      margin-bottom: 14px;
+    }
+    .field:last-child { margin-bottom: 0; }
+    .field-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      margin-bottom: 7px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .field-label span { font-weight: 500; color: rgba(255,255,255,.22); text-transform: none; letter-spacing: 0; font-size: 11px; }
+    .field-textarea {
+      width: 100%;
+      background: rgba(255,255,255,.04);
+      border: 1.5px solid rgba(255,255,255,.08);
+      border-radius: 13px;
+      padding: 12px 14px;
+      font-size: 15px;
+      font-family: inherit;
+      color: var(--text);
+      resize: none;
+      outline: none;
+      transition: border-color .15s;
+      line-height: 1.5;
+    }
+    .field-textarea::placeholder { color: var(--muted); font-size: 14px; }
+    .field-textarea:focus { border-color: rgba(59,130,246,.45); }
+
+    .field-date-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(255,255,255,.04);
+      border: 1.5px solid rgba(255,255,255,.08);
+      border-radius: 13px;
+      padding: 12px 14px;
+      transition: border-color .15s;
+    }
+    .field-date-row:focus-within { border-color: rgba(59,130,246,.45); }
+    .field-date-label {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--sub);
+    }
+    .field-date-input {
+      background: none;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-size: 15px;
+      font-weight: 700;
+      font-family: inherit;
+      text-align: right;
+      min-width: 0;
+    }
+    /* iOS date input color fix */
+    input[type="date"]::-webkit-date-and-time-value { color: var(--text); }
+
+    /* ─── SAVE BUTTON (fixed bottom) ─────── */
+    .btn-salvar-wrap {
+      position: fixed;
+      bottom: 0;
+      left: 0; right: 0;
+      padding: 12px 16px calc(12px + var(--safe-bottom));
+      background: linear-gradient(to top, var(--bg) 60%, transparent);
+      z-index: 50;
+    }
+    .btn-salvar {
+      width: 100%;
+      padding: 17px;
+      border-radius: 16px;
+      border: none;
+      font-size: 17px;
+      font-weight: 800;
+      cursor: pointer;
+      background: var(--blue);
+      color: #fff;
+      font-family: inherit;
+      letter-spacing: -.2px;
+      transition: opacity .15s, transform .1s, background .2s;
+      box-shadow: 0 4px 20px rgba(59,130,246,.35);
+    }
+    .btn-salvar:active { opacity: .85; transform: scale(.98); }
+    .btn-salvar:disabled { background: var(--surface); color: var(--muted); box-shadow: none; }
+    .btn-salvar.cat-mercado  { background: var(--green);  box-shadow: 0 4px 20px rgba(34,197,94,.35); }
+    .btn-salvar.cat-carro    { background: var(--red);    box-shadow: 0 4px 20px rgba(239,68,68,.35); }
+    .btn-salvar.cat-diversos { background: var(--orange); box-shadow: 0 4px 20px rgba(249,115,22,.35); }
+
+    /* ─── AVISO DUPLICATA INLINE ────────── */
+    .dup-banner {
+      display: none;
+      background: #451a03;
+      border: 2px solid #f97316;
+      border-radius: 16px;
+      padding: 14px 16px;
+      margin-bottom: 12px;
+      animation: dup-shake .3s ease;
+    }
+    .dup-banner.show { display: flex; gap: 12px; align-items: flex-start; }
+    @keyframes dup-shake {
+      0%,100%{transform:translateX(0)} 20%{transform:translateX(-6px)} 60%{transform:translateX(6px)}
+    }
+    .dup-banner-icon { font-size: 26px; flex-shrink: 0; line-height: 1; }
+    .dup-banner-title { font-size: 14px; font-weight: 900; color: #fed7aa; margin-bottom: 4px; }
+    .dup-banner-detail { font-size: 12px; color: #fdba74; line-height: 1.5; }
+    .dup-banner-actions { display: flex; gap: 8px; margin-top: 10px; }
+    .dup-banner-ignore { font-size: 12px; font-weight: 700; color: #fb923c; background: rgba(251,146,60,.15); border: 1px solid rgba(251,146,60,.3); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+    .btn-salvar.dup-active { background: #92400e !important; box-shadow: 0 4px 20px rgba(234,88,12,.4) !important; }
+
+    /* ─── PARCELAMENTO ───────────────────── */
+    .parcela-card { background: var(--surface); border: 1.5px solid rgba(99,102,241,.25); border-radius: 18px; padding: 16px; margin-bottom: 12px; }
+    .parcela-row  { display: flex; align-items: center; gap: 10px; }
+    .btn-parc-toggle {
+      flex: 1; padding: 10px 14px; border-radius: 12px;
+      border: 1.5px solid rgba(255,255,255,.1); background: rgba(255,255,255,.05);
+      color: var(--sub); font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit;
+      transition: all .2s; text-align: center;
+    }
+    .btn-parc-toggle.ativo { border-color: #6366f1; background: rgba(99,102,241,.15); color: #a5b4fc; }
+    .parcela-x { font-size: 13px; color: #6366f1; font-weight: 700; background: rgba(99,102,241,.12); border: 1px solid rgba(99,102,241,.25); border-radius: 8px; padding: 4px 10px; }
+    .parc-preview { font-size: 12px; color: #818cf8; font-weight: 600; margin-top: 10px; }
+    .parc-select {
+      width: 100%; margin-top: 10px; padding: 10px 12px;
+      background: var(--bg); color: var(--text); border: 1.5px solid rgba(99,102,241,.3);
+      border-radius: 12px; font-size: 15px; font-family: inherit; appearance: none;
+    }
+
+    /* ─── MODAL DUPLICATA ────────────────── */
+    .dup-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.75);
+      z-index: 998;
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 0;
+    }
+    .dup-overlay.show { display: flex; }
+    .dup-modal {
+      background: #0f1e30;
+      border: 1.5px solid rgba(245,158,11,.4);
+      border-radius: 28px 28px 0 0;
+      padding: 28px 22px calc(28px + var(--safe-bottom));
+      width: 100%;
+      max-width: 480px;
+      animation: slide-up .22s cubic-bezier(.34,1.56,.64,1);
+    }
+    @keyframes slide-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .dup-handle { width: 36px; height: 4px; background: rgba(255,255,255,.15); border-radius: 2px; margin: 0 auto 20px; }
+    .dup-icon { font-size: 40px; text-align: center; margin-bottom: 8px; }
+    .dup-title { font-size: 20px; font-weight: 900; color: #f59e0b; text-align: center; margin-bottom: 5px; }
+    .dup-desc { font-size: 13px; color: var(--sub); text-align: center; margin-bottom: 16px; }
+    .dup-info {
+      background: rgba(245,158,11,.08);
+      border: 1.5px solid rgba(245,158,11,.25);
+      border-radius: 14px;
+      padding: 14px 16px;
+      font-size: 14px;
+      color: var(--text);
+      margin-bottom: 20px;
+      line-height: 1.75;
+    }
+    .dup-info strong { color: #f59e0b; font-weight: 700; }
+    .dup-btns { display: flex; gap: 10px; }
+    .dup-btn-cancel {
+      flex: 1; padding: 14px; border-radius: 14px;
+      border: 1.5px solid rgba(255,255,255,.1); background: rgba(255,255,255,.05);
+      color: var(--sub); font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit;
+    }
+    .dup-btn-confirm {
+      flex: 1; padding: 14px; border-radius: 14px;
+      border: none; background: #f59e0b;
+      color: #000; font-size: 15px; font-weight: 800; cursor: pointer; font-family: inherit;
+    }
+
+    /* ─── TOAST ──────────────────────────── */
+    .toast {
+      position: fixed;
+      top: calc(var(--safe-top) + 16px);
+      left: 16px; right: 16px;
+      background: #111827;
+      color: #fff;
+      border-radius: 16px;
+      padding: 14px 18px;
+      font-size: 15px;
+      font-weight: 700;
+      z-index: 999;
+      transform: translateY(-120px);
+      opacity: 0;
+      transition: all .3s cubic-bezier(.34,1.56,.64,1);
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.4);
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast-ok  { background: #14532d; border: 1px solid rgba(34,197,94,.3); }
+    .toast-err { background: #7f1d1d; border: 1px solid rgba(239,68,68,.3); }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-left">
+    <div class="header-logo">💳</div>
+    <div>
+      <div class="header-title">Gasto Rápido</div>
+      <div class="header-date" id="hdr-date"></div>
+    </div>
+  </div>
+  <div class="header-badge">
+    <span class="sync-dot" id="sync-dot"></span>
+    <span id="sync-txt">conectando</span>
+  </div>
+</div>
+
+<!-- Valor -->
+<div class="card valor-card" id="valor-card">
+  <div class="card-label">Valor do Gasto</div>
+  <div class="valor-row">
+    <span class="valor-prefix">CA$</span>
+    <input id="inp-valor" class="valor-input" type="number" inputmode="decimal"
+           placeholder="0,00" step="0.01" min="0" autocomplete="off">
+  </div>
+</div>
+
+<!-- Categoria + Subcategorias -->
+<div class="card" id="cat-card">
+  <div class="card-label">Categoria</div>
+  <div class="cats">
+    <button class="cat-btn" id="cat-mercado" onclick="selecionarCat('mercado')">
+      <span class="cat-icon">🛒</span>
+      <span class="cat-name">Mercado</span>
+    </button>
+    <button class="cat-btn" id="cat-carro" onclick="selecionarCat('carro')">
+      <span class="cat-icon">🚗</span>
+      <span class="cat-name">Carro</span>
+    </button>
+    <button class="cat-btn" id="cat-diversos" onclick="selecionarCat('diversos')">
+      <span class="cat-icon">🔖</span>
+      <span class="cat-name">Diversos</span>
+    </button>
+  </div>
+
+  <!-- Subcategorias Mercado -->
+  <div class="subcats-wrap" id="subs-mercado">
+    <div class="sub-scroll">
+      <button class="sub-btn" onclick="selecionarSub('Walmart')">🛒 Walmart</button>
+      <button class="sub-btn" onclick="selecionarSub('Superstore')">🛍️ Superstore</button>
+      <button class="sub-btn" onclick="selecionarSub('Shoppers')">💊 Shoppers</button>
+      <button class="sub-btn" onclick="selecionarSub('No Frills')">🏷️ No Frills</button>
+      <button class="sub-btn" onclick="selecionarSub('Costco')">📦 Costco</button>
+      <button class="sub-btn" onclick="selecionarSub('On the Vine')">🥦 On the Vine</button>
+      <button class="sub-btn" onclick="selecionarSub('Outros')">• Outros</button>
+    </div>
+  </div>
+
+  <!-- Subcategorias Carro -->
+  <div class="subcats-wrap" id="subs-carro">
+    <div class="sub-scroll">
+      <button class="sub-btn" onclick="selecionarSub('⛽ Gasolina (Range Rover)')">⛽ Gasolina RR</button>
+      <button class="sub-btn" onclick="selecionarSub('⛽ Gasolina (Pilot)')">⛽ Gasolina Pilot</button>
+      <button class="sub-btn" onclick="selecionarSub('🛢️ Óleo')">🛢️ Óleo</button>
+      <button class="sub-btn" onclick="selecionarSub('🔧 Pneu')">🔧 Pneu</button>
+      <button class="sub-btn" onclick="selecionarSub('🔩 Peças')">🔩 Peças</button>
+      <button class="sub-btn" onclick="selecionarSub('Outros')">• Outros</button>
+    </div>
+  </div>
+
+  <!-- Subcategorias Diversos -->
+  <div class="subcats-wrap" id="subs-diversos">
+    <div class="sub-scroll">
+      <button class="sub-btn" onclick="selecionarSub('🍽️ Restaurantes')">🍽️ Restaurantes</button>
+      <button class="sub-btn" onclick="selecionarSub('📦 Amazon')">📦 Amazon</button>
+      <button class="sub-btn" onclick="selecionarSub('👕 Roupas')">👕 Roupas</button>
+      <button class="sub-btn" onclick="selecionarSub('🏪 Dollarama')">🏪 Dollarama</button>
+      <button class="sub-btn" onclick="selecionarSub('💪 Academia')">💪 Academia</button>
+      <button class="sub-btn" onclick="selecionarSub('🏃 Esportes')">🏃 Esportes</button>
+      <button class="sub-btn" onclick="selecionarSub('🎉 Lazer')">🎉 Lazer</button>
+      <button class="sub-btn" onclick="selecionarSub('🖨️ Staples')">🖨️ Staples</button>
+      <button class="sub-btn" onclick="selecionarSub('🐾 Veterinário')">🐾 Veterinário</button>
+      <button class="sub-btn" onclick="selecionarSub('💊 Remédio')">💊 Remédio</button>
+      <button class="sub-btn" onclick="selecionarSub('📱 Subscription')">📱 Subscription</button>
+      <button class="sub-btn" onclick="selecionarSub('Outros')">• Outros</button>
+    </div>
+  </div>
+</div>
+
+<!-- Aviso duplicata inline -->
+<div class="dup-banner" id="dup-banner">
+  <div class="dup-banner-icon">⚠️</div>
+  <div>
+    <div class="dup-banner-title">Valor já lançado nesta categoria!</div>
+    <div class="dup-banner-detail" id="dup-banner-detail"></div>
+    <div class="dup-banner-actions">
+      <button class="dup-banner-ignore" onclick="ignorarDup()">Salvar mesmo assim</button>
+    </div>
+  </div>
+</div>
+
+<!-- Parcelamento -->
+<div class="parcela-card" id="parcela-card">
+  <div class="card-label" style="margin-bottom:10px;color:var(--sub)">Parcelamento</div>
+  <div class="parcela-row">
+    <button type="button" class="btn-parc-toggle" id="btn-parc-toggle" onclick="toggleParc()">À vista</button>
+    <span class="parcela-x" id="parc-x" style="display:none"></span>
+  </div>
+  <select class="parc-select" id="parc-select" style="display:none" onchange="onParcSelect(this.value)">
+    <option value="2">2x</option><option value="3">3x</option><option value="4">4x</option>
+    <option value="5">5x</option><option value="6">6x</option><option value="7">7x</option>
+    <option value="8">8x</option><option value="9">9x</option><option value="10">10x</option>
+    <option value="11">11x</option><option value="12">12x</option><option value="15">15x</option>
+    <option value="18">18x</option><option value="24">24x</option>
+  </select>
+  <div id="parc-ini-wrap" style="display:none;margin-top:12px">
+    <div style="font-size:11px;color:#818cf8;font-weight:700;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">De qual parcela começa?</div>
+    <select class="parc-select" id="parc-ini-select" onchange="onParcIniSelect(this.value)" style="margin-top:0"></select>
+  </div>
+  <div class="parc-preview" id="parc-preview"></div>
+</div>
+
+<!-- Detalhes -->
+<div class="card">
+  <div class="card-label">Detalhes</div>
+
+  <div class="field">
+    <div class="field-label">O que foi gasto? <span>(opcional)</span></div>
+    <textarea id="inp-desc" class="field-textarea" rows="2"
+      placeholder="Ex: Gasolina no Petro-Canada, compras no Costco…"></textarea>
+  </div>
+
+  <div class="field">
+    <div class="field-label">Data</div>
+    <div class="field-date-row">
+      <span class="field-date-label">📅 Data do gasto</span>
+      <input id="inp-data" class="field-date-input" type="date">
+    </div>
+  </div>
+</div>
+
+<!-- Botão Salvar (fixed) -->
+<div class="btn-salvar-wrap">
+  <button class="btn-salvar" id="btn-salvar" onclick="salvar()">Salvar Lançamento</button>
+</div>
+
+<!-- Modal duplicata -->
+<div class="dup-overlay" id="dup-overlay">
+  <div class="dup-modal">
+    <div class="dup-handle"></div>
+    <div class="dup-icon">⚠️</div>
+    <div class="dup-title">Lançamento duplicado!</div>
+    <div class="dup-desc">Este valor já foi registrado com os mesmos dados:</div>
+    <div class="dup-info" id="dup-info"></div>
+    <div class="dup-btns">
+      <button class="dup-btn-cancel" onclick="fecharDup()">Cancelar</button>
+      <button class="dup-btn-confirm" onclick="salvarForcado()">Salvar mesmo assim</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><span id="toast-icon"></span><span id="toast-msg"></span></div>
+
+<script>
+// ── Config ──────────────────────────────────────────
+var FB_CONFIG = {
+  apiKey: "AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU",
+  authDomain: "gastos-casa-7f431.firebaseapp.com",
+  databaseURL: "https://gastos-casa-7f431-default-rtdb.firebaseio.com",
+  projectId: "gastos-casa-7f431",
+  storageBucket: "gastos-casa-7f431.firebasestorage.app",
+  messagingSenderId: "272395890131",
+  appId: "1:27239589031:web:5bd6057f62fe6b7abc9326"
+};
+var FB_PATH = 'gastos/lk62-gastos-9f3a7b2e';
+
+var _cat = null, _sub = null, _fbRef = null;
+var _lancamentos = [];
+var _lancPendente = null;
+var _dupIgnorado = false; // usuário escolheu salvar mesmo assim
+var _numParc = 1;    // 1 = à vista, >1 = parcelado
+var _parcIni = 1;   // parcela inicial (para lançar só as pendentes)
+
+// ── Init ────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', function() {
+  // Data de hoje
+  var hoje = new Date();
+  var y = hoje.getFullYear();
+  var m = String(hoje.getMonth() + 1).padStart(2, '0');
+  var d = String(hoje.getDate()).padStart(2, '0');
+  document.getElementById('inp-data').value = y + '-' + m + '-' + d;
+  document.getElementById('hdr-date').textContent =
+    hoje.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'short' });
+
+  // Firebase — aguarda autenticação antes de conectar ao banco
+  try {
+    firebase.initializeApp(FB_CONFIG);
+    firebase.auth().onAuthStateChanged(function(user) {
+      if (!user) {
+        // Não autenticado — redireciona para o app principal fazer login
+        window.location.href = 'index.html';
+        return;
+      }
+      _fbRef = firebase.database().ref(FB_PATH);
+      setSyncStatus('connecting');
+      _fbRef.once('value').then(function(snap) {
+        var fbData = snap.val() || {};
+        _lancamentos = fbData.lancamentos || [];
+        if (fbData.pending && typeof fbData.pending === 'object') {
+          Object.keys(fbData.pending).forEach(function(k) {
+            if (fbData.pending[k]) _lancamentos.push(fbData.pending[k]);
+          });
+        }
+        setSyncStatus('ok');
+      }).catch(function() { setSyncStatus('err'); });
+    });
+  } catch(e) {
+    console.warn('Firebase:', e);
+    setSyncStatus('err');
+  }
+
+  // Valor focus + valor card feedback + check duplicata em tempo real
+  var inpValor = document.getElementById('inp-valor');
+  inpValor.focus();
+  inpValor.addEventListener('focus', function() {
+    document.getElementById('valor-card').classList.add('focused');
+  });
+  inpValor.addEventListener('blur', function() {
+    document.getElementById('valor-card').classList.remove('focused');
+    checarDuplicataRealtime();
+  });
+  inpValor.addEventListener('input', function() {
+    _dupIgnorado = false;
+    checarDuplicataRealtime();
+    atualizarParcPreview();
+  });
+});
+
+function setSyncStatus(s) {
+  var dot = document.getElementById('sync-dot');
+  var txt = document.getElementById('sync-txt');
+  if (s === 'ok')          { dot.className = 'sync-dot ok';  txt.textContent = 'online'; }
+  else if (s === 'err')    { dot.className = 'sync-dot err'; txt.textContent = 'offline'; }
+  else                     { dot.className = 'sync-dot';     txt.textContent = 'conectando'; }
+}
+
+// ── Parcelamento ─────────────────────────────────────
+function addMeses(dataStr, n) {
+  var p = dataStr.split('-');
+  var ano = parseInt(p[0]), mes = parseInt(p[1]) - 1, dia = parseInt(p[2]);
+  var nm = mes + n;
+  var na = ano + Math.floor(nm / 12);
+  nm = nm % 12;
+  var ult = new Date(na, nm + 1, 0).getDate();
+  dia = Math.min(dia, ult);
+  return na + '-' + ((nm + 1) + '').padStart(2, '0') + '-' + (dia + '').padStart(2, '0');
+}
+function populateParcIni(total) {
+  var sel = document.getElementById('parc-ini-select');
+  sel.innerHTML = '';
+  for (var i = 1; i <= total; i++) {
+    var opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = i + '/' + total + (i === 1 ? ' — do início' : '');
+    sel.appendChild(opt);
+  }
+  _parcIni = 1;
+  sel.value = 1;
+}
+function onParcIniSelect(v) {
+  _parcIni = parseInt(v) || 1;
+  atualizarParcPreview();
+}
+function toggleParc() {
+  var btn = document.getElementById('btn-parc-toggle');
+  var sel = document.getElementById('parc-select');
+  var xBadge = document.getElementById('parc-x');
+  var iniWrap = document.getElementById('parc-ini-wrap');
+  if (_numParc === 1) {
+    _numParc = 2;
+    _parcIni = 1;
+    sel.value = '2';
+    sel.style.display = 'block';
+    iniWrap.style.display = 'block';
+    populateParcIni(2);
+    btn.classList.add('ativo');
+    btn.textContent = 'Parcelado';
+    xBadge.style.display = '';
+    atualizarParcPreview();
+  } else {
+    _numParc = 1;
+    _parcIni = 1;
+    sel.style.display = 'none';
+    iniWrap.style.display = 'none';
+    btn.classList.remove('ativo');
+    btn.textContent = 'À vista';
+    xBadge.style.display = 'none';
+    document.getElementById('parc-preview').textContent = '';
+  }
+}
+function onParcSelect(v) {
+  _numParc = parseInt(v) || 1;
+  populateParcIni(_numParc);
+  atualizarParcPreview();
+}
+function atualizarParcPreview() {
+  var xBadge = document.getElementById('parc-x');
+  var prev = document.getElementById('parc-preview');
+  if (_numParc <= 1) { xBadge.style.display = 'none'; prev.textContent = ''; return; }
+  xBadge.textContent = _numParc + 'x';
+  xBadge.style.display = '';
+  var valor = parseFloat(document.getElementById('inp-valor').value);
+  var restantes = _numParc - _parcIni + 1;
+  if (valor > 0) {
+    var parcValor = Math.round(valor / _numParc * 100) / 100;
+    var txt = _numParc + 'x de CA$ ' + parcValor.toFixed(2) + '/mês';
+    if (_parcIni > 1) {
+      txt += ' · ' + _parcIni + '/' + _numParc + ' → ' + _numParc + '/' + _numParc + ' (' + restantes + ' meses)';
+    }
+    prev.textContent = txt;
+  } else {
+    prev.textContent = _numParc + 'x' + (_parcIni > 1 ? ' · a partir de ' + _parcIni + '/' + _numParc : '');
+  }
+}
+
+// ── Selecionar categoria ─────────────────────────────
+function selecionarCat(cat) {
+  _cat = cat;
+  _sub = null;
+  _dupIgnorado = false;
+
+  var cores = { mercado: 'active-mercado', carro: 'active-carro', diversos: 'active-diversos' };
+
+  ['mercado', 'carro', 'diversos'].forEach(function(c) {
+    document.getElementById('cat-' + c).className = 'cat-btn' + (c === cat ? ' ' + cores[c] : '');
+    document.getElementById('subs-' + c).classList.toggle('visible', c === cat);
+  });
+
+  document.getElementById('valor-card').className = 'card valor-card has-' + cat;
+  document.getElementById('btn-salvar').className = 'btn-salvar cat-' + cat;
+  document.querySelectorAll('.sub-btn').forEach(function(b) { b.className = 'sub-btn'; });
+
+  checarDuplicataRealtime();
+}
+
+// ── Checa duplicata em tempo real ────────────────────
+function checarDuplicataRealtime() {
+  if (_dupIgnorado) return;
+  var valor = parseFloat(document.getElementById('inp-valor').value);
+  var data  = document.getElementById('inp-data').value;
+  if (!valor || valor <= 0 || !_cat || !data) { esconderDupBanner(); return; }
+
+  var dups = verificarDuplicata(valor, data, _cat);
+  if (dups.length > 0) {
+    var d = dups[0];
+    var catNome = { mercado: '🛒 Mercado', carro: '🚗 Carro', diversos: '🔖 Diversos' }[d.cat] || d.cat;
+    var subStr  = d.loja || d.divsub || d.sub || '';
+    var p = (d.data||'').split('-');
+    var dataFmt = p.length===3 ? p[2]+'/'+p[1]+'/'+p[0] : d.data;
+    document.getElementById('dup-banner-detail').innerHTML =
+      'CA$ ' + parseFloat(d.valor).toFixed(2) + ' · ' + dataFmt + ' · ' + catNome + (subStr ? ' · ' + subStr : '') +
+      (d.desc ? '<br>📝 ' + d.desc : '');
+    document.getElementById('dup-banner').className = 'dup-banner show';
+    document.getElementById('btn-salvar').classList.add('dup-active');
+  } else {
+    esconderDupBanner();
+  }
+}
+
+function esconderDupBanner() {
+  document.getElementById('dup-banner').className = 'dup-banner';
+  var btn = document.getElementById('btn-salvar');
+  btn.classList.remove('dup-active');
+}
+
+function ignorarDup() {
+  _dupIgnorado = true;
+  esconderDupBanner();
+}
+
+// ── Selecionar subcategoria ──────────────────────────
+function selecionarSub(sub) {
+  _sub = sub;
+  var activeClass = 'sub-btn active-' + _cat;
+  document.querySelectorAll('#subs-' + _cat + ' .sub-btn').forEach(function(b) {
+    var matches = b.getAttribute('onclick').includes("'" + sub + "'");
+    b.className = matches ? activeClass : 'sub-btn';
+  });
+}
+
+// ── Verificar duplicata (valor + data + categoria) ────
+function verificarDuplicata(valor, data, cat) {
+  return _lancamentos.filter(function(l) {
+    return Math.abs(parseFloat(l.valor) - valor) <= 0.001 &&
+           l.data === data &&
+           l.cat  === cat;
+  });
+}
+
+function formatarDataBr(iso) {
+  if (!iso) return '';
+  var p = iso.split('-');
+  return p[2] + '/' + p[1] + '/' + p[0];
+}
+
+// ── Salvar ───────────────────────────────────────────
+function salvar() {
+  var valor = parseFloat(document.getElementById('inp-valor').value);
+  var data  = document.getElementById('inp-data').value;
+
+  if (!valor || valor <= 0) { toast('⚠️', 'Informe o valor'); return; }
+  if (!_cat)                { toast('⚠️', 'Escolha a categoria'); return; }
+  if (!data)                { toast('⚠️', 'Informe a data'); return; }
+
+  // Bloquear se duplicata detectada e não foi ignorada
+  if (!_dupIgnorado) {
+    var dups = verificarDuplicata(valor, data, _cat);
+    if (dups.length > 0) {
+      checarDuplicataRealtime(); // garante que o banner aparece
+      toast('⚠️', 'Valor duplicado — toque em "Salvar mesmo assim"');
+      return;
+    }
+  }
+
+  var desc = (document.getElementById('inp-desc').value || '').trim();
+
+  if (_numParc > 1) {
+    // Lançamento parcelado — grava parcelas do _parcIni até o total
+    var parcValor = Math.round(valor / _numParc * 100) / 100;
+    var grupoId = Date.now().toString();
+    var lancs = [];
+    var offset = 0;
+    for (var i = _parcIni - 1; i < _numParc; i++) {
+      lancs.push({
+        id:     grupoId + '-' + (i + 1),
+        cat:    _cat,
+        sub:    (_cat === 'carro'    ? _sub : null) || null,
+        loja:   (_cat === 'mercado'  ? _sub : null) || null,
+        divsub: (_cat === 'diversos' ? _sub : null) || null,
+        valor:  parcValor,
+        data:   addMeses(data, offset),
+        desc:   desc,
+        parcela: { n: i + 1, total: _numParc, grupoId: grupoId, valorTotal: valor }
+      });
+      offset++;
+    }
+    gravarLancamentos(lancs);
+    return;
+  }
+
+  var lanc = {
+    id:     Date.now().toString(),
+    cat:    _cat,
+    sub:    (_cat === 'carro'    ? _sub : null) || null,
+    loja:   (_cat === 'mercado'  ? _sub : null) || null,
+    divsub: (_cat === 'diversos' ? _sub : null) || null,
+    valor:  valor,
+    data:   data,
+    desc:   desc
+  };
+
+  gravarLancamento(lanc);
+}
+
+// ── Fechar modal duplicata ────────────────────────────
+function fecharDup() {
+  document.getElementById('dup-overlay').classList.remove('show');
+  _lancPendente = null;
+}
+
+// ── Salvar mesmo assim ────────────────────────────────
+function salvarForcado() {
+  fecharDup();
+  if (_lancPendente) {
+    _lancPendente.id = Date.now().toString();
+    gravarLancamento(_lancPendente);
+  }
+}
+
+// ── Gravar no Firebase ────────────────────────────────
+function gravarLancamento(lanc) {
+  var btn = document.getElementById('btn-salvar');
+  btn.disabled = true;
+  btn.textContent = 'Salvando…';
+
+  if (!_fbRef) {
+    toast('❌', 'Sem conexão com Firebase');
+    btn.disabled = false; btn.textContent = 'Salvar Lançamento';
+    return;
+  }
+
+  _fbRef.child('pending/' + lanc.id).set(lanc).then(function() {
+    _lancamentos.push(lanc);
+    toast('✅', 'CA$ ' + parseFloat(lanc.valor).toFixed(2) + ' salvo!', true);
+    resetForm();
+    btn.disabled = false;
+    btn.textContent = 'Salvar Lançamento';
+    btn.className = 'btn-salvar';
+  }).catch(function(e) {
+    toast('❌', 'Erro ao salvar: ' + e.message);
+    btn.disabled = false; btn.textContent = 'Salvar Lançamento';
+  });
+}
+
+// ── Gravar múltiplas parcelas ────────────────────────
+function gravarLancamentos(lancs) {
+  var btn = document.getElementById('btn-salvar');
+  btn.disabled = true;
+  btn.textContent = 'Salvando ' + lancs.length + 'x…';
+
+  if (!_fbRef) {
+    toast('❌', 'Sem conexão com Firebase');
+    btn.disabled = false; btn.textContent = 'Salvar Lançamento';
+    return;
+  }
+
+  var updates = {};
+  lancs.forEach(function(l) { updates['pending/' + l.id] = l; });
+  _fbRef.update(updates).then(function() {
+    lancs.forEach(function(l) { _lancamentos.push(l); });
+    var primeira = lancs[0];
+    toast('✅', lancs.length + 'x salvas · CA$ ' + parseFloat(primeira.valor).toFixed(2) + '/mês', true);
+    resetForm();
+    btn.disabled = false; btn.textContent = 'Salvar Lançamento'; btn.className = 'btn-salvar';
+  }).catch(function(e) {
+    toast('❌', 'Erro: ' + e.message);
+    btn.disabled = false; btn.textContent = 'Salvar Lançamento';
+  });
+}
+
+function resetForm() {
+  document.getElementById('inp-valor').value = '';
+  document.getElementById('inp-desc').value  = '';
+  document.getElementById('inp-valor').focus();
+  ['mercado', 'carro', 'diversos'].forEach(function(c) {
+    document.getElementById('cat-' + c).className = 'cat-btn';
+    document.getElementById('subs-' + c).classList.remove('visible');
+  });
+  document.querySelectorAll('.sub-btn').forEach(function(b) { b.className = 'sub-btn'; });
+  document.getElementById('valor-card').className = 'card valor-card';
+  _cat = null; _sub = null;
+  // Reset parcelamento
+  _numParc = 1;
+  _parcIni = 1;
+  document.getElementById('btn-parc-toggle').classList.remove('ativo');
+  document.getElementById('btn-parc-toggle').textContent = 'À vista';
+  document.getElementById('parc-select').style.display = 'none';
+  document.getElementById('parc-ini-wrap').style.display = 'none';
+  document.getElementById('parc-x').style.display = 'none';
+  document.getElementById('parc-preview').textContent = '';
+}
+
+// ── Toast ────────────────────────────────────────────
+function toast(icon, msg, ok) {
+  var el = document.getElementById('toast');
+  document.getElementById('toast-icon').textContent = icon;
+  document.getElementById('toast-msg').textContent  = msg;
+  el.className = 'toast ' + (ok ? 'toast-ok' : 'toast-err') + ' show';
+  setTimeout(function() { el.classList.remove('show'); }, 2800);
+}
+</script>
+</body>
+</html>
