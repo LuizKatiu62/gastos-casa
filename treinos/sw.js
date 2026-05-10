@@ -1,4 +1,4 @@
-const CACHE = 'treinos-v1';
+const CACHE = 'treinos-v2';
 const CORE = ['./index.html', './manifest.json'];
 
 self.addEventListener('install', e => {
