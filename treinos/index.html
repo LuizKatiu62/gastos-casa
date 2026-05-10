@@ -207,6 +207,9 @@
     <div class="hero-eyebrow">Diário de</div>
     <div class="hero-title" style="margin-bottom:0">Treinos</div>
   </div>
+  <div style="padding:12px 12px 0;display:flex;justify-content:flex-end">
+    <button onclick="document.getElementById('import-file').click()" style="background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7;border-radius:20px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer">⌚ Importar Garmin</button>
+  </div>
   <div class="filter-chips">
     <button class="chip ativo" onclick="filtrar(this,'todos')">Todos</button>
     <button class="chip" onclick="filtrar(this,'facil')">🟢 Fácil</button>
@@ -279,6 +282,9 @@
     <span class="nav-icon">📊</span><span>Stats</span>
   </button>
 </nav>
+
+<!-- Input oculto para importar JSON do Garmin -->
+<input type="file" id="import-file" accept=".json" style="display:none" onchange="importarGarmin(this)">
 
 <!-- Modal: Treino -->
 <div class="modal-overlay" id="overlay-treino">
@@ -682,6 +688,34 @@ function deletarCorrida() {
   fechar('overlay-corrida');
   toast('🗑️ Corrida excluída');
   renderCorridas();
+}
+
+// ── Importar Garmin JSON ──
+function importarGarmin(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var json = JSON.parse(e.target.result);
+      var novos = json.treinos || [];
+      if (!novos.length) { toast('⚠️ Nenhum treino encontrado'); return; }
+      var d = getDados();
+      var ids = new Set(d.treinos.map(function(t){ return t.id; }));
+      var adicionados = 0;
+      novos.forEach(function(t) {
+        if (!ids.has(t.id)) { d.treinos.push(t); adicionados++; }
+      });
+      salvarDados(d);
+      renderTreinos();
+      renderSemana();
+      toast('✅ ' + adicionados + ' treinos importados do Garmin!');
+    } catch(e) {
+      toast('❌ Arquivo inválido');
+    }
+    input.value = '';
+  };
+  reader.readAsText(file);
 }
 
 // ── Filter ──
