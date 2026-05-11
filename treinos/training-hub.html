@@ -6,6 +6,7 @@
 <title>Luiz Silva — Training Hub</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script>
 firebase.initializeApp({
@@ -1014,18 +1015,31 @@ function loadGarmin(forcar) {
   const list = document.getElementById('garmin-list');
   list.innerHTML = '<div style="text-align:center;padding:48px;color:var(--text3)"><div style="font-size:28px;margin-bottom:8px">⌚</div>Conectando ao Firebase...</div>';
 
-  firebase.database().ref('treinos/luiz').once('value')
-    .then(function(snap) {
-      const raw = snap.val();
-      const arr = (raw && raw.treinos) ? raw.treinos : (Array.isArray(raw) ? raw : Object.values(raw || {}));
-      garminData = arr.filter(function(r){ return r && r.data; }).sort(function(a,b){ return b.data.localeCompare(a.data); });
-      garminLoaded = true;
-      buildGarminFilters();
-      renderGarmin();
-    })
-    .catch(function(e) {
-      list.innerHTML = '<div style="text-align:center;padding:48px;color:var(--red)">❌ Erro: ' + e.message + '<br><br><button onclick="loadGarmin(true)" style="padding:8px 20px;background:var(--green);color:#fff;border:none;border-radius:20px;cursor:pointer;font-family:inherit">Tentar novamente</button></div>';
-    });
+  const auth = firebase.auth();
+  const doRead = function() {
+    firebase.database().ref('treinos/luiz').once('value')
+      .then(function(snap) {
+        const raw = snap.val();
+        const arr = (raw && raw.treinos) ? raw.treinos : (Array.isArray(raw) ? raw : Object.values(raw || {}));
+        garminData = arr.filter(function(r){ return r && r.data; }).sort(function(a,b){ return b.data.localeCompare(a.data); });
+        garminLoaded = true;
+        buildGarminFilters();
+        renderGarmin();
+      })
+      .catch(function(e) {
+        list.innerHTML = '<div style="text-align:center;padding:48px;color:var(--red)">❌ Erro: ' + e.message + '<br><br><button onclick="loadGarmin(true)" style="padding:8px 20px;background:var(--green);color:#fff;border:none;border-radius:20px;cursor:pointer;font-family:inherit">Tentar novamente</button></div>';
+      });
+  };
+
+  if (auth.currentUser) {
+    doRead();
+  } else {
+    auth.signInAnonymously()
+      .then(doRead)
+      .catch(function(e) {
+        list.innerHTML = '<div style="text-align:center;padding:48px;color:var(--red)">❌ Erro: ' + e.message + '<br><br><button onclick="loadGarmin(true)" style="padding:8px 20px;background:var(--green);color:#fff;border:none;border-radius:20px;cursor:pointer;font-family:inherit">Tentar novamente</button></div>';
+      });
+  }
 }
 
 function buildGarminFilters() {
