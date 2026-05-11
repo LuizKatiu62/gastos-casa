@@ -1,5 +1,5 @@
-const CACHE = 'treinos-v4';
-const CORE = ['./index.html', './manifest.json'];
+const CACHE = 'treinos-v5';
+const CORE = ['./index.html', './manifest.json', './training-hub.html'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)));
