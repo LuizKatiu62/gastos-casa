@@ -1020,11 +1020,25 @@ function loadGarmin(forcar) {
     firebase.database().ref('treinos/luiz').once('value')
       .then(function(snap) {
         const raw = snap.val();
-        const arr = (raw && raw.treinos) ? raw.treinos : (Array.isArray(raw) ? raw : Object.values(raw || {}));
-        garminData = arr.filter(function(r){ return r && r.data; }).sort(function(a,b){ return b.data.localeCompare(a.data); });
+        let arr = [];
+        if (raw) {
+          const src = (raw.treinos !== undefined) ? raw.treinos : raw;
+          if (Array.isArray(src)) {
+            arr = src;
+          } else if (src && typeof src === 'object') {
+            arr = Object.values(src);
+          }
+        }
+        garminData = arr.filter(function(r){ return r && r.data; })
+                        .sort(function(a,b){ return b.data.localeCompare(a.data); });
+        // Default to "Tudo" so dados antigos aparecem
+        if (garminData.length > 0) garminRange = 'all';
         garminLoaded = true;
         buildGarminFilters();
         renderGarmin();
+        if (garminData.length === 0) {
+          list.innerHTML = '<div style="text-align:center;padding:48px;color:var(--text3)">Nenhum treino encontrado no Firebase.<br><small style="color:var(--text3)">Sincronize pelo app Treinos primeiro.</small></div>';
+        }
       })
       .catch(function(e) {
         list.innerHTML = '<div style="text-align:center;padding:48px;color:var(--red)">❌ Erro: ' + e.message + '<br><br><button onclick="loadGarmin(true)" style="padding:8px 20px;background:var(--green);color:#fff;border:none;border-radius:20px;cursor:pointer;font-family:inherit">Tentar novamente</button></div>';
