@@ -539,7 +539,7 @@
       <div id="dash-zones"></div>
     </div>
     <div class="card">
-      <h3 class="card-h">Semana de treino modelo (Meia Maratona)</h3>
+      <h3 class="card-h">Semana atual — Recuperação joelho (Mai–Jun 2026)</h3>
       <div id="dash-week"></div>
     </div>
   </div>
@@ -566,7 +566,7 @@
     <button class="race-btn active" onclick="selectRace(this,'hm')">🏅 Meia Maratona<span class="sub">21.1 km · 16 semanas</span></button>
     <button class="race-btn" onclick="selectRace(this,'m')">🏆 Maratona<span class="sub">42.2 km · 20 semanas</span></button>
     <button class="race-btn" onclick="selectRace(this,'um')">⛰️ Ultra Maratona<span class="sub">50 km+ · 24 semanas</span></button>
-    <button class="race-btn" onclick="selectRace(this,'d64')" style="border-color:#D85A30;color:#D85A30">🔥 Desafio 64 km<span class="sub">Loops 3.3 km · 20 semanas</span></button>
+    <button class="race-btn" onclick="selectRace(this,'d64')" style="border-color:#D85A30;color:#D85A30">🔥 Desafio 64 km<span class="sub">Recuperação joelho · 46 sem</span></button>
   </div>
 
   <div id="race-content"></div>
@@ -846,41 +846,57 @@ const RACES = {
     ]
   },
   d64: {
-    title:'Desafio 64 km — Little the Rez Revoir', weeks:20, pace:'8:00–9:30/km',
-    goal:'Completar 64 km em loops de 3.3 km · ~19-20 voltas · Saint John NB',
+    title:'Desafio 64 km — Recuperação + Plano Conservador', weeks:46, pace:'8:30–9:30/km',
+    goal:'Recuperar joelho → completar 64 km em loops de 3.3 km · Mai 2026 → Abr 2027',
     tips:[
-      'Cada volta de 3.3 km é uma mini-meta: celebre cada uma e controle o ego nas primeiras',
-      'Suporte a cada volta: água, géis, troca de meias/calçados planejada a cada 20 km',
-      'Abril em Saint John pode ser frio e chuvoso: prepare layers, luvas e galochas',
-      'Estratégia de pace: voltas 1–12 conservador (+30 seg/km), 13–16 ritmo alvo, 17+ sobrevivência',
-      'Método Galloway adaptado: 4 km corrida + 400 m caminhada → economiza quads para o final',
+      '⚠️ Regra do joelho: dor ≥ 3/10 = pare imediatamente, aplique gelo 20 min, descanse',
+      'Primeiras 6 semanas: zero corrida — ciclismo, natação e pool running apenas',
+      'Regra dos 10%: nunca aumente o volume semanal em mais de 10% por semana',
+      'A cada loop de 3.3 km: água + eletrólitos obrigatório, gel a cada 3 loops (~10 km)',
+      'Pace da prova: loops 1–6 conservador (+45 seg/km), 7–14 ritmo alvo, 15–19 sobrevivência',
+      'Galloway de proteção: 4 km corrida + 400 m caminhada desde o 1º loop até o fim',
     ],
     phases:[
-      {name:'Base',week:'Sem 1–6',color:'tag-blue',sessions:[
-        {day:'Ter',type:'Fácil Z2',dist:'7 km',desc:'Ritmo 8:30/km, foco em esforço constante'},
-        {day:'Qua',type:'Cross-train',dist:'—',desc:'Ciclismo 60 min Z2 ou natação'},
-        {day:'Qui',type:'Fácil',dist:'6 km',desc:'Z2 com strides ao final'},
-        {day:'Sáb',type:'LONGO',dist:'14 km',desc:'Z2 fácil, pratique nutrição a cada 45 min'},
-        {day:'Dom',type:'Recuperação',dist:'5 km',desc:'Z1 caminhada/trote'},
+      {name:'🦵 Recuperação Joelho',week:'Sem 1–6 · Mai 16 – Jun 29',color:'tag-red',sessions:[
+        {day:'Ter',type:'Pool running',dist:'30 min',desc:'Colete flutuador + corrida na água — mantém cardio sem impacto no joelho'},
+        {day:'Qua',type:'Fisioterapia',dist:'—',desc:'Fortalecimento: quadríceps, glúteos, panturrilhas — sem carga axial'},
+        {day:'Qui',type:'Ciclismo Z1',dist:'45 min',desc:'Ergométrica ou spinner, cadência 90+ rpm, resistência mínima — sem dor'},
+        {day:'Sáb',type:'Natação Z2',dist:'45 min',desc:'Nado livre ou costas — recuperação ativa, mobilidade, sem impacto'},
+        {day:'Dom',type:'Caminhada plana',dist:'30 min',desc:'Superfície plana, ritmo confortável — observe o joelho pós-atividade'},
       ]},
-      {name:'Construção',week:'Sem 7–14',color:'tag-amber',sessions:[
-        {day:'Ter',type:'Intervalos',dist:'10 km',desc:'6×800m Z4, recuperação ativa'},
-        {day:'Qua',type:'Médio',dist:'12 km',desc:'Z2–Z3 progressivo'},
-        {day:'Qui',type:'Cross-train',dist:'—',desc:'Natação 45 min + musculação'},
-        {day:'Sáb',type:'LONGO loops',dist:'26 km',desc:'Treinar em loops: repita percurso 4.8 km (simule 3.3 km) walk-run 4+0.4'},
-        {day:'Dom',type:'B2B',dist:'10 km',desc:'Pernas cansadas — simule fadiga acumulada de ultra'},
+      {name:'🚶 Walk-Run Progressivo',week:'Sem 7–12 · Jun 30 – Ago 11',color:'tag-amber',sessions:[
+        {day:'Ter',type:'Walk 1+run 1',dist:'4 km',desc:'1 min caminhada + 1 min corrida, repete. Qualquer dor → volte à caminhada'},
+        {day:'Qua',type:'Cross-train',dist:'—',desc:'Ciclismo 60 min Z2 — mantém base aeróbica sem estressar o joelho'},
+        {day:'Qui',type:'Walk-run prog.',dist:'5 km',desc:'Progrida: sem 7–8: 2+1 min · sem 9–10: 3+1 min · sem 11–12: 4+1 min'},
+        {day:'Sáb',type:'Caminhada longa',dist:'12 km',desc:'Z1 plano — prepara tendões e articulação para cargas crescentes'},
+        {day:'Dom',type:'Natação ou bike',dist:'40 min',desc:'Cross-train leve — recuperação ativa, sem corrida'},
       ]},
-      {name:'Pico / Loops',week:'Sem 15–18',color:'tag-red',sessions:[
-        {day:'Ter',type:'Tempo loops',dist:'10 km',desc:'Corrida em loops de 3.3 km — simule terreno e lógica mental da prova'},
-        {day:'Qua',type:'Cross-train',dist:'—',desc:'Ciclismo ou rolo de espuma'},
-        {day:'Qui',type:'Médio',dist:'13 km',desc:'Ritmo de prova com nutrição real — teste géis e hidratação'},
-        {day:'Sáb',type:'ULTRA SIM',dist:'45 km',desc:'Simulação de prova: loops com suporte a cada volta, método walk-run'},
-        {day:'Dom',type:'B2B',dist:'14 km',desc:'Recuperação ativa em pernas cansadas'},
+      {name:'🏃 Base Aeróbica Z2',week:'Sem 13–22 · Ago 12 – Out 20',color:'tag-blue',sessions:[
+        {day:'Ter',type:'Corrida Z2',dist:'6 km',desc:'Ritmo 9:00/km constante — FC 116–130 bpm, forma antes de velocidade'},
+        {day:'Qua',type:'Cross-train',dist:'—',desc:'Ciclismo 60 min Z2 — volume aeróbico sem impacto adicional'},
+        {day:'Qui',type:'Corrida Z2',dist:'8 km',desc:'Aumento semanal de 10% no máx — pare se sentir dor no joelho'},
+        {day:'Sáb',type:'LONGO Z2',dist:'18 km',desc:'Walk-run: 5 km corrida + 500 m caminhada, pace 9:00/km, gels a cada 45 min'},
+        {day:'Dom',type:'Recuperação ativa',dist:'4 km',desc:'Caminhada Z1 ou trote muito leve — observe o joelho nas 24h seguintes'},
       ]},
-      {name:'Afunilamento',week:'Sem 19–20',color:'tag-green',sessions:[
-        {day:'Ter',type:'Curto',dist:'7 km',desc:'Z2 fácil com 3 strides de 20 seg'},
-        {day:'Qui',type:'Ativação',dist:'5 km',desc:'30 min fácil + 4×20 seg no ritmo de prova'},
-        {day:'Sáb',type:'🔥 DESAFIO 64 KM!',dist:'64 km',desc:'Little the Rez Revoir · Saint John NB · ~19 loops de 3.3 km'},
+      {name:'⚙️ Construção + Loops',week:'Sem 23–34 · Out 21 – Jan 13',color:'tag-amber',sessions:[
+        {day:'Ter',type:'Intervalos suaves',dist:'10 km',desc:'4×1 km em Z3 (130–144 bpm) com rec. de 2 min — moderado, sem forçar joelho'},
+        {day:'Qua',type:'Cross-train',dist:'—',desc:'Natação 45 min + exercícios específicos de joelho (leg press, agachamento parcial)'},
+        {day:'Qui',type:'Loops de 3.3 km',dist:'13 km',desc:'Treino mental em loops — simule o percurso, pratique suporte a cada volta'},
+        {day:'Sáb',type:'LONGO loops',dist:'32 km',desc:'Walk-run 4 km + 400 m · suporte montado a cada loop · nutrição real de prova'},
+        {day:'Dom',type:'Back-to-back',dist:'12 km',desc:'Pernas de sábado — simule fadiga acumulada de ultra, pace Z1'},
+      ]},
+      {name:'🔥 Pico / Simulação',week:'Sem 35–42 · Jan 14 – Mar 10',color:'tag-red',sessions:[
+        {day:'Ter',type:'Tempo loops',dist:'12 km',desc:'Loops de 3.3 km no ritmo alvo (8:30/km) — controla FC, não ultrapasse Z3'},
+        {day:'Qua',type:'Cross-train',dist:'—',desc:'Ciclismo ou rolo de espuma + 15 min mobilidade de quadril e joelho'},
+        {day:'Qui',type:'Médio pace',dist:'15 km',desc:'Ritmo de prova com nutrição real — avalia recuperação do joelho pós-treino'},
+        {day:'Sáb',type:'ULTRA SIM',dist:'50 km',desc:'Simulação completa: loops, suporte, drop bag, walk-run, nutrição de prova'},
+        {day:'Dom',type:'B2B recovery',dist:'14 km',desc:'Pace Z1 em pernas de ultra — maior teste de recuperação do joelho'},
+      ]},
+      {name:'✅ Afunilamento',week:'Sem 43–46 · Mar 11 – Abr 6',color:'tag-green',sessions:[
+        {day:'Ter',type:'Curto Z2',dist:'8 km',desc:'Fácil com 3 strides de 20 seg — sente as pernas e o joelho'},
+        {day:'Qua',type:'Cross-train leve',dist:'—',desc:'Natação suave 30 min ou ciclismo leve — mantém mobilidade'},
+        {day:'Qui',type:'Ativação',dist:'5 km',desc:'30 min fácil + 4×20 seg no ritmo de prova — nada pesado'},
+        {day:'Sáb',type:'🔥 DESAFIO 64 KM!',dist:'64 km',desc:'Little the Rez Revoir · Saint John NB · ~19 loops de 3.3 km · Você merece chegar!'},
       ]},
     ]
   }
@@ -976,12 +992,12 @@ function buildDashboard() {
   const wc = document.getElementById('dash-week');
   const days = [
     {d:'Seg',t:'Descanso',c:'day-rest'},
-    {d:'Ter',t:'Intervalos',c:'day-active'},
-    {d:'Qua',t:'Cross',c:'day-active'},
-    {d:'Qui',t:'Fácil Z2',c:'day-active'},
+    {d:'Ter',t:'Pool run',c:'day-active'},
+    {d:'Qua',t:'Fisio/Força',c:'day-active'},
+    {d:'Qui',t:'Ciclismo Z1',c:'day-active'},
     {d:'Sex',t:'Descanso',c:'day-rest'},
-    {d:'Sáb',t:'LONGO',c:'day-long'},
-    {d:'Dom',t:'Recovery',c:'day-active'},
+    {d:'Sáb',t:'Natação Z2',c:'day-long'},
+    {d:'Dom',t:'Caminhada',c:'day-active'},
   ];
   let wh = '';
   days.forEach(d => {
@@ -1200,7 +1216,7 @@ function buildCharts() {
 //  CHAT / ASSISTENTE
 // =========================================================
 const QQ = [
-  'Qual meu ritmo alvo para o Desafio 64 km?',
+  'Como é o plano de recuperação do joelho para o Desafio 64 km?',
   'Como é a estratégia de loops no Desafio 64 km?',
   'Qual meu ritmo alvo para meia maratona?',
   'Como calcular minhas zonas de FC?',
@@ -1213,8 +1229,8 @@ const QQ = [
 ];
 
 const LOCAL = {
-  'desafio 64': `🔥 Desafio 64 km — Little the Rez Revoir, Saint John NB:\n\n📏 Distância: 64 km (~19 loops de 3.3 km)\n🎯 Ritmo alvo: 8:00–9:30/km (Z1–Z2, 103–130 bpm)\n🏃 Método: 4 km corrida + 400 m caminhada (Galloway adaptado)\n⏱️ Tempo estimado: 8h30 a 10h30\n\n🗺️ Estratégia por loops:\n• Loops 1–6: +30 seg/km abaixo do alvo — economize!\n• Loops 7–12: ritmo alvo estável\n• Loops 13–16: mantenha se puder\n• Loops 17–19: o que tiver nas pernas!\n\n💡 A cada volta: água + eletrólitos obrigatório. A cada 20 km: gel de cafeína.`,
-  'estratégia de loop': `🔥 Estratégia de loops no Desafio 64 km:\n\n✅ Vantagem do loop: você passa pelo suporte a cada 3.3 km — use!\n📋 Planeje: meias secas a cada 20 km, sandálias no check-in\n🧠 Mental: foque em 1 volta de cada vez — não pense em 64 km!\n⚡ Crise entre km 32–48 é normal — beba mais, coma e ande 1 min extra\n🥊 Km 48–64: é onde a prova começa de verdade\n\n☁️ Abril em Saint John: prepare camadas e impermeável leve na mochila de suporte.`,
+  'desafio 64': `🔥 Desafio 64 km — Plano de Recuperação do Joelho (Mai 2026 → Abr 2027):\n\n📅 46 semanas divididas em 6 fases:\n🦵 Sem 1–6: Zero corrida — pool running, bike, fisioterapia\n🚶 Sem 7–12: Walk-run progressivo (1+1 → 4+1 min)\n🏃 Sem 13–22: Base aeróbica Z2, 6→18 km longão\n⚙️ Sem 23–34: Construção + loops de 3.3 km\n🔥 Sem 35–42: Pico com simulação de 50 km\n✅ Sem 43–46: Afunilamento e prova!\n\n⚠️ Regra do joelho: dor ≥ 3/10 = pare, gelo, descanse. Não negocie com a dor.`,
+  'estratégia de loop': `🔥 Estratégia de loops no Desafio 64 km:\n\n✅ Vantagem do loop: suporte a cada 3.3 km — use isso!\n📋 Planeje: meias secas a cada 20 km, sandálias no check-in, drop bag\n🧠 Mental: foque em 1 volta de cada vez — não pense em 64 km!\n🦵 Cuide do joelho: se sentir dor, adicione 1 min extra de caminhada naquela volta\n⚡ Crise entre km 32–48 é normal — beba mais, coma e ande 1 min extra\n🥊 Km 48–64: é onde a prova começa de verdade\n\n☁️ Abril em Saint John: prepare camadas e impermeável leve na mochila de suporte.`,
   'ritmo alvo': `🏃 Ritmos alvo para Luiz (64 anos, FC repouso 49 bpm):\n\n🏅 Meia Maratona: 6:30–7:00/km (Z3, ~130–144 bpm)\n🏆 Maratona: 7:00–7:30/km (Z2–Z3, ~116–138 bpm)\n⛰️ Ultra: 7:30–8:30/km com caminhadas em subidas\n🔥 Desafio 64 km: 8:00–9:30/km (loop strategy) — 4 km corrida + 400m caminhada\n\nDica principal: nos primeiros km/loops da prova, vá 30 seg/km mais devagar que o ritmo alvo. Você recupera tudo no final!`,
   'zona': `❤️ Suas zonas pelo método Karvonen (FCmax 156, repouso 49, HRR 107):\n\nZ1 Recuperação:  103–116 bpm\nZ2 Aeróbico: 116–130 bpm ← 80% do tempo aqui!\nZ3 Aeróbico+: 130–144 bpm\nZ4 Limiar: 144–156 bpm\nZ5 VO₂Max: >156 bpm\n\nRegra de ouro: 80% dos treinos em Z1–Z2, 20% em Z3–Z5.`,
   'comer antes': `🥗 Nutrição pré-treino longo para Luiz:\n\n⏰ 2h antes: Panquecas de aveia + mel + banana + café\n⏰ 30 min antes: Gel de cafeína (100mg) + 500ml água\n🏃 A cada 45 min: 25–30g carboidratos (gel ou mastigáveis)\n\nSeu BMR é ~1.820 kcal/dia. Em treinos longos, adicione ~500–700 kcal por hora de exercício.`,
@@ -1237,7 +1253,9 @@ Dados do atleta (Garmin Connect - luiz62):
 - Dias disponíveis: Ter, Qua, Qui, Sáb, Dom (sábado = treino longo preferido)
 - Velocidade de treino Garmin: 3.0 m/s corrida (~5:33/km pace base)
 - Zonas (Karvonen, hrr=107): Z1 103–116 bpm, Z2 116–130 bpm, Z3 130–144 bpm, Z4 144–156 bpm, Z5 >156 bpm
-- Evento especial: Desafio 64 km (Little the Rez Revoir, Saint John NB, loops de 3.3 km)
+- Evento alvo: Desafio 64 km (Little the Rez Revoir, Saint John NB, loops de 3.3 km, abril 2027)
+- Situação atual: recuperando lesão no joelho desde mai/2026 — plano conservador de 46 semanas
+- Restrição: zero corrida nas primeiras 6 semanas (cross-training apenas), walk-run a partir de jul/2026
 - Histórico Garmin: ativo desde 2011, dados até 2026
 
 Responda SEMPRE em português brasileiro. Seja específico, prático e motivador.
