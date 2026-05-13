@@ -5,17 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Luiz Silva — Training Hub</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<script>
-firebase.initializeApp({
-  apiKey: "AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU",
-  authDomain: "gastos-casa-7f431.firebaseapp.com",
-  databaseURL: "https://gastos-casa-7f431-default-rtdb.firebaseio.com",
-  projectId: "gastos-casa-7f431"
-});
-</script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -1013,43 +1002,26 @@ const TIPO_INFO = {
 function loadGarmin(forcar) {
   if (!forcar && garminLoaded) { renderGarmin(); return; }
   const list = document.getElementById('garmin-list');
-  list.innerHTML = '<div style="text-align:center;padding:48px;color:var(--text3)"><div style="font-size:28px;margin-bottom:8px">⌚</div>Conectando ao Firebase...</div>';
+  list.innerHTML = '<div style="text-align:center;padding:48px;color:var(--text3)"><div style="font-size:28px;margin-bottom:8px">⌚</div>Carregando treinos...</div>';
 
-  const doRead = function() {
-    firebase.database().ref('treinos/luiz').once('value')
-      .then(function(snap) {
-        const raw = snap.val();
-        let arr = [];
-        if (raw) {
-          const src = (raw.treinos !== undefined) ? raw.treinos : raw;
-          if (Array.isArray(src)) {
-            arr = src;
-          } else if (src && typeof src === 'object') {
-            arr = Object.values(src).filter(function(v){ return v !== null; });
-          }
-        }
-        garminData = arr.filter(function(r){ return r && r.data; })
-                        .sort(function(a,b){ return b.data.localeCompare(a.data); });
-        if (garminData.length > 0) garminRange = 'all';
-        garminLoaded = true;
-        buildGarminFilters();
-        renderGarmin();
-        if (garminData.length === 0) {
-          list.innerHTML = '<div style="text-align:center;padding:48px;color:var(--text3)">Nenhum treino encontrado.<br><small>Abra o app Treinos e aguarde a sincronização.</small></div>';
-        }
-      })
-      .catch(function(e) {
-        list.innerHTML = '<div style="text-align:center;padding:48px;color:var(--red)">❌ Erro: ' + e.message + '<br><br><button onclick="loadGarmin(true)" style="padding:8px 20px;background:var(--green);color:#fff;border:none;border-radius:20px;cursor:pointer;font-family:inherit">Tentar novamente</button></div>';
-      });
-  };
+  // Read directly from localStorage — same origin as the Treinos app
+  try {
+    const raw = JSON.parse(localStorage.getItem('treinos') || '{}');
+    const src = Array.isArray(raw.treinos) ? raw.treinos
+              : (raw.treinos && typeof raw.treinos === 'object') ? Object.values(raw.treinos).filter(Boolean)
+              : [];
+    garminData = src.filter(function(r){ return r && r.data; })
+                    .sort(function(a,b){ return b.data.localeCompare(a.data); });
+  } catch(e) {
+    garminData = [];
+  }
 
-  const auth = firebase.auth();
-  if (auth.currentUser) {
-    doRead();
-  } else {
-    auth.signInAnonymously().then(doRead).catch(function(e) {
-      list.innerHTML = '<div style="text-align:center;padding:48px;color:var(--red)">❌ Erro auth: ' + e.message + '</div>';
-    });
+  if (garminData.length > 0) garminRange = 'all';
+  garminLoaded = true;
+  buildGarminFilters();
+  renderGarmin();
+  if (garminData.length === 0) {
+    list.innerHTML = '<div style="text-align:center;padding:48px;color:var(--text3)">Nenhum treino encontrado.<br><small>Os treinos precisam estar registrados no app Treinos neste dispositivo.</small></div>';
   }
 }
 
