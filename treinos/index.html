@@ -159,6 +159,20 @@
     .empty { text-align: center; padding: 48px 20px; color: #90a4ae; }
     .empty-icon { font-size: 48px; margin-bottom: 12px; }
     .empty-txt { font-size: 15px; line-height: 1.5; }
+
+    /* Strava */
+    .strava-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:4500;display:flex;align-items:center;justify-content:center;padding:1rem}
+    .strava-modal{background:#fff;border-radius:20px;padding:1.5rem;max-width:400px;width:100%;max-height:92vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.3)}
+    .strava-modal h3{margin-bottom:.4rem;font-size:1rem;display:flex;align-items:center;gap:.5rem}
+    .strava-field{margin-bottom:.8rem}
+    .strava-field label{display:block;font-size:.8rem;font-weight:600;color:#555;margin-bottom:.3rem}
+    .strava-field input{width:100%;border:1.5px solid #ddd;border-radius:8px;padding:.5rem .75rem;font-size:.88rem;outline:none;font-family:monospace}
+    .strava-field input:focus{border-color:#fc4c02}
+    .strava-btn-primary{width:100%;background:#fc4c02;color:#fff;border:none;border-radius:10px;padding:.75rem;font-size:.92rem;font-weight:700;cursor:pointer;font-family:inherit;margin-top:.25rem}
+    .strava-btn-primary:hover{background:#e04000}
+    .strava-btn-secondary{width:100%;padding:.5rem;background:none;border:none;color:#aaa;cursor:pointer;font-size:.8rem;margin-top:.5rem;font-family:inherit}
+    .strava-act-item{padding:.6rem .75rem;border:1.5px solid #eee;border-radius:10px;margin-bottom:.5rem;cursor:pointer;transition:border-color .15s}
+    .strava-act-item:hover{border-color:#fc4c02;background:#fff5f2}
   </style>
 </head>
 <body>
@@ -209,8 +223,9 @@
     <div class="hero-eyebrow">Diário de</div>
     <div class="hero-title" style="margin-bottom:0">Treinos</div>
   </div>
-  <div style="padding:12px 12px 0;display:flex;justify-content:flex-end">
+  <div style="padding:12px 12px 0;display:flex;justify-content:flex-end;gap:8px">
     <button onclick="document.getElementById('import-file').click()" style="background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7;border-radius:20px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer">⌚ Importar Garmin</button>
+    <button onclick="openStravaSyncModal()" style="background:#fce8e1;color:#c13a00;border:1px solid #fc4c02;border-radius:20px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer">🟠 Strava</button>
   </div>
   <div class="filter-chips">
     <button class="chip ativo" onclick="filtrar(this,'todos')">Todos</button>
@@ -987,6 +1002,249 @@ function iniciarSync() {
   } catch(e) { syncStatus('#e53935','erro'); }
 }
 
+// ══════════════════════════════════════════════════════
+// STRAVA INTEGRATION
+// ══════════════════════════════════════════════════════
+var STRAVA_CFG_KEY   = 'treinos_strava_cfg';
+var STRAVA_TOKEN_KEY = 'treinos_strava_tok';
+var STRAVA_REDIRECT  = 'https://luizkatiu62.github.io/treinos/';
+var STRAVA_SCOPE     = 'activity:read_all';
+var STRAVA_IDB_NAME  = 'treinos-meta';
+
+function loadStravaCfg(){ try{ return JSON.parse(localStorage.getItem(STRAVA_CFG_KEY))||null; }catch(e){ return null; } }
+function saveStravaCfg(c){ var s=JSON.stringify(c); localStorage.setItem(STRAVA_CFG_KEY,s); _stravaSaveIDB('strava_cfg',s); }
+function loadStravaToken(){ try{ return JSON.parse(localStorage.getItem(STRAVA_TOKEN_KEY))||null; }catch(e){ return null; } }
+function saveStravaToken(t){ var s=JSON.stringify(t); localStorage.setItem(STRAVA_TOKEN_KEY,s); _stravaSaveIDB('strava_tok',s); }
+
+function _stravaSaveIDB(key,val){
+  try{
+    var req=indexedDB.open(STRAVA_IDB_NAME,1);
+    req.onupgradeneeded=function(e){ e.target.result.createObjectStore('kv',{keyPath:'k'}); };
+    req.onsuccess=function(e){ e.target.result.transaction('kv','readwrite').objectStore('kv').put({k:key,v:val}); };
+  }catch(e){}
+}
+(function _stravaRestoreIDB(){
+  var hasTok=localStorage.getItem(STRAVA_TOKEN_KEY);
+  var hasCfg=localStorage.getItem(STRAVA_CFG_KEY);
+  if(hasTok && hasCfg) return;
+  try{
+    var req=indexedDB.open(STRAVA_IDB_NAME,1);
+    req.onupgradeneeded=function(e){ e.target.result.createObjectStore('kv',{keyPath:'k'}); };
+    req.onsuccess=function(e){
+      var st=e.target.result.transaction('kv','readonly').objectStore('kv');
+      if(!hasTok) st.get('strava_tok').onsuccess=function(ev){ if(ev.target.result&&ev.target.result.v) localStorage.setItem(STRAVA_TOKEN_KEY,ev.target.result.v); };
+      if(!hasCfg) st.get('strava_cfg').onsuccess=function(ev){ if(ev.target.result&&ev.target.result.v) localStorage.setItem(STRAVA_CFG_KEY,ev.target.result.v); };
+    };
+  }catch(e){}
+})();
+
+// Open date-picker modal then fetch activities
+function openStravaSyncModal(){
+  if(document.getElementById('strava-sync-overlay')) return;
+  var ov=document.createElement('div');
+  ov.className='strava-overlay'; ov.id='strava-sync-overlay';
+  ov.onclick=function(e){ if(e.target===ov) ov.remove(); };
+  ov.innerHTML='<div class="strava-modal">'+
+    '<h3><span style="color:#fc4c02;font-size:1.3rem">🟠</span> Importar do Strava</h3>'+
+    '<p style="font-size:.78rem;color:#888;margin-bottom:1rem;line-height:1.5">Selecione a data do treino que deseja importar.</p>'+
+    '<div class="strava-field"><label>Data do treino</label>'+
+    '<input type="date" id="strava-pick-date" value="'+hoje()+'"></div>'+
+    '<button class="strava-btn-primary" onclick="stravaBuscar()">🔍 Buscar atividades</button>'+
+    '<button class="strava-btn-secondary" onclick="document.getElementById(\'strava-sync-overlay\').remove()">Fechar</button>'+
+  '</div>';
+  document.body.appendChild(ov);
+}
+
+function stravaBuscar(){
+  var date=document.getElementById('strava-pick-date').value;
+  if(!date){ alert('Selecione uma data.'); return; }
+  document.getElementById('strava-sync-overlay').remove();
+  var tok=loadStravaToken();
+  if(!tok||!tok.accessToken) openStravaSetup(date);
+  else fetchStravaActivities(date);
+}
+
+function openStravaSetup(pendingDate){
+  if(document.getElementById('strava-setup-overlay')) return;
+  var cfg=loadStravaCfg()||{};
+  var ov=document.createElement('div');
+  ov.className='strava-overlay'; ov.id='strava-setup-overlay';
+  ov.onclick=function(e){ if(e.target===ov) ov.remove(); };
+  ov.innerHTML='<div class="strava-modal">'+
+    '<h3><span style="color:#fc4c02;font-size:1.3rem">🟠</span> Conectar ao Strava</h3>'+
+    '<p style="font-size:.78rem;color:#888;margin-bottom:1rem;line-height:1.5">Cole o Client ID e Client Secret do seu app em <strong>strava.com/settings/api</strong>.</p>'+
+    '<div class="strava-field"><label>Client ID</label><input type="text" id="st-client-id" value="'+(cfg.clientId||'')+'" placeholder="Ex: 12345"></div>'+
+    '<div class="strava-field"><label>Client Secret</label><input type="password" id="st-client-secret" value="'+(cfg.clientSecret||'')+'" placeholder="Cole o client secret"></div>'+
+    '<button class="strava-btn-primary" onclick="startStravaOAuth(\''+escHtmlAttr(pendingDate||'')+'\')">🟠 Autorizar com o Strava</button>'+
+    '<button class="strava-btn-secondary" onclick="document.getElementById(\'strava-setup-overlay\').remove()">Fechar</button>'+
+  '</div>';
+  document.body.appendChild(ov);
+}
+
+function escHtmlAttr(s){ return (s||'').replace(/'/g,'&#39;'); }
+
+function startStravaOAuth(pendingDate){
+  var clientId=(document.getElementById('st-client-id').value||'').trim();
+  var clientSecret=(document.getElementById('st-client-secret').value||'').trim();
+  if(!clientId||!clientSecret){ alert('Preencha o Client ID e o Client Secret.'); return; }
+  saveStravaCfg({clientId:clientId,clientSecret:clientSecret});
+  var state=btoa(JSON.stringify({clientId:clientId,clientSecret:clientSecret,pendingDate:pendingDate||''}));
+  window.location.href='https://www.strava.com/oauth/authorize?client_id='+clientId+
+    '&redirect_uri='+encodeURIComponent(STRAVA_REDIRECT)+
+    '&response_type=code&approval_prompt=auto&scope='+STRAVA_SCOPE+
+    '&state='+encodeURIComponent(state);
+}
+
+function handleStravaCallback(){
+  var params=new URLSearchParams(window.location.search);
+  var code=params.get('code');
+  var error=params.get('error');
+  if(!code&&!error) return;
+  window.history.replaceState({},document.title,window.location.pathname);
+  if(error){ alert('Autorização Strava cancelada.'); return; }
+  var cfg=loadStravaCfg();
+  var pendingDate='';
+  try{
+    var stateRaw=params.get('state');
+    if(stateRaw){
+      var stateObj=JSON.parse(atob(stateRaw));
+      if(stateObj.clientId&&stateObj.clientSecret){
+        cfg={clientId:stateObj.clientId,clientSecret:stateObj.clientSecret};
+        saveStravaCfg(cfg);
+        pendingDate=stateObj.pendingDate||'';
+      }
+    }
+  }catch(e){}
+  if(!cfg){ alert('Configuração Strava não encontrada. Tente novamente.'); return; }
+  fetch('https://www.strava.com/oauth/token',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({client_id:cfg.clientId,client_secret:cfg.clientSecret,code:code,grant_type:'authorization_code'})
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(data){
+    if(data.errors||!data.access_token){ alert('Erro Strava: '+(data.message||JSON.stringify(data))); return; }
+    saveStravaToken({accessToken:data.access_token,refreshToken:data.refresh_token,expiresAt:data.expires_at,athleteName:(data.athlete&&data.athlete.firstname?data.athlete.firstname+' '+data.athlete.lastname:'')});
+    if(pendingDate) setTimeout(function(){ fetchStravaActivities(pendingDate); },300);
+    else alert('✅ Strava conectado! Toque em 🟠 Strava para importar treinos.');
+  })
+  .catch(function(e){ alert('Erro de rede: '+e.message); });
+}
+
+async function ensureStravaToken(){
+  var tok=loadStravaToken();
+  if(!tok) return null;
+  if(tok.expiresAt < (Date.now()/1000+300)){
+    var cfg=loadStravaCfg(); if(!cfg) return null;
+    try{
+      var r=await fetch('https://www.strava.com/oauth/token',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({client_id:cfg.clientId,client_secret:cfg.clientSecret,refresh_token:tok.refreshToken,grant_type:'refresh_token'})
+      });
+      var data=await r.json();
+      if(!data.access_token) return null;
+      tok=Object.assign({},tok,{accessToken:data.access_token,refreshToken:data.refresh_token,expiresAt:data.expires_at});
+      saveStravaToken(tok);
+    }catch(e){ return null; }
+  }
+  return tok.accessToken;
+}
+
+async function fetchStravaActivities(date){
+  var token=await ensureStravaToken();
+  if(!token){ openStravaSetup(date); return; }
+  var loadOv=document.createElement('div');
+  loadOv.className='strava-overlay'; loadOv.id='strava-loading';
+  loadOv.innerHTML='<div class="strava-modal" style="text-align:center;padding:2rem"><div style="font-size:2rem;margin-bottom:.75rem">🟠</div><div style="font-weight:700;margin-bottom:.5rem">Buscando atividades...</div><div style="font-size:.8rem;color:#aaa">'+date+'</div></div>';
+  document.body.appendChild(loadOv);
+  var d=new Date(date+'T00:00:00');
+  var after=Math.floor(d.getTime()/1000)-3600;
+  var before=Math.floor(d.getTime()/1000)+86400+3600;
+  try{
+    var r=await fetch('https://www.strava.com/api/v3/athlete/activities?after='+after+'&before='+before+'&per_page=15',{headers:{'Authorization':'Bearer '+token}});
+    var acts=await r.json();
+    loadOv.remove();
+    if(!Array.isArray(acts)||acts.length===0){ showStravaNoActs(date); return; }
+    showStravaActList(date,acts);
+  }catch(e){ loadOv.remove(); alert('Erro ao buscar atividades: '+e.message); }
+}
+
+function showStravaNoActs(date){
+  var ov=document.createElement('div');
+  ov.className='strava-overlay'; ov.id='strava-no-acts';
+  ov.onclick=function(e){ if(e.target===ov) ov.remove(); };
+  ov.innerHTML='<div class="strava-modal" style="text-align:center">'+
+    '<h3>🟠 Strava</h3>'+
+    '<p style="color:#888;font-size:.85rem;margin:1rem 0">Nenhuma atividade encontrada para <strong>'+date+'</strong>.</p>'+
+    '<button class="strava-btn-primary" onclick="this.closest(\'.strava-overlay\').remove()">Fechar</button>'+
+  '</div>';
+  document.body.appendChild(ov);
+}
+
+function showStravaActList(date,acts){
+  var ov=document.createElement('div');
+  ov.className='strava-overlay'; ov.id='strava-act-list';
+  ov.onclick=function(e){ if(e.target===ov) ov.remove(); };
+  var months=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  var items=acts.map(function(act){
+    var km=(act.distance/1000).toFixed(2);
+    var secs=act.moving_time;
+    var h=Math.floor(secs/3600),m=Math.floor((secs%3600)/60),s=secs%60;
+    var dur=h>0?h+':'+pad(m)+':'+pad(s):m+':'+pad(s);
+    var paceS=act.distance>0?secs/(act.distance/1000):0;
+    var paceStr=paceS>0?Math.floor(paceS/60)+':'+pad(Math.floor(paceS%60))+'/km':'';
+    var actDate=act.start_date_local?act.start_date_local.split('T')[0]:date;
+    var dd=new Date(actDate+'T12:00:00');
+    var label=dd.getDate()+' '+months[dd.getMonth()];
+    return '<div class="strava-act-item" onclick="importStravaTreino(\''+date+'\',\''+act.id+'\',\''+act.name.replace(/'/g,'`').replace(/"/g,'`')+'\','+act.distance+','+act.moving_time+','+(act.average_heartrate||0)+',\''+(act.sport_type||act.type||'Run')+'\',\''+actDate+'\','+(act.average_cadence||0)+')">'+
+      '<div style="font-weight:700;font-size:.88rem;color:#fc4c02">'+act.name+'</div>'+
+      '<div style="font-size:.75rem;color:#555;margin-top:.2rem">'+(act.sport_type||act.type)+' · '+label+'</div>'+
+      '<div style="font-size:.78rem;color:#777;margin-top:.25rem">📏 '+km+' km &nbsp;·&nbsp; ⏱ '+dur+(paceStr?' &nbsp;·&nbsp; ⚡ '+paceStr:'')+(act.average_heartrate?' &nbsp;·&nbsp; ❤️ '+Math.round(act.average_heartrate)+' bpm':'')+'</div>'+
+    '</div>';
+  }).join('');
+  ov.innerHTML='<div class="strava-modal">'+
+    '<h3>🟠 Atividades do Strava</h3>'+
+    '<p style="font-size:.78rem;color:#888;margin-bottom:.85rem">Selecione a atividade para importar como treino.</p>'+
+    items+
+    '<button class="strava-btn-secondary" onclick="this.closest(\'.strava-overlay\').remove()">Fechar</button>'+
+  '</div>';
+  document.body.appendChild(ov);
+}
+
+var STRAVA_TIPO_MAP={'TrailRun':'trilha','VirtualRun':'virtual','Walk':'caminhada','Hike':'caminhada'};
+
+function importStravaTreino(date,actId,name,distM,movingSecs,hr,sportType,actDate,cadence){
+  document.getElementById('strava-act-list')&&document.getElementById('strava-act-list').remove();
+  var dist=Math.round(distM/10)/100;
+  var h=Math.floor(movingSecs/3600),m=Math.floor((movingSecs%3600)/60),s=movingSecs%60;
+  var duracao=h>0?h+':'+pad(m)+':'+pad(s):m+':'+pad(s);
+  var paceS=dist>0?movingSecs/dist:0;
+  var pace=paceS>0?Math.floor(paceS/60)+':'+pad(Math.floor(paceS%60)):'';
+  var hrVal=hr&&+hr>0?Math.round(+hr):0;
+  var tipo=STRAVA_TIPO_MAP[sportType]||'facil';
+  var treino={
+    id: uid(),
+    tipo: tipo,
+    data: actDate||date,
+    distancia: dist,
+    duracao: duracao,
+    pace: pace,
+    fcMed: hrVal,
+    fcMax: 0,
+    esforco: 5,
+    notas: name||'',
+    stravaId: String(actId)
+  };
+  var d=getDados();
+  // Avoid duplicates by stravaId
+  var idx=d.treinos.findIndex(function(t){ return t.stravaId&&t.stravaId===treino.stravaId; });
+  if(idx>=0){ d.treinos[idx]=Object.assign(d.treinos[idx],treino,{id:d.treinos[idx].id}); toast('✏️ Treino Strava atualizado'); }
+  else { d.treinos.push(treino); toast('✅ Treino importado do Strava!'); }
+  salvarDados(d);
+  renderSemana();
+  if(_telaAtual==='treinos') renderTreinos();
+}
+
 // ── Init ──
 document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('t-dist').addEventListener('input', updatePace);
@@ -997,6 +1255,7 @@ document.addEventListener('DOMContentLoaded', function() {
     o.addEventListener('click', function(e){ if (e.target===o) o.classList.remove('aberto'); });
   });
 
+  handleStravaCallback();
   renderSemana();
   firebase.auth().signInAnonymously().then(iniciarSync).catch(iniciarSync);
 
