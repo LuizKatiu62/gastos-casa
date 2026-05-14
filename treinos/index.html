@@ -2782,7 +2782,8 @@ function dsfSaveCustom(){
   custom[date]={type:type,km:type==='rest'?0:km,title:title||(DSF_ACT_LABEL[type]+(km>0?' '+km+'km':''))};
   dsfSaveCustomStore(custom);
   fechar('overlay-dsf-edit');
-  renderDesafio();
+  renderPlanoDesafio();
+  if(_tela==='desafio') renderDesafio();
 }
 function dsfClearCustom(){
   var date=document.getElementById('dsf-edit-date').value;
@@ -2790,7 +2791,8 @@ function dsfClearCustom(){
   delete custom[date];
   dsfSaveCustomStore(custom);
   fechar('overlay-dsf-edit');
-  renderDesafio();
+  renderPlanoDesafio();
+  if(_tela==='desafio') renderDesafio();
 }
 function openDsfImport(){
   document.getElementById('dsf-import-txt').value='';
