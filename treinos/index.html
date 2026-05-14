@@ -238,6 +238,25 @@ input[type=range].esf::-webkit-slider-thumb{-webkit-appearance:none;width:22px;h
 .strava-btn-s{width:100%;padding:.5rem;background:none;border:none;color:#aaa;cursor:pointer;font-size:.8rem;margin-top:.5rem;font-family:inherit}
 .strava-act-item{padding:.6rem .75rem;border:1.5px solid #eee;border-radius:10px;margin-bottom:.5rem;cursor:pointer;transition:border-color .15s}
 .strava-act-item:hover{border-color:#fc4c02;background:#fff5f2}
+/* Desafio 64 screen */
+.dsf-hero{background:linear-gradient(135deg,#1e3a5f 0%,#1a6b3a 100%);padding:18px 16px 14px;color:#fff;text-align:center}
+.dsf-countdown{font-size:36px;font-weight:900;line-height:1}
+.dsf-countdown-sub{font-size:11px;font-weight:700;opacity:.75;letter-spacing:.05em;text-transform:uppercase;margin-top:2px}
+.dsf-card{background:#fff;border-radius:14px;box-shadow:0 1px 6px rgba(0,0,0,.07);padding:14px;margin-bottom:12px}
+.dsf-day{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;background:#f8f9fa;margin-bottom:4px;border-left:3px solid transparent}
+.dsf-day.dsf-today{background:#eff6ff;border-left-color:#3b82f6}
+.dsf-day.dsf-done{background:#f0fdf4;border-left-color:#22c55e}
+.dsf-day.dsf-missed{background:#fef2f2;border-left-color:#ef4444}
+.dsf-day.dsf-race{background:#fefce8;border-left-color:#eab308}
+.dsf-day.dsf-rest{opacity:.55}
+.dsf-day-date{font-size:10px;font-weight:700;color:var(--text3);width:32px;flex-shrink:0;text-align:center;line-height:1.3}
+.dsf-day-icon{font-size:17px;flex-shrink:0;width:22px;text-align:center}
+.dsf-day-body{flex:1;min-width:0}
+.dsf-day-title{font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dsf-day-km{font-size:10px;font-weight:700;color:var(--text3)}
+.dsf-verdict{margin-top:10px;padding:8px 12px;border-radius:10px;font-size:12px;font-weight:700;text-align:center}
+.dsf-week-group{margin-bottom:16px}
+.dsf-week-title{font-size:11px;font-weight:800;padding:6px 10px;border-radius:8px;margin-bottom:6px;display:flex;align-items:center;gap:6px}
 </style>
 </head>
 <body>
@@ -421,6 +440,16 @@ input[type=range].esf::-webkit-slider-thumb{-webkit-appearance:none;width:22px;h
   <div id="gym-list" style="padding:8px 12px"></div>
 </div>
 
+<!-- Desafio 64km -->
+<div id="tela-desafio" class="screen">
+  <div class="dsf-hero">
+    <div class="dsf-countdown" id="dsf-countdown-num">—</div>
+    <div class="dsf-countdown-sub" id="dsf-countdown-sub">dias para o Desafio 64km</div>
+    <div style="font-size:10px;opacity:.55;margin-top:4px">13 de junho de 2026 · Little the Rez · Saint John NB</div>
+  </div>
+  <div id="dsf-content" style="padding:12px 14px"></div>
+</div>
+
 <!-- FABs -->
 <button class="fab" id="fab-treino" onclick="abrirTreino()">+</button>
 <button class="fab" id="fab-corrida" onclick="abrirCorrida()" style="display:none">+</button>
@@ -435,6 +464,7 @@ input[type=range].esf::-webkit-slider-thumb{-webkit-appearance:none;width:22px;h
   <button class="nav-btn nav-bike" id="nav-bike" onclick="irParaTela('bike')"><span class="nav-icon">🚴</span><span>Bike</span></button>
   <button class="nav-btn nav-swim" id="nav-natacao" onclick="irParaTela('natacao')"><span class="nav-icon">🏊</span><span>Natação</span></button>
   <button class="nav-btn" id="nav-gym" onclick="irParaTela('gym')"><span class="nav-icon">💪</span><span>Gym</span></button>
+  <button class="nav-btn" id="nav-desafio" onclick="irParaTela('desafio')"><span class="nav-icon">🏆</span><span>Desafio</span></button>
   <button class="nav-btn" id="nav-stats" onclick="irParaTela('stats')"><span class="nav-icon">📊</span><span>Análise</span></button>
   <button class="nav-btn" id="nav-corridas" onclick="irParaTela('corridas')"><span class="nav-icon">🏁</span><span>Provas</span></button>
 </nav>
@@ -836,6 +866,7 @@ function irParaTela(nome){
   if(nome==='bike')     renderBike();
   if(nome==='natacao')  renderNatacao();
   if(nome==='gym')      renderGym();
+  if(nome==='desafio')  renderDesafio();
 }
 function fechar(id){ document.getElementById(id).classList.remove('aberto'); }
 
@@ -2511,6 +2542,217 @@ function parseCSVLine(line){
   }
   res.push(cur.trim());
   return res;
+}
+
+// ── Desafio 64km ──
+var PLAN_D64=[
+  {date:'2026-05-11',week:7,phase:'Taper',type:'easy',km:10,title:'10km (Taper Começa)'},
+  {date:'2026-05-12',week:7,phase:'Taper',type:'rest',km:0,title:'Descanso'},
+  {date:'2026-05-13',week:7,phase:'Taper',type:'medium',km:8,title:'8km + Manter Velocidade'},
+  {date:'2026-05-14',week:7,phase:'Taper',type:'easy',km:6,title:'6km Tranquilo'},
+  {date:'2026-05-15',week:7,phase:'Taper',type:'rest',km:0,title:'Descanso Total'},
+  {date:'2026-05-16',week:7,phase:'Taper',type:'long',km:22,title:'22km Longo Taper — Little the Rez'},
+  {date:'2026-05-17',week:7,phase:'Taper',type:'easy',km:6,title:'6km Leve'},
+  {date:'2026-05-18',week:8,phase:'Taper 2',type:'easy',km:8,title:'8km Tranquilo'},
+  {date:'2026-05-19',week:8,phase:'Taper 2',type:'rest',km:0,title:'Descanso'},
+  {date:'2026-05-20',week:8,phase:'Taper 2',type:'medium',km:6,title:'6km + Strides'},
+  {date:'2026-05-21',week:8,phase:'Taper 2',type:'easy',km:5,title:'5km Leve'},
+  {date:'2026-05-22',week:8,phase:'Taper 2',type:'rest',km:0,title:'Descanso Total'},
+  {date:'2026-05-23',week:8,phase:'Taper 2',type:'long',km:16,title:'16km Longo Reduzido — Little the Rez'},
+  {date:'2026-05-24',week:8,phase:'Taper 2',type:'easy',km:5,title:'5km ou Descanso'},
+  {date:'2026-05-25',week:9,phase:'Pré-Prova',type:'easy',km:8,title:'8km + Strides'},
+  {date:'2026-05-26',week:9,phase:'Pré-Prova',type:'rest',km:0,title:'Descanso Total'},
+  {date:'2026-05-27',week:9,phase:'Pré-Prova',type:'easy',km:6,title:'6km Tranquilo'},
+  {date:'2026-05-28',week:9,phase:'Pré-Prova',type:'easy',km:5,title:'5km + Mobilidade'},
+  {date:'2026-05-29',week:9,phase:'Pré-Prova',type:'rest',km:0,title:'Descanso Total'},
+  {date:'2026-05-30',week:9,phase:'Pré-Prova',type:'long',km:10,title:'10km Reconhecimento — Little the Rez'},
+  {date:'2026-05-31',week:9,phase:'Pré-Prova',type:'easy',km:5,title:'5km Leve'},
+  {date:'2026-06-01',week:10,phase:'Semana da Corrida',type:'easy',km:6,title:'6km + Strides'},
+  {date:'2026-06-02',week:10,phase:'Semana da Corrida',type:'rest',km:0,title:'Descanso Total'},
+  {date:'2026-06-03',week:10,phase:'Semana da Corrida',type:'easy',km:5,title:'5km Tranquilo'},
+  {date:'2026-06-04',week:10,phase:'Semana da Corrida',type:'easy',km:4,title:'4km + 2×200m'},
+  {date:'2026-06-05',week:10,phase:'Semana da Corrida',type:'rest',km:0,title:'Descanso Total'},
+  {date:'2026-06-06',week:10,phase:'Semana da Corrida',type:'easy',km:3,title:'3km — Ativação'},
+  {date:'2026-06-07',week:10,phase:'Semana da Corrida',type:'rest',km:0,title:'Descanso Total'},
+  {date:'2026-06-08',week:11,phase:'Race Week',type:'easy',km:3,title:'3km Leve — Ativação Final'},
+  {date:'2026-06-09',week:11,phase:'Race Week',type:'rest',km:0,title:'Descanso Total'},
+  {date:'2026-06-10',week:11,phase:'Race Week',type:'easy',km:2,title:'2km Opcional'},
+  {date:'2026-06-11',week:11,phase:'Race Week',type:'rest',km:0,title:'Descanso Total'},
+  {date:'2026-06-12',week:11,phase:'Race Week',type:'rest',km:0,title:'🌅 Véspera — Descanso Absoluto'},
+  {date:'2026-06-13',week:11,phase:'Race Week',type:'race',km:64,title:'🏁 DESAFIO 64KM'}
+];
+
+// All planned run days from plan start (for readiness calculation)
+var PLAN_ALL_RUNS=[
+  {date:'2026-03-31',km:8},{date:'2026-04-01',km:10},{date:'2026-04-05',km:22},
+  {date:'2026-04-06',km:10},{date:'2026-04-08',km:11},{date:'2026-04-09',km:8},{date:'2026-04-11',km:27},{date:'2026-04-12',km:8},
+  {date:'2026-04-13',km:12},{date:'2026-04-15',km:12},{date:'2026-04-16',km:8},{date:'2026-04-17',km:8},{date:'2026-04-19',km:33},
+  {date:'2026-04-20',km:10},{date:'2026-04-22',km:10},{date:'2026-04-23',km:8},{date:'2026-04-25',km:26},{date:'2026-04-26',km:8},
+  {date:'2026-04-27',km:12},{date:'2026-04-29',km:12},{date:'2026-05-01',km:10},{date:'2026-05-02',km:33},{date:'2026-05-03',km:8},
+  {date:'2026-05-04',km:12},{date:'2026-05-06',km:12},{date:'2026-05-07',km:8},{date:'2026-05-09',km:36},{date:'2026-05-10',km:8},
+  {date:'2026-05-11',km:10},{date:'2026-05-13',km:8},{date:'2026-05-14',km:6},{date:'2026-05-16',km:22},{date:'2026-05-17',km:6},
+  {date:'2026-05-18',km:8},{date:'2026-05-20',km:6},{date:'2026-05-21',km:5},{date:'2026-05-23',km:16},{date:'2026-05-24',km:5},
+  {date:'2026-05-25',km:8},{date:'2026-05-27',km:6},{date:'2026-05-28',km:5},{date:'2026-05-30',km:10},{date:'2026-05-31',km:5},
+  {date:'2026-06-01',km:6},{date:'2026-06-03',km:5},{date:'2026-06-04',km:4},{date:'2026-06-06',km:3},
+  {date:'2026-06-08',km:3},{date:'2026-06-10',km:2}
+];
+
+var _dsfChart=null;
+var DSF_DOW=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+var DSF_MON=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+function dsfFmtDate(s){var p=s.split('-'),dt=new Date(+p[0],+p[1]-1,+p[2]);return DSF_DOW[dt.getDay()]+' '+parseInt(p[2])+'/'+DSF_MON[+p[1]-1];}
+function dsfBarColor(s){return s>=80?'#22c55e':s>=65?'#f59e0b':s>=50?'#f97316':'#ef4444';}
+
+function renderDesafio(){
+  var hj=hoje();
+  var raceDate='2026-06-13';
+  var msDay=1000*60*60*24;
+  var diff=Math.ceil((new Date(raceDate)-new Date(hj))/msDay);
+  var el=document.getElementById('dsf-countdown-num');
+  var sub=document.getElementById('dsf-countdown-sub');
+  if(diff>0){el.textContent=diff;sub.textContent='dias para o Desafio 64km';}
+  else if(diff===0){el.textContent='HOJE!';sub.textContent='Boa corrida, Luiz! 🏁';}
+  else{el.textContent='✅';sub.textContent='Desafio concluído!';}
+
+  var d=getDados();
+
+  // Readiness
+  var pastPlan=PLAN_ALL_RUNS.filter(function(p){return p.date<=hj;});
+  var longestActual=d.treinos.reduce(function(mx,t){return Math.max(mx,t.distancia||0);},0);
+  var doneCount=pastPlan.filter(function(p){
+    return d.treinos.some(function(t){return t.data===p.date&&(t.distancia||0)>0;});
+  }).length;
+  var consistScore=pastPlan.length>0?Math.round(doneCount/pastPlan.length*100):0;
+  var volumeScore=Math.min(100,Math.round(longestActual/36*100));
+  var paceScore=consistScore;
+  var maxGap=0,gap=0;
+  pastPlan.forEach(function(p){
+    var done=d.treinos.some(function(t){return t.data===p.date&&(t.distancia||0)>0;});
+    if(!done){gap++;if(gap>maxGap)maxGap=gap;}else gap=0;
+  });
+  var gapScore=maxGap===0?100:maxGap===1?80:maxGap===2?55:Math.max(0,40-maxGap*5);
+  var overall=pastPlan.length>0?Math.round(consistScore*.35+volumeScore*.25+paceScore*.20+gapScore*.20):0;
+  var gColor=dsfBarColor(overall);
+  var vLabel=overall>=80?'✅ Pronto para o Desafio!':overall>=65?'🟡 Bom caminho — mantenha o ritmo':overall>=50?'🟠 Atenção — foque nos treinos chave':'🔴 Risco — retome o plano imediatamente';
+  var bgc=overall>=80?'#f0fdf4':overall>=65?'#fefce8':overall>=50?'#fff7ed':'#fef2f2';
+
+  var circ=2*Math.PI*40;
+  var fill=Math.round(overall/100*circ*10)/10;
+  var gaugeSvg='<svg width="110" height="110" viewBox="0 0 110 110" style="flex-shrink:0">'
+    +'<circle cx="55" cy="55" r="40" fill="none" stroke="#eee" stroke-width="10"/>'
+    +'<circle cx="55" cy="55" r="40" fill="none" stroke="'+gColor+'" stroke-width="10"'
+    +' stroke-dasharray="'+fill+' '+(circ-fill)+'"'
+    +' stroke-linecap="round" transform="rotate(-90 55 55)"/>'
+    +'<text x="55" y="51" text-anchor="middle" font-size="22" font-weight="800" fill="'+gColor+'">'+overall+'%</text>'
+    +'<text x="55" y="66" text-anchor="middle" font-size="10" fill="#999">aptidão</text>'
+    +'</svg>';
+
+  var criteria=[
+    {label:'Consistência (35%)',score:consistScore,note:doneCount+'/'+pastPlan.length+' treinos planejados feitos'},
+    {label:'Volume máximo (25%)',score:volumeScore,note:longestActual+'km de 36km (treino mais longo)'},
+    {label:'Qualidade (20%)',score:paceScore,note:'baseado em consistência geral'},
+    {label:'Continuidade (20%)',score:gapScore,note:maxGap===0?'Sem faltas seguidas':'Máx. '+maxGap+' faltas seguidas'}
+  ];
+  var criteriaHtml=criteria.map(function(c){
+    return '<li style="margin-bottom:9px">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">'
+      +'<span style="font-size:10px;font-weight:700;color:var(--text2)">'+c.label+'</span>'
+      +'<span style="font-size:11px;font-weight:800;color:'+dsfBarColor(c.score)+'">'+c.score+'%</span>'
+      +'</div>'
+      +'<div style="height:5px;background:#eee;border-radius:3px;overflow:hidden;margin-bottom:2px">'
+      +'<div style="height:100%;width:'+c.score+'%;background:'+dsfBarColor(c.score)+';border-radius:3px"></div>'
+      +'</div>'
+      +'<div style="font-size:10px;color:var(--text3)">'+c.note+'</div>'
+      +'</li>';
+  }).join('');
+
+  // Weekly chart (weeks 7-11)
+  var weekDefs=[
+    {label:'Sem 7\nTaper',start:'2026-05-11',end:'2026-05-17',planned:52},
+    {label:'Sem 8\nTaper 2',start:'2026-05-18',end:'2026-05-24',planned:40},
+    {label:'Sem 9\nPré-Prova',start:'2026-05-25',end:'2026-05-31',planned:34},
+    {label:'Sem 10\nSem. Corrida',start:'2026-06-01',end:'2026-06-07',planned:18},
+    {label:'Sem 11\nRace Week',start:'2026-06-08',end:'2026-06-12',planned:5}
+  ];
+  var weekActual=weekDefs.map(function(w){
+    return Math.round(d.treinos.filter(function(t){return t.data>=w.start&&t.data<=w.end;})
+      .reduce(function(s,t){return s+(t.distancia||0);},0)*10)/10;
+  });
+
+  // Training plan (remaining days from today)
+  var remaining=PLAN_D64.filter(function(p){return p.date>=hj;});
+  var weekMap={};
+  remaining.forEach(function(p){
+    if(!weekMap[p.week]){weekMap[p.week]={phase:p.phase,days:[]};}
+    weekMap[p.week].days.push(p);
+  });
+  var phBg={'Taper':'#dbeafe','Taper 2':'#e0e7ff','Pré-Prova':'#d1fae5','Semana da Corrida':'#fef9c3','Race Week':'#fce7f3'};
+  var phCol={'Taper':'#1d4ed8','Taper 2':'#4338ca','Pré-Prova':'#15803d','Semana da Corrida':'#a16207','Race Week':'#be185d'};
+  var typeIcon={'easy':'🏃','medium':'🔴','long':'🌟','race':'🏁','rest':'🛋️'};
+  var weekNums=Object.keys(weekMap).map(Number).sort(function(a,b){return a-b;});
+  var planHtml=weekNums.map(function(wn){
+    var w=weekMap[wn];
+    var bg=phBg[w.phase]||'#f3f4f6',col=phCol[w.phase]||'#374151';
+    return '<div class="dsf-week-group">'
+      +'<div class="dsf-week-title" style="background:'+bg+';color:'+col+'">Semana '+wn+' · '+w.phase+'</div>'
+      +w.days.map(function(p){
+        var isToday=p.date===hj,isPast=p.date<hj;
+        var actual=d.treinos.find(function(t){return t.data===p.date&&(t.distancia||0)>0;});
+        var cls='dsf-day'+(p.type==='race'?' dsf-race':isToday?' dsf-today':isPast&&actual?' dsf-done':isPast&&p.km>0?' dsf-missed':p.type==='rest'?' dsf-rest':'');
+        var kmTxt=p.km>0?p.km+'km':'Descanso';
+        var actTxt=actual?' · ✅ '+Math.round((actual.distancia||0)*10)/10+'km':'';
+        return '<div class="'+cls+'">'
+          +'<div class="dsf-day-date">'+dsfFmtDate(p.date)+'</div>'
+          +'<div class="dsf-day-icon">'+(typeIcon[p.type]||'🏃')+'</div>'
+          +'<div class="dsf-day-body">'
+          +'<div class="dsf-day-title">'+p.title+'</div>'
+          +'<div class="dsf-day-km">'+kmTxt+actTxt+'</div>'
+          +'</div>'
+          +(isToday?'<span style="font-size:9px;font-weight:800;background:var(--blue);color:#fff;border-radius:5px;padding:2px 5px">HOJE</span>':'')
+          +'</div>';
+      }).join('')
+      +'</div>';
+  }).join('');
+
+  document.getElementById('dsf-content').innerHTML=
+    '<div class="dsf-card">'
+    +'<div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:10px">🏆 Aptidão para o Desafio</div>'
+    +'<div style="display:flex;align-items:flex-start;gap:12px">'
+    +gaugeSvg
+    +'<ul style="list-style:none;flex:1;margin:0;padding:0">'+criteriaHtml+'</ul>'
+    +'</div>'
+    +'<div class="dsf-verdict" style="background:'+bgc+';color:'+gColor+'">'+vLabel+'</div>'
+    +'</div>'
+    +'<div class="dsf-card">'
+    +'<div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:10px">📊 Volume por Semana (Taper)</div>'
+    +'<canvas id="dsf-chart" height="150"></canvas>'
+    +'</div>'
+    +'<div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:10px">📅 Plano Restante</div>'
+    +planHtml;
+
+  setTimeout(function(){
+    var ctx=document.getElementById('dsf-chart');
+    if(!ctx) return;
+    if(_dsfChart){_dsfChart.destroy();_dsfChart=null;}
+    _dsfChart=new Chart(ctx,{
+      type:'bar',
+      data:{
+        labels:weekDefs.map(function(w){return w.label.split('\n');}),
+        datasets:[
+          {label:'Planejado (km)',data:weekDefs.map(function(w){return w.planned;}),backgroundColor:'rgba(59,130,246,.2)',borderColor:'rgba(59,130,246,.7)',borderWidth:1.5,borderRadius:4},
+          {label:'Realizado (km)',data:weekActual,backgroundColor:'rgba(34,197,94,.35)',borderColor:'rgba(34,197,94,.8)',borderWidth:1.5,borderRadius:4}
+        ]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{labels:{font:{size:11},boxWidth:12}}},
+        scales:{
+          y:{beginAtZero:true,ticks:{font:{size:10}},grid:{color:'rgba(0,0,0,.06)'}},
+          x:{ticks:{font:{size:9}},grid:{display:false}}
+        }
+      }
+    });
+  },60);
 }
 </script>
 </body>
