@@ -2725,7 +2725,7 @@ function renderDesafio(){
     +'</div>'
     +'<div class="dsf-card">'
     +'<div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:10px">📊 Volume por Semana (Taper)</div>'
-    +'<div style="position:relative;height:180px"><canvas id="dsf-chart"></canvas></div>'
+    +'<div style="position:relative;height:180px;touch-action:pan-y"><canvas id="dsf-chart" style="touch-action:pan-y"></canvas></div>'
     +'</div>'
     +'<div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:10px">📅 Plano Restante</div>'
     +planHtml;
@@ -2745,6 +2745,7 @@ function renderDesafio(){
       },
       options:{
         responsive:true,maintainAspectRatio:false,
+        events:['mousemove','mouseout','click'],
         plugins:{legend:{labels:{font:{size:11},boxWidth:12,padding:10}}},
         scales:{
           y:{beginAtZero:true,ticks:{font:{size:9},color:'#94a3b8'},grid:{color:'#f1f5f9'}},
