@@ -359,6 +359,8 @@ input[type=range].esf::-webkit-slider-thumb{-webkit-appearance:none;width:22px;h
   </div>
   <div class="filter-bar" id="bike-filter-bar">
     <button class="chip ativo" onclick="filtrarBike(this,'todos')">Todos</button>
+    <button class="chip" onclick="filtrarBike(this,'indoor')">🏠 Indoor</button>
+    <button class="chip" onclick="filtrarBike(this,'outdoor')">🌿 Outdoor</button>
     <button class="chip" onclick="filtrarBike(this,'triathlon')">🔴 Triathlon</button>
     <button class="chip" onclick="filtrarBike(this,'road')">🚴 Road</button>
     <button class="chip" onclick="filtrarBike(this,'mtb')">🌲 MTB</button>
@@ -507,6 +509,13 @@ input[type=range].esf::-webkit-slider-thumb{-webkit-appearance:none;width:22px;h
         <button class="tipo-pill" data-tipo="road" onclick="selTipoBike(this)">🚴 Road Bike</button>
         <button class="tipo-pill" data-tipo="mtb" onclick="selTipoBike(this)">🌲 MTB</button>
         <button class="tipo-pill" data-tipo="fat" onclick="selTipoBike(this)">🏔️ FAT Bike</button>
+      </div>
+    </div>
+    <div class="fg">
+      <label class="fl">Ambiente</label>
+      <div style="display:flex;gap:8px">
+        <button id="b-amb-outdoor" onclick="setAmbienteBike('outdoor')" style="flex:1;padding:9px;border-radius:10px;border:2px solid var(--border);background:#f0fdf4;color:#166534;font-size:13px;font-weight:700;cursor:pointer">🌿 Outdoor</button>
+        <button id="b-amb-indoor" onclick="setAmbienteBike('indoor')" style="flex:1;padding:9px;border-radius:10px;border:2px solid var(--border);background:#fff;color:var(--text2);font-size:13px;font-weight:700;cursor:pointer">🏠 Indoor</button>
       </div>
     </div>
     <div class="form-row">
@@ -1337,7 +1346,8 @@ function updatePace100m(){
 function bikeItemHTML(b){
   var info=bikeTipoInfo(b.tipo);
   var dist=b.distancia?b.distancia.toFixed(1).replace('.',',')+'<small style="font-size:11px"> km</small>':'—';
-  var sub=[fmtDataCurta(b.data)];
+  var amb=b.ambiente==='indoor'?'🏠 Indoor':'🌿 Outdoor';
+  var sub=[fmtDataCurta(b.data),amb];
   if(b.duracao) sub.push(fmtDur(parseDur(b.duracao)));
   if(b.fcMed) sub.push('♥ '+b.fcMed);
   return '<div class="w-item" onclick="abrirBike(\''+b.id+'\')">'+
@@ -1358,7 +1368,9 @@ function bikeItemHTML(b){
 function renderBike(){
   var d=getDados();
   var lista=d.bike.slice().sort(function(a,b){return b.data.localeCompare(a.data);});
-  if(_filtrosBike!=='todos') lista=lista.filter(function(b){return b.tipo===_filtrosBike;});
+  if(_filtrosBike==='indoor')  lista=lista.filter(function(b){return b.ambiente==='indoor';});
+  else if(_filtrosBike==='outdoor') lista=lista.filter(function(b){return (b.ambiente||'outdoor')==='outdoor';});
+  else if(_filtrosBike!=='todos') lista=lista.filter(function(b){return b.tipo===_filtrosBike;});
   var km=lista.reduce(function(s,b){return s+(b.distancia||0);},0);
   document.getElementById('bike-sub').textContent=lista.length+' treinos · '+km.toFixed(0)+' km';
   var el=document.getElementById('bike-list');
@@ -1380,11 +1392,28 @@ function filtrarBike(btn,tipo){
   btn.classList.add('ativo');
   renderBike();
 }
+// ── Bike render: filter supports 'indoor'/'outdoor' as ambiente filters ──
+// (handled inside renderBike)
 
 // ── Bike modal ──
 function selTipoBike(btn){ document.querySelectorAll('#bike-tipo-pills .tipo-pill').forEach(function(p){p.classList.remove('sel');}); btn.classList.add('sel'); }
 function setTipoBike(val){ document.querySelectorAll('#bike-tipo-pills .tipo-pill').forEach(function(p){p.classList.toggle('sel',p.getAttribute('data-tipo')===val);}); }
 function getTipoBike(){ var s=document.querySelector('#bike-tipo-pills .tipo-pill.sel'); return s?s.getAttribute('data-tipo'):'road'; }
+function setAmbienteBike(val){
+  var out=document.getElementById('b-amb-outdoor'), ind=document.getElementById('b-amb-indoor');
+  if(val==='indoor'){
+    ind.style.borderColor='#ea580c'; ind.style.background='#fff7ed'; ind.style.color='#c2410c';
+    out.style.borderColor='var(--border)'; out.style.background='#fff'; out.style.color='var(--text2)';
+  } else {
+    out.style.borderColor='#16a34a'; out.style.background='#f0fdf4'; out.style.color='#166534';
+    ind.style.borderColor='var(--border)'; ind.style.background='#fff'; ind.style.color='var(--text2)';
+  }
+  out.setAttribute('data-sel', val==='outdoor'?'1':'');
+  ind.setAttribute('data-sel', val==='indoor'?'1':'');
+}
+function getAmbienteBike(){
+  return document.getElementById('b-amb-indoor').getAttribute('data-sel')?'indoor':'outdoor';
+}
 
 function abrirBike(id){
   var d=getDados(),b=id?d.bike.find(function(x){return x.id===id;}):null;
@@ -1392,6 +1421,7 @@ function abrirBike(id){
   document.getElementById('titulo-bike').textContent=id?'🚴 Editar Bike':'🚴 Novo Treino de Bike';
   document.getElementById('btn-del-bike').style.display=id?'block':'none';
   setTipoBike(b?b.tipo:'road');
+  setAmbienteBike(b?b.ambiente||'outdoor':'outdoor');
   document.getElementById('b-data').value=b?b.data:hoje();
   document.getElementById('b-dist').value=b?b.distancia||'':'';
   document.getElementById('b-dur').value=b?b.duracao||'':'';
@@ -1407,7 +1437,7 @@ function salvarBike(){
   var id=document.getElementById('b-id').value;
   var dist=parseFloat(document.getElementById('b-dist').value)||0;
   var dur=document.getElementById('b-dur').value.trim();
-  var obj={id:id||uid(),tipo:getTipoBike(),data:document.getElementById('b-data').value||hoje(),distancia:dist,duracao:dur,velocidade:calcVelocidade(dist,dur),fcMed:parseInt(document.getElementById('b-fc-med').value)||0,fcMax:parseInt(document.getElementById('b-fc-max').value)||0,esforco:parseInt(document.getElementById('b-esforco').value)||5,notas:document.getElementById('b-notas').value.trim()};
+  var obj={id:id||uid(),tipo:getTipoBike(),ambiente:getAmbienteBike(),data:document.getElementById('b-data').value||hoje(),distancia:dist,duracao:dur,velocidade:calcVelocidade(dist,dur),fcMed:parseInt(document.getElementById('b-fc-med').value)||0,fcMax:parseInt(document.getElementById('b-fc-max').value)||0,esforco:parseInt(document.getElementById('b-esforco').value)||5,notas:document.getElementById('b-notas').value.trim()};
   var d=getDados();
   if(id){var idx=d.bike.findIndex(function(x){return x.id===id;}); if(idx>=0) d.bike[idx]=obj; else d.bike.push(obj);}
   else d.bike.push(obj);
@@ -1881,6 +1911,13 @@ function detectStravaBikeTipo(sportType, actName){
   if(n.includes('triathlon')||n.includes(' tri ')||n.includes('ironman')||n.includes('t1 ')||n.includes('t2 ')) return 'triathlon';
   return 'road';
 }
+function detectStravaAmbiente(sportType, actName){
+  // VirtualRide = trainer/smart trainer = indoor
+  if(sportType==='VirtualRide') return 'indoor';
+  var n=(actName||'').toLowerCase();
+  if(n.includes('indoor')||n.includes('trainer')||n.includes('zwift')||n.includes('rouvy')||n.includes('sufferfest')) return 'indoor';
+  return 'outdoor';
+}
 function detectStravaNatacaoTipo(sportType, actName){
   var n=(actName||'').toLowerCase();
   if(sportType==='OpenWaterSwim'||n.includes('open water')||n.includes('abertas')||n.includes('lago')||n.includes('lake')||n.includes('river')||n.includes('rio')) return 'abertas';
@@ -1922,7 +1959,8 @@ function importStravaBike(date,actId,name,distM,movingSecs,hr,sportType,actDate)
   var vel=calcVelocidade(dist,duracao);
   var hrVal=hr&&+hr>0?Math.round(+hr):0;
   var tipo=detectStravaBikeTipo(sportType,name);
-  var entry={id:uid(),tipo:tipo,data:actDate||date,distancia:dist,duracao:duracao,velocidade:vel,fcMed:hrVal,fcMax:0,esforco:5,notas:name||'',stravaId:String(actId)};
+  var ambiente=detectStravaAmbiente(sportType,name);
+  var entry={id:uid(),tipo:tipo,ambiente:ambiente,data:actDate||date,distancia:dist,duracao:duracao,velocidade:vel,fcMed:hrVal,fcMax:0,esforco:5,notas:name||'',stravaId:String(actId)};
   var d=getDados();
   var idx=d.bike.findIndex(function(b){return b.stravaId&&b.stravaId===entry.stravaId;});
   if(idx>=0){
