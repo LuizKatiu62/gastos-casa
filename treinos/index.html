@@ -257,6 +257,9 @@ input[type=range].esf::-webkit-slider-thumb{-webkit-appearance:none;width:22px;h
 .dsf-verdict{margin-top:10px;padding:8px 12px;border-radius:10px;font-size:12px;font-weight:700;text-align:center}
 .dsf-week-group{margin-bottom:16px}
 .dsf-week-title{font-size:11px;font-weight:800;padding:6px 10px;border-radius:8px;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.dsf-day.dsf-custom{background:#f0fdf4;border-left-color:#22c55e}
+.dsf-edit-btn{background:none;border:none;font-size:13px;cursor:pointer;padding:2px 5px;border-radius:6px;flex-shrink:0;opacity:.45;transition:opacity .15s}
+.dsf-edit-btn:hover{opacity:1;background:#e2e8f0}
 </style>
 </head>
 <body>
@@ -448,6 +451,46 @@ input[type=range].esf::-webkit-slider-thumb{-webkit-appearance:none;width:22px;h
     <div style="font-size:10px;opacity:.55;margin-top:4px">13 de junho de 2026 · Little the Rez · Saint John NB</div>
   </div>
   <div id="dsf-content" style="padding:12px 14px"></div>
+</div>
+
+<!-- Desafio day edit overlay -->
+<div class="modal-overlay" id="overlay-dsf-edit">
+<div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-hdr">
+    <span class="modal-title" id="dsf-edit-title">Editar dia</span>
+    <button class="modal-x" onclick="fechar('overlay-dsf-edit')">✕</button>
+  </div>
+  <div class="modal-body">
+    <input type="hidden" id="dsf-edit-date">
+    <div class="fg" style="margin-bottom:12px">
+      <label class="fl">Atividade</label>
+      <div class="tipo-pills" id="dsf-act-pills" style="flex-wrap:wrap;gap:6px">
+        <button class="tipo-pill" data-dsf="rest"   onclick="dsfSelAct(this)">🛋️ Descanso</button>
+        <button class="tipo-pill" data-dsf="easy"   onclick="dsfSelAct(this)">🏃 Corrida fácil</button>
+        <button class="tipo-pill" data-dsf="medium" onclick="dsfSelAct(this)">🔴 Intervalado</button>
+        <button class="tipo-pill" data-dsf="long"   onclick="dsfSelAct(this)">🌟 Longo</button>
+        <button class="tipo-pill" data-dsf="bike"   onclick="dsfSelAct(this)">🚴 Bike</button>
+        <button class="tipo-pill" data-dsf="swim"   onclick="dsfSelAct(this)">🏊 Natação</button>
+        <button class="tipo-pill" data-dsf="gym"    onclick="dsfSelAct(this)">💪 Gym</button>
+        <button class="tipo-pill" data-dsf="walk"   onclick="dsfSelAct(this)">🚶 Caminhada</button>
+        <button class="tipo-pill" data-dsf="mob"    onclick="dsfSelAct(this)">🧘 Mobilidade</button>
+      </div>
+    </div>
+    <div class="fg" id="dsf-km-row">
+      <label class="fl">Distância planejada (km)</label>
+      <input class="fi" type="number" id="dsf-edit-km" placeholder="0" min="0" step="0.5">
+    </div>
+    <div class="fg">
+      <label class="fl">Título / observação</label>
+      <input class="fi" type="text" id="dsf-edit-label" placeholder="ex: 8km tranquilo">
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn-sec" id="dsf-edit-clear" onclick="dsfClearCustom()">Remover alteração</button>
+    <button class="btn-pri" onclick="dsfSaveCustom()">Salvar</button>
+  </div>
+</div>
 </div>
 
 <!-- FABs -->
@@ -2602,6 +2645,61 @@ var DSF_DOW=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 var DSF_MON=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 function dsfFmtDate(s){var p=s.split('-'),dt=new Date(+p[0],+p[1]-1,+p[2]);return DSF_DOW[dt.getDay()]+' '+parseInt(p[2])+'/'+DSF_MON[+p[1]-1];}
 function dsfBarColor(s){return s>=80?'#22c55e':s>=65?'#f59e0b':s>=50?'#f97316':'#ef4444';}
+function dsfLoadCustom(){try{return JSON.parse(localStorage.getItem('treinos_d64_custom'))||{};}catch(e){return {};}}
+function dsfSaveCustomStore(m){localStorage.setItem('treinos_d64_custom',JSON.stringify(m));}
+var DSF_ACT_ICON={rest:'🛋️',easy:'🏃',medium:'🔴',long:'🌟',bike:'🚴',swim:'🏊',gym:'💪',walk:'🚶',mob:'🧘',race:'🏁'};
+var DSF_ACT_LABEL={rest:'Descanso',easy:'Corrida fácil',medium:'Intervalado',long:'Longo',bike:'Bike',swim:'Natação',gym:'Gym',walk:'Caminhada',mob:'Mobilidade',race:'DESAFIO 64KM'};
+
+function openDsfEdit(date){
+  var custom=dsfLoadCustom();
+  var base=PLAN_D64.find(function(p){return p.date===date;})||{};
+  var c=custom[date]||{};
+  var type=c.type||base.type||'rest';
+  var km=c.km!==undefined?c.km:(base.km||0);
+  var label=c.title||base.title||'';
+  var p=base.date?base.date.split('-'):date.split('-');
+  var dt=new Date(+p[0],+p[1]-1,+p[2]);
+  document.getElementById('dsf-edit-title').textContent=DSF_DOW[dt.getDay()]+' '+parseInt(p[2])+'/'+DSF_MON[+p[1]-1];
+  document.getElementById('dsf-edit-date').value=date;
+  document.getElementById('dsf-edit-km').value=km||'';
+  document.getElementById('dsf-edit-label').value=label;
+  document.getElementById('dsf-edit-clear').style.display=custom[date]?'block':'none';
+  document.querySelectorAll('#dsf-act-pills .tipo-pill').forEach(function(b){
+    b.classList.toggle('sel',b.dataset.dsf===type);
+  });
+  var isRest=type==='rest';
+  document.getElementById('dsf-km-row').style.display=isRest?'none':'block';
+  document.getElementById('overlay-dsf-edit').classList.add('aberto');
+}
+function dsfSelAct(btn){
+  document.querySelectorAll('#dsf-act-pills .tipo-pill').forEach(function(b){b.classList.remove('sel');});
+  btn.classList.add('sel');
+  var isRest=btn.dataset.dsf==='rest';
+  document.getElementById('dsf-km-row').style.display=isRest?'none':'block';
+}
+function dsfGetSelAct(){
+  var sel=document.querySelector('#dsf-act-pills .tipo-pill.sel');
+  return sel?sel.dataset.dsf:'rest';
+}
+function dsfSaveCustom(){
+  var date=document.getElementById('dsf-edit-date').value;
+  var type=dsfGetSelAct();
+  var km=parseFloat(document.getElementById('dsf-edit-km').value)||0;
+  var title=document.getElementById('dsf-edit-label').value.trim();
+  var custom=dsfLoadCustom();
+  custom[date]={type:type,km:type==='rest'?0:km,title:title||(DSF_ACT_LABEL[type]+(km>0?' '+km+'km':''))};
+  dsfSaveCustomStore(custom);
+  fechar('overlay-dsf-edit');
+  renderDesafio();
+}
+function dsfClearCustom(){
+  var date=document.getElementById('dsf-edit-date').value;
+  var custom=dsfLoadCustom();
+  delete custom[date];
+  dsfSaveCustomStore(custom);
+  fechar('overlay-dsf-edit');
+  renderDesafio();
+}
 
 function renderDesafio(){
   var hj=hoje();
@@ -2688,7 +2786,7 @@ function renderDesafio(){
   });
   var phBg={'Taper':'#dbeafe','Taper 2':'#e0e7ff','Pré-Prova':'#d1fae5','Semana da Corrida':'#fef9c3','Race Week':'#fce7f3'};
   var phCol={'Taper':'#1d4ed8','Taper 2':'#4338ca','Pré-Prova':'#15803d','Semana da Corrida':'#a16207','Race Week':'#be185d'};
-  var typeIcon={'easy':'🏃','medium':'🔴','long':'🌟','race':'🏁','rest':'🛋️'};
+  var custom=dsfLoadCustom();
   var weekNums=Object.keys(weekMap).map(Number).sort(function(a,b){return a-b;});
   var planHtml=weekNums.map(function(wn){
     var w=weekMap[wn];
@@ -2696,19 +2794,26 @@ function renderDesafio(){
     return '<div class="dsf-week-group">'
       +'<div class="dsf-week-title" style="background:'+bg+';color:'+col+'">Semana '+wn+' · '+w.phase+'</div>'
       +w.days.map(function(p){
+        var ov=custom[p.date];
+        var type=ov?ov.type:p.type;
+        var km=ov?(ov.km||0):p.km;
+        var title=ov?(ov.title||p.title):p.title;
         var isToday=p.date===hj,isPast=p.date<hj;
         var actual=d.treinos.find(function(t){return t.data===p.date&&(t.distancia||0)>0;});
-        var cls='dsf-day'+(p.type==='race'?' dsf-race':isToday?' dsf-today':isPast&&actual?' dsf-done':isPast&&p.km>0?' dsf-missed':p.type==='rest'?' dsf-rest':'');
-        var kmTxt=p.km>0?p.km+'km':'Descanso';
-        var actTxt=actual?' · ✅ '+Math.round((actual.distancia||0)*10)/10+'km':'';
+        var cls='dsf-day'+(type==='race'?' dsf-race':isToday?' dsf-today':ov?' dsf-custom':isPast&&actual?' dsf-done':isPast&&km>0?' dsf-missed':type==='rest'?' dsf-rest':'');
+        var icon=DSF_ACT_ICON[type]||'🏃';
+        var kmTxt=km>0?km+'km':'Descanso';
+        var actTxt=actual?' · ✅ '+Math.round((actual.distancia||0)*10)/10+'km feito':'';
+        var editBtn=type!=='race'?('<button class="dsf-edit-btn" onclick="openDsfEdit(\''+p.date+'\')">✏️</button>'):'';
         return '<div class="'+cls+'">'
           +'<div class="dsf-day-date">'+dsfFmtDate(p.date)+'</div>'
-          +'<div class="dsf-day-icon">'+(typeIcon[p.type]||'🏃')+'</div>'
+          +'<div class="dsf-day-icon">'+icon+'</div>'
           +'<div class="dsf-day-body">'
-          +'<div class="dsf-day-title">'+p.title+'</div>'
+          +'<div class="dsf-day-title">'+title+'</div>'
           +'<div class="dsf-day-km">'+kmTxt+actTxt+'</div>'
           +'</div>'
           +(isToday?'<span style="font-size:9px;font-weight:800;background:var(--blue);color:#fff;border-radius:5px;padding:2px 5px">HOJE</span>':'')
+          +editBtn
           +'</div>';
       }).join('')
       +'</div>';
