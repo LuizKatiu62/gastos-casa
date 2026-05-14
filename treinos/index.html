@@ -648,6 +648,19 @@ input[type=range].esf::-webkit-slider-thumb{-webkit-appearance:none;width:22px;h
       <button class="modal-x" onclick="fechar('overlay-plan-custom')">✕</button>
     </div>
     <div style="padding:16px 16px 20px">
+      <!-- Quick-pick activity buttons -->
+      <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:8px">Selecionar atividade</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px" id="plan-activity-pills">
+        <button type="button" onclick="setPlanActivity('🏃','Corrida','Zona 2, ritmo fácil')" style="display:flex;align-items:center;gap:4px;padding:6px 10px;border:1.5px solid var(--border);border-radius:20px;background:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">🏃 Corrida</button>
+        <button type="button" onclick="setPlanActivity('🔴','Intervalado','Aquecimento + tiros + cooldown')" style="display:flex;align-items:center;gap:4px;padding:6px 10px;border:1.5px solid var(--border);border-radius:20px;background:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">🔴 Intervalado</button>
+        <button type="button" onclick="setPlanActivity('🚴','Bike Outdoor','Ritmo moderado, Zona 2')" style="display:flex;align-items:center;gap:4px;padding:6px 10px;border:1.5px solid var(--border);border-radius:20px;background:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">🚴 Bike</button>
+        <button type="button" onclick="setPlanActivity('🏠','Bike Indoor','Zwift ou rolo')" style="display:flex;align-items:center;gap:4px;padding:6px 10px;border:1.5px solid var(--border);border-radius:20px;background:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">🏠 Indoor</button>
+        <button type="button" onclick="setPlanActivity('🏊','Natação','Técnica e resistência')" style="display:flex;align-items:center;gap:4px;padding:6px 10px;border:1.5px solid var(--border);border-radius:20px;background:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">🏊 Natação</button>
+        <button type="button" onclick="setPlanActivity('💪','Gym','Força e condicionamento')" style="display:flex;align-items:center;gap:4px;padding:6px 10px;border:1.5px solid var(--border);border-radius:20px;background:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">💪 Gym</button>
+        <button type="button" onclick="setPlanActivity('🧘','Mobilidade','Alongamento e foam roller')" style="display:flex;align-items:center;gap:4px;padding:6px 10px;border:1.5px solid var(--border);border-radius:20px;background:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">🧘 Mobilidade</button>
+        <button type="button" onclick="setPlanActivity('🚶','Caminhada','Ritmo leve, recuperação ativa')" style="display:flex;align-items:center;gap:4px;padding:6px 10px;border:1.5px solid var(--border);border-radius:20px;background:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">🚶 Caminhada</button>
+        <button type="button" onclick="setPlanActivity('🛋️','Descanso','Recuperação completa')" style="display:flex;align-items:center;gap:4px;padding:6px 10px;border:1.5px solid var(--border);border-radius:20px;background:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">🛋️ Descanso</button>
+      </div>
       <div style="display:flex;gap:10px;margin-bottom:12px">
         <div>
           <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:4px">Ícone</div>
@@ -972,6 +985,16 @@ function loadDayCustom(){ try{ return JSON.parse(localStorage.getItem('treinos_d
 function saveDayCustom(m){ localStorage.setItem('treinos_day_custom', JSON.stringify(m)); }
 
 var _planCustomDow=null;
+function setPlanActivity(icon, label, detail){
+  document.getElementById('plan-custom-icon').value=icon;
+  document.getElementById('plan-custom-label').value=label;
+  document.getElementById('plan-custom-detail').value=detail;
+  // highlight selected pill
+  document.querySelectorAll('#plan-activity-pills button').forEach(function(b){
+    b.style.background=b.textContent.trim().startsWith(icon)?'var(--blue-light)':'#fff';
+    b.style.borderColor=b.textContent.trim().startsWith(icon)?'var(--blue)':'var(--border)';
+  });
+}
 function openPlanCustomModal(dayDow, ev){
   if(ev){ ev.stopPropagation(); }
   _planCustomDow=dayDow;
