@@ -268,7 +268,7 @@ input[type=range].esf::-webkit-slider-thumb{-webkit-appearance:none;width:22px;h
 <div id="tela-dash" class="screen ativa">
   <div class="race-card" id="race-card"></div>
 
-  <div class="sec"><span class="sec-title">Plano da Semana</span></div>
+  <div class="sec"><span class="sec-title" id="plano-semana-title">Plano da Semana</span></div>
   <div class="card" id="plano-semana-card"></div>
 
   <div class="sec"><span class="sec-title">Esta semana</span></div>
@@ -994,6 +994,70 @@ var _planSwapSel = null; // dow selecionado para troca
 function loadDayRemap(){ try{ return JSON.parse(localStorage.getItem('treinos_day_remap'))||{}; }catch(e){ return {}; } }
 function saveDayRemap(m){ localStorage.setItem('treinos_day_remap', JSON.stringify(m)); }
 
+function renderPlanoDesafio(){
+  var hj=hoje();
+  var d=getDados();
+  var custom=dsfLoadCustom();
+  var now=new Date(),dow=now.getDay();
+  var mon=new Date(now); mon.setDate(now.getDate()-(dow===0?6:dow-1));
+
+  var phBg={'Taper':'#dbeafe','Taper 2':'#e0e7ff','Pré-Prova':'#d1fae5','Semana da Corrida':'#fef9c3','Race Week':'#fce7f3'};
+  var phCol={'Taper':'#1d4ed8','Taper 2':'#4338ca','Pré-Prova':'#15803d','Semana da Corrida':'#a16207','Race Week':'#be185d'};
+  var typeIcon={easy:'🏃',medium:'🔴',long:'🌟',race:'🏁',rest:'🛋️',bike:'🚴',swim:'🏊',gym:'💪',walk:'🚶',mob:'🧘'};
+  var DAY_NAMES=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+
+  // Find week's phase
+  var weekPhase=null;
+  for(var i=0;i<7;i++){
+    var dt0=new Date(mon); dt0.setDate(mon.getDate()+i);
+    var ds0=dt0.getFullYear()+'-'+pad(dt0.getMonth()+1)+'-'+pad(dt0.getDate());
+    var ep=PLAN_D64.find(function(p){return p.date===ds0;});
+    if(ep){weekPhase={phase:ep.phase,week:ep.week};break;}
+  }
+
+  var titleEl=document.getElementById('plano-semana-title');
+  if(titleEl) titleEl.textContent=weekPhase?'Semana '+weekPhase.week+' · Desafio 64km':'Plano da Semana';
+
+  var bg=weekPhase?(phBg[weekPhase.phase]||'#f3f4f6'):'#f3f4f6';
+  var col=weekPhase?(phCol[weekPhase.phase]||'#374151'):'#374151';
+  var banner=weekPhase
+    ?'<div class="plan-phase-banner" style="background:'+bg+';border:1.5px solid '+col+'33">'
+      +'<span class="plan-phase-icon">🏆</span>'
+      +'<div style="flex:1"><div class="plan-phase-name" style="color:'+col+'">'+weekPhase.phase+'</div>'
+      +'<div class="plan-phase-tip">Desafio 64km · 13 de junho · Saint John NB</div></div>'
+      +'<button onclick="irParaTela(\'desafio\')" style="font-size:10px;background:none;border:none;color:var(--text3);cursor:pointer;padding:2px 6px;flex-shrink:0;font-weight:700">Ver tudo →</button>'
+      +'</div>'
+    :'';
+
+  var html=banner;
+  for(var i=0;i<7;i++){
+    var dt=new Date(mon); dt.setDate(mon.getDate()+i);
+    var ds=dt.getFullYear()+'-'+pad(dt.getMonth()+1)+'-'+pad(dt.getDate());
+    var dayDow=dt.getDay();
+    var base=PLAN_D64.find(function(p){return p.date===ds;});
+    var ov=custom[ds];
+    var type=ov?ov.type:(base?base.type:'rest');
+    var km=ov?(ov.km||0):(base?(base.km||0):0);
+    var title=ov?ov.title:(base?base.title:(ds==='2026-06-13'?'🏁 DESAFIO 64KM':'Descanso'));
+    var actual=d.treinos.find(function(t){return t.data===ds&&(t.distancia||0)>0;});
+    var isToday=ds===hj, isPast=ds<hj, isRace=ds==='2026-06-13';
+    var detail=km>0?km+'km':'Descanso';
+    if(actual) detail='✅ '+Math.round((actual.distancia||0)*10)/10+' km feito';
+    var cls='plan-day'+(isRace?' plan-race':isToday?' plan-hoje':isPast&&actual?' plan-custom':ov?' plan-custom':'');
+    html+='<div class="'+cls+'">'
+      +'<div class="plan-day-name">'+DAY_NAMES[dayDow]+'</div>'
+      +'<div class="plan-day-icon">'+(typeIcon[type]||'🏃')+'</div>'
+      +'<div class="plan-day-body">'
+        +'<div class="plan-day-label">'+title+'</div>'
+        +'<div class="plan-day-detail">'+detail+'</div>'
+      +'</div>'
+      +(isToday?'<div class="plan-hoje-tag">HOJE</div>':'')
+      +(!isRace?'<button class="plan-edit-btn" onclick="openDsfEdit(\''+ds+'\')" title="Editar dia">✏️</button>':'')
+      +'</div>';
+  }
+  document.getElementById('plano-semana-card').innerHTML=html;
+}
+
 function renderPlanoSemana(){
   var hj=hoje();
   var planoKey=getPlanoKey(hj);
@@ -1207,8 +1271,8 @@ function renderDash(){
   }
   document.getElementById('race-card').innerHTML=raceHTML;
 
-  // Weekly plan
-  renderPlanoSemana();
+  // Weekly plan — Desafio 64
+  renderPlanoDesafio();
 
   // Week stats
   var sem=getSemana();
