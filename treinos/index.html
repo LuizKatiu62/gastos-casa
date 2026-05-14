@@ -310,24 +310,37 @@ input[type=range].esf::-webkit-slider-thumb{-webkit-appearance:none;width:22px;h
 
 <!-- ══ ANÁLISE ══ -->
 <div id="tela-stats" class="screen">
-  <div class="page-hero">
-    <div class="page-hero-title">Análise</div>
-    <div class="page-hero-sub">Performance e evolução</div>
+  <div class="page-hero" style="background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 100%)">
+    <div class="page-hero-title">Triathlon — Análise</div>
+    <div class="page-hero-sub">🏃 Corrida · 🚴 Bike · 🏊 Natação</div>
   </div>
-  <div class="sec"><span class="sec-title">Recordes Pessoais</span></div>
+
+  <div class="sec"><span class="sec-title">Este ano</span></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:0 12px 10px" id="tri-year-card"></div>
+
+  <div class="sec"><span class="sec-title">Horas de treino — últimas 12 semanas</span></div>
+  <div class="card"><div class="chart-wrap" style="height:170px"><canvas id="tri-vol-chart"></canvas></div></div>
+
+  <div class="sec" style="padding-top:10px">
+    <span class="sec-title" style="color:var(--blue)">🏃 Corrida</span>
+  </div>
+  <div class="card" id="run-stats-boxes"></div>
+  <div class="card"><div class="chart-wrap" style="height:150px"><canvas id="run-month-chart"></canvas></div></div>
+
+  <div class="sec" style="padding-top:10px">
+    <span class="sec-title" style="color:#ea580c">🚴 Bike</span>
+  </div>
+  <div class="card" id="bike-stats-boxes"></div>
+  <div class="card"><div class="chart-wrap" style="height:150px"><canvas id="bike-month-chart"></canvas></div></div>
+
+  <div class="sec" style="padding-top:10px">
+    <span class="sec-title" style="color:#0e7490">🏊 Natação</span>
+  </div>
+  <div class="card" id="swim-stats-boxes"></div>
+  <div class="card"><div class="chart-wrap" style="height:150px"><canvas id="swim-month-chart"></canvas></div></div>
+
+  <div class="sec" style="padding-top:10px"><span class="sec-title">🏅 Records Pessoais</span></div>
   <div class="card" id="prs-card"></div>
-
-  <div class="sec"><span class="sec-title">Volume — últimas 12 semanas</span></div>
-  <div class="card"><div class="chart-wrap"><canvas id="vol-chart"></canvas></div></div>
-
-  <div class="sec"><span class="sec-title">Comparativo por Ano</span></div>
-  <div class="card" id="year-card"></div>
-
-  <div class="sec"><span class="sec-title">Últimos 30 dias</span></div>
-  <div class="card"><div class="stat-grid3" id="stats-30"></div></div>
-
-  <div class="sec"><span class="sec-title">Por tipo de treino</span></div>
-  <div class="card" id="tipo-card"></div>
 </div>
 
 <!-- ══ CORRIDAS ══ -->
@@ -644,6 +657,7 @@ firebase.initializeApp({
 });
 var _fbRef=null, _fbAtivo=false, _fbSalvando=false, _fbLatest=[];
 var _tela='dash', _filtro='todos', _volChart=null;
+var _triVolChart=null, _runMonthChart=null, _bikeMonthChart=null, _swimMonthChart=null;
 
 // ── Utils ──
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
@@ -1059,114 +1073,173 @@ function filtrar(btn,tipo){
   renderLog();
 }
 
+// ── Stats helpers ──
+function getLastNMonths(n){
+  var months=[],now=new Date();
+  for(var i=n-1;i>=0;i--){
+    var d2=new Date(now.getFullYear(),now.getMonth()-i,1);
+    var y=d2.getFullYear(),m=d2.getMonth()+1;
+    var key=y+'-'+pad(m);
+    var lastDay=new Date(y,m,0).getDate();
+    months.push({key:key,label:MESES[d2.getMonth()].slice(0,3)+'/'+String(y).slice(2),start:key+'-01',end:key+'-'+pad(lastDay)});
+  }
+  return months;
+}
+function parsePace100mSecs(p){
+  if(!p) return 0;
+  return parsePaceSecs(p.replace('/100m',''));
+}
+function mkBarChart(canvasId, chartRef, labels, data, color, unit){
+  var ctx=document.getElementById(canvasId); if(!ctx) return null;
+  if(chartRef) chartRef.destroy();
+  return new Chart(ctx.getContext('2d'),{
+    type:'bar',
+    data:{labels:labels,datasets:[{data:data,backgroundColor:data.map(function(_,i){return i===data.length-1?color:color+'88';}),borderRadius:5,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.raw+' '+unit;}}}},
+      scales:{x:{grid:{display:false},ticks:{font:{size:9},color:'#94a3b8'}},y:{grid:{color:'#f1f5f9'},ticks:{font:{size:9},color:'#94a3b8',callback:function(v){return v+(unit.length<=3?' '+unit:'');}}}}}
+  });
+}
+function statBoxHTML(val,lbl,cor){
+  return '<div class="stat-box"><div class="stat-val" style="color:'+cor+'">'+val+'</div><div class="stat-lbl">'+lbl+'</div></div>';
+}
+
 // ── Render: Stats ──
 function renderStats(){
-  var d=getDados(), hj=hoje();
+  var d=getDados(), hj=hoje(), year=hj.substring(0,4);
 
-  // PRs
+  // ── Este ano: summary ──
+  var runY=d.treinos.filter(function(t){return t.data&&t.data.startsWith(year);});
+  var bikeY=d.bike.filter(function(b){return b.data&&b.data.startsWith(year);});
+  var swimY=d.natacao.filter(function(n){return n.data&&n.data.startsWith(year);});
+  var runKm=runY.reduce(function(s,t){return s+(t.distancia||0);},0);
+  var bikeKm=bikeY.reduce(function(s,b){return s+(b.distancia||0);},0);
+  var swimM=swimY.reduce(function(s,n){return s+(n.distancia||0);},0);
+  var runPaces=runY.filter(function(t){return t.pace;}).map(function(t){return parsePaceSecs(t.pace);}).filter(Boolean);
+  var avgRunPaceSec=runPaces.length?Math.round(runPaces.reduce(function(s,v){return s+v;},0)/runPaces.length):0;
+  var avgRunPace=avgRunPaceSec?Math.floor(avgRunPaceSec/60)+':'+pad(Math.round(avgRunPaceSec%60)):null;
+  var bikeSpeeds=bikeY.filter(function(b){return b.velocidade;}).map(function(b){return parseFloat(b.velocidade)||0;}).filter(Boolean);
+  var avgBikeSpd=bikeSpeeds.length?(bikeSpeeds.reduce(function(s,v){return s+v;},0)/bikeSpeeds.length).toFixed(1):null;
+  var swimPaces=swimY.filter(function(n){return n.pace;}).map(function(n){return parsePace100mSecs(n.pace);}).filter(Boolean);
+  var avgSwimPaceSec=swimPaces.length?Math.round(swimPaces.reduce(function(s,v){return s+v;},0)/swimPaces.length):0;
+  var avgSwimPace=avgSwimPaceSec?Math.floor(avgSwimPaceSec/60)+':'+pad(Math.round(avgSwimPaceSec%60)):null;
+  function sportCard(emoji,label,val,sub,metric,metricLbl,bg,cor){
+    return '<div style="background:'+bg+';border-radius:14px;padding:14px 8px;text-align:center">'+
+      '<div style="font-size:24px;line-height:1">'+emoji+'</div>'+
+      '<div style="font-size:10px;font-weight:800;color:'+cor+';margin-top:5px;text-transform:uppercase;letter-spacing:.5px">'+label+'</div>'+
+      '<div style="font-size:22px;font-weight:900;color:'+cor+';margin-top:3px;line-height:1">'+val+'</div>'+
+      '<div style="font-size:10px;color:var(--text3);margin-top:2px">'+sub+' sessões</div>'+
+      (metric?'<div style="font-size:11px;font-weight:700;color:var(--text2);margin-top:6px;padding-top:5px;border-top:1px solid rgba(0,0,0,.07)">'+metric+'<br><span style="font-size:9px;font-weight:600;color:var(--text3)">'+metricLbl+'</span></div>':'')+'</div>';
+  }
+  document.getElementById('tri-year-card').innerHTML=
+    sportCard('🏃','Corrida',runKm.toFixed(0)+' km',runY.length,avgRunPace?avgRunPace+'/km':null,'pace médio','#eff6ff','var(--blue)')+
+    sportCard('🚴','Bike',bikeKm.toFixed(0)+' km',bikeY.length,avgBikeSpd?avgBikeSpd+' km/h':null,'vel. média','#fff7ed','#ea580c')+
+    sportCard('🏊','Natação',swimM>=1000?(swimM/1000).toFixed(1)+' km':swimM+' m',swimY.length,avgSwimPace?avgSwimPace+'/100m':null,'pace médio','#ecfeff','#0e7490');
+
+  // ── Weekly hours stacked chart ──
+  var wLabels=[],runHrs=[],bikeHrs=[],swimHrs=[];
+  for(var w=11;w>=0;w--){
+    var dt=new Date(hj+'T12:00:00'); dt.setDate(dt.getDate()-w*7);
+    var dow=dt.getDay();
+    var monW=new Date(dt); monW.setDate(dt.getDate()-(dow===0?6:dow-1));
+    var sunW=new Date(monW); sunW.setDate(monW.getDate()+6);
+    function fdw(x){return x.getFullYear()+'-'+pad(x.getMonth()+1)+'-'+pad(x.getDate());}
+    var ini=fdw(monW),fim=fdw(sunW);
+    wLabels.push(monW.getDate()+'/'+(monW.getMonth()+1));
+    function wkHrs(arr){return Math.round(arr.filter(function(x){return x.data>=ini&&x.data<=fim;}).reduce(function(s,x){return s+parseDur(x.duracao);},0)/360)/10;}
+    runHrs.push(wkHrs(d.treinos));
+    bikeHrs.push(wkHrs(d.bike));
+    swimHrs.push(wkHrs(d.natacao));
+  }
+  var ctxT=document.getElementById('tri-vol-chart'); if(ctxT){
+    if(_triVolChart) _triVolChart.destroy();
+    _triVolChart=new Chart(ctxT.getContext('2d'),{
+      type:'bar',
+      data:{labels:wLabels,datasets:[
+        {label:'🏃 Corrida',data:runHrs,backgroundColor:'#3b82f6bb',stack:'s',borderRadius:3},
+        {label:'🚴 Bike',   data:bikeHrs,backgroundColor:'#f97316bb',stack:'s',borderRadius:3},
+        {label:'🏊 Natação',data:swimHrs,backgroundColor:'#06b6d4bb',stack:'s',borderRadius:3},
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:true,position:'top',labels:{font:{size:9},boxWidth:9,padding:6}},
+          tooltip:{callbacks:{label:function(c){return c.dataset.label.slice(3)+': '+c.raw+'h';}}}},
+        scales:{
+          x:{stacked:true,grid:{display:false},ticks:{font:{size:9},color:'#94a3b8'}},
+          y:{stacked:true,grid:{color:'#f1f5f9'},ticks:{font:{size:9},color:'#94a3b8',callback:function(v){return v+'h';}}}
+        }}
+    });
+  }
+
+  // ── Monthly data ──
+  var months=getLastNMonths(8), mLabels=months.map(function(m){return m.label;});
+
+  // ── Corrida: stats + chart ──
+  var runMonthKm=months.map(function(m){return Math.round(d.treinos.filter(function(t){return t.data>=m.start&&t.data<=m.end;}).reduce(function(s,t){return s+(t.distancia||0);},0)*10)/10;});
+  var thisMonthRun=d.treinos.filter(function(t){return t.data>=months[months.length-1].start&&t.data<=months[months.length-1].end;});
+  var tmRunKm=thisMonthRun.reduce(function(s,t){return s+(t.distancia||0);},0);
+  var tmRunSec=thisMonthRun.reduce(function(s,t){return s+parseDur(t.duracao);},0);
+  var bestRunLong=d.treinos.slice().sort(function(a,b){return (b.distancia||0)-(a.distancia||0);})[0];
+  document.getElementById('run-stats-boxes').innerHTML='<div class="stat-grid3">'+
+    statBoxHTML(tmRunKm.toFixed(1)+' km','este mês','var(--blue)')+
+    statBoxHTML(thisMonthRun.length,'sessões','var(--blue)')+
+    statBoxHTML(tmRunKm>0&&tmRunSec>0?calcPace(tmRunKm,fmtDur(tmRunSec)):'—','pace médio','var(--blue)')+
+  '</div>';
+  _runMonthChart=mkBarChart('run-month-chart',_runMonthChart,mLabels,runMonthKm,'#3b82f6','km');
+
+  // ── Bike: stats + chart ──
+  var bikeMonthKm=months.map(function(m){return Math.round(d.bike.filter(function(b){return b.data>=m.start&&b.data<=m.end;}).reduce(function(s,b){return s+(b.distancia||0);},0)*10)/10;});
+  var thisMonthBike=d.bike.filter(function(b){return b.data>=months[months.length-1].start&&b.data<=months[months.length-1].end;});
+  var tmBikeKm=thisMonthBike.reduce(function(s,b){return s+(b.distancia||0);},0);
+  var tmBikeSpeeds=thisMonthBike.filter(function(b){return b.velocidade;}).map(function(b){return parseFloat(b.velocidade)||0;}).filter(Boolean);
+  var tmBikeSpd=tmBikeSpeeds.length?(tmBikeSpeeds.reduce(function(s,v){return s+v;},0)/tmBikeSpeeds.length).toFixed(1):'—';
+  document.getElementById('bike-stats-boxes').innerHTML='<div class="stat-grid3">'+
+    statBoxHTML(tmBikeKm.toFixed(1)+' km','este mês','#ea580c')+
+    statBoxHTML(thisMonthBike.length,'sessões','#ea580c')+
+    statBoxHTML(tmBikeSpd+' km/h','vel. média','#ea580c')+
+  '</div>';
+  _bikeMonthChart=mkBarChart('bike-month-chart',_bikeMonthChart,mLabels,bikeMonthKm,'#f97316','km');
+
+  // ── Natação: stats + chart ──
+  var swimMonthM=months.map(function(m){return Math.round(d.natacao.filter(function(n){return n.data>=m.start&&n.data<=m.end;}).reduce(function(s,n){return s+(n.distancia||0);},0));});
+  var thisMonthSwim=d.natacao.filter(function(n){return n.data>=months[months.length-1].start&&n.data<=months[months.length-1].end;});
+  var tmSwimM=thisMonthSwim.reduce(function(s,n){return s+(n.distancia||0);},0);
+  var tmSwimPaces=thisMonthSwim.filter(function(n){return n.pace;}).map(function(n){return parsePace100mSecs(n.pace);}).filter(Boolean);
+  var tmSwimPaceSec=tmSwimPaces.length?Math.round(tmSwimPaces.reduce(function(s,v){return s+v;},0)/tmSwimPaces.length):0;
+  var tmSwimPace=tmSwimPaceSec?Math.floor(tmSwimPaceSec/60)+':'+pad(Math.round(tmSwimPaceSec%60)):'—';
+  document.getElementById('swim-stats-boxes').innerHTML='<div class="stat-grid3">'+
+    statBoxHTML(tmSwimM>=1000?(tmSwimM/1000).toFixed(1)+' km':tmSwimM+' m','este mês','#0e7490')+
+    statBoxHTML(thisMonthSwim.length,'sessões','#0e7490')+
+    statBoxHTML(tmSwimPace+'/100m','pace médio','#0e7490')+
+  '</div>';
+  _swimMonthChart=mkBarChart('swim-month-chart',_swimMonthChart,mLabels,swimMonthM,'#06b6d4','m');
+
+  // ── PRs (corrida) ──
   function bestPace(minK,maxK){
     var c=d.treinos.filter(function(t){return t.distancia>=minK&&t.distancia<=maxK&&t.pace;});
     if(!c.length) return null;
     return c.sort(function(a,b){return parsePaceSecs(a.pace)-parsePaceSecs(b.pace);})[0];
   }
   var bestLong=d.treinos.slice().sort(function(a,b){return (b.distancia||0)-(a.distancia||0);})[0];
+  var bestBikeLong=d.bike.slice().sort(function(a,b){return (b.distancia||0)-(a.distancia||0);})[0];
+  var bestSwimLong=d.natacao.slice().sort(function(a,b){return (b.distancia||0)-(a.distancia||0);})[0];
   var prsHTML='';
-  [{label:'5 km',min:4.5,max:5.5},{label:'10 km',min:9,max:11},{label:'21 km',min:20,max:22}].forEach(function(pr){
+  [{label:'5 km',min:4.5,max:5.5},{label:'10 km',min:9,max:11},{label:'21 km',min:20,max:22},{label:'42 km',min:40,max:44}].forEach(function(pr){
     var b=bestPace(pr.min,pr.max);
     if(b) prsHTML+='<div class="pr-item">'+
-      '<div><div class="pr-badge">'+pr.label+'</div><div style="font-size:11px;color:var(--text3);margin-top:3px">'+fmtDataCurta(b.data)+'</div></div>'+
+      '<div><div class="pr-badge">🏃 '+pr.label+'</div><div style="font-size:11px;color:var(--text3);margin-top:3px">'+fmtDataCurta(b.data)+'</div></div>'+
       '<div style="text-align:right"><div class="pr-val">'+b.pace+'/km</div><div class="pr-sub">'+b.distancia.toFixed(1)+' km</div></div>'+
     '</div>';
   });
   if(bestLong) prsHTML+='<div class="pr-item">'+
-    '<div><div class="pr-badge">Mais longa</div><div style="font-size:11px;color:var(--text3);margin-top:3px">'+fmtDataCurta(bestLong.data)+'</div></div>'+
-    '<div class="pr-val">'+bestLong.distancia.toFixed(1)+' km</div>'+
-  '</div>';
-  document.getElementById('prs-card').innerHTML=prsHTML||'<div style="color:var(--text3);font-size:13px">Sem dados suficientes. Importe seus treinos!</div>';
-
-  // 12-week volume chart
-  var labels=[],vals=[],colors=[];
-  for(var w=11;w>=0;w--){
-    var dt=new Date(hj+'T12:00:00'); dt.setDate(dt.getDate()-w*7);
-    var day=dt.getDay();
-    var mon=new Date(dt); mon.setDate(dt.getDate()-(day===0?6:day-1));
-    var sun=new Date(mon); sun.setDate(mon.getDate()+6);
-    function fd(x){return x.getFullYear()+'-'+pad(x.getMonth()+1)+'-'+pad(x.getDate());}
-    var ini=fd(mon),fim=fd(sun);
-    var wkm=d.treinos.filter(function(t){return t.data>=ini&&t.data<=fim;}).reduce(function(s,t){return s+(t.distancia||0);},0);
-    labels.push(mon.getDate()+'/'+(mon.getMonth()+1));
-    vals.push(Math.round(wkm*10)/10);
-    colors.push(w===0?'#f97316':'#3b82f6');
-  }
-  var ctx=document.getElementById('vol-chart').getContext('2d');
-  if(_volChart) _volChart.destroy();
-  _volChart=new Chart(ctx,{
-    type:'bar',
-    data:{labels:labels,datasets:[{data:vals,backgroundColor:colors,borderRadius:6,borderSkipped:false}]},
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.raw+' km';}}}},
-      scales:{
-        x:{grid:{display:false},ticks:{font:{size:10},color:'#94a3b8'}},
-        y:{grid:{color:'#f1f5f9'},ticks:{font:{size:10},color:'#94a3b8',callback:function(v){return v+'km';}}}
-      }
-    }
-  });
-
-  // Year comparison — use actual data, fallback to known stats for years with <50 km
-  var yearRows=[{y:2024,known:1134},{y:2025,known:846},{y:2026,known:0}];
-  yearRows.forEach(function(yr){
-    var yk=d.treinos.filter(function(t){return t.data&&t.data.startsWith(String(yr.y));}).reduce(function(s,t){return s+(t.distancia||0);},0);
-    yr.km=Math.round(yk<50&&yr.known?yr.known:yk);
-  });
-  var maxY=Math.max.apply(null,yearRows.map(function(y){return y.km;}))||1;
-  var yColors=['#3b82f6','#a855f7','#f97316'];
-  document.getElementById('year-card').innerHTML=yearRows.map(function(yr,i){
-    var pct=Math.round(yr.km/maxY*100);
-    return '<div class="year-row">'+
-      '<div class="year-tag">'+yr.y+'</div>'+
-      '<div class="year-bg">'+
-        '<div class="year-fill" style="width:'+pct+'%;background:'+yColors[i]+'">'+
-          (pct>18?'<span class="year-fill-val">'+yr.km+' km</span>':'')+'</div>'+
-      '</div>'+
-      '<div class="year-km" style="color:'+yColors[i]+'">'+(pct<=18?yr.km+' km':'')+'</div>'+
-    '</div>';
-  }).join('');
-
-  // 30-day
-  var d30=new Date(hj+'T00:00:00'); d30.setDate(d30.getDate()-30);
-  var d30s=d30.getFullYear()+'-'+pad(d30.getMonth()+1)+'-'+pad(d30.getDate());
-  var last30=d.treinos.filter(function(t){return t.data>=d30s;});
-  var km30=last30.reduce(function(s,t){return s+(t.distancia||0);},0);
-  var sec30=last30.reduce(function(s,t){return s+parseDur(t.duracao);},0);
-  document.getElementById('stats-30').innerHTML=
-    '<div class="stat-box"><div class="stat-val">'+km30.toFixed(0)+'</div><div class="stat-lbl">km totais</div></div>'+
-    '<div class="stat-box"><div class="stat-val">'+last30.length+'</div><div class="stat-lbl">treinos</div></div>'+
-    '<div class="stat-box"><div class="stat-val">'+(km30>0?calcPace(km30,fmtDur(sec30)):'—')+'</div><div class="stat-lbl">pace médio</div></div>';
-
-  // By type
-  var tipos={};
-  d.treinos.forEach(function(t){tipos[t.tipo]=(tipos[t.tipo]||0)+(t.distancia||0);});
-  var totalKm=Object.values(tipos).reduce(function(s,v){return s+v;},0)||1;
-  var tiposKeys=Object.keys(tipos).sort(function(a,b){return tipos[b]-tipos[a];});
-  document.getElementById('tipo-card').innerHTML=tiposKeys.length
-    ?tiposKeys.map(function(tipo){
-        var info=tipoInfo(tipo),pct=(tipos[tipo]/totalKm*100).toFixed(0);
-        return '<div class="tipo-row">'+
-          '<span style="font-size:16px">'+info.emoji+'</span>'+
-          '<div style="flex:1">'+
-            '<div style="display:flex;justify-content:space-between;margin-bottom:4px">'+
-              '<span style="font-size:13px;font-weight:700">'+info.label+'</span>'+
-              '<span style="font-size:12px;color:var(--text2)">'+tipos[tipo].toFixed(0)+' km</span>'+
-            '</div>'+
-            '<div style="height:6px;background:var(--border);border-radius:3px">'+
-              '<div style="height:100%;width:'+pct+'%;background:'+info.cor+';border-radius:3px"></div>'+
-            '</div>'+
-          '</div>'+
-          '<span style="font-size:12px;color:var(--text3);width:28px;text-align:right">'+pct+'%</span>'+
-        '</div>';
-      }).join('')
-    :'<div style="color:var(--text3);font-size:13px">Nenhum dado. Importe treinos para ver análise!</div>';
+    '<div><div class="pr-badge">🏃 Maior corrida</div><div style="font-size:11px;color:var(--text3);margin-top:3px">'+fmtDataCurta(bestLong.data)+'</div></div>'+
+    '<div class="pr-val">'+bestLong.distancia.toFixed(1)+' km</div></div>';
+  if(bestBikeLong) prsHTML+='<div class="pr-item">'+
+    '<div><div class="pr-badge" style="background:#ea580c">🚴 Maior ride</div><div style="font-size:11px;color:var(--text3);margin-top:3px">'+fmtDataCurta(bestBikeLong.data)+'</div></div>'+
+    '<div class="pr-val" style="color:#ea580c">'+bestBikeLong.distancia.toFixed(1)+' km</div></div>';
+  if(bestSwimLong) prsHTML+='<div class="pr-item">'+
+    '<div><div class="pr-badge" style="background:#0e7490">🏊 Maior nado</div><div style="font-size:11px;color:var(--text3);margin-top:3px">'+fmtDataCurta(bestSwimLong.data)+'</div></div>'+
+    '<div class="pr-val" style="color:#0e7490">'+(bestSwimLong.distancia>=1000?(bestSwimLong.distancia/1000).toFixed(1)+' km':bestSwimLong.distancia+' m')+'</div></div>';
+  document.getElementById('prs-card').innerHTML=prsHTML||'<div style="color:var(--text3);font-size:13px">Sem dados ainda. Importe seus treinos!</div>';
 }
 
 // ── Corrida types ──
