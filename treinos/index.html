@@ -192,6 +192,22 @@ input[type=range].esf::-webkit-slider-thumb{-webkit-appearance:none;width:22px;h
 .empty{text-align:center;padding:36px 16px;color:var(--text3)}
 .empty-icon{font-size:38px;margin-bottom:8px}
 
+/* Plan week */
+.plan-day{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;background:var(--bg);margin-bottom:5px}
+.plan-day:last-child{margin-bottom:0}
+.plan-day.plan-hoje{background:var(--blue-light);border:1.5px solid var(--blue)}
+.plan-day.plan-race{background:#fefce8;border:1.5px solid var(--gold)}
+.plan-day-name{font-size:10px;font-weight:700;color:var(--text3);width:26px;flex-shrink:0;text-transform:uppercase}
+.plan-day-icon{font-size:18px;width:26px;text-align:center;flex-shrink:0}
+.plan-day-body{flex:1;min-width:0}
+.plan-day-label{font-size:13px;font-weight:700;color:var(--text)}
+.plan-day-detail{font-size:11px;color:var(--text2);margin-top:1px}
+.plan-hoje-tag{font-size:9px;font-weight:800;background:var(--blue);color:#fff;border-radius:5px;padding:2px 6px;flex-shrink:0}
+.plan-phase-banner{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;margin-bottom:10px}
+.plan-phase-icon{font-size:20px}
+.plan-phase-name{font-size:13px;font-weight:800}
+.plan-phase-tip{font-size:11px;color:var(--text2);margin-top:1px}
+
 /* Strava modals */
 .strava-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:4500;display:flex;align-items:center;justify-content:center;padding:1rem}
 .strava-modal{background:#fff;border-radius:20px;padding:1.5rem;max-width:400px;width:100%;max-height:92vh;overflow-y:auto}
@@ -212,8 +228,8 @@ input[type=range].esf::-webkit-slider-thumb{-webkit-appearance:none;width:22px;h
 <div id="tela-dash" class="screen ativa">
   <div class="race-card" id="race-card"></div>
 
-  <div class="sec"><span class="sec-title">Plano de Treino — Hoje</span></div>
-  <div class="card"><div id="today-card"></div></div>
+  <div class="sec"><span class="sec-title">Plano da Semana</span></div>
+  <div class="card" id="plano-semana-card"></div>
 
   <div class="sec"><span class="sec-title">Esta semana</span></div>
   <div class="card">
@@ -519,6 +535,98 @@ function irParaTela(nome){
 }
 function fechar(id){ document.getElementById(id).classList.remove('aberto'); }
 
+// ── Training plan: weekly schedules per phase ──
+// Index: 0=Dom, 1=Seg, 2=Ter, 3=Qua, 4=Qui, 5=Sex, 6=Sáb
+var PLANO_SEMANA = {
+  'pre': [
+    {icon:'🛋️', label:'Descanso', detail:'Recuperação ativa — caminhada leve se quiser'},
+    {icon:'🧘', label:'Mobilidade 20 min', detail:'Alongamento, foam roller, joelho'},
+    {icon:'💪', label:'Força leve 25 min', detail:'Core e glúteos sem impacto'},
+    {icon:'🚴', label:'Cross-training 30 min', detail:'Bicicleta ou natação — ritmo moderado'},
+    {icon:'🛋️', label:'Descanso ativo', detail:'Caminhada leve ou mobilidade'},
+    {icon:'🚴', label:'Cross-training 35 min', detail:'Bicicleta ou natação'},
+    {icon:'🛋️', label:'Descanso total', detail:'Nada de exercício intenso'},
+  ],
+  'cross': [
+    {icon:'🛋️', label:'Descanso total', detail:'Recuperação completa'},
+    {icon:'🚴', label:'Cross-training 40 min', detail:'Bicicleta, natação ou musculação — ritmo moderado'},
+    {icon:'🧘', label:'Mobilidade 20 min', detail:'Yoga, pilates ou alongamento focado no joelho'},
+    {icon:'💪', label:'Força funcional 30 min', detail:'Core, glúteos e superiores — sem impacto'},
+    {icon:'🛋️', label:'Descanso ativo', detail:'Caminhada leve de 20 min se quiser'},
+    {icon:'🚴', label:'Cross-training 40 min', detail:'Bicicleta, natação ou musculação'},
+    {icon:'🚴', label:'Cross-training longo 60 min', detail:'Bicicleta ou natação — ritmo confortável e constante'},
+  ],
+  'walkrun': [
+    {icon:'🛋️', label:'Descanso', detail:'Recuperação'},
+    {icon:'🚶', label:'Walk-Run 25 min', detail:'3 min corrida + 1 min caminhada · Pace Z1 (9:30–10:30/km)'},
+    {icon:'💪', label:'Cross-training leve 25 min', detail:'Bike ou natação — sem impacto'},
+    {icon:'🚶', label:'Walk-Run 30 min', detail:'3 min corrida + 1 min caminhada · Dor ≥ 3/10 = parar'},
+    {icon:'🛋️', label:'Descanso', detail:'Recuperação total'},
+    {icon:'🚶', label:'Walk-Run 35 min', detail:'3 min corrida + 1 min caminhada · Último teste antes do taper'},
+    {icon:'🧘', label:'Mobilidade leve 20 min', detail:'Alongamento, descanso das pernas'},
+  ],
+  'taper': [
+    {icon:'🛋️', label:'Descanso', detail:'Pernas descansadas para a prova'},
+    {icon:'🚶', label:'Walk-Run leve 20 min', detail:'Ritmo bem tranquilo — só para manter o ritmo'},
+    {icon:'🛋️', label:'Descanso', detail:'Nada pesado'},
+    {icon:'🚶', label:'Caminhada curta 15 min', detail:'Só para se mover — sem esforço'},
+    {icon:'🛋️', label:'Descanso total', detail:'Hidrate bem'},
+    {icon:'🧘', label:'Preparação mental', detail:'Montar kit, verificar rota, dormir cedo'},
+    {icon:'🏆', label:'DESAFIO 64km!', detail:'Pace 9–10:30/km · Galloway 3+1 · 19–20 voltas de 3.3km'},
+  ],
+};
+
+function getPlanoKey(hj){
+  if(hj>='2026-06-08') return 'taper';
+  if(hj>='2026-06-01') return 'walkrun';
+  if(hj>='2026-05-16') return 'cross';
+  return 'pre';
+}
+
+function renderPlanoSemana(){
+  var hj=hoje();
+  var planoKey=getPlanoKey(hj);
+  var dias=PLANO_SEMANA[planoKey];
+  var ph=getCurrentPhase();
+
+  // Build this week Mon–Sun
+  var now=new Date(),dow=now.getDay();
+  var mon=new Date(now); mon.setDate(now.getDate()-(dow===0?6:dow-1));
+
+  var banner='';
+  if(ph){
+    banner='<div class="plan-phase-banner" style="background:'+ph.color+'22;border:1.5px solid '+ph.color+'44">'+
+      '<span class="plan-phase-icon">'+ph.icon+'</span>'+
+      '<div><div class="plan-phase-name" style="color:'+ph.color+'">'+ph.label+'</div>'+
+      '<div class="plan-phase-tip">'+ph.tip+'</div></div>'+
+    '</div>';
+  }
+
+  var html=banner;
+  for(var i=0;i<7;i++){
+    var dt=new Date(mon); dt.setDate(mon.getDate()+i);
+    var ds=dt.getFullYear()+'-'+pad(dt.getMonth()+1)+'-'+pad(dt.getDate());
+    var dayDow=dt.getDay(); // 0=Sun
+    var entry=dias[dayDow]||{icon:'🛋️',label:'Descanso',detail:''};
+    // Race day override
+    if(ds===RACE_DATE) entry={icon:'🏆',label:'DIA DO DESAFIO!',detail:'Pace 9–10:30/km · Galloway 3+1 · Boa corrida, Luiz!'};
+    var isToday=ds===hj;
+    var isRace=ds===RACE_DATE;
+    var cls='plan-day'+(isRace?' plan-race':isToday?' plan-hoje':'');
+    var dayNames=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+    html+='<div class="'+cls+'">'+
+      '<div class="plan-day-name">'+dayNames[dayDow]+'</div>'+
+      '<div class="plan-day-icon">'+entry.icon+'</div>'+
+      '<div class="plan-day-body">'+
+        '<div class="plan-day-label">'+entry.label+'</div>'+
+        (entry.detail?'<div class="plan-day-detail">'+entry.detail+'</div>':'')+
+      '</div>'+
+      (isToday?'<div class="plan-hoje-tag">HOJE</div>':'')+
+    '</div>';
+  }
+  document.getElementById('plano-semana-card').innerHTML=html;
+}
+
 // ── Race helpers ──
 function getRaceDays(){
   var race=new Date(RACE_DATE+'T12:00:00'),now=new Date(); now.setHours(0,0,0,0);
@@ -594,22 +702,8 @@ function renderDash(){
   }
   document.getElementById('race-card').innerHTML=raceHTML;
 
-  // Today
-  var ph=getCurrentPhase();
-  var todayHTML='';
-  if(ph){
-    todayHTML='<div class="today-wrap">'+
-      '<div class="today-icon">'+ph.icon+'</div>'+
-      '<div>'+
-        '<div class="today-title">'+ph.label+'</div>'+
-        '<div class="today-desc">'+ph.tip+'</div>'+
-        '<span class="today-knee">🦵 Joelho: pare se dor ≥ 3/10</span>'+
-      '</div>'+
-    '</div>';
-  } else if(days<0){
-    todayHTML='<div class="today-wrap"><div class="today-icon">🎉</div><div><div class="today-title">Parabéns!</div><div class="today-desc">O Desafio 64km foi concluído! Hora de recuperar e celebrar a conquista!</div></div></div>';
-  }
-  document.getElementById('today-card').innerHTML=todayHTML;
+  // Weekly plan
+  renderPlanoSemana();
 
   // Week stats
   var sem=getSemana();
@@ -1136,7 +1230,25 @@ function showStravaActList(date,acts){
   document.body.appendChild(ov);
 }
 
-var STRAVA_TIPO={'TrailRun':'trilha','VirtualRun':'virtual','Walk':'caminhada','Hike':'caminhada'};
+var STRAVA_TIPO={
+  'VirtualRun':'virtual','VirtualRide':'virtual',
+  'TrailRun':'trilha','Trail':'trilha',
+  'Walk':'caminhada','Hike':'caminhada',
+  'Run':'facil','Workout':'facil'
+};
+function detectStravaTipo(sportType, actName){
+  // Check sport type mapping first
+  if(STRAVA_TIPO[sportType]) return STRAVA_TIPO[sportType];
+  // Fall back to name keywords (handles manual/treadmill entries)
+  var n=(actName||'').toLowerCase();
+  if(n.includes('virtual')||n.includes('esteira')||n.includes('treadmill')||n.includes('indoor')) return 'virtual';
+  if(n.includes('trilha')||n.includes('trail')||n.includes('mountain')) return 'trilha';
+  if(n.includes('caminhada')||n.includes('walk')||n.includes('hike')) return 'caminhada';
+  if(n.includes('tempo')||n.includes('limiar')) return 'tempo';
+  if(n.includes('interval')||n.includes('fartlek')||n.includes('repetição')) return 'intervalado';
+  if(n.includes('longo')||n.includes('long run')) return 'longo';
+  return 'facil';
+}
 
 function importStravaTreino(date,actId,name,distM,movingSecs,hr,sportType,actDate,cadence){
   var el=document.getElementById('strava-act-list'); if(el) el.remove();
@@ -1146,12 +1258,20 @@ function importStravaTreino(date,actId,name,distM,movingSecs,hr,sportType,actDat
   var paceS=dist>0?movingSecs/dist:0;
   var pace=paceS>0?Math.floor(paceS/60)+':'+pad(Math.floor(paceS%60)):'';
   var hrVal=hr&&+hr>0?Math.round(+hr):0;
-  var treino={id:uid(),tipo:STRAVA_TIPO[sportType]||'facil',data:actDate||date,distancia:dist,duracao:duracao,pace:pace,fcMed:hrVal,fcMax:0,esforco:5,notas:name||'',stravaId:String(actId)};
+  var tipo=detectStravaTipo(sportType,name);
+  var treino={id:uid(),tipo:tipo,data:actDate||date,distancia:dist,duracao:duracao,pace:pace,fcMed:hrVal,fcMax:0,esforco:5,notas:name||'',stravaId:String(actId)};
   var d=getDados();
   var idx=d.treinos.findIndex(function(t){return t.stravaId&&t.stravaId===treino.stravaId;});
-  if(idx>=0){d.treinos[idx]=Object.assign(d.treinos[idx],treino,{id:d.treinos[idx].id});toast('✏️ Treino Strava atualizado');}
-  else{d.treinos.push(treino);toast('✅ Treino importado do Strava!');}
+  if(idx>=0){
+    d.treinos[idx]=Object.assign(d.treinos[idx],treino,{id:d.treinos[idx].id});
+    toast('✏️ Treino Strava atualizado');
+  } else {
+    d.treinos.push(treino);
+    toast('✅ Importado! Verifique o tipo abaixo.');
+  }
   salvarDados(d); renderDash(); if(_tela==='log') renderLog();
+  // Open edit modal so user can review/adjust type
+  setTimeout(function(){ abrirTreino(treino.id); },400);
 }
 
 // ── Init ──
