@@ -456,10 +456,8 @@ input[type=range].esf::-webkit-slider-thumb{-webkit-appearance:none;width:22px;h
     <div class="page-hero-sub" id="gym-sub">carregando...</div>
   </div>
   <div style="padding:10px 12px 0;display:flex;justify-content:flex-end;gap:8px">
-    <label style="background:#fff7ed;color:#92400e;border:1px solid #fcd34d;border-radius:20px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">
-      📥 Import Hevy CSV
-      <input type="file" accept=".csv" onchange="importHevyCSV(this)" style="display:none">
-    </label>
+    <button onclick="document.getElementById('hevy-csv-input').click()" style="background:#fff7ed;color:#92400e;border:1px solid #fcd34d;border-radius:20px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">📥 Import Hevy CSV</button>
+    <input type="file" id="hevy-csv-input" accept=".csv,.txt" style="position:fixed;top:-200%;left:-200%;width:1px;height:1px;opacity:0" onchange="importHevyCSV(this)">
     <button onclick="abrirGym()" style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d;border-radius:20px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">+ Manual</button>
   </div>
   <div id="gym-list" style="padding:8px 12px"></div>
@@ -2849,27 +2847,42 @@ function renderGym(){
 }
 
 // ── HEVY CSV IMPORT ──
-var HEVY_MON={Jan:'01',Feb:'02',Mar:'03',Apr:'04',May:'05',Jun:'06',Jul:'07',Aug:'08',Sep:'09',Oct:'10',Nov:'11',Dec:'12'};
+var HEVY_MON={jan:'01',feb:'02',mar:'03',apr:'04',may:'05',jun:'06',jul:'07',aug:'08',sep:'09',oct:'10',nov:'11',dec:'12'};
 function parseHevyDT(s){
-  if(!s) return null;
+  if(!s||!s.trim()) return null;
   s=s.trim();
-  // Format 1: "2024 Nov 27, 9:09am"
-  var m=s.match(/(\d{4})\s+([A-Za-z]{3})\s+(\d{1,2}),?\s*(\d{1,2}):(\d{2})\s*(am|pm)?/i);
+  // "2024 Nov 27, 9:09am"  or  "Nov 27, 2024, 9:09am"
+  var m=s.match(/(\d{4})\s+([A-Za-z]{3})\s+(\d{1,2}),?\s*(\d{1,2}):(\d{2})\s*(am|pm)?/i)
+      ||s.match(/([A-Za-z]{3})\s+(\d{1,2}),?\s*(\d{4}),?\s*(\d{1,2}):(\d{2})\s*(am|pm)?/i);
   if(m){
-    var yr=+m[1],mo=HEVY_MON[m[2]]||'01',day=pad(+m[3]);
-    var hr=+m[4],min=+m[5],ap=(m[6]||'').toLowerCase();
+    var yr,mo,day,hr,mn,ap;
+    if(/^\d{4}/.test(m[0])){ yr=+m[1];mo=HEVY_MON[m[2].toLowerCase()]||'01';day=pad(+m[3]);hr=+m[4];mn=+m[5];ap=(m[6]||'').toLowerCase(); }
+    else { mo=HEVY_MON[m[1].toLowerCase()]||'01';day=pad(+m[2]);yr=+m[3];hr=+m[4];mn=+m[5];ap=(m[6]||'').toLowerCase(); }
     if(ap==='pm'&&hr<12) hr+=12;
     if(ap==='am'&&hr===12) hr=0;
-    return new Date(yr+'-'+mo+'-'+day+'T'+pad(hr)+':'+pad(min)+':00');
+    return new Date(yr+'-'+mo+'-'+day+'T'+pad(hr)+':'+pad(mn)+':00');
   }
-  // Format 2: "2024-11-27 09:09:08"
+  // "2024-11-27 09:09:08" or ISO
   var dt=new Date(s.replace(' ','T'));
   return isNaN(dt)?null:dt;
 }
 function parseHevyDate(s){
   var dt=parseHevyDT(s);
-  if(!dt) return hoje();
+  if(!dt||isNaN(dt)) return hoje();
   return dt.getFullYear()+'-'+pad(dt.getMonth()+1)+'-'+pad(dt.getDate());
+}
+function hevyFindCol(headers,names){
+  // case-insensitive, partial match
+  var lc=headers.map(function(h){return h.toLowerCase();});
+  for(var i=0;i<names.length;i++){
+    var n=names[i].toLowerCase();
+    var idx=lc.indexOf(n);
+    if(idx>=0) return idx;
+    // partial
+    idx=lc.findIndex(function(h){return h.indexOf(n)>=0;});
+    if(idx>=0) return idx;
+  }
+  return -1;
 }
 
 function importHevyCSV(input){
@@ -2877,35 +2890,44 @@ function importHevyCSV(input){
   var reader=new FileReader();
   reader.onload=function(e){
     try{
-      var lines=e.target.result.split(/\r?\n/);
-      var headers=parseCSVLine(lines[0]);
-      // Normalize headers (trim whitespace and BOM)
-      headers=headers.map(function(h){return h.replace(/^﻿/,'').trim();});
-      var iTitle=headers.indexOf('Title'), iStart=headers.indexOf('Start Time'),
-          iEnd=headers.indexOf('End Time'), iDesc=headers.indexOf('Description'),
-          iExTitle=headers.indexOf('Exercise Title');
+      var raw=e.target.result.replace(/^﻿/,''); // strip BOM
+      var lines=raw.split(/\r?\n/);
+      var headers=parseCSVLine(lines[0]).map(function(h){return h.trim();});
+
+      var iTitle =hevyFindCol(headers,['title','workout title','workout name','name']);
+      var iStart =hevyFindCol(headers,['start time','start','date','started']);
+      var iEnd   =hevyFindCol(headers,['end time','end','finished','ended']);
+      var iDesc  =hevyFindCol(headers,['description','notes','workout notes']);
+      var iExTitle=hevyFindCol(headers,['exercise title','exercise name','exercise']);
+
       if(iTitle<0||iStart<0){
-        toast('❌ CSV do Hevy não reconhecido (cols: '+headers.slice(0,5).join(', ')+')');
-        return;
+        toast('❌ Colunas não encontradas. Colunas do CSV: '+headers.slice(0,6).join(' | '));
+        input.value=''; return;
       }
+
       var workouts={};
       for(var i=1;i<lines.length;i++){
-        var cols=parseCSVLine(lines[i]); if(!cols||cols.length<2)continue;
+        var cols=parseCSVLine(lines[i]); if(!cols||cols.length<2) continue;
         var rawTitle=(cols[iTitle]||'').trim();
         var rawStart=(cols[iStart]||'').trim();
         if(!rawTitle&&!rawStart) continue;
         var key=rawTitle+'||'+rawStart;
-        if(!workouts[key]) workouts[key]={title:rawTitle,start:rawStart,end:(cols[iEnd]||'').trim(),desc:(iDesc>=0?cols[iDesc]||'':'').trim(),exs:[]};
+        if(!workouts[key]) workouts[key]={title:rawTitle,start:rawStart,
+          end:(iEnd>=0?cols[iEnd]||'':'').trim(),
+          desc:(iDesc>=0?cols[iDesc]||'':'').trim(),exs:[]};
         if(iExTitle>=0){
           var ex=(cols[iExTitle]||'').trim();
           if(ex&&workouts[key].exs.indexOf(ex)<0) workouts[key].exs.push(ex);
         }
       }
       var keys=Object.keys(workouts);
+      if(!keys.length){
+        toast('⚠️ Arquivo lido mas nenhuma linha encontrada ('+lines.length+' linhas totais)');
+        input.value=''; return;
+      }
       var d=getDados(); var added=0,skipped=0;
       keys.forEach(function(k){
-        var w=workouts[k];
-        if(!w.title)return;
+        var w=workouts[k]; if(!w.title) return;
         var datePart=parseHevyDate(w.start);
         var durMin=0;
         var dtS=parseHevyDT(w.start), dtE=parseHevyDT(w.end);
@@ -2919,11 +2941,11 @@ function importHevyCSV(input){
       });
       salvarDados(d); renderGym();
       if(added>0) toast('✅ '+added+' treinos importados do Hevy'+(skipped?' ('+skipped+' já existiam)':'')+'!');
-      else toast('⚠️ Nenhum novo treino — '+skipped+' já existiam');
-    }catch(err){toast('❌ Erro: '+err.message);}
+      else toast('⚠️ Nenhum novo treino — '+skipped+' já existiam no app');
+    }catch(err){toast('❌ Erro ao processar CSV: '+err.message);}
     input.value='';
   };
-  reader.readAsText(file);
+  reader.readAsText(file,'UTF-8');
 }
 function parseCSVLine(line){
   if(!line)return[];
