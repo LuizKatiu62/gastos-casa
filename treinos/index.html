@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0f172a">
-<meta name="app-version" content="20260513-v2">
+<meta name="app-version" content="20260513-v3">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <title>Luiz — Atleta</title>
 <link rel="manifest" href="manifest.json">
@@ -254,7 +254,14 @@ input[type=range].esf::-webkit-slider-thumb{-webkit-appearance:none;width:22px;h
   <div class="sync-line">
     <div class="sync-dot" id="sync-dot"></div>
     <span class="sync-txt" id="sync-txt">conectando...</span>
+    <span style="margin-left:auto;font-size:10px;color:var(--text3)" id="app-ver-txt"></span>
   </div>
+</div>
+
+<!-- Update banner (hidden by default) -->
+<div id="update-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:#1d4ed8;color:#fff;padding:12px 16px;display:none;align-items:center;gap:10px;padding-top:max(env(safe-area-inset-top,12px),44px)">
+  <span style="flex:1;font-size:13px;font-weight:700">🔄 Nova versão disponível!</span>
+  <button onclick="forceUpdate()" style="background:#fff;color:#1d4ed8;border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:800;cursor:pointer">Atualizar agora</button>
 </div>
 
 <!-- ══ LOG ══ -->
@@ -1274,6 +1281,22 @@ function importStravaTreino(date,actId,name,distM,movingSecs,hr,sportType,actDat
   setTimeout(function(){ abrirTreino(treino.id); },400);
 }
 
+// ── Force update ──
+function forceUpdate(){
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.getRegistrations().then(function(regs){
+      regs.forEach(function(r){r.unregister();});
+    });
+    caches.keys().then(function(keys){
+      keys.forEach(function(k){caches.delete(k);});
+    }).then(function(){
+      window.location.reload(true);
+    });
+  } else {
+    window.location.reload(true);
+  }
+}
+
 // ── Init ──
 document.addEventListener('DOMContentLoaded',function(){
   document.getElementById('t-dist').addEventListener('input',updatePace);
@@ -1285,7 +1308,29 @@ document.addEventListener('DOMContentLoaded',function(){
   handleStravaCallback();
   renderDash();
   firebase.auth().signInAnonymously().then(iniciarSync).catch(iniciarSync);
-  if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(function(){});
+  // Show app version
+  var verEl=document.getElementById('app-ver-txt');
+  if(verEl){ var vm=document.querySelector('meta[name="app-version"]'); if(vm) verEl.textContent='v'+vm.content; }
+
+  // Service worker with auto-update detection
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('./sw.js').then(function(reg){
+      // Check for updates every 60s
+      setInterval(function(){reg.update();},60000);
+      reg.addEventListener('updatefound',function(){
+        var nw=reg.installing;
+        nw.addEventListener('statechange',function(){
+          if(nw.state==='installed'&&navigator.serviceWorker.controller){
+            document.getElementById('update-banner').style.display='flex';
+          }
+        });
+      });
+    }).catch(function(){});
+    // If SW controller changes (new SW took over), reload
+    navigator.serviceWorker.addEventListener('controllerchange',function(){
+      window.location.reload();
+    });
+  }
 });
 </script>
 </body>
