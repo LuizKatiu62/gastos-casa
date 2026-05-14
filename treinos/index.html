@@ -387,12 +387,20 @@ input[type=range].esf::-webkit-slider-thumb{-webkit-appearance:none;width:22px;h
     <div class="page-hero-title">Corridas</div>
     <div class="page-hero-sub">Calendário e resultados</div>
   </div>
-  <div style="padding:12px 12px 0">
-    <button onclick="abrirCorrida()" style="width:100%;background:var(--blue);color:#fff;border:none;border-radius:12px;padding:13px;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
-      <span style="font-size:20px">+</span> Adicionar corrida
+  <div style="padding:12px 12px 0;display:flex;gap:8px">
+    <button onclick="abrirCorrida()" style="flex:1;background:var(--blue);color:#fff;border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">
+      <span style="font-size:18px">+</span> Adicionar corrida
     </button>
+    <button onclick="toggleCalendario2026()" style="background:#1a3a5c;color:#fff;border:none;border-radius:12px;padding:13px 14px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">🍁 Canadá 2026</button>
   </div>
-  <div class="sec" style="padding-top:14px"><span class="sec-title">Próximas</span></div>
+  <div id="cal2026-section" style="display:none;margin:12px 12px 0;background:#fff;border-radius:14px;box-shadow:0 1px 8px rgba(0,0,0,.08);overflow:hidden">
+    <div style="background:linear-gradient(135deg,#1a3a5c,#c0392b);padding:14px 16px;display:flex;justify-content:space-between;align-items:center">
+      <span style="color:#fff;font-weight:900;font-size:15px">🍁 Calendário Canadá &amp; EUA 2026</span>
+      <button onclick="toggleCalendario2026()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:8px;padding:4px 10px;font-size:13px;cursor:pointer">✕</button>
+    </div>
+    <div id="cal2026-body" style="padding:12px 14px 16px"></div>
+  </div>
+  <div class="sec" style="padding-top:14px"><span class="sec-title">Minhas Provas</span></div>
   <div class="card" id="prox-wrap"></div>
   <div class="sec"><span class="sec-title">Resultados</span></div>
   <div class="card" id="pass-wrap"></div>
@@ -1660,6 +1668,114 @@ function autoFillDist(){
   var tipo=document.getElementById('c-tipo').value;
   var info=ctInfo(tipo);
   if(info.dist>0) document.getElementById('c-dist').value=info.dist;
+}
+
+// ── Calendário Provas 2026 ──
+var RACES_2026={
+  us:[
+    {name:'Boston Marathon',         city:'Boston, MA',    date:'2026-04-20',dists:['Maratona 42k'],flag:'🇺🇸',reg:'closed',url:'https://www.baa.org/races/boston-marathon'},
+    {name:'United Airlines NYC Half',city:'Nova York, NY', date:'2026-03-15',dists:['Meia 21k'],   flag:'🇺🇸',reg:'closed',url:'',past:true},
+    {name:'NYC Marathon',            city:'Nova York, NY', date:'2026-11-01',dists:['Maratona 42k'],flag:'🇺🇸',reg:'open',  url:'https://www.nyrr.org/races/tcsnewyorkcitymarathon'}
+  ],
+  ca:[
+    {name:'Fredericton Marathon',          city:'Fredericton, NB',  date:'2026-05-03',dists:['5k','10k','Meia','Maratona'],prov:'NB',reg:'open',url:'https://frederictonmarathon.com'},
+    {name:'Moncton Marathon',              city:'Moncton, NB',      date:'2026-05-17',dists:['5k','10k','Meia','Maratona'],prov:'NB',reg:'open',url:'https://www.legsforliteracy.com'},
+    {name:'Emera Marathon by the Sea',     city:'Saint John, NB',   date:'2026-08-09',dists:['10k','Meia','Maratona'],     prov:'NB',reg:'open',url:'https://marathonbythesea.com'},
+    {name:"King's County Road Race",       city:'Sussex, NB',       date:'2026-06-07',dists:['5k','10k'],                  prov:'NB',reg:'open',url:''},
+    {name:'Bluenose International Marathon',city:'Halifax, NS',     date:'2026-05-17',dists:['5k','10k','Meia','Maratona'],prov:'NS',reg:'open',url:'https://bluenosemarathon.com'},
+    {name:'Valley Harvest Marathon',       city:'Wolfville, NS',    date:'2026-10-04',dists:['5k','10k','Meia','Maratona'],prov:'NS',reg:'open',url:'https://www.valleyharvestmarathon.ca'},
+    {name:'South Shore Race Weekend',      city:'Bridgewater, NS',  date:'2026-06-14',dists:['5k','10k','Meia'],           prov:'NS',reg:'open',url:''},
+    {name:'Fall Classic Half Marathon',    city:'Halifax, NS',      date:'2026-11-01',dists:['Meia','10k'],                prov:'NS',reg:'open',url:''},
+    {name:'Antigonish Highland Half',      city:'Antigonish, NS',   date:'2026-09-13',dists:['Meia','10k','5k'],           prov:'NS',reg:'open',url:''},
+    {name:'PEI Marathon',                  city:'Charlottetown, PE',date:'2026-10-11',dists:['5k','10k','Meia','Maratona'],prov:'PE',reg:'open',url:'https://peimarathon.ca'},
+    {name:'Island Race Series — Spring',   city:'Charlottetown, PE',date:'2026-05-24',dists:['5k','10k'],                  prov:'PE',reg:'open',url:''},
+    {name:'Tely 10',                       city:"St. John's, NL",   date:'2026-07-26',dists:['10k'],                       prov:'NL',reg:'open',url:'https://www.nlaa.ca/tely10'},
+    {name:'NL Marathon',                   city:"St. John's, NL",   date:'2026-05-31',dists:['5k','10k','Meia','Maratona'],prov:'NL',reg:'open',url:''},
+    {name:'Corner Brook Marathon',         city:'Corner Brook, NL', date:'2026-09-06',dists:['Meia','Maratona'],           prov:'NL',reg:'open',url:''},
+    {name:'Demi-marathon de Montréal',     city:'Montréal, QC',     date:'2026-04-26',dists:['5k','10k','Meia'],           prov:'QC',reg:'open',url:'https://couronsmtl.com'},
+    {name:'Montréal Marathon (Oasis Rock)',city:'Montréal, QC',     date:'2026-09-27',dists:['10k','Meia','Maratona'],     prov:'QC',reg:'open',url:'https://couronsmtl.com'},
+    {name:'Québec City Marathon',          city:'Québec, QC',       date:'2026-08-23',dists:['10k','Meia','Maratona'],     prov:'QC',reg:'open',url:'https://www.jecoursqc.com'},
+    {name:'Ultra-Trail Mont-Tremblant',    city:'Mont-Tremblant, QC',date:'2026-08-14',dists:['Ultra 55k','Ultra 100k','Ultra 160k'],prov:'QC',reg:'open',url:'https://borealys.utmb.world'},
+    {name:'Marathon du Fjord',             city:'Saguenay, QC',     date:'2026-06-21',dists:['Meia','Maratona'],           prov:'QC',reg:'open',url:''},
+    {name:'Gatineau Ultra',                city:'Gatineau, QC',     date:'2026-05-10',dists:['Ultra 50k','Ultra 100k'],    prov:'QC',reg:'open',url:''},
+    {name:'Around the Bay 30k',            city:'Hamilton, ON',     date:'2026-03-29',dists:['30k'],                       prov:'ON',past:true,reg:'closed',url:''},
+    {name:'Sporting Life 10k',             city:'Toronto, ON',      date:'2026-05-10',dists:['10k'],                       prov:'ON',reg:'open',url:'https://www.sportinglife10k.ca'},
+    {name:'Mississauga Marathon',          city:'Mississauga, ON',  date:'2026-05-03',dists:['5k','10k','Meia','Maratona'],prov:'ON',reg:'open',url:'https://www.mississaugamarathon.com'},
+    {name:'Tamarack Ottawa Race Weekend',  city:'Ottawa, ON',       date:'2026-05-23',dists:['5k','10k','Meia','Maratona'],prov:'ON',reg:'open',url:'https://www.runottawa.ca'},
+    {name:'Kingston Half Marathon',        city:'Kingston, ON',     date:'2026-06-14',dists:['5k','10k','Meia'],           prov:'ON',reg:'open',url:''},
+    {name:'Toronto Waterfront Marathon',   city:'Toronto, ON',      date:'2026-10-18',dists:['5k','10k','Meia','Maratona'],prov:'ON',reg:'open',url:'https://www.torontowaterfrontmarathon.com'},
+    {name:'Niagara Falls Marathon',        city:'Niagara Falls, ON',date:'2026-10-25',dists:['5k','10k','Meia','Maratona'],prov:'ON',reg:'open',url:'https://niagarafallsmarathon.com'},
+    {name:'Road2Hope Marathon',            city:'Hamilton, ON',     date:'2026-11-08',dists:['5k','10k','Meia','Maratona'],prov:'ON',reg:'open',url:'https://www.hamiltonmarathon.ca'},
+    {name:'Burlington Waterfront Half',    city:'Burlington, ON',   date:'2026-09-13',dists:['5k','10k','Meia'],           prov:'ON',reg:'open',url:''},
+    {name:'Oakville Half Marathon',        city:'Oakville, ON',     date:'2026-09-20',dists:['5k','10k','Meia'],           prov:'ON',reg:'open',url:''},
+    {name:'Barrie Half Marathon',          city:'Barrie, ON',       date:'2026-08-16',dists:['5k','10k','Meia'],           prov:'ON',reg:'open',url:''},
+    {name:'Sudbury International Marathon',city:'Sudbury, ON',      date:'2026-05-31',dists:['10k','Meia','Maratona'],     prov:'ON',reg:'open',url:''}
+  ]
+};
+var R26_MONTHS=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+function r26DistBadge(d){
+  var c=d.indexOf('Ultra')>=0?'#8e44ad':d.indexOf('Maratona')>=0?'#e74c3c':d.indexOf('Meia')>=0?'#2980b9':d.indexOf('30k')>=0?'#e67e22':'#27ae60';
+  return '<span style="background:'+c+';color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:999px;white-space:nowrap">'+d+'</span>';
+}
+function r26RaceCard(r,dark){
+  var hj=hoje(),isPast=r.past||r.date<hj;
+  var dt=new Date(r.date+'T12:00:00');
+  var diffDays=Math.ceil((dt-new Date())/86400000);
+  var countdown=isPast
+    ?'<span style="color:#aaa;font-size:11px">Realizada</span>'
+    :diffDays<=30
+      ?'<span style="color:#e74c3c;font-weight:800;font-size:11px">⚡ '+diffDays+'d</span>'
+      :'<span style="color:#2980b9;font-size:11px">📅 '+diffDays+'d</span>';
+  var regClosed=isPast||r.reg==='closed';
+  var regBadge=regClosed
+    ?'<span style="font-size:10px;font-weight:800;color:#fff;background:#c0392b;padding:2px 7px;border-radius:999px">🔒 Inscrições Encerradas</span>'
+    :'<span style="font-size:10px;font-weight:800;color:#fff;background:#1e8449;padding:2px 7px;border-radius:999px">✅ Abertas</span>'
+     +(r.url?'&nbsp;<a href="'+r.url+'" target="_blank" rel="noopener" style="font-size:10px;font-weight:800;color:#fff;background:#1a5276;padding:2px 7px;border-radius:999px;text-decoration:none">🔗 Site</a>':'');
+  var border=dark?'1px solid rgba(255,255,255,.1)':'1px solid #f0f0f0';
+  return '<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:'+border+';opacity:'+(isPast?'.45':'1')+'">'
+    +'<div style="min-width:40px;text-align:center;background:'+(dark?'rgba(255,255,255,.1)':'#f4f6f8')+';border-radius:8px;padding:4px 3px">'
+      +'<div style="font-size:9px;font-weight:800;text-transform:uppercase;color:'+(dark?'#f39c12':'#888')+'">'+R26_MONTHS[dt.getMonth()]+'</div>'
+      +'<div style="font-size:17px;font-weight:900;color:'+(dark?'#fff':'#2c3e50')+';line-height:1">'+dt.getDate()+'</div>'
+    +'</div>'
+    +'<div style="flex:1;min-width:0">'
+      +'<div style="font-weight:800;font-size:13px;color:'+(dark?'#fff':'#2c3e50')+'">'+r.name+'</div>'
+      +'<div style="font-size:11px;color:'+(dark?'#aaa':'#888')+';margin:2px 0">'+(r.flag||'🍁')+' '+r.city+'</div>'
+      +'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">'+r.dists.map(r26DistBadge).join('')+'</div>'
+      +'<div style="margin-top:5px">'+regBadge+'</div>'
+    +'</div>'
+    +'<div style="flex-shrink:0">'+countdown+'</div>'
+  +'</div>';
+}
+function r26ProvSection(title,color,races){
+  var sorted=races.slice().sort(function(a,b){return a.date.localeCompare(b.date);});
+  return '<div style="margin-bottom:18px">'
+    +'<div style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.07em;color:'+color+';border-left:3px solid '+color+';padding-left:8px;margin-bottom:6px">'+title+'</div>'
+    +sorted.map(function(r){return r26RaceCard(r,false);}).join('')
+  +'</div>';
+}
+function r26BuildContent(){
+  var hj=hoje();
+  var usSorted=RACES_2026.us.slice().sort(function(a,b){return a.date.localeCompare(b.date);});
+  var html='<div style="background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:12px;padding:12px 14px;margin-bottom:16px">'
+    +'<div style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:#f39c12;margin-bottom:8px">🇺🇸 Estados Unidos — Boston & Nova York</div>'
+    +usSorted.map(function(r){return r26RaceCard(r,true);}).join('')
+  +'</div>';
+  var provNames ={NB:'New Brunswick',NS:'Nova Scotia',PE:'Prince Edward Island',NL:'Newfoundland & Labrador',QC:'Québec',ON:'Ontario'};
+  var provColors={NB:'#27ae60',NS:'#2980b9',PE:'#e67e22',NL:'#c0392b',QC:'#8e44ad',ON:'#1a5276'};
+  ['NB','NS','PE','NL','QC','ON'].forEach(function(prov){
+    var races=RACES_2026.ca.filter(function(r){return r.prov===prov;});
+    if(races.length) html+=r26ProvSection('🍁 '+provNames[prov],provColors[prov],races);
+  });
+  return html;
+}
+function toggleCalendario2026(){
+  var sec=document.getElementById('cal2026-section');
+  if(sec.style.display==='none'){
+    sec.style.display='block';
+    document.getElementById('cal2026-body').innerHTML=r26BuildContent();
+  } else {
+    sec.style.display='none';
+  }
 }
 
 // ── Render: Corridas ──
