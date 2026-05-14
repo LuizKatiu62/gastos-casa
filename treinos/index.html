@@ -218,6 +218,9 @@ input[type=range].esf::-webkit-slider-thumb{-webkit-appearance:none;width:22px;h
 .plan-day-label{font-size:13px;font-weight:700;color:var(--text)}
 .plan-day-detail{font-size:11px;color:var(--text2);margin-top:1px}
 .plan-hoje-tag{font-size:9px;font-weight:800;background:var(--blue);color:#fff;border-radius:5px;padding:2px 6px;flex-shrink:0}
+.plan-day.plan-custom{background:#f0fdf4;border:1.5px solid #86efac}
+.plan-edit-btn{background:none;border:none;font-size:14px;cursor:pointer;padding:2px 4px;border-radius:6px;flex-shrink:0;opacity:.5;transition:opacity .15s}
+.plan-edit-btn:hover{opacity:1;background:#e2e8f0}
 .plan-phase-banner{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;margin-bottom:10px}
 .plan-phase-icon{font-size:20px}
 .plan-phase-name{font-size:13px;font-weight:800}
@@ -597,6 +600,36 @@ input[type=range].esf::-webkit-slider-thumb{-webkit-appearance:none;width:22px;h
 </div>
 </div>
 
+<!-- overlay: personalizar dia do plano -->
+<div class="modal-overlay" id="overlay-plan-custom" onclick="if(event.target===this)fechar('overlay-plan-custom')">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="plan-custom-title">Personalizar dia</span>
+      <button class="modal-x" onclick="fechar('overlay-plan-custom')">✕</button>
+    </div>
+    <div style="padding:16px 16px 20px">
+      <div style="display:flex;gap:10px;margin-bottom:12px">
+        <div>
+          <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:4px">Ícone</div>
+          <input type="text" id="plan-custom-icon" placeholder="🏃" maxlength="4" style="width:54px;font-size:22px;text-align:center;border:1.5px solid var(--border);border-radius:8px;padding:6px 4px;outline:none">
+        </div>
+        <div style="flex:1">
+          <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:4px">Treino *</div>
+          <input type="text" id="plan-custom-label" placeholder="ex: Corrida 45 min" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box">
+        </div>
+      </div>
+      <div style="margin-bottom:16px">
+        <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:4px">Detalhe (opcional)</div>
+        <input type="text" id="plan-custom-detail" placeholder="ex: Zona 2, ritmo fácil, 10km" style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box">
+      </div>
+      <div style="display:flex;gap:8px">
+        <button onclick="savePlanCustomDay()" style="flex:1;padding:10px;background:var(--green);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">✅ Salvar</button>
+        <button onclick="clearPlanCustomDay()" style="padding:10px 14px;background:#fef2f2;color:#ef4444;border:1px solid #fca5a5;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">↩️ Remover</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -809,7 +842,8 @@ function renderPlanoSemana(){
   var dias=PLANO_SEMANA[planoKey];
   var ph=getCurrentPhase();
   var remap=loadDayRemap();
-  var hasCustom=Object.keys(remap).length>0;
+  var custom=loadDayCustom();
+  var hasCustom=Object.keys(remap).length>0||Object.keys(custom).length>0;
 
   // Build this week Mon–Sun
   var now=new Date(),dow=now.getDay();
@@ -836,11 +870,14 @@ function renderPlanoSemana(){
     var entry=dias[effDow]||{icon:'🛋️',label:'Descanso',detail:''};
     // Race day override
     if(ds===RACE_DATE) entry={icon:'🏆',label:'DIA DO DESAFIO!',detail:'Pace 9–10:30/km · Galloway 3+1 · Boa corrida, Luiz!'};
+    // Custom day override
+    var isCustom=custom[dayDow]!==undefined;
+    if(isCustom) entry=custom[dayDow];
     var isToday=ds===hj;
     var isRace=ds===RACE_DATE;
     var isSel=_planSwapSel===dayDow;
     var isSwapped=remap[dayDow]!==undefined;
-    var cls='plan-day'+(isRace?' plan-race':isToday?' plan-hoje':'')+(isSel?' plan-sel':isSwapped?' plan-swap':'');
+    var cls='plan-day'+(isRace?' plan-race':isToday?' plan-hoje':isCustom?' plan-custom':'')+(isSel?' plan-sel':(!isCustom&&isSwapped)?' plan-swap':'');
     html+='<div class="'+cls+'" onclick="selectPlanDay('+dayDow+')">'+
       '<div class="plan-day-name">'+dayNames[dayDow]+'</div>'+
       '<div class="plan-day-icon">'+entry.icon+'</div>'+
@@ -849,6 +886,7 @@ function renderPlanoSemana(){
         (entry.detail?'<div class="plan-day-detail">'+entry.detail+'</div>':'')+
       '</div>'+
       (isToday?'<div class="plan-hoje-tag">HOJE</div>':'')+
+      '<button class="plan-edit-btn" onclick="openPlanCustomModal('+dayDow+',event)" title="Personalizar dia">✏️</button>'+
     '</div>';
   }
   document.getElementById('plano-semana-card').innerHTML=html;
@@ -881,9 +919,49 @@ function selectPlanDay(dayDow){
 
 function resetDayRemap(){
   localStorage.removeItem('treinos_day_remap');
+  localStorage.removeItem('treinos_day_custom');
   _planSwapSel=null;
   renderPlanoSemana();
   toast('↩️ Plano restaurado');
+}
+
+function loadDayCustom(){ try{ return JSON.parse(localStorage.getItem('treinos_day_custom'))||{}; }catch(e){ return {}; } }
+function saveDayCustom(m){ localStorage.setItem('treinos_day_custom', JSON.stringify(m)); }
+
+var _planCustomDow=null;
+function openPlanCustomModal(dayDow, ev){
+  if(ev){ ev.stopPropagation(); }
+  _planCustomDow=dayDow;
+  var c=loadDayCustom()[dayDow]||{};
+  var nomes=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+  document.getElementById('plan-custom-title').textContent='✏️ Personalizar '+nomes[dayDow];
+  document.getElementById('plan-custom-icon').value=c.icon||'';
+  document.getElementById('plan-custom-label').value=c.label||'';
+  document.getElementById('plan-custom-detail').value=c.detail||'';
+  document.getElementById('overlay-plan-custom').classList.add('aberto');
+  setTimeout(function(){ document.getElementById('plan-custom-label').focus(); },120);
+}
+function savePlanCustomDay(){
+  if(_planCustomDow===null) return;
+  var label=document.getElementById('plan-custom-label').value.trim();
+  if(!label){ toast('Digite o nome do treino'); return; }
+  var icon=document.getElementById('plan-custom-icon').value.trim()||'🏃';
+  var detail=document.getElementById('plan-custom-detail').value.trim();
+  var c=loadDayCustom();
+  c[_planCustomDow]={icon:icon,label:label,detail:detail};
+  saveDayCustom(c);
+  fechar('overlay-plan-custom');
+  renderPlanoSemana();
+  toast('✅ Treino salvo no plano');
+}
+function clearPlanCustomDay(){
+  if(_planCustomDow===null) return;
+  var c=loadDayCustom();
+  delete c[_planCustomDow];
+  saveDayCustom(c);
+  fechar('overlay-plan-custom');
+  renderPlanoSemana();
+  toast('↩️ Dia restaurado ao plano');
 }
 
 // ── Race helpers ──
