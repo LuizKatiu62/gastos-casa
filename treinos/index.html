@@ -354,17 +354,15 @@ input[type=range].esf::-webkit-slider-thumb{-webkit-appearance:none;width:22px;h
     <div class="page-hero-sub" id="bike-sub">carregando...</div>
   </div>
   <div style="padding:10px 12px 0;display:flex;justify-content:flex-end;gap:8px">
-    <button onclick="abrirBike()" style="background:#fff7ed;color:#c2410c;border:1px solid #fdba74;border-radius:20px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">+ Registrar Bike</button>
+    <button onclick="openStravaModalFor('bike')" style="background:#fff5f2;color:#c2410c;border:1px solid #fc4c02;border-radius:20px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">🟠 Strava</button>
+    <button onclick="abrirBike()" style="background:#fff7ed;color:#c2410c;border:1px solid #fdba74;border-radius:20px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">+ Manual</button>
   </div>
   <div class="filter-bar" id="bike-filter-bar">
     <button class="chip ativo" onclick="filtrarBike(this,'todos')">Todos</button>
-    <button class="chip" onclick="filtrarBike(this,'recovery')">🟢 Recovery</button>
-    <button class="chip" onclick="filtrarBike(this,'endurance')">🔵 Endurance</button>
-    <button class="chip" onclick="filtrarBike(this,'intervalado')">🔴 Intervalado</button>
-    <button class="chip" onclick="filtrarBike(this,'hill')">🟤 Montanha</button>
-    <button class="chip" onclick="filtrarBike(this,'tempo')">🟠 Tempo</button>
-    <button class="chip" onclick="filtrarBike(this,'indoor')">🖥️ Indoor</button>
+    <button class="chip" onclick="filtrarBike(this,'triathlon')">🔴 Triathlon</button>
+    <button class="chip" onclick="filtrarBike(this,'road')">🚴 Road</button>
     <button class="chip" onclick="filtrarBike(this,'mtb')">🌲 MTB</button>
+    <button class="chip" onclick="filtrarBike(this,'fat')">🏔️ FAT Bike</button>
   </div>
   <div id="bike-list"></div>
 </div>
@@ -376,7 +374,8 @@ input[type=range].esf::-webkit-slider-thumb{-webkit-appearance:none;width:22px;h
     <div class="page-hero-sub" id="natacao-sub">carregando...</div>
   </div>
   <div style="padding:10px 12px 0;display:flex;justify-content:flex-end;gap:8px">
-    <button onclick="abrirNatacao()" style="background:var(--cyan-light);color:#0e7490;border:1px solid #67e8f9;border-radius:20px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">+ Registrar Natação</button>
+    <button onclick="openStravaModalFor('natacao')" style="background:#fff5f2;color:#c2410c;border:1px solid #fc4c02;border-radius:20px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">🟠 Strava</button>
+    <button onclick="abrirNatacao()" style="background:var(--cyan-light);color:#0e7490;border:1px solid #67e8f9;border-radius:20px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">+ Manual</button>
   </div>
   <div class="filter-bar" id="natacao-filter-bar">
     <button class="chip ativo" onclick="filtrarNatacao(this,'todos')">Todos</button>
@@ -504,13 +503,10 @@ input[type=range].esf::-webkit-slider-thumb{-webkit-appearance:none;width:22px;h
     <div class="fg">
       <label class="fl">Tipo</label>
       <div class="tipo-pills" id="bike-tipo-pills">
-        <button class="tipo-pill sel" data-tipo="recovery" onclick="selTipoBike(this)">🟢 Recovery</button>
-        <button class="tipo-pill" data-tipo="endurance" onclick="selTipoBike(this)">🔵 Endurance</button>
-        <button class="tipo-pill" data-tipo="intervalado" onclick="selTipoBike(this)">🔴 Intervalado</button>
-        <button class="tipo-pill" data-tipo="hill" onclick="selTipoBike(this)">🟤 Montanha</button>
-        <button class="tipo-pill" data-tipo="tempo" onclick="selTipoBike(this)">🟠 Tempo</button>
-        <button class="tipo-pill" data-tipo="indoor" onclick="selTipoBike(this)">🖥️ Indoor</button>
+        <button class="tipo-pill sel" data-tipo="triathlon" onclick="selTipoBike(this)">🔴 Triathlon Bike</button>
+        <button class="tipo-pill" data-tipo="road" onclick="selTipoBike(this)">🚴 Road Bike</button>
         <button class="tipo-pill" data-tipo="mtb" onclick="selTipoBike(this)">🌲 MTB</button>
+        <button class="tipo-pill" data-tipo="fat" onclick="selTipoBike(this)">🏔️ FAT Bike</button>
       </div>
     </div>
     <div class="form-row">
@@ -613,13 +609,10 @@ var TIPO_INFO = {
 };
 
 var BIKE_TIPO_INFO = {
-  recovery:   {emoji:'🟢', label:'Recovery',  bg:'#f0fdf4', cor:'#16a34a'},
-  endurance:  {emoji:'🔵', label:'Endurance', bg:'#eff6ff', cor:'#2563eb'},
-  intervalado:{emoji:'🔴', label:'Intervalado',bg:'#fef2f2',cor:'#dc2626'},
-  hill:       {emoji:'🟤', label:'Montanha',  bg:'#fef3c7', cor:'#92400e'},
-  tempo:      {emoji:'🟠', label:'Tempo',     bg:'#fff7ed', cor:'#ea580c'},
-  indoor:     {emoji:'🖥️', label:'Indoor',    bg:'#f0fdf4', cor:'#15803d'},
-  mtb:        {emoji:'🌲', label:'MTB',       bg:'#f0fdf4', cor:'#166534'},
+  triathlon:{emoji:'🔴', label:'Triathlon Bike', bg:'#fef2f2', cor:'#dc2626'},
+  road:     {emoji:'🚴', label:'Road Bike',      bg:'#eff6ff', cor:'#2563eb'},
+  mtb:      {emoji:'🌲', label:'MTB',            bg:'#f0fdf4', cor:'#166534'},
+  fat:      {emoji:'🏔️', label:'FAT Bike',       bg:'#f5f3ff', cor:'#7c3aed'},
 };
 var NATACAO_TIPO_INFO = {
   recovery:   {emoji:'🟢', label:'Recovery',     bg:'#ecfeff', cor:'#0e7490'},
@@ -1391,14 +1384,14 @@ function filtrarBike(btn,tipo){
 // ── Bike modal ──
 function selTipoBike(btn){ document.querySelectorAll('#bike-tipo-pills .tipo-pill').forEach(function(p){p.classList.remove('sel');}); btn.classList.add('sel'); }
 function setTipoBike(val){ document.querySelectorAll('#bike-tipo-pills .tipo-pill').forEach(function(p){p.classList.toggle('sel',p.getAttribute('data-tipo')===val);}); }
-function getTipoBike(){ var s=document.querySelector('#bike-tipo-pills .tipo-pill.sel'); return s?s.getAttribute('data-tipo'):'recovery'; }
+function getTipoBike(){ var s=document.querySelector('#bike-tipo-pills .tipo-pill.sel'); return s?s.getAttribute('data-tipo'):'road'; }
 
 function abrirBike(id){
   var d=getDados(),b=id?d.bike.find(function(x){return x.id===id;}):null;
   document.getElementById('b-id').value=id||'';
   document.getElementById('titulo-bike').textContent=id?'🚴 Editar Bike':'🚴 Novo Treino de Bike';
   document.getElementById('btn-del-bike').style.display=id?'block':'none';
-  setTipoBike(b?b.tipo:'recovery');
+  setTipoBike(b?b.tipo:'road');
   document.getElementById('b-data').value=b?b.data:hoje();
   document.getElementById('b-dist').value=b?b.distancia||'':'';
   document.getElementById('b-dur').value=b?b.duracao||'':'';
@@ -1666,6 +1659,12 @@ function iniciarSync(){
 // ══════════════════════════════════════════════
 // STRAVA INTEGRATION
 // ══════════════════════════════════════════════
+var _stravaTarget='run'; // 'run' | 'bike' | 'natacao'
+function openStravaModalFor(target){
+  _stravaTarget=target||'run';
+  openStravaSyncModal();
+}
+
 var STRAVA_CFG_KEY='treinos_strava_cfg', STRAVA_TOKEN_KEY='treinos_strava_tok';
 var STRAVA_REDIRECT='https://luizkatiu62.github.io/treinos/';
 var STRAVA_SCOPE='activity:read_all', STRAVA_IDB_NAME='treinos-meta';
@@ -1812,24 +1811,47 @@ function showStravaEmpty(date){
 function showStravaActList(date,acts){
   var ov=document.createElement('div'); ov.className='strava-overlay'; ov.id='strava-act-list';
   ov.onclick=function(e){if(e.target===ov) ov.remove();};
-  var items=acts.map(function(act){
+  var target=_stravaTarget;
+  // Sort: matching sport type first
+  var sorted=acts.slice().sort(function(a,b){
+    var st=a.sport_type||a.type||'';
+    var sb=b.sport_type||b.type||'';
+    var aMatch=(target==='bike'&&STRAVA_BIKE_SPORTS.indexOf(st)>=0)||(target==='natacao'&&STRAVA_SWIM_SPORTS.indexOf(st)>=0)||(target==='run'&&STRAVA_BIKE_SPORTS.indexOf(st)<0&&STRAVA_SWIM_SPORTS.indexOf(st)<0);
+    var bMatch=(target==='bike'&&STRAVA_BIKE_SPORTS.indexOf(sb)>=0)||(target==='natacao'&&STRAVA_SWIM_SPORTS.indexOf(sb)>=0)||(target==='run'&&STRAVA_BIKE_SPORTS.indexOf(sb)<0&&STRAVA_SWIM_SPORTS.indexOf(sb)<0);
+    return (bMatch?1:0)-(aMatch?1:0);
+  });
+  var items=sorted.map(function(act){
+    var st=act.sport_type||act.type||'';
+    var isBike=STRAVA_BIKE_SPORTS.indexOf(st)>=0;
+    var isSwim=STRAVA_SWIM_SPORTS.indexOf(st)>=0;
+    var isMatch=(target==='bike'&&isBike)||(target==='natacao'&&isSwim)||(target==='run'&&!isBike&&!isSwim);
     var km=(act.distance/1000).toFixed(2);
     var secs=act.moving_time;
     var h=Math.floor(secs/3600),mi=Math.floor((secs%3600)/60),s=secs%60;
     var dur=h>0?h+':'+pad(mi)+':'+pad(s):mi+':'+pad(s);
-    var paceS=act.distance>0?secs/(act.distance/1000):0;
-    var paceStr=paceS>0?Math.floor(paceS/60)+':'+pad(Math.floor(paceS%60))+'/km':'';
     var actDate=act.start_date_local?act.start_date_local.split('T')[0]:date;
     var dd=new Date(actDate+'T12:00:00');
     var dlbl=dd.getDate()+' '+MESES[dd.getMonth()];
-    return '<div class="strava-act-item" onclick="importStravaTreino(\''+date+'\',\''+act.id+'\',\''+act.name.replace(/'/g,'`').replace(/"/g,'`')+'\','+act.distance+','+act.moving_time+','+(act.average_heartrate||0)+',\''+(act.sport_type||act.type||'Run')+'\',\''+actDate+'\','+(act.average_cadence||0)+')">'+
+    // metric display: pace for run/swim, speed for bike
+    var metricStr='';
+    if(isBike&&act.distance>0){ var spd=(act.distance/1000)/(secs/3600); metricStr=' &nbsp;·&nbsp; ⚡ '+spd.toFixed(1)+' km/h'; }
+    else if(act.distance>0){ var paceS=secs/(act.distance/1000); metricStr=' &nbsp;·&nbsp; ⚡ '+Math.floor(paceS/60)+':'+pad(Math.floor(paceS%60))+'/km'; }
+    var dimStyle=isMatch?'':'opacity:.45;';
+    return '<div class="strava-act-item" style="'+dimStyle+'" onclick="importStravaSelected(\''+date+'\',\''+act.id+'\',\''+act.name.replace(/'/g,'`').replace(/"/g,'`')+'\','+act.distance+','+act.moving_time+','+(act.average_heartrate||0)+',\''+escAttr(st)+'\',\''+actDate+'\')">'+
       '<div style="font-weight:700;font-size:.88rem;color:#fc4c02">'+act.name+'</div>'+
-      '<div style="font-size:.75rem;color:#555;margin-top:.2rem">'+(act.sport_type||act.type)+' · '+dlbl+'</div>'+
-      '<div style="font-size:.78rem;color:#777;margin-top:.25rem">📏 '+km+' km &nbsp;·&nbsp; ⏱ '+dur+(paceStr?' &nbsp;·&nbsp; ⚡ '+paceStr:'')+(act.average_heartrate?' &nbsp;·&nbsp; ❤️ '+Math.round(act.average_heartrate)+' bpm':'')+'</div>'+
+      '<div style="font-size:.75rem;color:#555;margin-top:.2rem">'+st+' · '+dlbl+(isMatch?' ✓':'')+'</div>'+
+      '<div style="font-size:.78rem;color:#777;margin-top:.25rem">📏 '+km+' km &nbsp;·&nbsp; ⏱ '+dur+metricStr+(act.average_heartrate?' &nbsp;·&nbsp; ❤️ '+Math.round(act.average_heartrate)+' bpm':'')+'</div>'+
     '</div>';
   }).join('');
-  ov.innerHTML='<div class="strava-modal"><h3>🟠 Atividades do Strava</h3><p style="font-size:.78rem;color:#888;margin-bottom:.85rem">Selecione para importar como treino.</p>'+items+'<button class="strava-btn-s" onclick="this.closest(\'.strava-overlay\').remove()">Fechar</button></div>';
+  var title=target==='bike'?'🚴 Importar Bike do Strava':target==='natacao'?'🏊 Importar Natação do Strava':'🟠 Atividades do Strava';
+  ov.innerHTML='<div class="strava-modal"><h3>'+title+'</h3><p style="font-size:.78rem;color:#888;margin-bottom:.85rem">As atividades compatíveis aparecem destacadas. Selecione para importar.</p>'+items+'<button class="strava-btn-s" onclick="this.closest(\'.strava-overlay\').remove()">Fechar</button></div>';
   document.body.appendChild(ov);
+}
+
+function importStravaSelected(date,actId,name,distM,movingSecs,hr,sportType,actDate){
+  if(_stravaTarget==='bike') importStravaBike(date,actId,name,distM,movingSecs,hr,sportType,actDate);
+  else if(_stravaTarget==='natacao') importStravaNatacao(date,actId,name,distM,movingSecs,hr,sportType,actDate);
+  else importStravaTreino(date,actId,name,distM,movingSecs,hr,sportType,actDate,0);
 }
 
 var STRAVA_TIPO={
@@ -1838,10 +1860,11 @@ var STRAVA_TIPO={
   'Walk':'caminhada','Hike':'caminhada',
   'Run':'facil','Workout':'facil'
 };
+var STRAVA_BIKE_SPORTS=['Ride','VirtualRide','MountainBikeRide','EBikeRide','GravelRide','Handcycle','Velomobile','Cycling'];
+var STRAVA_SWIM_SPORTS=['Swim','OpenWaterSwim'];
+
 function detectStravaTipo(sportType, actName){
-  // Check sport type mapping first
   if(STRAVA_TIPO[sportType]) return STRAVA_TIPO[sportType];
-  // Fall back to name keywords (handles manual/treadmill entries)
   var n=(actName||'').toLowerCase();
   if(n.includes('virtual')||n.includes('esteira')||n.includes('treadmill')||n.includes('indoor')) return 'virtual';
   if(n.includes('trilha')||n.includes('trail')||n.includes('mountain')) return 'trilha';
@@ -1850,6 +1873,21 @@ function detectStravaTipo(sportType, actName){
   if(n.includes('interval')||n.includes('fartlek')||n.includes('repetição')) return 'intervalado';
   if(n.includes('longo')||n.includes('long run')) return 'longo';
   return 'facil';
+}
+function detectStravaBikeTipo(sportType, actName){
+  var n=(actName||'').toLowerCase();
+  if(sportType==='MountainBikeRide'||n.includes('mtb')||n.includes('mountain bike')) return 'mtb';
+  if(n.includes('fat bike')||n.includes('fat ')) return 'fat';
+  if(n.includes('triathlon')||n.includes(' tri ')||n.includes('ironman')||n.includes('t1 ')||n.includes('t2 ')) return 'triathlon';
+  return 'road';
+}
+function detectStravaNatacaoTipo(sportType, actName){
+  var n=(actName||'').toLowerCase();
+  if(sportType==='OpenWaterSwim'||n.includes('open water')||n.includes('abertas')||n.includes('lago')||n.includes('lake')||n.includes('river')||n.includes('rio')) return 'abertas';
+  if(n.includes('drill')) return 'drills';
+  if(n.includes('interval')) return 'intervalado';
+  if(n.includes('longo')||n.includes('long')) return 'longo';
+  return 'recovery';
 }
 
 function importStravaTreino(date,actId,name,distM,movingSecs,hr,sportType,actDate,cadence){
@@ -1874,6 +1912,51 @@ function importStravaTreino(date,actId,name,distM,movingSecs,hr,sportType,actDat
   salvarDados(d); renderDash(); if(_tela==='log') renderLog();
   // Open edit modal so user can review/adjust type
   setTimeout(function(){ abrirTreino(treino.id); },400);
+}
+
+function importStravaBike(date,actId,name,distM,movingSecs,hr,sportType,actDate){
+  var el=document.getElementById('strava-act-list'); if(el) el.remove();
+  var dist=Math.round(distM/10)/100;
+  var h=Math.floor(movingSecs/3600),m=Math.floor((movingSecs%3600)/60),s=movingSecs%60;
+  var duracao=h>0?h+':'+pad(m)+':'+pad(s):m+':'+pad(s);
+  var vel=calcVelocidade(dist,duracao);
+  var hrVal=hr&&+hr>0?Math.round(+hr):0;
+  var tipo=detectStravaBikeTipo(sportType,name);
+  var entry={id:uid(),tipo:tipo,data:actDate||date,distancia:dist,duracao:duracao,velocidade:vel,fcMed:hrVal,fcMax:0,esforco:5,notas:name||'',stravaId:String(actId)};
+  var d=getDados();
+  var idx=d.bike.findIndex(function(b){return b.stravaId&&b.stravaId===entry.stravaId;});
+  if(idx>=0){
+    d.bike[idx]=Object.assign(d.bike[idx],entry,{id:d.bike[idx].id});
+    toast('✏️ Bike Strava atualizado');
+  } else {
+    d.bike.push(entry);
+    toast('✅ Bike importado!');
+  }
+  salvarDados(d); renderDash(); if(_tela==='bike') renderBike();
+  setTimeout(function(){ abrirBike(entry.id); },400);
+}
+
+function importStravaNatacao(date,actId,name,distM,movingSecs,hr,sportType,actDate){
+  var el=document.getElementById('strava-act-list'); if(el) el.remove();
+  // Strava reports swim distance in meters — use as-is
+  var distMetros=Math.round(distM);
+  var h=Math.floor(movingSecs/3600),m=Math.floor((movingSecs%3600)/60),s=movingSecs%60;
+  var duracao=h>0?h+':'+pad(m)+':'+pad(s):m+':'+pad(s);
+  var pace=calcPace100m(distMetros,duracao);
+  var hrVal=hr&&+hr>0?Math.round(+hr):0;
+  var tipo=detectStravaNatacaoTipo(sportType,name);
+  var entry={id:uid(),tipo:tipo,data:actDate||date,distancia:distMetros,duracao:duracao,pace:pace,fcMed:hrVal,fcMax:0,esforco:5,notas:name||'',stravaId:String(actId)};
+  var d=getDados();
+  var idx=d.natacao.findIndex(function(n){return n.stravaId&&n.stravaId===entry.stravaId;});
+  if(idx>=0){
+    d.natacao[idx]=Object.assign(d.natacao[idx],entry,{id:d.natacao[idx].id});
+    toast('✏️ Natação Strava atualizada');
+  } else {
+    d.natacao.push(entry);
+    toast('✅ Natação importada!');
+  }
+  salvarDados(d); renderDash(); if(_tela==='natacao') renderNatacao();
+  setTimeout(function(){ abrirNatacao(entry.id); },400);
 }
 
 // ── Force update ──
