@@ -2668,11 +2668,11 @@ function renderDesafio(){
 
   // Weekly chart (weeks 7-11)
   var weekDefs=[
-    {label:'Sem 7\nTaper',start:'2026-05-11',end:'2026-05-17',planned:52},
-    {label:'Sem 8\nTaper 2',start:'2026-05-18',end:'2026-05-24',planned:40},
-    {label:'Sem 9\nPré-Prova',start:'2026-05-25',end:'2026-05-31',planned:34},
-    {label:'Sem 10\nSem. Corrida',start:'2026-06-01',end:'2026-06-07',planned:18},
-    {label:'Sem 11\nRace Week',start:'2026-06-08',end:'2026-06-12',planned:5}
+    {label:'S7 Taper',start:'2026-05-11',end:'2026-05-17',planned:52},
+    {label:'S8 Taper 2',start:'2026-05-18',end:'2026-05-24',planned:40},
+    {label:'S9 Pré-Prova',start:'2026-05-25',end:'2026-05-31',planned:34},
+    {label:'S10 Corrida',start:'2026-06-01',end:'2026-06-07',planned:18},
+    {label:'S11 Race',start:'2026-06-08',end:'2026-06-12',planned:5}
   ];
   var weekActual=weekDefs.map(function(w){
     return Math.round(d.treinos.filter(function(t){return t.data>=w.start&&t.data<=w.end;})
@@ -2725,7 +2725,7 @@ function renderDesafio(){
     +'</div>'
     +'<div class="dsf-card">'
     +'<div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:10px">📊 Volume por Semana (Taper)</div>'
-    +'<canvas id="dsf-chart" height="150"></canvas>'
+    +'<div style="position:relative;height:180px"><canvas id="dsf-chart"></canvas></div>'
     +'</div>'
     +'<div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:10px">📅 Plano Restante</div>'
     +planHtml;
@@ -2734,21 +2734,21 @@ function renderDesafio(){
     var ctx=document.getElementById('dsf-chart');
     if(!ctx) return;
     if(_dsfChart){_dsfChart.destroy();_dsfChart=null;}
-    _dsfChart=new Chart(ctx,{
+    _dsfChart=new Chart(ctx.getContext('2d'),{
       type:'bar',
       data:{
-        labels:weekDefs.map(function(w){return w.label.split('\n');}),
+        labels:weekDefs.map(function(w){return w.label;}),
         datasets:[
-          {label:'Planejado (km)',data:weekDefs.map(function(w){return w.planned;}),backgroundColor:'rgba(59,130,246,.2)',borderColor:'rgba(59,130,246,.7)',borderWidth:1.5,borderRadius:4},
-          {label:'Realizado (km)',data:weekActual,backgroundColor:'rgba(34,197,94,.35)',borderColor:'rgba(34,197,94,.8)',borderWidth:1.5,borderRadius:4}
+          {label:'Planejado (km)',data:weekDefs.map(function(w){return w.planned;}),backgroundColor:'rgba(59,130,246,.25)',borderColor:'rgba(59,130,246,.8)',borderWidth:1.5,borderRadius:4,borderSkipped:false},
+          {label:'Realizado (km)',data:weekActual,backgroundColor:'rgba(34,197,94,.4)',borderColor:'rgba(34,197,94,.9)',borderWidth:1.5,borderRadius:4,borderSkipped:false}
         ]
       },
       options:{
         responsive:true,maintainAspectRatio:false,
-        plugins:{legend:{labels:{font:{size:11},boxWidth:12}}},
+        plugins:{legend:{labels:{font:{size:11},boxWidth:12,padding:10}}},
         scales:{
-          y:{beginAtZero:true,ticks:{font:{size:10}},grid:{color:'rgba(0,0,0,.06)'}},
-          x:{ticks:{font:{size:9}},grid:{display:false}}
+          y:{beginAtZero:true,ticks:{font:{size:9},color:'#94a3b8'},grid:{color:'#f1f5f9'}},
+          x:{ticks:{font:{size:9},color:'#94a3b8'},grid:{display:false}}
         }
       }
     });
