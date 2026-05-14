@@ -406,11 +406,27 @@ input[type=range].esf::-webkit-slider-thumb{-webkit-appearance:none;width:22px;h
   <div id="natacao-list"></div>
 </div>
 
+<div id="tela-gym" class="screen">
+  <div class="page-hero" style="background:linear-gradient(135deg,#1c1917 0%,#78350f 100%)">
+    <div class="page-hero-title">💪 Treinos de Gym</div>
+    <div class="page-hero-sub" id="gym-sub">carregando...</div>
+  </div>
+  <div style="padding:10px 12px 0;display:flex;justify-content:flex-end;gap:8px">
+    <label style="background:#fff7ed;color:#92400e;border:1px solid #fcd34d;border-radius:20px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">
+      📥 Import Hevy CSV
+      <input type="file" accept=".csv" onchange="importHevyCSV(this)" style="display:none">
+    </label>
+    <button onclick="abrirGym()" style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d;border-radius:20px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">+ Manual</button>
+  </div>
+  <div id="gym-list" style="padding:8px 12px"></div>
+</div>
+
 <!-- FABs -->
 <button class="fab" id="fab-treino" onclick="abrirTreino()">+</button>
 <button class="fab" id="fab-corrida" onclick="abrirCorrida()" style="display:none">+</button>
 <button class="fab" id="fab-bike" onclick="abrirBike()" style="display:none;background:#ea580c">+</button>
 <button class="fab" id="fab-natacao" onclick="abrirNatacao()" style="display:none;background:var(--cyan)">+</button>
+<button class="fab" id="fab-gym" onclick="abrirGym()" style="display:none;background:#92400e">+</button>
 
 <!-- Nav -->
 <nav class="nav">
@@ -418,6 +434,7 @@ input[type=range].esf::-webkit-slider-thumb{-webkit-appearance:none;width:22px;h
   <button class="nav-btn" id="nav-log" onclick="irParaTela('log')"><span class="nav-icon">🏃</span><span>Corrida</span></button>
   <button class="nav-btn nav-bike" id="nav-bike" onclick="irParaTela('bike')"><span class="nav-icon">🚴</span><span>Bike</span></button>
   <button class="nav-btn nav-swim" id="nav-natacao" onclick="irParaTela('natacao')"><span class="nav-icon">🏊</span><span>Natação</span></button>
+  <button class="nav-btn" id="nav-gym" onclick="irParaTela('gym')"><span class="nav-icon">💪</span><span>Gym</span></button>
   <button class="nav-btn" id="nav-stats" onclick="irParaTela('stats')"><span class="nav-icon">📊</span><span>Análise</span></button>
   <button class="nav-btn" id="nav-corridas" onclick="irParaTela('corridas')"><span class="nav-icon">🏁</span><span>Provas</span></button>
 </nav>
@@ -600,6 +617,29 @@ input[type=range].esf::-webkit-slider-thumb{-webkit-appearance:none;width:22px;h
 </div>
 </div>
 
+<!-- overlay: gym manual -->
+<div class="modal-overlay" id="overlay-gym" onclick="if(event.target===this)fechar('overlay-gym')">
+<div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-hdr">
+    <span class="modal-title" id="titulo-gym">Novo Treino Gym</span>
+    <button class="modal-x" onclick="fechar('overlay-gym')">✕</button>
+  </div>
+  <div class="modal-body">
+    <input type="hidden" id="g-id">
+    <div class="form-row">
+      <div class="fg"><label class="fl">Data</label><input type="date" class="fi" id="g-data"></div>
+      <div class="fg"><label class="fl">Duração (min)</label><input type="number" class="fi" id="g-dur" placeholder="60" inputmode="numeric"></div>
+    </div>
+    <div class="fg"><label class="fl">Nome do treino</label><input type="text" class="fi" id="g-nome" placeholder="ex: Peito e Tríceps"></div>
+    <div class="fg"><label class="fl">Nº de exercícios</label><input type="number" class="fi" id="g-exercicios" placeholder="ex: 6" inputmode="numeric"></div>
+    <div class="fg"><label class="fl">Notas</label><textarea class="fi" id="g-notas" rows="2" placeholder="Como foi o treino?"></textarea></div>
+    <button class="btn btn-primary" style="background:#92400e" onclick="salvarGym()">Salvar</button>
+    <button class="btn btn-danger" id="btn-del-gym" onclick="deletarGym()" style="display:none">Excluir sessão</button>
+  </div>
+</div>
+</div>
+
 <!-- overlay: personalizar dia do plano -->
 <div class="modal-overlay" id="overlay-plan-custom" onclick="if(event.target===this)fechar('overlay-plan-custom')">
   <div class="modal">
@@ -735,8 +775,9 @@ function getDados(){
     if(!Array.isArray(d.corridas)) d.corridas=[];
     if(!Array.isArray(d.bike))     d.bike=[];
     if(!Array.isArray(d.natacao))  d.natacao=[];
+    if(!Array.isArray(d.gym))      d.gym=[];
     return d;
-  }catch(e){ return {treinos:[],corridas:[],bike:[],natacao:[]}; }
+  }catch(e){ return {treinos:[],corridas:[],bike:[],natacao:[],gym:[]}; }
 }
 function salvarDados(d){
   try{
@@ -774,12 +815,14 @@ function irParaTela(nome){
   document.getElementById('fab-corrida').style.display=nome==='corridas'?'flex':'none';
   document.getElementById('fab-bike').style.display=nome==='bike'?'flex':'none';
   document.getElementById('fab-natacao').style.display=nome==='natacao'?'flex':'none';
+  document.getElementById('fab-gym').style.display=nome==='gym'?'flex':'none';
   if(nome==='dash')     renderDash();
   if(nome==='log')      renderLog();
   if(nome==='stats')    renderStats();
   if(nome==='corridas') renderCorridas();
   if(nome==='bike')     renderBike();
   if(nome==='natacao')  renderNatacao();
+  if(nome==='gym')      renderGym();
 }
 function fechar(id){ document.getElementById(id).classList.remove('aberto'); }
 
@@ -2328,6 +2371,124 @@ document.addEventListener('DOMContentLoaded',function(){
     });
   }
 });
+
+// ── GYM ──
+function abrirGym(id){
+  var d=getDados(); var r=id?d.gym.find(function(x){return x.id===id;}):null;
+  document.getElementById('g-id').value=id||'';
+  document.getElementById('titulo-gym').textContent=id?'Editar Treino Gym':'Novo Treino Gym';
+  document.getElementById('g-data').value=r?r.data:hoje();
+  document.getElementById('g-dur').value=r?r.duracao:'';
+  document.getElementById('g-nome').value=r?r.nome:'';
+  document.getElementById('g-exercicios').value=r?r.exercicios:'';
+  document.getElementById('g-notas').value=r?r.notas:'';
+  document.getElementById('btn-del-gym').style.display=id?'block':'none';
+  document.getElementById('overlay-gym').classList.add('aberto');
+}
+function salvarGym(){
+  var nome=document.getElementById('g-nome').value.trim();
+  if(!nome){toast('Digite o nome do treino');return;}
+  var d=getDados();
+  var id=document.getElementById('g-id').value||Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  var rec={id:id,data:document.getElementById('g-data').value,nome:nome,
+    duracao:parseInt(document.getElementById('g-dur').value)||0,
+    exercicios:parseInt(document.getElementById('g-exercicios').value)||0,
+    notas:document.getElementById('g-notas').value.trim()};
+  var idx=d.gym.findIndex(function(x){return x.id===id;});
+  if(idx>=0) d.gym[idx]=rec; else d.gym.push(rec);
+  salvarDados(d);
+  fechar('overlay-gym');
+  renderGym();
+  toast('💪 Treino salvo!');
+}
+function deletarGym(){
+  var id=document.getElementById('g-id').value; if(!id)return;
+  if(!confirm('Excluir este treino?'))return;
+  var d=getDados(); d.gym=d.gym.filter(function(x){return x.id!==id;});
+  salvarDados(d); fechar('overlay-gym'); renderGym(); toast('🗑️ Excluído');
+}
+function renderGym(){
+  var d=getDados(); var list=d.gym.slice().sort(function(a,b){return b.data.localeCompare(a.data);});
+  var total=list.length;
+  var totalMin=list.reduce(function(s,x){return s+(x.duracao||0);},0);
+  document.getElementById('gym-sub').textContent=total+' sessões · '+Math.round(totalMin/60)+'h '+totalMin%60+'min total';
+  if(!list.length){
+    document.getElementById('gym-list').innerHTML='<div style="text-align:center;padding:40px;color:#94a3b8;font-size:14px">Nenhum treino ainda.<br>Adiciona manualmente ou importa do Hevy.</div>';
+    return;
+  }
+  var html='';
+  list.forEach(function(r){
+    var dur=r.duracao?r.duracao+'min':'—';
+    var exs=r.exercicios?r.exercicios+' exercícios':'';
+    html+='<div onclick="abrirGym(\''+r.id+'\')" style="background:#fff;border-radius:14px;padding:12px 14px;margin-bottom:8px;box-shadow:0 1px 4px rgba(0,0,0,.07);cursor:pointer;border-left:4px solid #92400e">'+
+      '<div style="display:flex;align-items:center;gap:10px">'+
+        '<div style="font-size:24px">💪</div>'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="font-size:14px;font-weight:700;color:#1c1917">'+r.nome+'</div>'+
+          '<div style="font-size:11px;color:#78716c;margin-top:2px">'+r.data+(exs?' · '+exs:'')+(r.notas?' · '+r.notas.substring(0,40):'')+' </div>'+
+        '</div>'+
+        '<div style="font-size:13px;font-weight:700;color:#92400e;white-space:nowrap">⏱ '+dur+'</div>'+
+      '</div>'+
+    '</div>';
+  });
+  document.getElementById('gym-list').innerHTML=html;
+}
+
+// ── HEVY CSV IMPORT ──
+function importHevyCSV(input){
+  var file=input.files[0]; if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var lines=e.target.result.split('\n');
+      var headers=parseCSVLine(lines[0]);
+      var iTitle=headers.indexOf('Title'), iStart=headers.indexOf('Start Time'),
+          iEnd=headers.indexOf('End Time'), iDesc=headers.indexOf('Description'),
+          iExTitle=headers.indexOf('Exercise Title');
+      if(iTitle<0||iStart<0){toast('❌ CSV do Hevy não reconhecido');return;}
+      var workouts={};
+      for(var i=1;i<lines.length;i++){
+        var cols=parseCSVLine(lines[i]); if(!cols||cols.length<2)continue;
+        var key=(cols[iTitle]||'')+'||'+(cols[iStart]||'');
+        if(!workouts[key]) workouts[key]={title:cols[iTitle],start:cols[iStart],end:cols[iEnd]||'',desc:cols[iDesc]||'',exs:[]};
+        var ex=(cols[iExTitle]||'').trim();
+        if(ex&&workouts[key].exs.indexOf(ex)<0) workouts[key].exs.push(ex);
+      }
+      var d=getDados(); var added=0;
+      Object.values(workouts).forEach(function(w){
+        if(!w.title)return;
+        var datePart=(w.start||'').split(' ')[0]||hoje();
+        var durMin=0;
+        if(w.start&&w.end){
+          var s=new Date(w.start.replace(' ','T')), en=new Date(w.end.replace(' ','T'));
+          if(!isNaN(s)&&!isNaN(en)) durMin=Math.round((en-s)/60000);
+        }
+        var id=Date.now().toString(36)+Math.random().toString(36).slice(2,6)+'_'+added;
+        var exists=d.gym.some(function(x){return x.data===datePart&&x.nome===w.title;});
+        if(!exists){
+          d.gym.push({id:id,data:datePart,nome:w.title,duracao:durMin,exercicios:w.exs.length,notas:w.desc});
+          added++;
+        }
+      });
+      salvarDados(d); renderGym();
+      toast('✅ '+added+' treinos importados do Hevy!');
+    }catch(err){toast('❌ Erro ao ler CSV: '+err.message);}
+    input.value='';
+  };
+  reader.readAsText(file);
+}
+function parseCSVLine(line){
+  if(!line)return[];
+  var res=[],cur='',inQ=false;
+  for(var i=0;i<line.length;i++){
+    var c=line[i];
+    if(c==='"'){if(inQ&&line[i+1]==='"'){cur+='"';i++;}else inQ=!inQ;}
+    else if(c===','&&!inQ){res.push(cur.trim());cur='';}
+    else cur+=c;
+  }
+  res.push(cur.trim());
+  return res;
+}
 </script>
 </body>
 </html>
