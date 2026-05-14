@@ -19,10 +19,21 @@
   --orange:#f97316;--orange-light:#fff7ed;
   --purple:#a855f7;--purple-light:#faf5ff;
   --gold:#eab308;--red:#ef4444;
+  --cyan:#06b6d4;--cyan-light:#ecfeff;
   --bg:#f8fafc;--surface:#fff;--border:#e2e8f0;
   --text:#0f172a;--text2:#64748b;--text3:#94a3b8;
   --nav-h:64px;--r:16px;--r-sm:10px;
 }
+/* Tri sport tags */
+.tri-tag{display:inline-flex;align-items:center;gap:4px;border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700}
+.tri-run{background:var(--blue-light);color:var(--blue)}
+.tri-bike{background:var(--orange-light);color:#c2410c}
+.tri-swim{background:var(--cyan-light);color:#0e7490}
+/* Triathlon summary strip */
+.tri-strip{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px}
+.tri-box{border-radius:var(--r-sm);padding:10px 8px;text-align:center}
+.tri-box-val{font-size:18px;font-weight:900;line-height:1}
+.tri-box-lbl{font-size:10px;margin-top:2px;font-weight:600}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden}
 
@@ -150,9 +161,11 @@ html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sa
 
 /* Nav */
 .nav{position:fixed;bottom:0;left:0;right:0;height:var(--nav-h);background:#fff;border-top:1px solid var(--border);display:flex;padding-bottom:env(safe-area-inset-bottom,0);z-index:200}
-.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:none;border:none;color:var(--text3);cursor:pointer;font-size:10px;font-weight:600}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:none;border:none;color:var(--text3);cursor:pointer;font-size:9px;font-weight:600;min-width:0;padding:0 2px}
 .nav-btn.ativo{color:var(--blue)}
-.nav-icon{font-size:20px;line-height:1}
+.nav-btn.nav-bike.ativo{color:#ea580c}
+.nav-btn.nav-swim.ativo{color:var(--cyan)}
+.nav-icon{font-size:19px;line-height:1}
 
 /* Modal */
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:flex-end}
@@ -237,6 +250,7 @@ input[type=range].esf::-webkit-slider-thumb{-webkit-appearance:none;width:22px;h
   <div class="card">
     <div class="week-stat-row" id="week-stats"></div>
     <div class="day-strip" id="day-strip"></div>
+    <div class="tri-strip" id="tri-strip" style="display:none"></div>
   </div>
 
   <button class="strava-quick" onclick="openStravaSyncModal()">
@@ -333,16 +347,62 @@ input[type=range].esf::-webkit-slider-thumb{-webkit-appearance:none;width:22px;h
   <div class="card" id="pass-wrap"></div>
 </div>
 
+<!-- ══ BIKE ══ -->
+<div id="tela-bike" class="screen">
+  <div class="page-hero" style="background:linear-gradient(135deg,#431407 0%,#9a3412 100%)">
+    <div class="page-hero-title">🚴 Treinos de Bike</div>
+    <div class="page-hero-sub" id="bike-sub">carregando...</div>
+  </div>
+  <div style="padding:10px 12px 0;display:flex;justify-content:flex-end;gap:8px">
+    <button onclick="abrirBike()" style="background:#fff7ed;color:#c2410c;border:1px solid #fdba74;border-radius:20px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">+ Registrar Bike</button>
+  </div>
+  <div class="filter-bar" id="bike-filter-bar">
+    <button class="chip ativo" onclick="filtrarBike(this,'todos')">Todos</button>
+    <button class="chip" onclick="filtrarBike(this,'recovery')">🟢 Recovery</button>
+    <button class="chip" onclick="filtrarBike(this,'endurance')">🔵 Endurance</button>
+    <button class="chip" onclick="filtrarBike(this,'intervalado')">🔴 Intervalado</button>
+    <button class="chip" onclick="filtrarBike(this,'hill')">🟤 Montanha</button>
+    <button class="chip" onclick="filtrarBike(this,'tempo')">🟠 Tempo</button>
+    <button class="chip" onclick="filtrarBike(this,'indoor')">🖥️ Indoor</button>
+    <button class="chip" onclick="filtrarBike(this,'mtb')">🌲 MTB</button>
+  </div>
+  <div id="bike-list"></div>
+</div>
+
+<!-- ══ NATAÇÃO ══ -->
+<div id="tela-natacao" class="screen">
+  <div class="page-hero" style="background:linear-gradient(135deg,#083344 0%,#0e7490 100%)">
+    <div class="page-hero-title">🏊 Treinos de Natação</div>
+    <div class="page-hero-sub" id="natacao-sub">carregando...</div>
+  </div>
+  <div style="padding:10px 12px 0;display:flex;justify-content:flex-end;gap:8px">
+    <button onclick="abrirNatacao()" style="background:var(--cyan-light);color:#0e7490;border:1px solid #67e8f9;border-radius:20px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">+ Registrar Natação</button>
+  </div>
+  <div class="filter-bar" id="natacao-filter-bar">
+    <button class="chip ativo" onclick="filtrarNatacao(this,'todos')">Todos</button>
+    <button class="chip" onclick="filtrarNatacao(this,'recovery')">🟢 Recovery</button>
+    <button class="chip" onclick="filtrarNatacao(this,'drills')">🔵 Drills</button>
+    <button class="chip" onclick="filtrarNatacao(this,'intervalado')">🔴 Intervalado</button>
+    <button class="chip" onclick="filtrarNatacao(this,'longo')">🟣 Longo</button>
+    <button class="chip" onclick="filtrarNatacao(this,'abertas')">🌊 Águas Abertas</button>
+  </div>
+  <div id="natacao-list"></div>
+</div>
+
 <!-- FABs -->
 <button class="fab" id="fab-treino" onclick="abrirTreino()">+</button>
 <button class="fab" id="fab-corrida" onclick="abrirCorrida()" style="display:none">+</button>
+<button class="fab" id="fab-bike" onclick="abrirBike()" style="display:none;background:#ea580c">+</button>
+<button class="fab" id="fab-natacao" onclick="abrirNatacao()" style="display:none;background:var(--cyan)">+</button>
 
 <!-- Nav -->
 <nav class="nav">
   <button class="nav-btn ativo" id="nav-dash" onclick="irParaTela('dash')"><span class="nav-icon">🏠</span><span>Início</span></button>
-  <button class="nav-btn" id="nav-log" onclick="irParaTela('log')"><span class="nav-icon">📋</span><span>Treinos</span></button>
+  <button class="nav-btn" id="nav-log" onclick="irParaTela('log')"><span class="nav-icon">🏃</span><span>Corrida</span></button>
+  <button class="nav-btn nav-bike" id="nav-bike" onclick="irParaTela('bike')"><span class="nav-icon">🚴</span><span>Bike</span></button>
+  <button class="nav-btn nav-swim" id="nav-natacao" onclick="irParaTela('natacao')"><span class="nav-icon">🏊</span><span>Natação</span></button>
   <button class="nav-btn" id="nav-stats" onclick="irParaTela('stats')"><span class="nav-icon">📊</span><span>Análise</span></button>
-  <button class="nav-btn" id="nav-corridas" onclick="irParaTela('corridas')"><span class="nav-icon">🏁</span><span>Corridas</span></button>
+  <button class="nav-btn" id="nav-corridas" onclick="irParaTela('corridas')"><span class="nav-icon">🏁</span><span>Provas</span></button>
 </nav>
 
 <input type="file" id="import-file" accept=".json" style="display:none" onchange="importarGarmin(this)">
@@ -431,6 +491,94 @@ input[type=range].esf::-webkit-slider-thumb{-webkit-appearance:none;width:22px;h
 </div>
 </div>
 
+<!-- Modal Bike -->
+<div class="modal-overlay" id="overlay-bike">
+<div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-hdr">
+    <span class="modal-title" id="titulo-bike">🚴 Novo Treino de Bike</span>
+    <button class="modal-x" onclick="fechar('overlay-bike')">✕</button>
+  </div>
+  <div class="modal-body">
+    <input type="hidden" id="b-id">
+    <div class="fg">
+      <label class="fl">Tipo</label>
+      <div class="tipo-pills" id="bike-tipo-pills">
+        <button class="tipo-pill sel" data-tipo="recovery" onclick="selTipoBike(this)">🟢 Recovery</button>
+        <button class="tipo-pill" data-tipo="endurance" onclick="selTipoBike(this)">🔵 Endurance</button>
+        <button class="tipo-pill" data-tipo="intervalado" onclick="selTipoBike(this)">🔴 Intervalado</button>
+        <button class="tipo-pill" data-tipo="hill" onclick="selTipoBike(this)">🟤 Montanha</button>
+        <button class="tipo-pill" data-tipo="tempo" onclick="selTipoBike(this)">🟠 Tempo</button>
+        <button class="tipo-pill" data-tipo="indoor" onclick="selTipoBike(this)">🖥️ Indoor</button>
+        <button class="tipo-pill" data-tipo="mtb" onclick="selTipoBike(this)">🌲 MTB</button>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="fg"><label class="fl">Data</label><input type="date" class="fi" id="b-data"></div>
+      <div class="fg"><label class="fl">Distância (km)</label><input type="number" step="0.1" class="fi" id="b-dist" placeholder="0,0" inputmode="decimal" oninput="updateVelocidade()"></div>
+    </div>
+    <div class="form-row">
+      <div class="fg"><label class="fl">Duração (h:mm:ss)</label><input type="text" class="fi" id="b-dur" placeholder="0:00:00" inputmode="numeric" oninput="updateVelocidade()" onblur="updateVelocidade()"></div>
+      <div class="fg"><label class="fl">Velocidade média</label><input type="text" class="fi" id="b-vel" placeholder="— km/h" readonly></div>
+    </div>
+    <div class="form-row">
+      <div class="fg"><label class="fl">FC Média (bpm)</label><input type="number" class="fi" id="b-fc-med" placeholder="—" inputmode="numeric"></div>
+      <div class="fg"><label class="fl">FC Máx (bpm)</label><input type="number" class="fi" id="b-fc-max" placeholder="—" inputmode="numeric"></div>
+    </div>
+    <div class="fg">
+      <label class="fl">Esforço percebido: <span id="b-esf-val">5</span>/10</label>
+      <input type="range" min="1" max="10" value="5" class="esf" id="b-esforco" oninput="document.getElementById('b-esf-val').textContent=this.value">
+    </div>
+    <div class="fg"><label class="fl">Observações</label><textarea class="fi" id="b-notas" rows="2" placeholder="Percurso, sensações..."></textarea></div>
+    <button class="btn btn-primary" style="background:#ea580c" onclick="salvarBike()">Salvar</button>
+    <button class="btn btn-danger" id="btn-del-bike" onclick="deletarBike()" style="display:none">Excluir treino</button>
+  </div>
+</div>
+</div>
+
+<!-- Modal Natação -->
+<div class="modal-overlay" id="overlay-natacao">
+<div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-hdr">
+    <span class="modal-title" id="titulo-natacao">🏊 Nova Sessão de Natação</span>
+    <button class="modal-x" onclick="fechar('overlay-natacao')">✕</button>
+  </div>
+  <div class="modal-body">
+    <input type="hidden" id="n-id">
+    <div class="fg">
+      <label class="fl">Tipo</label>
+      <div class="tipo-pills" id="natacao-tipo-pills">
+        <button class="tipo-pill sel" data-tipo="recovery" onclick="selTipoNatacao(this)">🟢 Recovery</button>
+        <button class="tipo-pill" data-tipo="drills" onclick="selTipoNatacao(this)">🔵 Drills</button>
+        <button class="tipo-pill" data-tipo="intervalado" onclick="selTipoNatacao(this)">🔴 Intervalado</button>
+        <button class="tipo-pill" data-tipo="longo" onclick="selTipoNatacao(this)">🟣 Longo</button>
+        <button class="tipo-pill" data-tipo="abertas" onclick="selTipoNatacao(this)">🌊 Águas Abertas</button>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="fg"><label class="fl">Data</label><input type="date" class="fi" id="n-data"></div>
+      <div class="fg"><label class="fl">Distância (metros)</label><input type="number" step="50" class="fi" id="n-dist" placeholder="1500" inputmode="numeric" oninput="updatePace100m()"></div>
+    </div>
+    <div class="form-row">
+      <div class="fg"><label class="fl">Duração (h:mm:ss)</label><input type="text" class="fi" id="n-dur" placeholder="0:30:00" inputmode="numeric" oninput="updatePace100m()" onblur="updatePace100m()"></div>
+      <div class="fg"><label class="fl">Pace / 100 m</label><input type="text" class="fi" id="n-pace" placeholder="—" readonly></div>
+    </div>
+    <div class="form-row">
+      <div class="fg"><label class="fl">FC Média (bpm)</label><input type="number" class="fi" id="n-fc-med" placeholder="—" inputmode="numeric"></div>
+      <div class="fg"><label class="fl">FC Máx (bpm)</label><input type="number" class="fi" id="n-fc-max" placeholder="—" inputmode="numeric"></div>
+    </div>
+    <div class="fg">
+      <label class="fl">Esforço percebido: <span id="n-esf-val">5</span>/10</label>
+      <input type="range" min="1" max="10" value="5" class="esf" id="n-esforco" oninput="document.getElementById('n-esf-val').textContent=this.value">
+    </div>
+    <div class="fg"><label class="fl">Observações</label><textarea class="fi" id="n-notas" rows="2" placeholder="Piscina, técnica, sensações..."></textarea></div>
+    <button class="btn btn-primary" style="background:var(--cyan);color:#fff" onclick="salvarNatacao()">Salvar</button>
+    <button class="btn btn-danger" id="btn-del-natacao" onclick="deletarNatacao()" style="display:none">Excluir sessão</button>
+  </div>
+</div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -463,6 +611,25 @@ var TIPO_INFO = {
   virtual:     {emoji:'🖥️', label:'Virtual Run',  bg:'#f0fdf4', cor:'#15803d'},
   caminhada:   {emoji:'🚶', label:'Caminhada',   bg:'#f8fafc', cor:'#475569'},
 };
+
+var BIKE_TIPO_INFO = {
+  recovery:   {emoji:'🟢', label:'Recovery',  bg:'#f0fdf4', cor:'#16a34a'},
+  endurance:  {emoji:'🔵', label:'Endurance', bg:'#eff6ff', cor:'#2563eb'},
+  intervalado:{emoji:'🔴', label:'Intervalado',bg:'#fef2f2',cor:'#dc2626'},
+  hill:       {emoji:'🟤', label:'Montanha',  bg:'#fef3c7', cor:'#92400e'},
+  tempo:      {emoji:'🟠', label:'Tempo',     bg:'#fff7ed', cor:'#ea580c'},
+  indoor:     {emoji:'🖥️', label:'Indoor',    bg:'#f0fdf4', cor:'#15803d'},
+  mtb:        {emoji:'🌲', label:'MTB',       bg:'#f0fdf4', cor:'#166534'},
+};
+var NATACAO_TIPO_INFO = {
+  recovery:   {emoji:'🟢', label:'Recovery',     bg:'#ecfeff', cor:'#0e7490'},
+  drills:     {emoji:'🔵', label:'Drills',       bg:'#eff6ff', cor:'#2563eb'},
+  intervalado:{emoji:'🔴', label:'Intervalado',  bg:'#fef2f2', cor:'#dc2626'},
+  longo:      {emoji:'🟣', label:'Longo',        bg:'#faf5ff', cor:'#9333ea'},
+  abertas:    {emoji:'🌊', label:'Águas Abertas',bg:'#ecfeff', cor:'#0284c7'},
+};
+function bikeTipoInfo(t){ return BIKE_TIPO_INFO[t]||{emoji:'🚴',label:t||'Bike',bg:'#fff7ed',cor:'#ea580c'}; }
+function natacaoTipoInfo(t){ return NATACAO_TIPO_INFO[t]||{emoji:'🏊',label:t||'Natação',bg:'#ecfeff',cor:'#0e7490'}; }
 
 // ── Firebase ──
 var FB_SECRET = 'luiz';
@@ -513,8 +680,14 @@ function tipoInfo(t){ return TIPO_INFO[t]||{emoji:'🏃',label:t||'Treino',bg:'#
 
 // ── Data ──
 function getDados(){
-  try{ var d=JSON.parse(localStorage.getItem('treinos')||'{}'); if(!Array.isArray(d.treinos)) d.treinos=[]; if(!Array.isArray(d.corridas)) d.corridas=[]; return d; }
-  catch(e){ return {treinos:[],corridas:[]}; }
+  try{
+    var d=JSON.parse(localStorage.getItem('treinos')||'{}');
+    if(!Array.isArray(d.treinos))  d.treinos=[];
+    if(!Array.isArray(d.corridas)) d.corridas=[];
+    if(!Array.isArray(d.bike))     d.bike=[];
+    if(!Array.isArray(d.natacao))  d.natacao=[];
+    return d;
+  }catch(e){ return {treinos:[],corridas:[],bike:[],natacao:[]}; }
 }
 function salvarDados(d){
   try{
@@ -550,10 +723,14 @@ function irParaTela(nome){
   document.getElementById('nav-'+nome).classList.add('ativo');
   document.getElementById('fab-treino').style.display=(nome==='dash'||nome==='log')?'flex':'none';
   document.getElementById('fab-corrida').style.display=nome==='corridas'?'flex':'none';
-  if(nome==='dash')    renderDash();
-  if(nome==='log')     renderLog();
-  if(nome==='stats')   renderStats();
+  document.getElementById('fab-bike').style.display=nome==='bike'?'flex':'none';
+  document.getElementById('fab-natacao').style.display=nome==='natacao'?'flex':'none';
+  if(nome==='dash')     renderDash();
+  if(nome==='log')      renderLog();
+  if(nome==='stats')    renderStats();
   if(nome==='corridas') renderCorridas();
+  if(nome==='bike')     renderBike();
+  if(nome==='natacao')  renderNatacao();
 }
 function fechar(id){ document.getElementById(id).classList.remove('aberto'); }
 
@@ -778,9 +955,41 @@ function renderDash(){
   var secs=lista.reduce(function(s,t){return s+parseDur(t.duracao);},0);
   var h=Math.floor(secs/3600),m=Math.floor((secs%3600)/60);
   document.getElementById('week-stats').innerHTML=
-    '<div class="week-stat"><div class="week-stat-val">'+km.toFixed(1).replace('.',',')+'</div><div class="week-stat-lbl">km</div></div>'+
-    '<div class="week-stat"><div class="week-stat-val">'+lista.length+'</div><div class="week-stat-lbl">treinos</div></div>'+
+    '<div class="week-stat"><div class="week-stat-val">'+km.toFixed(1).replace('.',',')+'</div><div class="week-stat-lbl">km corrida</div></div>'+
+    '<div class="week-stat"><div class="week-stat-val">'+lista.length+'</div><div class="week-stat-lbl">sessões</div></div>'+
     '<div class="week-stat"><div class="week-stat-val">'+h+':'+pad(m)+'</div><div class="week-stat-lbl">tempo</div></div>';
+
+  // Tri weekly strip (only if bike or natação has data this week)
+  var bikeW=d.bike.filter(function(x){return x.data>=sem.ini&&x.data<=sem.fim;});
+  var natW=d.natacao.filter(function(x){return x.data>=sem.ini&&x.data<=sem.fim;});
+  var bikeKm=bikeW.reduce(function(s,x){return s+(x.distancia||0);},0);
+  var natM=natW.reduce(function(s,x){return s+(x.distancia||0);},0);
+  var triStrip=document.getElementById('tri-strip');
+  if(bikeKm>0||natM>0){
+    var bikeSecW=bikeW.reduce(function(s,x){return s+parseDur(x.duracao);},0);
+    var natSecW=natW.reduce(function(s,x){return s+parseDur(x.duracao);},0);
+    var bh=Math.floor(bikeSecW/3600),bm=Math.floor((bikeSecW%3600)/60);
+    var nh=Math.floor(natSecW/3600),nm=Math.floor((natSecW%3600)/60);
+    triStrip.innerHTML=
+      '<div class="tri-box" style="background:var(--blue-light)">'+
+        '<div class="tri-box-val" style="color:var(--blue)">🏃</div>'+
+        '<div class="tri-box-val" style="color:var(--blue);font-size:14px">'+km.toFixed(0)+'<small style="font-size:9px">km</small></div>'+
+        '<div class="tri-box-lbl" style="color:var(--blue)">Corrida</div>'+
+      '</div>'+
+      '<div class="tri-box" style="background:var(--orange-light)">'+
+        '<div class="tri-box-val" style="color:#ea580c">🚴</div>'+
+        '<div class="tri-box-val" style="color:#ea580c;font-size:14px">'+(bikeKm>0?bikeKm.toFixed(0)+'<small style="font-size:9px">km</small>':bh+':'+pad(bm))+'</div>'+
+        '<div class="tri-box-lbl" style="color:#ea580c">Bike</div>'+
+      '</div>'+
+      '<div class="tri-box" style="background:var(--cyan-light)">'+
+        '<div class="tri-box-val" style="color:#0e7490">🏊</div>'+
+        '<div class="tri-box-val" style="color:#0e7490;font-size:14px">'+(natM>0?natM+'<small style="font-size:9px">m</small>':nh+':'+pad(nm))+'</div>'+
+        '<div class="tri-box-lbl" style="color:#0e7490">Natação</div>'+
+      '</div>';
+    triStrip.style.display='grid';
+  } else {
+    triStrip.style.display='none';
+  }
 
   // Day strip
   var dayData=[], maxKm=0;
@@ -1106,6 +1315,211 @@ function importarGarmin(input){
   reader.readAsText(file);
 }
 
+// ── Bike helpers ──
+var _filtrosBike='todos', _filtrosNatacao='todos';
+
+function calcVelocidade(dist,dur){
+  var s=parseDur(typeof dur==='string'?dur:fmtDur(dur));
+  if(!dist||!s) return '';
+  return (dist/(s/3600)).toFixed(1)+' km/h';
+}
+function calcPace100m(distM,dur){
+  var s=parseDur(typeof dur==='string'?dur:fmtDur(dur));
+  if(!distM||!s) return '';
+  var p100=s/(distM/100);
+  var m=Math.floor(p100/60),sec=Math.round(p100%60);
+  if(sec===60){m++;sec=0;}
+  return m+':'+pad(sec)+'/100m';
+}
+function updateVelocidade(){
+  var dist=parseFloat(document.getElementById('b-dist').value)||0;
+  document.getElementById('b-vel').value=calcVelocidade(dist,document.getElementById('b-dur').value)||'';
+}
+function updatePace100m(){
+  var dist=parseFloat(document.getElementById('n-dist').value)||0;
+  document.getElementById('n-pace').value=calcPace100m(dist,document.getElementById('n-dur').value)||'';
+}
+
+// ── Bike item HTML ──
+function bikeItemHTML(b){
+  var info=bikeTipoInfo(b.tipo);
+  var dist=b.distancia?b.distancia.toFixed(1).replace('.',',')+'<small style="font-size:11px"> km</small>':'—';
+  var sub=[fmtDataCurta(b.data)];
+  if(b.duracao) sub.push(fmtDur(parseDur(b.duracao)));
+  if(b.fcMed) sub.push('♥ '+b.fcMed);
+  return '<div class="w-item" onclick="abrirBike(\''+b.id+'\')">'+
+    '<div class="w-badge" style="background:'+info.bg+'">'+info.emoji+'</div>'+
+    '<div class="w-info">'+
+      '<div class="w-name">'+info.label+'</div>'+
+      '<div class="w-sub">'+sub.join(' · ')+'</div>'+
+      (b.notas?'<div class="w-note">'+b.notas.substring(0,55)+'</div>':'')+
+    '</div>'+
+    '<div class="w-meta">'+
+      '<div class="w-dist" style="color:#ea580c">'+dist+'</div>'+
+      (b.velocidade?'<div class="w-pace">'+b.velocidade+'</div>':'')+
+    '</div>'+
+  '</div>';
+}
+
+// ── Render: Bike ──
+function renderBike(){
+  var d=getDados();
+  var lista=d.bike.slice().sort(function(a,b){return b.data.localeCompare(a.data);});
+  if(_filtrosBike!=='todos') lista=lista.filter(function(b){return b.tipo===_filtrosBike;});
+  var km=lista.reduce(function(s,b){return s+(b.distancia||0);},0);
+  document.getElementById('bike-sub').textContent=lista.length+' treinos · '+km.toFixed(0)+' km';
+  var el=document.getElementById('bike-list');
+  if(!lista.length){
+    el.innerHTML='<div class="empty"><div class="empty-icon">🚴</div><div style="font-size:14px;color:var(--text2)">Nenhum treino de bike ainda.<br>Toque em <b>+ Registrar Bike</b>!</div></div>';
+    return;
+  }
+  var html='',lastMes='';
+  lista.forEach(function(b){
+    var mes=b.data?b.data.substring(0,7):'';
+    if(mes!==lastMes){lastMes=mes;var p=mes.split('-');html+='<div class="month-hdr">'+MESES_LONG[parseInt(p[1],10)-1]+' '+p[0]+'</div>';}
+    html+='<div class="card" style="margin-bottom:6px;padding:12px 14px">'+bikeItemHTML(b)+'</div>';
+  });
+  el.innerHTML=html;
+}
+function filtrarBike(btn,tipo){
+  _filtrosBike=tipo;
+  document.querySelectorAll('#bike-filter-bar .chip').forEach(function(c){c.classList.remove('ativo');});
+  btn.classList.add('ativo');
+  renderBike();
+}
+
+// ── Bike modal ──
+function selTipoBike(btn){ document.querySelectorAll('#bike-tipo-pills .tipo-pill').forEach(function(p){p.classList.remove('sel');}); btn.classList.add('sel'); }
+function setTipoBike(val){ document.querySelectorAll('#bike-tipo-pills .tipo-pill').forEach(function(p){p.classList.toggle('sel',p.getAttribute('data-tipo')===val);}); }
+function getTipoBike(){ var s=document.querySelector('#bike-tipo-pills .tipo-pill.sel'); return s?s.getAttribute('data-tipo'):'recovery'; }
+
+function abrirBike(id){
+  var d=getDados(),b=id?d.bike.find(function(x){return x.id===id;}):null;
+  document.getElementById('b-id').value=id||'';
+  document.getElementById('titulo-bike').textContent=id?'🚴 Editar Bike':'🚴 Novo Treino de Bike';
+  document.getElementById('btn-del-bike').style.display=id?'block':'none';
+  setTipoBike(b?b.tipo:'recovery');
+  document.getElementById('b-data').value=b?b.data:hoje();
+  document.getElementById('b-dist').value=b?b.distancia||'':'';
+  document.getElementById('b-dur').value=b?b.duracao||'':'';
+  document.getElementById('b-vel').value=b?b.velocidade||'':'';
+  document.getElementById('b-fc-med').value=b?b.fcMed||'':'';
+  document.getElementById('b-fc-max').value=b?b.fcMax||'':'';
+  document.getElementById('b-esforco').value=b?b.esforco||5:5;
+  document.getElementById('b-esf-val').textContent=b?b.esforco||5:5;
+  document.getElementById('b-notas').value=b?b.notas||'':'';
+  document.getElementById('overlay-bike').classList.add('aberto');
+}
+function salvarBike(){
+  var id=document.getElementById('b-id').value;
+  var dist=parseFloat(document.getElementById('b-dist').value)||0;
+  var dur=document.getElementById('b-dur').value.trim();
+  var obj={id:id||uid(),tipo:getTipoBike(),data:document.getElementById('b-data').value||hoje(),distancia:dist,duracao:dur,velocidade:calcVelocidade(dist,dur),fcMed:parseInt(document.getElementById('b-fc-med').value)||0,fcMax:parseInt(document.getElementById('b-fc-max').value)||0,esforco:parseInt(document.getElementById('b-esforco').value)||5,notas:document.getElementById('b-notas').value.trim()};
+  var d=getDados();
+  if(id){var idx=d.bike.findIndex(function(x){return x.id===id;}); if(idx>=0) d.bike[idx]=obj; else d.bike.push(obj);}
+  else d.bike.push(obj);
+  salvarDados(d); fechar('overlay-bike');
+  toast(id?'✏️ Bike atualizado':'🚴 Bike salvo!');
+  renderDash(); if(_tela==='bike') renderBike();
+}
+function deletarBike(){
+  var id=document.getElementById('b-id').value;
+  if(!id||!confirm('Excluir este treino de bike?')) return;
+  var d=getDados(); d.bike=d.bike.filter(function(x){return x.id!==id;});
+  salvarDados(d); fechar('overlay-bike'); toast('🗑️ Bike excluído');
+  renderDash(); if(_tela==='bike') renderBike();
+}
+
+// ── Natação item HTML ──
+function natacaoItemHTML(n){
+  var info=natacaoTipoInfo(n.tipo);
+  var dist=n.distancia?(n.distancia>=1000?(n.distancia/1000).toFixed(1).replace('.',',')+' km':n.distancia+' m'):'—';
+  var sub=[fmtDataCurta(n.data)];
+  if(n.duracao) sub.push(fmtDur(parseDur(n.duracao)));
+  if(n.fcMed) sub.push('♥ '+n.fcMed);
+  return '<div class="w-item" onclick="abrirNatacao(\''+n.id+'\')">'+
+    '<div class="w-badge" style="background:'+info.bg+'">'+info.emoji+'</div>'+
+    '<div class="w-info">'+
+      '<div class="w-name">'+info.label+'</div>'+
+      '<div class="w-sub">'+sub.join(' · ')+'</div>'+
+      (n.notas?'<div class="w-note">'+n.notas.substring(0,55)+'</div>':'')+
+    '</div>'+
+    '<div class="w-meta">'+
+      '<div class="w-dist" style="color:#0e7490">'+dist+'</div>'+
+      (n.pace?'<div class="w-pace">'+n.pace+'</div>':'')+
+    '</div>'+
+  '</div>';
+}
+
+// ── Render: Natação ──
+function renderNatacao(){
+  var d=getDados();
+  var lista=d.natacao.slice().sort(function(a,b){return b.data.localeCompare(a.data);});
+  if(_filtrosNatacao!=='todos') lista=lista.filter(function(n){return n.tipo===_filtrosNatacao;});
+  var m=lista.reduce(function(s,n){return s+(n.distancia||0);},0);
+  document.getElementById('natacao-sub').textContent=lista.length+' sessões · '+(m>=1000?(m/1000).toFixed(1)+' km':m+' m');
+  var el=document.getElementById('natacao-list');
+  if(!lista.length){
+    el.innerHTML='<div class="empty"><div class="empty-icon">🏊</div><div style="font-size:14px;color:var(--text2)">Nenhuma sessão de natação ainda.<br>Toque em <b>+ Registrar Natação</b>!</div></div>';
+    return;
+  }
+  var html='',lastMes='';
+  lista.forEach(function(n){
+    var mes=n.data?n.data.substring(0,7):'';
+    if(mes!==lastMes){lastMes=mes;var p=mes.split('-');html+='<div class="month-hdr">'+MESES_LONG[parseInt(p[1],10)-1]+' '+p[0]+'</div>';}
+    html+='<div class="card" style="margin-bottom:6px;padding:12px 14px">'+natacaoItemHTML(n)+'</div>';
+  });
+  el.innerHTML=html;
+}
+function filtrarNatacao(btn,tipo){
+  _filtrosNatacao=tipo;
+  document.querySelectorAll('#natacao-filter-bar .chip').forEach(function(c){c.classList.remove('ativo');});
+  btn.classList.add('ativo');
+  renderNatacao();
+}
+
+// ── Natação modal ──
+function selTipoNatacao(btn){ document.querySelectorAll('#natacao-tipo-pills .tipo-pill').forEach(function(p){p.classList.remove('sel');}); btn.classList.add('sel'); }
+function setTipoNatacao(val){ document.querySelectorAll('#natacao-tipo-pills .tipo-pill').forEach(function(p){p.classList.toggle('sel',p.getAttribute('data-tipo')===val);}); }
+function getTipoNatacao(){ var s=document.querySelector('#natacao-tipo-pills .tipo-pill.sel'); return s?s.getAttribute('data-tipo'):'recovery'; }
+
+function abrirNatacao(id){
+  var d=getDados(),n=id?d.natacao.find(function(x){return x.id===id;}):null;
+  document.getElementById('n-id').value=id||'';
+  document.getElementById('titulo-natacao').textContent=id?'🏊 Editar Natação':'🏊 Nova Sessão de Natação';
+  document.getElementById('btn-del-natacao').style.display=id?'block':'none';
+  setTipoNatacao(n?n.tipo:'recovery');
+  document.getElementById('n-data').value=n?n.data:hoje();
+  document.getElementById('n-dist').value=n?n.distancia||'':'';
+  document.getElementById('n-dur').value=n?n.duracao||'':'';
+  document.getElementById('n-pace').value=n?n.pace||'':'';
+  document.getElementById('n-fc-med').value=n?n.fcMed||'':'';
+  document.getElementById('n-fc-max').value=n?n.fcMax||'':'';
+  document.getElementById('n-esforco').value=n?n.esforco||5:5;
+  document.getElementById('n-esf-val').textContent=n?n.esforco||5:5;
+  document.getElementById('n-notas').value=n?n.notas||'':'';
+  document.getElementById('overlay-natacao').classList.add('aberto');
+}
+function salvarNatacao(){
+  var id=document.getElementById('n-id').value;
+  var dist=parseFloat(document.getElementById('n-dist').value)||0;
+  var dur=document.getElementById('n-dur').value.trim();
+  var obj={id:id||uid(),tipo:getTipoNatacao(),data:document.getElementById('n-data').value||hoje(),distancia:dist,duracao:dur,pace:calcPace100m(dist,dur),fcMed:parseInt(document.getElementById('n-fc-med').value)||0,fcMax:parseInt(document.getElementById('n-fc-max').value)||0,esforco:parseInt(document.getElementById('n-esforco').value)||5,notas:document.getElementById('n-notas').value.trim()};
+  var d=getDados();
+  if(id){var idx=d.natacao.findIndex(function(x){return x.id===id;}); if(idx>=0) d.natacao[idx]=obj; else d.natacao.push(obj);}
+  else d.natacao.push(obj);
+  salvarDados(d); fechar('overlay-natacao');
+  toast(id?'✏️ Natação atualizada':'🏊 Natação salva!');
+  renderDash(); if(_tela==='natacao') renderNatacao();
+}
+function deletarNatacao(){
+  var id=document.getElementById('n-id').value;
+  if(!id||!confirm('Excluir esta sessão de natação?')) return;
+  var d=getDados(); d.natacao=d.natacao.filter(function(x){return x.id!==id;});
+  salvarDados(d); fechar('overlay-natacao'); toast('🗑️ Natação excluída');
+  renderDash(); if(_tela==='natacao') renderNatacao();
+}
+
 // ── Backup export / restore ──
 function exportarBackup(){
   var d=getDados();
@@ -1135,7 +1549,15 @@ function restaurarBackup(input){
       local.treinos.forEach(function(t){
         if(t.id&&!merged.some(function(m){return m.id===t.id;})) merged.push(t);
       });
-      var restored={treinos:merged,corridas:json.corridas||local.corridas||[]};
+      var mergedBike=(json.bike||[]).slice();
+      (local.bike||[]).forEach(function(b){
+        if(b.id&&!mergedBike.some(function(m){return m.id===b.id;})) mergedBike.push(b);
+      });
+      var mergedNat=(json.natacao||[]).slice();
+      (local.natacao||[]).forEach(function(n){
+        if(n.id&&!mergedNat.some(function(m){return m.id===n.id;})) mergedNat.push(n);
+      });
+      var restored={treinos:merged,corridas:json.corridas||local.corridas||[],bike:mergedBike,natacao:mergedNat};
       salvarDados(restored);
       renderDash(); if(_tela==='log') renderLog(); if(_tela==='corridas') renderCorridas(); if(_tela==='stats') renderStats();
       toast('✅ Restaurado: '+merged.length+' treinos');
@@ -1153,10 +1575,18 @@ function mergeFromFirebase(fb){
   if(fbTs<=localTs+500) return false; // Firebase not newer — skip
   _fbLatest=fb.treinos.slice();
   var dd=Object.assign({},fb); delete dd._ts;
+  if(!Array.isArray(dd.bike))    dd.bike=[];
+  if(!Array.isArray(dd.natacao)) dd.natacao=[];
   // Merge: keep any local-only entries not in Firebase
   var localData=getDados();
   localData.treinos.forEach(function(t){
     if(t.id&&!dd.treinos.some(function(ft){return ft.id===t.id;})) dd.treinos.push(t);
+  });
+  localData.bike.forEach(function(b){
+    if(b.id&&!dd.bike.some(function(fb2){return fb2.id===b.id;})) dd.bike.push(b);
+  });
+  localData.natacao.forEach(function(n){
+    if(n.id&&!dd.natacao.some(function(fn){return fn.id===n.id;})) dd.natacao.push(n);
   });
   // Safety guard: never reduce record count — if merge result has fewer records than local, skip
   if(dd.treinos.length < localData.treinos.length){
@@ -1207,9 +1637,19 @@ function iniciarSync(){
           fb.treinos.forEach(function(t){
             if(t.id&&!loc2.treinos.some(function(lt){return lt.id===t.id;})) loc2.treinos.push(t);
           });
-          localStorage.setItem('treinos',JSON.stringify(loc2));
-          localStorage.setItem('treinos_ts',new Date().toISOString());
         }
+        if(fb.bike){
+          fb.bike.forEach(function(b){
+            if(b.id&&!loc2.bike.some(function(lb){return lb.id===b.id;})) loc2.bike.push(b);
+          });
+        }
+        if(fb.natacao){
+          fb.natacao.forEach(function(n){
+            if(n.id&&!loc2.natacao.some(function(ln){return ln.id===n.id;})) loc2.natacao.push(n);
+          });
+        }
+        localStorage.setItem('treinos',JSON.stringify(loc2));
+        localStorage.setItem('treinos_ts',new Date().toISOString());
         loc2._ts=Date.now(); _fbRef.set(loc2);
         syncStatus('#22c55e','sincronizado');
       }
