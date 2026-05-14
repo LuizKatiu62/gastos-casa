@@ -1723,16 +1723,45 @@ function _idbSave(key,val){
 
 function openStravaSyncModal(){
   if(document.getElementById('strava-sync-ov')) return;
+  var isBike=_stravaTarget==='bike', isSwim=_stravaTarget==='natacao';
+  var title=isBike?'🚴 Importar Bike do Strava':isSwim?'🏊 Importar Natação do Strava':'🟠 Importar do Strava';
+  // Default "from" date: 1 year ago for bike/swim (useful for history), today for run
+  var defaultFrom=isBike||isSwim?(function(){var d=new Date();d.setFullYear(d.getFullYear()-1);return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());})():hoje();
   var ov=document.createElement('div'); ov.className='strava-overlay'; ov.id='strava-sync-ov';
   ov.onclick=function(e){if(e.target===ov) ov.remove();};
   ov.innerHTML='<div class="strava-modal">'+
-    '<h3>🟠 Importar do Strava</h3>'+
-    '<p style="font-size:.78rem;color:#888;margin-bottom:1rem;line-height:1.5">Selecione a data do treino que quer importar.</p>'+
-    '<div class="strava-field"><label>Data do treino</label><input type="date" id="strava-pick-date" value="'+hoje()+'"></div>'+
-    '<button class="strava-btn-p" onclick="stravaBuscar()">🔍 Buscar atividades</button>'+
+    '<h3>'+title+'</h3>'+
+    // Tab buttons
+    '<div style="display:flex;gap:6px;margin-bottom:1rem">'+
+      '<button id="strava-tab-dia" onclick="stravaTabSwitch(\'dia\')" style="flex:1;padding:8px;border-radius:8px;border:2px solid #fc4c02;background:#fc4c02;color:#fff;font-size:12px;font-weight:700;cursor:pointer">📅 Por data</button>'+
+      '<button id="strava-tab-periodo" onclick="stravaTabSwitch(\'periodo\')" style="flex:1;padding:8px;border-radius:8px;border:2px solid #eee;background:#fff;color:#888;font-size:12px;font-weight:700;cursor:pointer">📦 Importar histórico</button>'+
+    '</div>'+
+    // Single date panel
+    '<div id="strava-panel-dia">'+
+      '<div class="strava-field"><label>Data do treino</label><input type="date" id="strava-pick-date" value="'+hoje()+'"></div>'+
+      '<button class="strava-btn-p" onclick="stravaBuscar()">🔍 Buscar atividades</button>'+
+    '</div>'+
+    // Date range panel
+    '<div id="strava-panel-periodo" style="display:none">'+
+      '<p style="font-size:.78rem;color:#888;margin-bottom:.75rem;line-height:1.5">Importa automaticamente todos os treinos de <strong>'+(isBike?'bike':isSwim?'natação':'corrida')+'</strong> do período selecionado.</p>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:.75rem">'+
+        '<div class="strava-field" style="margin:0"><label>De</label><input type="date" id="strava-range-from" value="'+defaultFrom+'"></div>'+
+        '<div class="strava-field" style="margin:0"><label>Até</label><input type="date" id="strava-range-to" value="'+hoje()+'"></div>'+
+      '</div>'+
+      '<button class="strava-btn-p" onclick="stravaImportarPeriodo()">⬇️ Importar histórico</button>'+
+    '</div>'+
     '<button class="strava-btn-s" onclick="document.getElementById(\'strava-sync-ov\').remove()">Fechar</button>'+
   '</div>';
   document.body.appendChild(ov);
+}
+
+function stravaTabSwitch(tab){
+  var isDia=tab==='dia';
+  document.getElementById('strava-panel-dia').style.display=isDia?'':'none';
+  document.getElementById('strava-panel-periodo').style.display=isDia?'none':'';
+  var btnDia=document.getElementById('strava-tab-dia'), btnPer=document.getElementById('strava-tab-periodo');
+  btnDia.style.background=isDia?'#fc4c02':'#fff'; btnDia.style.color=isDia?'#fff':'#888'; btnDia.style.borderColor=isDia?'#fc4c02':'#eee';
+  btnPer.style.background=isDia?'#fff':'#fc4c02'; btnPer.style.color=isDia?'#888':'#fff'; btnPer.style.borderColor=isDia?'#eee':'#fc4c02';
 }
 
 function stravaBuscar(){
@@ -1742,6 +1771,99 @@ function stravaBuscar(){
   var tok=loadStravaToken();
   if(!tok||!tok.accessToken) openStravaSetup(date);
   else fetchStravaActivities(date);
+}
+
+async function stravaImportarPeriodo(){
+  var from=document.getElementById('strava-range-from').value;
+  var to=document.getElementById('strava-range-to').value;
+  if(!from||!to){alert('Selecione o período.');return;}
+  document.getElementById('strava-sync-ov').remove();
+  var token=await ensureStravaToken();
+  if(!token){openStravaSetup('');return;}
+
+  // Determine sport type filter
+  var target=_stravaTarget;
+  var sportFilter=target==='bike'?STRAVA_BIKE_SPORTS:target==='natacao'?STRAVA_SWIM_SPORTS:null;
+
+  var lov=document.createElement('div'); lov.className='strava-overlay'; lov.id='strava-loading';
+  lov.innerHTML='<div class="strava-modal" style="text-align:center;padding:2rem">'+
+    '<div style="font-size:2rem;margin-bottom:.75rem">🟠</div>'+
+    '<div style="font-weight:700;margin-bottom:.5rem" id="strava-load-txt">Buscando atividades...</div>'+
+    '<div style="font-size:.8rem;color:#aaa">'+from+' → '+to+'</div></div>';
+  document.body.appendChild(lov);
+
+  var after=Math.floor(new Date(from+'T00:00:00').getTime()/1000);
+  var before=Math.floor(new Date(to+'T23:59:59').getTime()/1000);
+  var allActs=[], page=1, done=false;
+  try{
+    while(!done){
+      document.getElementById('strava-load-txt').textContent='Buscando página '+page+'...';
+      var r=await fetch('https://www.strava.com/api/v3/athlete/activities?after='+after+'&before='+before+'&per_page=100&page='+page,{headers:{'Authorization':'Bearer '+token}});
+      var batch=await r.json();
+      if(!Array.isArray(batch)||batch.length===0){done=true;break;}
+      allActs=allActs.concat(batch);
+      if(batch.length<100) done=true;
+      else page++;
+    }
+  }catch(e){lov.remove();alert('Erro ao buscar: '+e.message);return;}
+
+  // Filter by sport type
+  var matching=sportFilter?allActs.filter(function(a){return sportFilter.indexOf(a.sport_type||a.type||'')>=0;}):allActs;
+  lov.remove();
+
+  if(!matching.length){
+    var nem=document.createElement('div'); nem.className='strava-overlay';
+    nem.onclick=function(e){if(e.target===nem)nem.remove();};
+    var sportLabel=target==='bike'?'bike':target==='natacao'?'natação':'corrida';
+    nem.innerHTML='<div class="strava-modal" style="text-align:center"><h3>🟠 Strava</h3><p style="color:#888;font-size:.85rem;margin:1rem 0">Nenhuma atividade de <strong>'+sportLabel+'</strong> encontrada em '+from+' → '+to+'.</p><button class="strava-btn-p" onclick="this.closest(\'.strava-overlay\').remove()">Fechar</button></div>';
+    document.body.appendChild(nem); return;
+  }
+
+  // Bulk import
+  var d=getDados(), added=0, updated=0;
+  matching.forEach(function(act){
+    var st=act.sport_type||act.type||'';
+    var distM=act.distance||0;
+    var secs=act.moving_time||0;
+    var hh=Math.floor(secs/3600),mm=Math.floor((secs%3600)/60),ss=secs%60;
+    var dur=hh>0?hh+':'+pad(mm)+':'+pad(ss):mm+':'+pad(ss);
+    var hrVal=act.average_heartrate?Math.round(act.average_heartrate):0;
+    var actDate=act.start_date_local?act.start_date_local.split('T')[0]:hoje();
+    var sid=String(act.id);
+    if(target==='bike'){
+      var dist=Math.round(distM/10)/100;
+      var vel=calcVelocidade(dist,dur);
+      var tipo=detectStravaBikeTipo(st,act.name||'');
+      var amb=detectStravaAmbiente(st,act.name||'');
+      var entry={id:uid(),tipo:tipo,ambiente:amb,data:actDate,distancia:dist,duracao:dur,velocidade:vel,fcMed:hrVal,fcMax:0,esforco:5,notas:act.name||'',stravaId:sid};
+      var idx=d.bike.findIndex(function(b){return b.stravaId===sid;});
+      if(idx>=0){d.bike[idx]=Object.assign(d.bike[idx],entry,{id:d.bike[idx].id});updated++;}
+      else{d.bike.push(entry);added++;}
+    } else if(target==='natacao'){
+      var distM2=Math.round(distM);
+      var pace=calcPace100m(distM2,dur);
+      var tipo2=detectStravaNatacaoTipo(st,act.name||'');
+      var entry2={id:uid(),tipo:tipo2,data:actDate,distancia:distM2,duracao:dur,pace:pace,fcMed:hrVal,fcMax:0,esforco:5,notas:act.name||'',stravaId:sid};
+      var idx2=d.natacao.findIndex(function(n){return n.stravaId===sid;});
+      if(idx2>=0){d.natacao[idx2]=Object.assign(d.natacao[idx2],entry2,{id:d.natacao[idx2].id});updated++;}
+      else{d.natacao.push(entry2);added++;}
+    } else {
+      var dist3=Math.round(distM/10)/100;
+      var paceS3=dist3>0?secs/dist3:0;
+      var pace3=paceS3>0?Math.floor(paceS3/60)+':'+pad(Math.floor(paceS3%60)):'';
+      var tipo3=detectStravaTipo(st,act.name||'');
+      var entry3={id:uid(),tipo:tipo3,data:actDate,distancia:dist3,duracao:dur,pace:pace3,fcMed:hrVal,fcMax:0,esforco:5,notas:act.name||'',stravaId:sid};
+      var idx3=d.treinos.findIndex(function(t){return t.stravaId===sid;});
+      if(idx3>=0){d.treinos[idx3]=Object.assign(d.treinos[idx3],entry3,{id:d.treinos[idx3].id});updated++;}
+      else{d.treinos.push(entry3);added++;}
+    }
+  });
+  salvarDados(d);
+  renderDash();
+  if(_tela==='bike') renderBike();
+  if(_tela==='natacao') renderNatacao();
+  if(_tela==='log') renderLog();
+  toast('✅ '+added+' importados · '+updated+' atualizados');
 }
 
 function openStravaSetup(pendingDate){
