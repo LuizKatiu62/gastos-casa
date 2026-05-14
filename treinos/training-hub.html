@@ -247,6 +247,25 @@
   .day-long { background: var(--amber-light); color: #854F0B; }
   .plan-title { font-size: 13px; font-weight: 600; }
   .plan-desc { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .day-pill.editable { cursor: pointer; position: relative; }
+  .day-pill.editable:hover { opacity: .78; }
+  .day-pill.customized { outline: 2px solid var(--blue); outline-offset: 2px; }
+  .day-picker-overlay { position: fixed; inset: 0; z-index: 500; }
+  .day-picker {
+    position: fixed; z-index: 501;
+    background: var(--surface); border: 1px solid var(--border2);
+    border-radius: 12px; padding: 8px;
+    box-shadow: 0 8px 32px rgba(0,0,0,.18);
+    display: flex; flex-wrap: wrap; gap: 6px; width: 196px;
+  }
+  .day-picker-btn {
+    width: 52px; height: 36px; border-radius: 8px; border: 1.5px solid var(--border);
+    background: var(--surface2); color: var(--text); font-size: 12px; font-weight: 700;
+    cursor: pointer; transition: background .12s;
+  }
+  .day-picker-btn:hover, .day-picker-btn.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+  .day-picker-reset { width: 100%; height: 32px; border-radius: 8px; border: none;
+    background: var(--red-light); color: var(--red); font-size: 11px; font-weight: 700; cursor: pointer; margin-top: 2px; }
 
   /* ZONES */
   .zone-row { margin-bottom: 10px; }
@@ -1186,10 +1205,13 @@ function renderRace() {
         <span class="phase-week">${phase.week}</span>
       </div>`;
     phase.sessions.forEach(s => {
-      const isLong = s.day === 'Sáb';
+      const effDay = getEffectiveDay(s.day);
+      const isLong = effDay === 'Sáb' || s.day === 'Sáb';
       const isRest = s.dist === '—';
+      const isCustom = effDay !== s.day;
       html += `<div class="plan-row">
-        <div class="day-pill ${isLong?'day-long':isRest?'day-rest':'day-active'}">${s.day}</div>
+        <div class="day-pill editable ${isLong?'day-long':isRest?'day-rest':'day-active'}${isCustom?' customized':''}"
+             onclick="openDayPicker(event,'${s.day}')" title="Toque para mudar o dia">${effDay}</div>
         <div style="flex:1">
           <div class="plan-title">${s.type}${s.dist !== '—' ? `<span class="${isLong?'long-badge':'dist-badge'}">${s.dist}</span>` : ''}</div>
           <div class="plan-desc">${s.desc}</div>
@@ -1462,6 +1484,73 @@ window.addEventListener('DOMContentLoaded', () => {
   renderNutrition();
   buildQuickQs();
 });
+
+// =========================================================
+//  DIAS CUSTOMIZADOS
+// =========================================================
+const DAYS_KEY = 'treinos_custom_days';
+const ALL_DAYS = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
+
+function loadCustomDays(){ try{ return JSON.parse(localStorage.getItem(DAYS_KEY))||{}; }catch(e){ return {}; } }
+function saveCustomDays(m){ localStorage.setItem(DAYS_KEY, JSON.stringify(m)); }
+
+function getEffectiveDay(defaultDay){
+  const m = loadCustomDays();
+  return m[defaultDay] || defaultDay;
+}
+
+function openDayPicker(evt, defaultDay){
+  evt.stopPropagation();
+  document.getElementById('day-picker-overlay')?.remove();
+
+  const current = getEffectiveDay(defaultDay);
+  const rect = evt.currentTarget.getBoundingClientRect();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'day-picker-overlay';
+  overlay.className = 'day-picker-overlay';
+  overlay.onclick = function(){ overlay.remove(); };
+
+  const picker = document.createElement('div');
+  picker.className = 'day-picker';
+  picker.onclick = function(e){ e.stopPropagation(); };
+
+  // Position near the pill
+  const top = Math.min(rect.bottom + 6, window.innerHeight - 160);
+  const left = Math.max(4, Math.min(rect.left - 8, window.innerWidth - 204));
+  picker.style.top  = top  + 'px';
+  picker.style.left = left + 'px';
+
+  ALL_DAYS.forEach(function(d){
+    var btn = document.createElement('button');
+    btn.className = 'day-picker-btn' + (d === current ? ' active' : '');
+    btn.textContent = d;
+    btn.onclick = function(){
+      var m = loadCustomDays();
+      if(d === defaultDay){ delete m[defaultDay]; }
+      else { m[defaultDay] = d; }
+      saveCustomDays(m);
+      overlay.remove();
+      renderRace();
+    };
+    picker.appendChild(btn);
+  });
+
+  var reset = document.createElement('button');
+  reset.className = 'day-picker-reset';
+  reset.textContent = '↩️ Restaurar padrão (este dia)';
+  reset.onclick = function(){
+    var m = loadCustomDays();
+    delete m[defaultDay];
+    saveCustomDays(m);
+    overlay.remove();
+    renderRace();
+  };
+  picker.appendChild(reset);
+
+  overlay.appendChild(picker);
+  document.body.appendChild(overlay);
+}
 </script>
 </body>
 </html>
