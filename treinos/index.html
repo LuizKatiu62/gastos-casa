@@ -238,6 +238,19 @@ input[type=range].esf::-webkit-slider-thumb{-webkit-appearance:none;width:22px;h
 .strava-btn-s{width:100%;padding:.5rem;background:none;border:none;color:#aaa;cursor:pointer;font-size:.8rem;margin-top:.5rem;font-family:inherit}
 .strava-act-item{padding:.6rem .75rem;border:1.5px solid #eee;border-radius:10px;margin-bottom:.5rem;cursor:pointer;transition:border-color .15s}
 .strava-act-item:hover{border-color:#fc4c02;background:#fff5f2}
+/* Exames / Saúde */
+.exam-card{background:#fff;border-radius:14px;box-shadow:0 1px 6px rgba(0,0,0,.07);padding:14px;margin-bottom:10px}
+.exam-card-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.exam-date-badge{font-size:13px;font-weight:800;color:var(--text)}
+.exam-lab{font-size:11px;color:var(--text3);margin-top:1px}
+.exam-vals{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.exam-val{display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:8px;background:#f8f9fa}
+.exam-val-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.exam-val-label{font-size:10px;color:var(--text3);flex:1}
+.exam-val-num{font-size:12px;font-weight:800}
+.exam-pdf-btn{background:#eff6ff;color:#1d4ed8;border:1.5px solid #bfdbfe;border-radius:20px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer}
+.exam-actions{display:flex;gap:6px;margin-top:10px}
+.exam-del-btn{background:none;border:none;color:#ef4444;font-size:11px;cursor:pointer;padding:4px;margin-left:auto}
 /* Desafio 64 screen */
 .dsf-hero{background:linear-gradient(135deg,#1e3a5f 0%,#1a6b3a 100%);padding:18px 16px 14px;color:#fff;text-align:center}
 .dsf-countdown{font-size:36px;font-weight:900;line-height:1}
@@ -521,6 +534,68 @@ input[type=range].esf::-webkit-slider-thumb{-webkit-appearance:none;width:22px;h
 </div>
 </div>
 
+<!-- Saúde / Exames -->
+<div id="tela-exames" class="screen">
+  <div class="page-hero" style="background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 100%)">
+    <div class="page-hero-title">🩺 Saúde</div>
+    <div class="page-hero-sub" id="exames-sub">Exames de sangue</div>
+  </div>
+  <div style="padding:10px 12px 0;display:flex;gap:8px;flex-wrap:wrap">
+    <button onclick="abrirExame()" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:20px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">+ Novo Exame</button>
+    <label style="background:#f0fdf4;color:#15803d;border:1px solid #86efac;border-radius:20px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">
+      📎 Anexar PDF
+      <input type="file" accept=".pdf" onchange="uploadExamePDF(this)" style="display:none" id="exam-pdf-upload">
+    </label>
+  </div>
+  <div id="exames-list" style="padding:8px 12px"></div>
+</div>
+
+<!-- Modal Exame -->
+<div class="modal-overlay" id="overlay-exame">
+<div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-hdr">
+    <span class="modal-title" id="titulo-exame">Novo Exame</span>
+    <button class="modal-x" onclick="fechar('overlay-exame')">✕</button>
+  </div>
+  <div class="modal-body">
+    <input type="hidden" id="ex-id">
+    <div class="fg"><label class="fl">Data do Exame</label><input class="fi" type="date" id="ex-data"></div>
+    <div class="fg"><label class="fl">Laboratório (opcional)</label><input class="fi" type="text" id="ex-lab" placeholder="ex: LifeLabs"></div>
+    <div style="font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin:12px 0 6px">🔴 Hematologia</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="fg"><label class="fl">Hemoglobina (g/dL)</label><input class="fi" type="number" id="ex-hgb" placeholder="13.5–17.5" step="0.1"></div>
+      <div class="fg"><label class="fl">Hematócrito (%)</label><input class="fi" type="number" id="ex-hct" placeholder="41–53" step="0.1"></div>
+      <div class="fg"><label class="fl">Ferritina (ng/mL)</label><input class="fi" type="number" id="ex-fer" placeholder=">50 ideal" step="0.1"></div>
+      <div class="fg"><label class="fl">Ferro Sérico (mcg/dL)</label><input class="fi" type="number" id="ex-iron" placeholder="65–175" step="1"></div>
+    </div>
+    <div style="font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin:12px 0 6px">💊 Vitaminas & Minerais</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="fg"><label class="fl">Vitamina D (ng/mL)</label><input class="fi" type="number" id="ex-vitd" placeholder=">40 ideal" step="0.1"></div>
+      <div class="fg"><label class="fl">Vitamina B12 (pg/mL)</label><input class="fi" type="number" id="ex-b12" placeholder="200–900" step="1"></div>
+    </div>
+    <div style="font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin:12px 0 6px">📊 Metabólico</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="fg"><label class="fl">Glicose (mg/dL)</label><input class="fi" type="number" id="ex-glc" placeholder="70–99" step="1"></div>
+      <div class="fg"><label class="fl">TSH (mIU/L)</label><input class="fi" type="number" id="ex-tsh" placeholder="0.4–4.0" step="0.1"></div>
+      <div class="fg"><label class="fl">PCR (mg/L)</label><input class="fi" type="number" id="ex-pcr" placeholder="<3" step="0.1"></div>
+    </div>
+    <div style="font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin:12px 0 6px">🫀 Lipídios</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="fg"><label class="fl">Colesterol Total (mg/dL)</label><input class="fi" type="number" id="ex-chol" placeholder="<200" step="1"></div>
+      <div class="fg"><label class="fl">HDL (mg/dL)</label><input class="fi" type="number" id="ex-hdl" placeholder=">40" step="1"></div>
+      <div class="fg"><label class="fl">LDL (mg/dL)</label><input class="fi" type="number" id="ex-ldl" placeholder="<130" step="1"></div>
+      <div class="fg"><label class="fl">Triglicerídeos (mg/dL)</label><input class="fi" type="number" id="ex-trig" placeholder="<150" step="1"></div>
+    </div>
+    <div class="fg"><label class="fl">Notas</label><input class="fi" type="text" id="ex-notas" placeholder="observações do médico..."></div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn-sec" id="btn-del-exame" onclick="deletarExame()" style="display:none">🗑️ Excluir</button>
+    <button class="btn-pri" onclick="salvarExame()">Salvar</button>
+  </div>
+</div>
+</div>
+
 <!-- FABs -->
 <button class="fab" id="fab-treino" onclick="abrirTreino()">+</button>
 <button class="fab" id="fab-corrida" onclick="abrirCorrida()" style="display:none">+</button>
@@ -536,6 +611,7 @@ input[type=range].esf::-webkit-slider-thumb{-webkit-appearance:none;width:22px;h
   <button class="nav-btn nav-swim" id="nav-natacao" onclick="irParaTela('natacao')"><span class="nav-icon">🏊</span><span>Natação</span></button>
   <button class="nav-btn" id="nav-gym" onclick="irParaTela('gym')"><span class="nav-icon">💪</span><span>Gym</span></button>
   <button class="nav-btn" id="nav-desafio" onclick="irParaTela('desafio')"><span class="nav-icon">🏆</span><span>Desafio</span></button>
+  <button class="nav-btn" id="nav-exames" onclick="irParaTela('exames')"><span class="nav-icon">🩺</span><span>Saúde</span></button>
   <button class="nav-btn" id="nav-stats" onclick="irParaTela('stats')"><span class="nav-icon">📊</span><span>Análise</span></button>
   <button class="nav-btn" id="nav-corridas" onclick="irParaTela('corridas')"><span class="nav-icon">🏁</span><span>Provas</span></button>
 </nav>
@@ -938,6 +1014,7 @@ function irParaTela(nome){
   if(nome==='natacao')  renderNatacao();
   if(nome==='gym')      renderGym();
   if(nome==='desafio')  renderDesafio();
+  if(nome==='exames')   renderExames();
 }
 function fechar(id){ document.getElementById(id).classList.remove('aberto'); }
 
@@ -3012,6 +3089,142 @@ function renderDesafio(){
       }
     });
   },60);
+}
+
+// ── Saúde / Exames ──
+var EXAM_FIELDS=[
+  {key:'hgb', label:'Hemoglobina', unit:'g/dL', min:13.5, max:17.5},
+  {key:'hct', label:'Hematócrito', unit:'%',    min:41,   max:53},
+  {key:'fer', label:'Ferritina',   unit:'ng/mL', min:50,  max:400},
+  {key:'iron',label:'Ferro',       unit:'mcg/dL',min:65,  max:175},
+  {key:'vitd',label:'Vit. D',      unit:'ng/mL', min:40,  max:100},
+  {key:'b12', label:'Vit. B12',    unit:'pg/mL', min:200, max:900},
+  {key:'glc', label:'Glicose',     unit:'mg/dL', min:70,  max:99},
+  {key:'tsh', label:'TSH',         unit:'mIU/L', min:0.4, max:4.0},
+  {key:'pcr', label:'PCR',         unit:'mg/L',  min:0,   max:3},
+  {key:'chol',label:'Colesterol',  unit:'mg/dL', min:0,   max:200},
+  {key:'hdl', label:'HDL',         unit:'mg/dL', min:40,  max:999},
+  {key:'ldl', label:'LDL',         unit:'mg/dL', min:0,   max:130},
+  {key:'trig',label:'Triglicerídeos',unit:'mg/dL',min:0,  max:150}
+];
+
+function loadExames(){try{return JSON.parse(localStorage.getItem('treinos_exames'))||[];}catch(e){return[];}}
+function saveExames(arr){localStorage.setItem('treinos_exames',JSON.stringify(arr));}
+function examValColor(f,v){
+  if(v===undefined||v===null||v==='') return '#94a3b8';
+  var n=parseFloat(v);
+  if(isNaN(n)) return '#94a3b8';
+  if(f.key==='hdl') return n>=f.min?'#22c55e':'#ef4444';
+  if(n>=f.min&&n<=f.max) return '#22c55e';
+  var pct=f.max>0?(n/f.max):0;
+  if(f.min===0) return n<=f.max?'#22c55e':n<=f.max*1.2?'#f59e0b':'#ef4444';
+  if(n<f.min) return n>=f.min*0.85?'#f59e0b':'#ef4444';
+  return n<=f.max*1.15?'#f59e0b':'#ef4444';
+}
+
+function abrirExame(id){
+  var list=loadExames(), ex=id?list.find(function(e){return e.id===id;}):null;
+  document.getElementById('ex-id').value=id||'';
+  document.getElementById('titulo-exame').textContent=id?'Editar Exame':'Novo Exame';
+  document.getElementById('btn-del-exame').style.display=id?'block':'none';
+  document.getElementById('ex-data').value=ex?ex.data:hoje();
+  document.getElementById('ex-lab').value=ex?ex.lab||'':'';
+  document.getElementById('ex-notas').value=ex?ex.notas||'':'';
+  EXAM_FIELDS.forEach(function(f){
+    var el=document.getElementById('ex-'+f.key);
+    if(el) el.value=ex&&ex.valores&&ex.valores[f.key]!=null?ex.valores[f.key]:'';
+  });
+  document.getElementById('overlay-exame').classList.add('aberto');
+}
+
+function salvarExame(){
+  var id=document.getElementById('ex-id').value||uid();
+  var vals={};
+  EXAM_FIELDS.forEach(function(f){
+    var el=document.getElementById('ex-'+f.key);
+    if(el&&el.value!=='') vals[f.key]=parseFloat(el.value);
+  });
+  var obj={id:id,data:document.getElementById('ex-data').value||hoje(),lab:document.getElementById('ex-lab').value.trim(),notas:document.getElementById('ex-notas').value.trim(),valores:vals};
+  var list=loadExames();
+  var idx=list.findIndex(function(e){return e.id===id;});
+  if(idx>=0) list[idx]=obj; else list.push(obj);
+  list.sort(function(a,b){return b.data.localeCompare(a.data);});
+  saveExames(list);
+  fechar('overlay-exame');
+  renderExames();
+  toast('✅ Exame salvo!');
+}
+
+function deletarExame(){
+  var id=document.getElementById('ex-id').value;
+  var list=loadExames().filter(function(e){return e.id!==id;});
+  saveExames(list);
+  try{localStorage.removeItem('treinos_exam_pdf_'+id);}catch(e){}
+  fechar('overlay-exame');
+  renderExames();
+  toast('🗑️ Exame excluído');
+}
+
+function uploadExamePDF(input){
+  var file=input.files[0]; if(!file)return;
+  if(file.size>3*1024*1024){toast('⚠️ PDF muito grande (máx. 3MB)');input.value='';return;}
+  var list=loadExames();
+  // Attach to most recent exam or create placeholder
+  var targetId=list.length>0?list[0].id:null;
+  if(!targetId){toast('⚠️ Adicione um exame primeiro, depois anexe o PDF');input.value='';return;}
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      localStorage.setItem('treinos_exam_pdf_'+targetId,e.target.result);
+      renderExames();
+      toast('✅ PDF anexado ao último exame');
+    }catch(err){toast('❌ Sem espaço para salvar o PDF');}
+    input.value='';
+  };
+  reader.readAsDataURL(file);
+}
+
+function verPDF(id){
+  var data=localStorage.getItem('treinos_exam_pdf_'+id);
+  if(!data){toast('⚠️ PDF não encontrado');return;}
+  var win=window.open();
+  if(win){win.document.write('<iframe src="'+data+'" style="width:100%;height:100%;border:none"></iframe>'); win.document.close();}
+  else{var a=document.createElement('a');a.href=data;a.download='exame.pdf';a.click();}
+}
+
+function renderExames(){
+  var list=loadExames();
+  var sub=document.getElementById('exames-sub');
+  if(sub) sub.textContent=list.length>0?list.length+' exame'+(list.length>1?'s':''):'Nenhum exame ainda';
+  var el=document.getElementById('exames-list');
+  if(!el) return;
+  if(!list.length){
+    el.innerHTML='<div class="empty"><div class="empty-icon">🩺</div><div>Nenhum exame registrado.<br>Toque em + Novo Exame para adicionar.</div></div>';
+    return;
+  }
+  el.innerHTML=list.map(function(ex){
+    var hasPDF=!!localStorage.getItem('treinos_exam_pdf_'+ex.id);
+    var valsHtml=EXAM_FIELDS.filter(function(f){return ex.valores&&ex.valores[f.key]!=null;}).map(function(f){
+      var v=ex.valores[f.key];
+      var col=examValColor(f,v);
+      return '<div class="exam-val">'
+        +'<div class="exam-val-dot" style="background:'+col+'"></div>'
+        +'<span class="exam-val-label">'+f.label+'</span>'
+        +'<span class="exam-val-num" style="color:'+col+'">'+v+'<small style="font-size:9px;font-weight:500"> '+f.unit+'</small></span>'
+        +'</div>';
+    }).join('');
+    return '<div class="exam-card">'
+      +'<div class="exam-card-hdr">'
+        +'<div><div class="exam-date-badge">'+fmtDataLonga(ex.data)+'</div>'+(ex.lab?'<div class="exam-lab">'+ex.lab+'</div>':'')+'</div>'
+        +'<button onclick="abrirExame(\''+ex.id+'\')" style="background:#f1f5f9;border:none;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">✏️ Editar</button>'
+      +'</div>'
+      +(valsHtml?'<div class="exam-vals">'+valsHtml+'</div>':'')
+      +(ex.notas?'<div style="margin-top:8px;font-size:11px;color:var(--text2);background:#f8f9fa;border-radius:8px;padding:6px 8px">'+ex.notas+'</div>':'')
+      +'<div class="exam-actions">'
+        +(hasPDF?'<button class="exam-pdf-btn" onclick="verPDF(\''+ex.id+'\')">📄 Ver PDF</button>':'<span style="font-size:11px;color:var(--text3)">Sem PDF anexado</span>')
+      +'</div>'
+      +'</div>';
+  }).join('');
 }
 </script>
 </body>
