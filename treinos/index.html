@@ -193,10 +193,12 @@ input[type=range].esf::-webkit-slider-thumb{-webkit-appearance:none;width:22px;h
 .empty-icon{font-size:38px;margin-bottom:8px}
 
 /* Plan week */
-.plan-day{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;background:var(--bg);margin-bottom:5px}
+.plan-day{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;background:var(--bg);margin-bottom:5px;cursor:pointer;transition:opacity .15s}
 .plan-day:last-child{margin-bottom:0}
 .plan-day.plan-hoje{background:var(--blue-light);border:1.5px solid var(--blue)}
 .plan-day.plan-race{background:#fefce8;border:1.5px solid var(--gold)}
+.plan-day.plan-sel{outline:2.5px solid var(--blue);outline-offset:1px}
+.plan-day.plan-swap{outline:2px solid var(--green);outline-offset:1px}
 .plan-day-name{font-size:10px;font-weight:700;color:var(--text3);width:26px;flex-shrink:0;text-transform:uppercase}
 .plan-day-icon{font-size:18px;width:26px;text-align:center;flex-shrink:0}
 .plan-day-body{flex:1;min-width:0}
@@ -600,11 +602,18 @@ function getPlanoKey(hj){
   return 'pre';
 }
 
+var _planSwapSel = null; // dow selecionado para troca
+
+function loadDayRemap(){ try{ return JSON.parse(localStorage.getItem('treinos_day_remap'))||{}; }catch(e){ return {}; } }
+function saveDayRemap(m){ localStorage.setItem('treinos_day_remap', JSON.stringify(m)); }
+
 function renderPlanoSemana(){
   var hj=hoje();
   var planoKey=getPlanoKey(hj);
   var dias=PLANO_SEMANA[planoKey];
   var ph=getCurrentPhase();
+  var remap=loadDayRemap();
+  var hasCustom=Object.keys(remap).length>0;
 
   // Build this week Mon–Sun
   var now=new Date(),dow=now.getDay();
@@ -614,24 +623,29 @@ function renderPlanoSemana(){
   if(ph){
     banner='<div class="plan-phase-banner" style="background:'+ph.color+'22;border:1.5px solid '+ph.color+'44">'+
       '<span class="plan-phase-icon">'+ph.icon+'</span>'+
-      '<div><div class="plan-phase-name" style="color:'+ph.color+'">'+ph.label+'</div>'+
+      '<div style="flex:1"><div class="plan-phase-name" style="color:'+ph.color+'">'+ph.label+'</div>'+
       '<div class="plan-phase-tip">'+ph.tip+'</div></div>'+
+      (hasCustom?'<button onclick="resetDayRemap()" style="font-size:10px;background:none;border:none;color:var(--text3);cursor:pointer;padding:2px 4px;flex-shrink:0">↩️ Redefinir</button>':'')+
     '</div>';
   }
 
   var html=banner;
+  var dayNames=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
   for(var i=0;i<7;i++){
     var dt=new Date(mon); dt.setDate(mon.getDate()+i);
     var ds=dt.getFullYear()+'-'+pad(dt.getMonth()+1)+'-'+pad(dt.getDate());
     var dayDow=dt.getDay(); // 0=Sun
-    var entry=dias[dayDow]||{icon:'🛋️',label:'Descanso',detail:''};
+    // Apply remap: use remapped dow for activity lookup
+    var effDow = (remap[dayDow] !== undefined) ? remap[dayDow] : dayDow;
+    var entry=dias[effDow]||{icon:'🛋️',label:'Descanso',detail:''};
     // Race day override
     if(ds===RACE_DATE) entry={icon:'🏆',label:'DIA DO DESAFIO!',detail:'Pace 9–10:30/km · Galloway 3+1 · Boa corrida, Luiz!'};
     var isToday=ds===hj;
     var isRace=ds===RACE_DATE;
-    var cls='plan-day'+(isRace?' plan-race':isToday?' plan-hoje':'');
-    var dayNames=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
-    html+='<div class="'+cls+'">'+
+    var isSel=_planSwapSel===dayDow;
+    var isSwapped=remap[dayDow]!==undefined;
+    var cls='plan-day'+(isRace?' plan-race':isToday?' plan-hoje':'')+(isSel?' plan-sel':isSwapped?' plan-swap':'');
+    html+='<div class="'+cls+'" onclick="selectPlanDay('+dayDow+')">'+
       '<div class="plan-day-name">'+dayNames[dayDow]+'</div>'+
       '<div class="plan-day-icon">'+entry.icon+'</div>'+
       '<div class="plan-day-body">'+
@@ -642,6 +656,38 @@ function renderPlanoSemana(){
     '</div>';
   }
   document.getElementById('plano-semana-card').innerHTML=html;
+}
+
+function selectPlanDay(dayDow){
+  if(_planSwapSel===null){
+    _planSwapSel=dayDow;
+    renderPlanoSemana();
+  } else if(_planSwapSel===dayDow){
+    _planSwapSel=null;
+    renderPlanoSemana();
+  } else {
+    // Swap the two days
+    var remap=loadDayRemap();
+    var a=_planSwapSel, b=dayDow;
+    var ra=(remap[a]!==undefined)?remap[a]:a;
+    var rb=(remap[b]!==undefined)?remap[b]:b;
+    if(ra===b && rb===a){ // already swapped — undo
+      delete remap[a]; delete remap[b];
+    } else {
+      remap[a]=rb; remap[b]=ra;
+    }
+    saveDayRemap(remap);
+    _planSwapSel=null;
+    renderPlanoSemana();
+    toast('✅ Dias trocados');
+  }
+}
+
+function resetDayRemap(){
+  localStorage.removeItem('treinos_day_remap');
+  _planSwapSel=null;
+  renderPlanoSemana();
+  toast('↩️ Plano restaurado');
 }
 
 // ── Race helpers ──
