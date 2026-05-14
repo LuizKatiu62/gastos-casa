@@ -540,12 +540,8 @@ input[type=range].esf::-webkit-slider-thumb{-webkit-appearance:none;width:22px;h
     <div class="page-hero-title">🩺 Saúde</div>
     <div class="page-hero-sub" id="exames-sub">Exames de sangue</div>
   </div>
-  <div style="padding:10px 12px 0;display:flex;gap:8px;flex-wrap:wrap">
+  <div style="padding:10px 12px 0">
     <button onclick="abrirExame()" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:20px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">+ Novo Exame</button>
-    <label style="background:#f0fdf4;color:#15803d;border:1px solid #86efac;border-radius:20px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">
-      📎 Anexar PDF
-      <input type="file" accept=".pdf" onchange="uploadExamePDF(this)" style="display:none" id="exam-pdf-upload">
-    </label>
   </div>
   <div id="exames-list" style="padding:8px 12px"></div>
 </div>
@@ -588,6 +584,15 @@ input[type=range].esf::-webkit-slider-thumb{-webkit-appearance:none;width:22px;h
       <div class="fg"><label class="fl">Triglicerídeos (mg/dL)</label><input class="fi" type="number" id="ex-trig" placeholder="<150" step="1"></div>
     </div>
     <div class="fg"><label class="fl">Notas</label><input class="fi" type="text" id="ex-notas" placeholder="observações do médico..."></div>
+    <div class="fg" style="margin-top:4px">
+      <label class="fl">PDF do Exame</label>
+      <div id="ex-pdf-status" style="font-size:12px;color:var(--text3);margin-bottom:6px;padding:8px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0">Nenhum PDF anexado</div>
+      <div style="display:flex;gap:8px">
+        <button type="button" onclick="document.getElementById('ex-pdf-input').click()" style="flex:1;background:#f0fdf4;color:#15803d;border:1px solid #86efac;border-radius:10px;padding:9px;font-size:12px;font-weight:700;cursor:pointer">📎 Selecionar PDF</button>
+        <button type="button" id="ex-pdf-remove-btn" onclick="removerPDFModal()" style="display:none;background:#fff1f2;color:#dc2626;border:1px solid #fecaca;border-radius:10px;padding:9px 14px;font-size:12px;font-weight:700;cursor:pointer">🗑️</button>
+      </div>
+      <input type="file" id="ex-pdf-input" accept=".pdf,application/pdf" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none" onchange="handlePDFInput(this)">
+    </div>
   </div>
   <div class="modal-footer">
     <button class="btn-sec" id="btn-del-exame" onclick="deletarExame()" style="display:none">🗑️ Excluir</button>
@@ -3122,8 +3127,68 @@ function examValColor(f,v){
   return n<=f.max*1.15?'#f59e0b':'#ef4444';
 }
 
+// IndexedDB for PDFs (no size limit, works on iOS)
+var _examDB=null;
+function getExamDB(){
+  if(_examDB) return Promise.resolve(_examDB);
+  return new Promise(function(res,rej){
+    var req=indexedDB.open('treinos_exam_pdfs',1);
+    req.onupgradeneeded=function(e){e.target.result.createObjectStore('pdfs');};
+    req.onsuccess=function(e){_examDB=e.target.result;res(_examDB);};
+    req.onerror=function(){rej(req.error);};
+  });
+}
+function savePDFtoDB(id,buf){
+  return getExamDB().then(function(db){return new Promise(function(res,rej){
+    var tx=db.transaction('pdfs','readwrite');
+    tx.objectStore('pdfs').put(buf,id);
+    tx.oncomplete=res; tx.onerror=function(){rej(tx.error);};
+  });});
+}
+function getPDFfromDB(id){
+  return getExamDB().then(function(db){return new Promise(function(res,rej){
+    var tx=db.transaction('pdfs','readonly');
+    var req=tx.objectStore('pdfs').get(id);
+    req.onsuccess=function(){res(req.result||null);}; req.onerror=function(){rej(req.error);};
+  });});
+}
+function delPDFfromDB(id){
+  return getExamDB().then(function(db){return new Promise(function(res){
+    var tx=db.transaction('pdfs','readwrite');
+    tx.objectStore('pdfs').delete(id);
+    tx.oncomplete=res; tx.onerror=res;
+  });});
+}
+
+// PDF modal state
+var _pendingPDF=null; // {buf:ArrayBuffer, name:string}
+var _removePDF=false;
+
+function handlePDFInput(input){
+  var file=input.files[0]; if(!file) return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    _pendingPDF={buf:e.target.result,name:file.name};
+    _removePDF=false;
+    var st=document.getElementById('ex-pdf-status');
+    st.textContent='📄 '+file.name; st.style.color='#15803d';
+    document.getElementById('ex-pdf-remove-btn').style.display='block';
+  };
+  reader.onerror=function(){toast('❌ Erro ao ler o PDF');};
+  reader.readAsArrayBuffer(file);
+  input.value='';
+}
+
+function removerPDFModal(){
+  _pendingPDF=null; _removePDF=true;
+  var st=document.getElementById('ex-pdf-status');
+  st.textContent='PDF será removido ao salvar'; st.style.color='#dc2626';
+  document.getElementById('ex-pdf-remove-btn').style.display='none';
+}
+
 function abrirExame(id){
   var list=loadExames(), ex=id?list.find(function(e){return e.id===id;}):null;
+  _pendingPDF=null; _removePDF=false;
   document.getElementById('ex-id').value=id||'';
   document.getElementById('titulo-exame').textContent=id?'Editar Exame':'Novo Exame';
   document.getElementById('btn-del-exame').style.display=id?'block':'none';
@@ -3134,6 +3199,14 @@ function abrirExame(id){
     var el=document.getElementById('ex-'+f.key);
     if(el) el.value=ex&&ex.valores&&ex.valores[f.key]!=null?ex.valores[f.key]:'';
   });
+  var st=document.getElementById('ex-pdf-status');
+  document.getElementById('ex-pdf-remove-btn').style.display='none';
+  if(ex&&ex.hasPdf){
+    st.textContent='📄 PDF já anexado'; st.style.color='#15803d';
+    document.getElementById('ex-pdf-remove-btn').style.display='block';
+  } else {
+    st.textContent='Nenhum PDF anexado'; st.style.color='var(--text3)';
+  }
   document.getElementById('overlay-exame').classList.add('aberto');
 }
 
@@ -3144,52 +3217,52 @@ function salvarExame(){
     var el=document.getElementById('ex-'+f.key);
     if(el&&el.value!=='') vals[f.key]=parseFloat(el.value);
   });
-  var obj={id:id,data:document.getElementById('ex-data').value||hoje(),lab:document.getElementById('ex-lab').value.trim(),notas:document.getElementById('ex-notas').value.trim(),valores:vals};
   var list=loadExames();
+  var existing=list.find(function(e){return e.id===id;})||{};
+  var hasPdf=_pendingPDF?true:(_removePDF?false:(existing.hasPdf||false));
+  var obj={id:id,data:document.getElementById('ex-data').value||hoje(),lab:document.getElementById('ex-lab').value.trim(),notas:document.getElementById('ex-notas').value.trim(),valores:vals,hasPdf:hasPdf};
   var idx=list.findIndex(function(e){return e.id===id;});
   if(idx>=0) list[idx]=obj; else list.push(obj);
   list.sort(function(a,b){return b.data.localeCompare(a.data);});
   saveExames(list);
+  if(_pendingPDF){
+    savePDFtoDB(id,_pendingPDF.buf)
+      .then(function(){toast('✅ Exame e PDF salvos!');})
+      .catch(function(){toast('✅ Exame salvo (erro ao salvar PDF)');});
+  } else if(_removePDF){
+    delPDFfromDB(id);
+    toast('✅ Exame salvo (PDF removido)');
+  } else {
+    toast('✅ Exame salvo!');
+  }
   fechar('overlay-exame');
   renderExames();
-  toast('✅ Exame salvo!');
 }
 
 function deletarExame(){
   var id=document.getElementById('ex-id').value;
   var list=loadExames().filter(function(e){return e.id!==id;});
   saveExames(list);
+  delPDFfromDB(id);
   try{localStorage.removeItem('treinos_exam_pdf_'+id);}catch(e){}
   fechar('overlay-exame');
   renderExames();
   toast('🗑️ Exame excluído');
 }
 
-function uploadExamePDF(input){
-  var file=input.files[0]; if(!file)return;
-  if(file.size>3*1024*1024){toast('⚠️ PDF muito grande (máx. 3MB)');input.value='';return;}
-  var list=loadExames();
-  // Attach to most recent exam or create placeholder
-  var targetId=list.length>0?list[0].id:null;
-  if(!targetId){toast('⚠️ Adicione um exame primeiro, depois anexe o PDF');input.value='';return;}
-  var reader=new FileReader();
-  reader.onload=function(e){
-    try{
-      localStorage.setItem('treinos_exam_pdf_'+targetId,e.target.result);
-      renderExames();
-      toast('✅ PDF anexado ao último exame');
-    }catch(err){toast('❌ Sem espaço para salvar o PDF');}
-    input.value='';
-  };
-  reader.readAsDataURL(file);
-}
-
 function verPDF(id){
-  var data=localStorage.getItem('treinos_exam_pdf_'+id);
-  if(!data){toast('⚠️ PDF não encontrado');return;}
-  var win=window.open();
-  if(win){win.document.write('<iframe src="'+data+'" style="width:100%;height:100%;border:none"></iframe>'); win.document.close();}
-  else{var a=document.createElement('a');a.href=data;a.download='exame.pdf';a.click();}
+  getPDFfromDB(id).then(function(buf){
+    if(!buf){toast('⚠️ PDF não encontrado');return;}
+    var blob=new Blob([buf],{type:'application/pdf'});
+    var url=URL.createObjectURL(blob);
+    var win=window.open(url,'_blank','noopener');
+    if(!win){
+      var a=document.createElement('a');
+      a.href=url; a.download='exame.pdf';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    }
+    setTimeout(function(){URL.revokeObjectURL(url);},60000);
+  }).catch(function(){toast('❌ Erro ao abrir PDF');});
 }
 
 function renderExames(){
@@ -3203,7 +3276,7 @@ function renderExames(){
     return;
   }
   el.innerHTML=list.map(function(ex){
-    var hasPDF=!!localStorage.getItem('treinos_exam_pdf_'+ex.id);
+    var hasPDF=!!(ex.hasPdf);
     var valsHtml=EXAM_FIELDS.filter(function(f){return ex.valores&&ex.valores[f.key]!=null;}).map(function(f){
       var v=ex.valores[f.key];
       var col=examValColor(f,v);
