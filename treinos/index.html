@@ -450,6 +450,9 @@ input[type=range].esf::-webkit-slider-thumb{-webkit-appearance:none;width:22px;h
     <div class="dsf-countdown-sub" id="dsf-countdown-sub">dias para o Desafio 64km</div>
     <div style="font-size:10px;opacity:.55;margin-top:4px">13 de junho de 2026 · Little the Rez · Saint John NB</div>
   </div>
+  <div style="padding:8px 14px 0;display:flex;justify-content:flex-end">
+    <button onclick="openDsfImport()" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:20px;padding:5px 14px;font-size:11px;font-weight:700;cursor:pointer">📥 Importar plano do Desafio 64</button>
+  </div>
   <div id="dsf-content" style="padding:12px 14px"></div>
 </div>
 
@@ -489,6 +492,31 @@ input[type=range].esf::-webkit-slider-thumb{-webkit-appearance:none;width:22px;h
   <div class="modal-footer">
     <button class="btn-sec" id="dsf-edit-clear" onclick="dsfClearCustom()">Remover alteração</button>
     <button class="btn-pri" onclick="dsfSaveCustom()">Salvar</button>
+  </div>
+</div>
+</div>
+
+<!-- Desafio import overlay -->
+<div class="modal-overlay" id="overlay-dsf-import">
+<div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-hdr">
+    <span class="modal-title">Importar Plano do Desafio 64</span>
+    <button class="modal-x" onclick="fechar('overlay-dsf-import')">✕</button>
+  </div>
+  <div class="modal-body">
+    <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:10px">
+      1. No app <strong>Desafio 64km</strong>, entre no modo Admin<br>
+      2. Toque em <strong>📤 → Treinos</strong> e copie o texto<br>
+      3. Cole aqui abaixo
+    </div>
+    <div class="fg">
+      <textarea class="fi" id="dsf-import-txt" rows="5" placeholder='{"exported":"2026-05-14","days":[...]}' style="font-size:11px;font-family:monospace;resize:none"></textarea>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn-sec" onclick="fechar('overlay-dsf-import')">Cancelar</button>
+    <button class="btn-pri" onclick="dsfDoImport()">Importar</button>
   </div>
 </div>
 </div>
@@ -2699,6 +2727,31 @@ function dsfClearCustom(){
   dsfSaveCustomStore(custom);
   fechar('overlay-dsf-edit');
   renderDesafio();
+}
+function openDsfImport(){
+  document.getElementById('dsf-import-txt').value='';
+  document.getElementById('overlay-dsf-import').classList.add('aberto');
+}
+function dsfDoImport(){
+  try{
+    var raw=document.getElementById('dsf-import-txt').value.trim();
+    var obj=JSON.parse(raw);
+    if(!obj.days||!Array.isArray(obj.days)) throw new Error('formato inválido');
+    var custom=dsfLoadCustom();
+    obj.days.forEach(function(day){
+      if(!day.date) return;
+      var base=PLAN_D64.find(function(p){return p.date===day.date;});
+      var same=base&&base.type===day.type&&base.km===day.km;
+      if(same){ delete custom[day.date]; }
+      else{ custom[day.date]={type:day.type,km:day.km,title:day.title}; }
+    });
+    dsfSaveCustomStore(custom);
+    fechar('overlay-dsf-import');
+    renderDesafio();
+    toast('✅ Plano importado!');
+  }catch(e){
+    toast('❌ Erro: '+e.message);
+  }
 }
 
 function renderDesafio(){
