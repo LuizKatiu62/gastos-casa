@@ -254,7 +254,8 @@ input[type=range].esf::-webkit-slider-thumb{-webkit-appearance:none;width:22px;h
   <div class="sync-line">
     <div class="sync-dot" id="sync-dot"></div>
     <span class="sync-txt" id="sync-txt">conectando...</span>
-    <span style="margin-left:auto;font-size:10px;color:var(--text3)" id="app-ver-txt"></span>
+    <button onclick="syncManual()" style="margin-left:auto;background:none;border:none;font-size:18px;cursor:pointer;padding:4px 6px;line-height:1" title="Sincronizar agora">🔄</button>
+    <span style="font-size:10px;color:var(--text3)" id="app-ver-txt"></span>
   </div>
 </div>
 
@@ -1057,6 +1058,38 @@ function importarGarmin(input){
 }
 
 // ── Firebase sync ──
+function mergeFromFirebase(fb){
+  var localTs=localStorage.getItem('treinos_ts')?new Date(localStorage.getItem('treinos_ts')).getTime():0;
+  var fbTs=fb&&fb._ts?fb._ts:0;
+  if(!fb||!fb.treinos) return false;
+  if(fbTs<=localTs+500) return false; // Firebase not newer — skip
+  _fbLatest=fb.treinos.slice();
+  var dd=Object.assign({},fb); delete dd._ts;
+  // Merge: keep any local-only entries not in Firebase
+  getDados().treinos.forEach(function(t){
+    if(t.id&&!dd.treinos.some(function(ft){return ft.id===t.id;})) dd.treinos.push(t);
+  });
+  localStorage.setItem('treinos',JSON.stringify(dd));
+  localStorage.setItem('treinos_ts',new Date(fbTs).toISOString());
+  renderDash();
+  if(_tela==='log') renderLog();
+  if(_tela==='corridas') renderCorridas();
+  if(_tela==='stats') renderStats();
+  var h=new Date(fbTs),hh=h.getHours(),mm=h.getMinutes();
+  syncStatus('#22c55e','atualizado '+hh+':'+pad(mm)+' ☁️');
+  return true;
+}
+
+function syncManual(){
+  if(!_fbRef){ toast('⚠️ Firebase não conectado'); return; }
+  syncStatus('#f59e0b','buscando...');
+  _fbRef.once('value').then(function(snap){
+    var fb=snap.val();
+    var updated=mergeFromFirebase(fb);
+    if(!updated) syncStatus('#22c55e','já atualizado ✓');
+  }).catch(function(){ syncStatus('#ef4444','sem conexão'); });
+}
+
 function iniciarSync(){
   try{
     _fbRef=firebase.database().ref('treinos/'+FB_SECRET); _fbAtivo=true;
@@ -1066,34 +1099,31 @@ function iniciarSync(){
       var localTs=localStorage.getItem('treinos_ts')?new Date(localStorage.getItem('treinos_ts')).getTime():0;
       var fbTs=fb&&fb._ts?fb._ts:0;
       if(!fb||!fb.treinos){
-        var loc=getDados(); loc._ts=Date.now(); _fbRef.set(loc); syncStatus('#22c55e','sincronizado');
-      } else if(fbTs>localTs+1000){
-        _fbLatest=fb.treinos.slice();
-        var dd=Object.assign({},fb); delete dd._ts;
-        var locNow=getDados();
-        locNow.treinos.forEach(function(t){ if(t.id&&!dd.treinos.some(function(ft){return ft.id===t.id;})) dd.treinos.push(t); });
-        localStorage.setItem('treinos',JSON.stringify(dd)); localStorage.setItem('treinos_ts',new Date().toISOString());
-        renderDash(); syncStatus('#22c55e','atualizado ☁️');
+        // Nothing in Firebase — upload local
+        var loc=getDados(); loc._ts=Date.now(); _fbRef.set(loc);
+        syncStatus('#22c55e','sincronizado');
+      } else if(fbTs>localTs+500){
+        // Firebase is newer — download
+        mergeFromFirebase(fb);
       } else {
+        // Local is same or newer — merge any Firebase-only entries then upload
         _fbLatest=fb.treinos?fb.treinos.slice():[];
         var loc2=getDados();
-        if(fb.treinos){ fb.treinos.forEach(function(t){ if(t.id&&!loc2.treinos.some(function(lt){return lt.id===t.id;})) loc2.treinos.push(t); }); localStorage.setItem('treinos',JSON.stringify(loc2)); localStorage.setItem('treinos_ts',new Date().toISOString()); }
-        loc2._ts=Date.now(); _fbRef.set(loc2); syncStatus('#22c55e','sincronizado');
+        if(fb.treinos){
+          fb.treinos.forEach(function(t){
+            if(t.id&&!loc2.treinos.some(function(lt){return lt.id===t.id;})) loc2.treinos.push(t);
+          });
+          localStorage.setItem('treinos',JSON.stringify(loc2));
+          localStorage.setItem('treinos_ts',new Date().toISOString());
+        }
+        loc2._ts=Date.now(); _fbRef.set(loc2);
+        syncStatus('#22c55e','sincronizado');
       }
+      // Real-time listener: fires when any other device saves
       _fbRef.on('value',function(snap2){
         if(_fbSalvando) return;
         var fb2=snap2.val(); if(!fb2||!fb2.treinos) return;
-        _fbLatest=fb2.treinos.slice();
-        var lTs=localStorage.getItem('treinos_ts')?new Date(localStorage.getItem('treinos_ts')).getTime():0;
-        var fTs=fb2._ts||0;
-        if(fTs>lTs+5000||(fb2.treinos.length>getDados().treinos.length&&fTs>lTs)){
-          var d2=Object.assign({},fb2); delete d2._ts;
-          var lc=getDados();
-          lc.treinos.forEach(function(t){ if(t.id&&!d2.treinos.some(function(ft){return ft.id===t.id;})) d2.treinos.push(t); });
-          localStorage.setItem('treinos',JSON.stringify(d2)); localStorage.setItem('treinos_ts',new Date(fTs).toISOString());
-          renderDash(); if(_tela==='log') renderLog(); if(_tela==='corridas') renderCorridas();
-          syncStatus('#22c55e','atualizado ☁️');
-        }
+        mergeFromFirebase(fb2);
       });
     }).catch(function(){syncStatus('#ef4444','offline');});
   }catch(e){syncStatus('#ef4444','erro');}
@@ -1339,6 +1369,13 @@ document.addEventListener('DOMContentLoaded',function(){
   handleStravaCallback();
   renderDash();
   firebase.auth().signInAnonymously().then(iniciarSync).catch(iniciarSync);
+
+  // Sync when app comes back to foreground (iOS: switching back from another app)
+  document.addEventListener('visibilitychange',function(){
+    if(document.visibilityState==='visible'&&_fbRef){
+      syncManual();
+    }
+  });
   // Show app version
   var verEl=document.getElementById('app-ver-txt');
   if(verEl){ var vm=document.querySelector('meta[name="app-version"]'); if(vm) verEl.textContent='v'+vm.content; }
