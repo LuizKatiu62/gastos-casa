@@ -2624,44 +2624,78 @@ function renderGym(){
 }
 
 // ── HEVY CSV IMPORT ──
+var HEVY_MON={Jan:'01',Feb:'02',Mar:'03',Apr:'04',May:'05',Jun:'06',Jul:'07',Aug:'08',Sep:'09',Oct:'10',Nov:'11',Dec:'12'};
+function parseHevyDT(s){
+  if(!s) return null;
+  s=s.trim();
+  // Format 1: "2024 Nov 27, 9:09am"
+  var m=s.match(/(\d{4})\s+([A-Za-z]{3})\s+(\d{1,2}),?\s*(\d{1,2}):(\d{2})\s*(am|pm)?/i);
+  if(m){
+    var yr=+m[1],mo=HEVY_MON[m[2]]||'01',day=pad(+m[3]);
+    var hr=+m[4],min=+m[5],ap=(m[6]||'').toLowerCase();
+    if(ap==='pm'&&hr<12) hr+=12;
+    if(ap==='am'&&hr===12) hr=0;
+    return new Date(yr+'-'+mo+'-'+day+'T'+pad(hr)+':'+pad(min)+':00');
+  }
+  // Format 2: "2024-11-27 09:09:08"
+  var dt=new Date(s.replace(' ','T'));
+  return isNaN(dt)?null:dt;
+}
+function parseHevyDate(s){
+  var dt=parseHevyDT(s);
+  if(!dt) return hoje();
+  return dt.getFullYear()+'-'+pad(dt.getMonth()+1)+'-'+pad(dt.getDate());
+}
+
 function importHevyCSV(input){
   var file=input.files[0]; if(!file)return;
   var reader=new FileReader();
   reader.onload=function(e){
     try{
-      var lines=e.target.result.split('\n');
+      var lines=e.target.result.split(/\r?\n/);
       var headers=parseCSVLine(lines[0]);
+      // Normalize headers (trim whitespace and BOM)
+      headers=headers.map(function(h){return h.replace(/^﻿/,'').trim();});
       var iTitle=headers.indexOf('Title'), iStart=headers.indexOf('Start Time'),
           iEnd=headers.indexOf('End Time'), iDesc=headers.indexOf('Description'),
           iExTitle=headers.indexOf('Exercise Title');
-      if(iTitle<0||iStart<0){toast('❌ CSV do Hevy não reconhecido');return;}
+      if(iTitle<0||iStart<0){
+        toast('❌ CSV do Hevy não reconhecido (cols: '+headers.slice(0,5).join(', ')+')');
+        return;
+      }
       var workouts={};
       for(var i=1;i<lines.length;i++){
         var cols=parseCSVLine(lines[i]); if(!cols||cols.length<2)continue;
-        var key=(cols[iTitle]||'')+'||'+(cols[iStart]||'');
-        if(!workouts[key]) workouts[key]={title:cols[iTitle],start:cols[iStart],end:cols[iEnd]||'',desc:cols[iDesc]||'',exs:[]};
-        var ex=(cols[iExTitle]||'').trim();
-        if(ex&&workouts[key].exs.indexOf(ex)<0) workouts[key].exs.push(ex);
-      }
-      var d=getDados(); var added=0;
-      Object.values(workouts).forEach(function(w){
-        if(!w.title)return;
-        var datePart=(w.start||'').split(' ')[0]||hoje();
-        var durMin=0;
-        if(w.start&&w.end){
-          var s=new Date(w.start.replace(' ','T')), en=new Date(w.end.replace(' ','T'));
-          if(!isNaN(s)&&!isNaN(en)) durMin=Math.round((en-s)/60000);
+        var rawTitle=(cols[iTitle]||'').trim();
+        var rawStart=(cols[iStart]||'').trim();
+        if(!rawTitle&&!rawStart) continue;
+        var key=rawTitle+'||'+rawStart;
+        if(!workouts[key]) workouts[key]={title:rawTitle,start:rawStart,end:(cols[iEnd]||'').trim(),desc:(iDesc>=0?cols[iDesc]||'':'').trim(),exs:[]};
+        if(iExTitle>=0){
+          var ex=(cols[iExTitle]||'').trim();
+          if(ex&&workouts[key].exs.indexOf(ex)<0) workouts[key].exs.push(ex);
         }
-        var id=Date.now().toString(36)+Math.random().toString(36).slice(2,6)+'_'+added;
+      }
+      var keys=Object.keys(workouts);
+      var d=getDados(); var added=0,skipped=0;
+      keys.forEach(function(k){
+        var w=workouts[k];
+        if(!w.title)return;
+        var datePart=parseHevyDate(w.start);
+        var durMin=0;
+        var dtS=parseHevyDT(w.start), dtE=parseHevyDT(w.end);
+        if(dtS&&dtE&&!isNaN(dtS)&&!isNaN(dtE)) durMin=Math.max(0,Math.round((dtE-dtS)/60000));
         var exists=d.gym.some(function(x){return x.data===datePart&&x.nome===w.title;});
         if(!exists){
+          var id=Date.now().toString(36)+Math.random().toString(36).slice(2,6)+'_'+added;
           d.gym.push({id:id,data:datePart,nome:w.title,duracao:durMin,exercicios:w.exs.length,notas:w.desc});
           added++;
-        }
+        } else skipped++;
       });
       salvarDados(d); renderGym();
-      toast('✅ '+added+' treinos importados do Hevy!');
-    }catch(err){toast('❌ Erro ao ler CSV: '+err.message);}
+      if(added>0) toast('✅ '+added+' treinos importados do Hevy'+(skipped?' ('+skipped+' já existiam)':'')+'!');
+      else toast('⚠️ Nenhum novo treino — '+skipped+' já existiam');
+    }catch(err){toast('❌ Erro: '+err.message);}
     input.value='';
   };
   reader.readAsText(file);
