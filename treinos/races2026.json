@@ -1,0 +1,41 @@
+{
+  "us": [
+    { "name": "Boston Marathon",          "city": "Boston, MA",    "date": "2026-04-20", "dists": ["Maratona 42k"], "flag": "🇺🇸", "reg": "closed", "url": "https://www.baa.org/races/boston-marathon", "past": true },
+    { "name": "United Airlines NYC Half", "city": "Nova York, NY", "date": "2026-03-15", "dists": ["Meia 21k"],    "flag": "🇺🇸", "reg": "closed", "url": "", "past": true },
+    { "name": "NYC Marathon",             "city": "Nova York, NY", "date": "2026-11-01", "dists": ["Maratona 42k"], "flag": "🇺🇸", "reg": "open",   "url": "https://www.nyrr.org/races/tcsnewyorkcitymarathon" }
+  ],
+  "ca": [
+    { "name": "Fredericton Marathon",           "city": "Fredericton, NB",   "date": "2026-05-03", "dists": ["5k","10k","Meia","Maratona"], "prov": "NB", "reg": "open", "url": "https://frederictonmarathon.com" },
+    { "name": "Moncton Marathon",               "city": "Moncton, NB",       "date": "2026-05-17", "dists": ["5k","10k","Meia","Maratona"], "prov": "NB", "reg": "open", "url": "https://www.legsforliteracy.com" },
+    { "name": "Emera Marathon by the Sea",      "city": "Saint John, NB",    "date": "2026-08-09", "dists": ["10k","Meia","Maratona"],      "prov": "NB", "reg": "open", "url": "https://marathonbythesea.com" },
+    { "name": "King's County Road Race",        "city": "Sussex, NB",        "date": "2026-06-07", "dists": ["5k","10k"],                   "prov": "NB", "reg": "open", "url": "" },
+    { "name": "Bluenose International Marathon","city": "Halifax, NS",        "date": "2026-05-17", "dists": ["5k","10k","Meia","Maratona"], "prov": "NS", "reg": "open", "url": "https://bluenosemarathon.com" },
+    { "name": "Valley Harvest Marathon",        "city": "Wolfville, NS",      "date": "2026-10-04", "dists": ["5k","10k","Meia","Maratona"], "prov": "NS", "reg": "open", "url": "https://www.valleyharvestmarathon.ca" },
+    { "name": "South Shore Race Weekend",       "city": "Bridgewater, NS",    "date": "2026-06-14", "dists": ["5k","10k","Meia"],            "prov": "NS", "reg": "open", "url": "" },
+    { "name": "Fall Classic Half Marathon",     "city": "Halifax, NS",        "date": "2026-11-01", "dists": ["Meia","10k"],                 "prov": "NS", "reg": "open", "url": "" },
+    { "name": "Antigonish Highland Half",       "city": "Antigonish, NS",     "date": "2026-09-13", "dists": ["Meia","10k","5k"],            "prov": "NS", "reg": "open", "url": "" },
+    { "name": "PEI Marathon",                   "city": "Charlottetown, PE",  "date": "2026-10-11", "dists": ["5k","10k","Meia","Maratona"], "prov": "PE", "reg": "open", "url": "https://peimarathon.ca" },
+    { "name": "Island Race Series — Spring",    "city": "Charlottetown, PE",  "date": "2026-05-24", "dists": ["5k","10k"],                   "prov": "PE", "reg": "open", "url": "" },
+    { "name": "Tely 10",                        "city": "St. John's, NL",     "date": "2026-07-26", "dists": ["10k"],                        "prov": "NL", "reg": "open", "url": "https://www.nlaa.ca/tely10" },
+    { "name": "NL Marathon",                    "city": "St. John's, NL",     "date": "2026-05-31", "dists": ["5k","10k","Meia","Maratona"], "prov": "NL", "reg": "open", "url": "" },
+    { "name": "Corner Brook Marathon",          "city": "Corner Brook, NL",   "date": "2026-09-06", "dists": ["Meia","Maratona"],            "prov": "NL", "reg": "open", "url": "" },
+    { "name": "Demi-marathon de Montréal",      "city": "Montréal, QC",       "date": "2026-04-26", "dists": ["5k","10k","Meia"],            "prov": "QC", "reg": "open", "url": "https://couronsmtl.com" },
+    { "name": "Montréal Marathon (Oasis Rock)", "city": "Montréal, QC",       "date": "2026-09-27", "dists": ["10k","Meia","Maratona"],      "prov": "QC", "reg": "open", "url": "https://couronsmtl.com" },
+    { "name": "Québec City Marathon",           "city": "Québec, QC",         "date": "2026-08-23", "dists": ["10k","Meia","Maratona"],      "prov": "QC", "reg": "open", "url": "https://www.jecoursqc.com" },
+    { "name": "Ultra-Trail Mont-Tremblant",     "city": "Mont-Tremblant, QC", "date": "2026-08-14", "dists": ["Ultra 55k","Ultra 100k","Ultra 160k"], "prov": "QC", "reg": "open", "url": "https://borealys.utmb.world" },
+    { "name": "Marathon du Fjord",              "city": "Saguenay, QC",       "date": "2026-06-21", "dists": ["Meia","Maratona"],            "prov": "QC", "reg": "open", "url": "" },
+    { "name": "Gatineau Ultra",                 "city": "Gatineau, QC",       "date": "2026-05-10", "dists": ["Ultra 50k","Ultra 100k"],     "prov": "QC", "reg": "open", "url": "" },
+    { "name": "Around the Bay 30k",             "city": "Hamilton, ON",       "date": "2026-03-29", "dists": ["30k"],                        "prov": "ON", "past": true, "reg": "closed", "url": "" },
+    { "name": "Sporting Life 10k",              "city": "Toronto, ON",        "date": "2026-05-10", "dists": ["10k"],                        "prov": "ON", "reg": "open", "url": "https://www.sportinglife10k.ca" },
+    { "name": "Mississauga Marathon",           "city": "Mississauga, ON",    "date": "2026-05-03", "dists": ["5k","10k","Meia","Maratona"], "prov": "ON", "reg": "open", "url": "https://www.mississaugamarathon.com" },
+    { "name": "Tamarack Ottawa Race Weekend",   "city": "Ottawa, ON",         "date": "2026-05-23", "dists": ["5k","10k","Meia","Maratona"], "prov": "ON", "reg": "open", "url": "https://www.runottawa.ca" },
+    { "name": "Kingston Half Marathon",         "city": "Kingston, ON",       "date": "2026-06-14", "dists": ["5k","10k","Meia"],            "prov": "ON", "reg": "open", "url": "" },
+    { "name": "Toronto Waterfront Marathon",    "city": "Toronto, ON",        "date": "2026-10-18", "dists": ["5k","10k","Meia","Maratona"], "prov": "ON", "reg": "open", "url": "https://www.torontowaterfrontmarathon.com" },
+    { "name": "Niagara Falls Marathon",         "city": "Niagara Falls, ON",  "date": "2026-10-25", "dists": ["5k","10k","Meia","Maratona"], "prov": "ON", "reg": "open", "url": "https://niagarafallsmarathon.com" },
+    { "name": "Road2Hope Marathon",             "city": "Hamilton, ON",       "date": "2026-11-08", "dists": ["5k","10k","Meia","Maratona"], "prov": "ON", "reg": "open", "url": "https://www.hamiltonmarathon.ca" },
+    { "name": "Burlington Waterfront Half",     "city": "Burlington, ON",     "date": "2026-09-13", "dists": ["5k","10k","Meia"],            "prov": "ON", "reg": "open", "url": "" },
+    { "name": "Oakville Half Marathon",         "city": "Oakville, ON",       "date": "2026-09-20", "dists": ["5k","10k","Meia"],            "prov": "ON", "reg": "open", "url": "" },
+    { "name": "Barrie Half Marathon",           "city": "Barrie, ON",         "date": "2026-08-16", "dists": ["5k","10k","Meia"],            "prov": "ON", "reg": "open", "url": "" },
+    { "name": "Sudbury International Marathon", "city": "Sudbury, ON",        "date": "2026-05-31", "dists": ["10k","Meia","Maratona"],      "prov": "ON", "reg": "open", "url": "" }
+  ]
+}
