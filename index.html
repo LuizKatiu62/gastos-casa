@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260515-101">
+<meta name="app-version" content="20260515-102">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -2132,8 +2132,9 @@ function renderizar() {
   var qtds = { carro:0, diversos:0, mercado:0, parcelados:0 };
   var total = 0;
   lista.forEach(function(l) {
-    tots[l.cat] = (tots[l.cat]||0) + parseFloat(l.valor||0);
-    qtds[l.cat] = (qtds[l.cat]||0) + 1;
+    var cat = l.parcela ? 'parcelados' : l.cat;
+    tots[cat] = (tots[cat]||0) + parseFloat(l.valor||0);
+    qtds[cat] = (qtds[cat]||0) + 1;
     total += parseFloat(l.valor||0);
   });
 
