@@ -702,7 +702,7 @@ document.addEventListener('change', function(ev){ enforceUpper(ev.target); });
         </div>
         <div class="form-group full">
           <label>Customer</label>
-          <input type="text" id="inc-customer" placeholder="Customer name" list="customer-suggestions" autocomplete="off">
+          <input type="text" id="inc-customer" placeholder="Customer name" list="customer-suggestions" autocomplete="off" style="width:200px;max-width:100%">
         </div>
         <div class="form-group full">
           <label>Equipment Description</label>
@@ -719,7 +719,7 @@ document.addEventListener('change', function(ev){ enforceUpper(ev.target); });
         </div>
         <div class="form-group full" id="equip-other-group" style="display:none">
           <label>Other — Describe Equipment</label>
-          <input type="text" id="inc-equip-other" placeholder="Describe the equipment..." list="material-suggestions" autocomplete="off">
+          <input type="text" id="inc-equip-other" placeholder="Describe the equipment..." list="material-suggestions" autocomplete="off" style="width:200px;max-width:100%">
         </div>
 
         <!-- ── Nameplate Details ── -->
@@ -728,15 +728,15 @@ document.addEventListener('change', function(ev){ enforceUpper(ev.target); });
         <div class="form-subgrid">
           <div class="form-group">
             <label>Manufacturer</label>
-            <input type="text" id="inc-manufacturer" placeholder="e.g. ABB, Baldor">
+            <input type="text" id="inc-manufacturer" placeholder="e.g. ABB, Baldor" style="width:170px;max-width:100%">
           </div>
           <div class="form-group">
             <label>Model Number</label>
-            <input type="text" id="inc-model" placeholder="Model #">
+            <input type="text" id="inc-model" placeholder="Model #" style="width:140px;max-width:100%">
           </div>
           <div class="form-group">
             <label>Serial Number</label>
-            <input type="text" id="inc-serial" placeholder="Serial #">
+            <input type="text" id="inc-serial" placeholder="Serial #" style="width:140px;max-width:100%">
           </div>
           <div class="form-group">
             <label>Type / Size</label>
@@ -785,7 +785,7 @@ document.addEventListener('change', function(ev){ enforceUpper(ev.target); });
         </div>
         <div class="form-group" id="bench-name-group" style="display:none">
           <label>Bench — Person Name</label>
-          <input type="text" id="inc-bench-name" placeholder="Person's name">
+          <input type="text" id="inc-bench-name" placeholder="Person's name" style="width:180px;max-width:100%">
         </div>
 
         <div class="form-group">
@@ -870,11 +870,11 @@ document.addEventListener('change', function(ev){ enforceUpper(ev.target); });
         </div>
         <div class="form-group">
           <label>Incoming Form #</label>
-          <input type="text" id="sub-incoming" placeholder="e.g. INC-2024-001" oninput="prefillSubFromIncoming('incoming')">
+          <input type="text" id="sub-incoming" placeholder="e.g. INC-2024-001" oninput="prefillSubFromIncoming('incoming')" style="width:140px;max-width:100%">
         </div>
         <div class="form-group full">
           <label>Customer</label>
-          <input type="text" id="sub-customer" placeholder="Customer name" list="customer-suggestions" autocomplete="off">
+          <input type="text" id="sub-customer" placeholder="Customer name" list="customer-suggestions" autocomplete="off" style="width:200px;max-width:100%">
         </div>
         <div class="form-group full">
           <label>Material</label>
@@ -891,11 +891,11 @@ document.addEventListener('change', function(ev){ enforceUpper(ev.target); });
         </div>
         <div class="form-group full" id="sub-material-other-group" style="display:none">
           <label>Other — Describe Material</label>
-          <input type="text" id="sub-material-other" class="no-upper" placeholder="Describe the material..." list="material-suggestions" autocomplete="off">
+          <input type="text" id="sub-material-other" class="no-upper" placeholder="Describe the material..." list="material-suggestions" autocomplete="off" style="width:200px;max-width:100%">
         </div>
         <div class="form-group full">
           <label>Part / Component Sent <span style="font-weight:400;font-size:.72rem;opacity:.6;text-transform:none;letter-spacing:0">(leave blank if sending complete unit)</span></label>
-          <input type="text" id="sub-part-sent" class="no-upper" placeholder="e.g. Shaft, Bearing, Rotor, Stator...">
+          <input type="text" id="sub-part-sent" class="no-upper" placeholder="e.g. Shaft, Bearing, Rotor, Stator..." style="width:200px;max-width:100%">
         </div>
 
         <!-- ── Subcontractor ── -->
@@ -903,7 +903,7 @@ document.addEventListener('change', function(ev){ enforceUpper(ev.target); });
 
         <div class="form-group full">
           <label>Subcontractor Name</label>
-          <input type="text" id="sub-name" placeholder="Subcontractor company name">
+          <input type="text" id="sub-name" placeholder="Subcontractor company name" style="width:200px;max-width:100%">
         </div>
         <div class="form-group">
           <label>Outgoing #</label>
@@ -934,7 +934,7 @@ document.addEventListener('change', function(ev){ enforceUpper(ev.target); });
         </div>
         <div class="form-group" id="sub-carrier-other-group" style="display:none">
           <label>Carrier Name</label>
-          <input type="text" id="sub-carrier-other" placeholder="Enter carrier name">
+          <input type="text" id="sub-carrier-other" placeholder="Enter carrier name" style="width:170px;max-width:100%">
         </div>
         <div class="form-group">
           <label>Tracking Number</label>
@@ -975,11 +975,11 @@ document.addEventListener('change', function(ev){ enforceUpper(ev.target); });
 
         <div class="form-group">
           <label>Order Number *</label>
-          <input type="text" id="pkg-order" placeholder="e.g. ORD-00123">
+          <input type="text" id="pkg-order" placeholder="e.g. ORD-00123" style="width:140px;max-width:100%">
         </div>
         <div class="form-group">
           <label>Customer</label>
-          <input type="text" id="pkg-customer" list="customer-suggestions" placeholder="Customer name">
+          <input type="text" id="pkg-customer" list="customer-suggestions" placeholder="Customer name" style="width:200px;max-width:100%">
         </div>
         <div class="form-group">
           <label>Pick Date *</label>
@@ -1040,11 +1040,11 @@ document.addEventListener('change', function(ev){ enforceUpper(ev.target); });
 
         <div class="form-group" id="pay-order-num-group" style="display:none">
           <label id="pay-order-num-label">Order #</label>
-          <input type="text" id="pay-order-num" placeholder="Order number" oninput="payLookupOrder()">
+          <input type="text" id="pay-order-num" placeholder="Order number" oninput="payLookupOrder()" style="width:105px;max-width:100%">
         </div>
         <div class="form-group" id="pay-customer-group" style="display:none">
           <label>Customer</label>
-          <input type="text" id="pay-customer" list="customer-suggestions" placeholder="Customer name">
+          <input type="text" id="pay-customer" list="customer-suggestions" placeholder="Customer name" style="width:200px;max-width:100%">
         </div>
 
         <div class="form-group full">
@@ -1060,7 +1060,7 @@ document.addEventListener('change', function(ev){ enforceUpper(ev.target); });
 
         <div class="form-group" id="pay-cheque-group" style="display:none">
           <label>Cheque Number</label>
-          <input type="text" id="pay-cheque-num" placeholder="Cheque #">
+          <input type="text" id="pay-cheque-num" placeholder="Cheque #" style="width:105px;max-width:100%">
         </div>
 
         <div class="form-group full">
@@ -1143,7 +1143,7 @@ document.addEventListener('change', function(ev){ enforceUpper(ev.target); });
         </div>
         <div class="form-group">
           <label>Customer</label>
-          <input type="text" id="proc-customer" list="customer-suggestions" placeholder="Customer name">
+          <input type="text" id="proc-customer" list="customer-suggestions" placeholder="Customer name" style="width:200px;max-width:100%">
         </div>
         <div class="form-group">
           <label>Purchase Order</label>
@@ -1151,7 +1151,7 @@ document.addEventListener('change', function(ev){ enforceUpper(ev.target); });
         </div>
         <div class="form-group">
           <label>Material</label>
-          <input type="text" id="proc-material" list="material-suggestions" placeholder="Material description">
+          <input type="text" id="proc-material" list="material-suggestions" placeholder="Material description" style="width:200px;max-width:100%">
         </div>
         <div class="form-group">
           <label>Shipping Area Received Date *</label>
@@ -1209,7 +1209,7 @@ document.addEventListener('change', function(ev){ enforceUpper(ev.target); });
         </div>
         <div class="form-group">
           <label>Customer</label>
-          <input type="text" id="shp-customer" placeholder="Customer name" list="customer-suggestions" autocomplete="off">
+          <input type="text" id="shp-customer" placeholder="Customer name" list="customer-suggestions" autocomplete="off" style="width:200px;max-width:100%">
         </div>
 
         <!-- ── Orders ── -->
@@ -1226,7 +1226,7 @@ document.addEventListener('change', function(ev){ enforceUpper(ev.target); });
         <div class="form-group full">
           <label>Transfer Number(s)</label>
           <div class="tag-input-row">
-            <input type="text" id="shp-tr-input" placeholder="Add Transfer #" onkeydown="if(event.key==='Enter'){event.preventDefault();addShpTag('tr')}">
+            <input type="text" id="shp-tr-input" placeholder="Add Transfer #" onkeydown="if(event.key==='Enter'){event.preventDefault();addShpTag('tr')}" style="width:105px;max-width:100%;flex:none">
             <button class="btn btn-secondary btn-sm" onclick="addShpTag('tr')">+ Add</button>
           </div>
           <div class="tags-list" id="shp-tr-tags"></div>
@@ -1262,7 +1262,7 @@ document.addEventListener('change', function(ev){ enforceUpper(ev.target); });
         </div>
         <div class="form-group full" id="shp-material-other-group" style="display:none">
           <label>Other — Describe Material</label>
-          <input type="text" id="shp-material-other" class="no-upper" placeholder="Describe the material..." list="material-suggestions" autocomplete="off">
+          <input type="text" id="shp-material-other" class="no-upper" placeholder="Describe the material..." list="material-suggestions" autocomplete="off" style="width:200px;max-width:100%">
         </div>
         <div class="form-subgrid" style="grid-template-columns:auto auto auto">
           <div class="form-group">
@@ -1308,12 +1308,12 @@ document.addEventListener('change', function(ev){ enforceUpper(ev.target); });
 
         <div class="form-group">
           <label>City</label>
-          <input type="text" id="shp-city" placeholder="City" oninput="lookupCityProvince()" onchange="lookupCityProvince()" list="city-list" autocomplete="off">
+          <input type="text" id="shp-city" placeholder="City" oninput="lookupCityProvince()" onchange="lookupCityProvince()" list="city-list" autocomplete="off" style="width:140px;max-width:100%">
           <datalist id="city-list"></datalist>
         </div>
         <div class="form-group">
           <label>Province / State</label>
-          <input type="text" id="shp-province" placeholder="e.g. NB" list="province-list">
+          <input type="text" id="shp-province" placeholder="e.g. NB" list="province-list" style="width:55px;max-width:100%">
           <datalist id="province-list">
             <option value="AB"><option value="BC"><option value="MB"><option value="NB">
             <option value="NL"><option value="NS"><option value="NT"><option value="NU">
@@ -1323,11 +1323,11 @@ document.addEventListener('change', function(ev){ enforceUpper(ev.target); });
         </div>
         <div class="form-group">
           <label>Postal Code</label>
-          <input type="text" id="shp-postal" placeholder="e.g. E2L 4L1" oninput="detectCountryFromPostal()">
+          <input type="text" id="shp-postal" placeholder="e.g. E2L 4L1" oninput="detectCountryFromPostal()" style="width:90px;max-width:100%">
         </div>
         <div class="form-group">
           <label>Country</label>
-          <input type="text" id="shp-country" placeholder="Canada" value="Canada">
+          <input type="text" id="shp-country" placeholder="Canada" value="Canada" style="width:85px;max-width:100%">
         </div>
 
         <!-- ── Transportation ── -->
@@ -1350,7 +1350,7 @@ document.addEventListener('change', function(ev){ enforceUpper(ev.target); });
         </div>
         <div class="form-group" id="shp-carrier-other-group" style="display:none">
           <label>Carrier Name</label>
-          <input type="text" id="shp-carrier-other" placeholder="Enter carrier name">
+          <input type="text" id="shp-carrier-other" placeholder="Enter carrier name" style="width:170px;max-width:100%">
         </div>
         <div class="form-group full">
           <label>Tracking Number</label>
@@ -1398,7 +1398,7 @@ document.addEventListener('change', function(ev){ enforceUpper(ev.target); });
         </div>
         <div class="form-group">
           <label>Supplier</label>
-          <input type="text" id="itm-supplier" placeholder="Supplier name">
+          <input type="text" id="itm-supplier" placeholder="Supplier name" style="width:200px;max-width:100%">
         </div>
         <div class="form-group">
           <label>Requested By</label>
@@ -1418,7 +1418,7 @@ document.addEventListener('change', function(ev){ enforceUpper(ev.target); });
         </div>
         <div class="form-group" id="itm-reqby-other-group" style="display:none">
           <label>Requested By — Name</label>
-          <input type="text" id="itm-reqby-other" placeholder="Type the name">
+          <input type="text" id="itm-reqby-other" placeholder="Type the name" style="width:180px;max-width:100%">
         </div>
       </div>
 
@@ -2975,7 +2975,7 @@ function renderItmLines(){
         '</div>',
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">',
           '<div class="form-group"><label>BIN Location</label><select id="itm-l'+i+'-bin" onchange="toggleLineStock('+i+')"><option value="">— Select BIN —</option>'+binSel+'</select></div>',
-          '<div class="form-group" id="itm-l'+i+'-stockgrp" style="display:'+(item.binLocation==='Stock'?'flex':'none')+'"><label>Stock — BIN #</label><input type="text" id="itm-l'+i+'-binstock" placeholder="e.g. A-12" oninput="enforceUpper(this)" value="'+escAttr(item.binStock||'')+'"></div>',
+          '<div class="form-group" id="itm-l'+i+'-stockgrp" style="display:'+(item.binLocation==='Stock'?'flex':'none')+'"><label>Stock — BIN #</label><input type="text" id="itm-l'+i+'-binstock" placeholder="e.g. A-12" oninput="enforceUpper(this)" value="'+escAttr(item.binStock||'')+'" style="width:120px;max-width:100%"></div>',
         '</div>',
         '<div class="form-group" style="margin-bottom:6px">',
           '<label>Application</label>',
@@ -2989,13 +2989,13 @@ function renderItmLines(){
           '</div>',
         '</div>',
         '<div id="itm-l'+i+'-sogrp" style="display:'+(isSO?'block':'none')+'">',
-          '<div class="form-group"><label>Sales Order #</label><input type="text" id="itm-l'+i+'-sonum" placeholder="Sales Order number" oninput="enforceUpper(this)" value="'+escAttr(item.salesOrderNum||'')+'"></div>',
+          '<div class="form-group"><label>Sales Order #</label><input type="text" id="itm-l'+i+'-sonum" placeholder="Sales Order number" oninput="enforceUpper(this)" value="'+escAttr(item.salesOrderNum||'')+'" style="width:105px;max-width:100%"></div>',
         '</div>',
         '<div id="itm-l'+i+'-wogrp" style="display:'+(isWO?'block':'none')+'">',
           '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px">',
-            '<div class="form-group"><label>Work Order #</label><input type="text" id="itm-l'+i+'-wonum" placeholder="Work Order #" maxlength="7" oninput="enforceUpper(this)" value="'+escAttr(item.workOrderNum||'')+'"></div>',
+            '<div class="form-group"><label>Work Order #</label><input type="text" id="itm-l'+i+'-wonum" placeholder="Work Order #" maxlength="7" oninput="enforceUpper(this)" value="'+escAttr(item.workOrderNum||'')+'" style="width:105px;max-width:100%"></div>',
             '<div class="form-group"><label>Area</label><select id="itm-l'+i+'-area"><option value="">— Area —</option>'+areaSel+'</select></div>',
-            '<div class="form-group"><label>Customer</label><input type="text" id="itm-l'+i+'-cust" list="customer-suggestions" placeholder="Customer" oninput="enforceUpper(this)" value="'+escAttr(item.customer||'')+'"></div>',
+            '<div class="form-group"><label>Customer</label><input type="text" id="itm-l'+i+'-cust" list="customer-suggestions" placeholder="Customer" oninput="enforceUpper(this)" value="'+escAttr(item.customer||'')+'" style="width:180px;max-width:100%"></div>',
           '</div>',
           '<div id="itm-l'+i+'-wipbtn" style="margin-top:10px;display:'+(item.binLocation==='WIP'?'flex':'none')+'">',
             '<button type="button" class="btn btn-secondary btn-sm" onclick="printItemWipLabel('+i+')" style="gap:6px">🏷️ Print WIP Label</button>',
