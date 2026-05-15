@@ -140,6 +140,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--surface-alt);colo
 .form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--blue-500);box-shadow:0 0 0 3px rgba(21,101,192,.1)}
 .form-group textarea{resize:vertical;min-height:80px}
 .form-group input::placeholder,.form-group textarea::placeholder{color:var(--text-muted)}
+.len-warn{display:none;font-size:.65rem;color:#dc2626;font-weight:700;margin-top:2px;line-height:1.3}
 .form-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:22px;padding-top:18px;border-top:1px solid var(--border)}
 
 /* ── FORM SECTION DIVIDER ── */
@@ -674,15 +675,15 @@ document.addEventListener('change', function(ev){ enforceUpper(ev.target); });
 
         <div class="form-group">
           <label>Incoming Form #</label>
-          <input type="text" id="inc-form-num" placeholder="e.g. INC-2024-001">
+          <input type="text" id="inc-form-num" placeholder="e.g. 32850" data-maxdigits="5" style="width:80px;max-width:100%">
         </div>
         <div class="form-group">
           <label>Work Order #</label>
-          <input type="text" id="inc-wo" placeholder="e.g. WO-2024-100" maxlength="7">
+          <input type="text" id="inc-wo" placeholder="e.g. 1234567" data-maxdigits="7" style="width:105px;max-width:100%">
         </div>
         <div class="form-group">
           <label>Previous Work Order #</label>
-          <input type="text" id="inc-prev-wo" placeholder="e.g. WO-2023-050" maxlength="7">
+          <input type="text" id="inc-prev-wo" placeholder="e.g. 1234567" data-maxdigits="7" style="width:105px;max-width:100%">
         </div>
         <div class="form-group">
           <label>Date</label>
@@ -865,7 +866,7 @@ document.addEventListener('change', function(ev){ enforceUpper(ev.target); });
 
         <div class="form-group">
           <label>Work Order #</label>
-          <input type="text" id="sub-wo" placeholder="e.g. WO-2024-100" maxlength="7" oninput="prefillSubFromIncoming('wo')">
+          <input type="text" id="sub-wo" placeholder="e.g. 1234567" oninput="prefillSubFromIncoming('wo')" data-maxdigits="7" style="width:105px;max-width:100%">
         </div>
         <div class="form-group">
           <label>Incoming Form #</label>
@@ -906,7 +907,7 @@ document.addEventListener('change', function(ev){ enforceUpper(ev.target); });
         </div>
         <div class="form-group">
           <label>Outgoing #</label>
-          <input type="text" id="sub-outgoing" placeholder="e.g. OUT-2024-001">
+          <input type="text" id="sub-outgoing" placeholder="e.g. 12345" data-maxdigits="5" style="width:80px;max-width:100%">
         </div>
 
         <!-- ── Shipping & Return ── -->
@@ -1130,15 +1131,15 @@ document.addEventListener('change', function(ev){ enforceUpper(ev.target); });
 
         <div class="form-group">
           <label>Work Order #</label>
-          <input type="text" id="proc-wo" placeholder="Work Order #" maxlength="7" oninput="procLookupOrder()">
+          <input type="text" id="proc-wo" placeholder="Work Order #" oninput="procLookupOrder()" data-maxdigits="7" style="width:105px;max-width:100%">
         </div>
         <div class="form-group">
           <label>Sales Order #</label>
-          <input type="text" id="proc-so" placeholder="Sales Order #" oninput="procLookupOrder()">
+          <input type="text" id="proc-so" placeholder="Sales Order #" oninput="procLookupOrder()" data-maxdigits="7" style="width:105px;max-width:100%">
         </div>
         <div class="form-group">
           <label>Outgoing #</label>
-          <input type="text" id="proc-outgoing" placeholder="Outgoing form #">
+          <input type="text" id="proc-outgoing" placeholder="Outgoing form #" data-maxdigits="5" style="width:80px;max-width:100%">
         </div>
         <div class="form-group">
           <label>Customer</label>
@@ -1146,7 +1147,7 @@ document.addEventListener('change', function(ev){ enforceUpper(ev.target); });
         </div>
         <div class="form-group">
           <label>Purchase Order</label>
-          <input type="text" id="proc-po" placeholder="PO #">
+          <input type="text" id="proc-po" placeholder="PO #" data-maxdigits="7" style="width:105px;max-width:100%">
         </div>
         <div class="form-group">
           <label>Material</label>
@@ -1217,7 +1218,7 @@ document.addEventListener('change', function(ev){ enforceUpper(ev.target); });
         <div class="form-group full">
           <label>Sales Order Number(s)</label>
           <div class="tag-input-row">
-            <input type="text" id="shp-so-input" placeholder="Add Sales Order #" onkeydown="if(event.key==='Enter'){event.preventDefault();addShpTag('so')}">
+            <input type="text" id="shp-so-input" placeholder="Add Sales Order #" onkeydown="if(event.key==='Enter'){event.preventDefault();addShpTag('so')}" data-maxdigits="7" style="width:105px;max-width:100%;flex:none">
             <button class="btn btn-secondary btn-sm" onclick="addShpTag('so')">+ Add</button>
           </div>
           <div class="tags-list" id="shp-so-tags"></div>
@@ -1233,14 +1234,14 @@ document.addEventListener('change', function(ev){ enforceUpper(ev.target); });
         <div class="form-group full">
           <label>Work Order Number(s)</label>
           <div class="tag-input-row">
-            <input type="text" id="shp-wo-input" placeholder="Add Work Order #" maxlength="7" onkeydown="if(event.key==='Enter'){event.preventDefault();addShpTag('wo')}" oninput="checkShpOutgoing()">
+            <input type="text" id="shp-wo-input" placeholder="Add Work Order #" onkeydown="if(event.key==='Enter'){event.preventDefault();addShpTag('wo')}" oninput="checkShpOutgoing()" data-maxdigits="7" style="width:105px;max-width:100%;flex:none">
             <button class="btn btn-secondary btn-sm" onclick="addShpTag('wo')">+ Add</button>
           </div>
           <div class="tags-list" id="shp-wo-tags"></div>
         </div>
         <div class="form-group full" id="shp-outgoing-group" style="display:none">
           <label>Outgoing #</label>
-          <input type="text" id="shp-outgoing" placeholder="e.g. OUT-2024-001">
+          <input type="text" id="shp-outgoing" placeholder="e.g. 12345" data-maxdigits="5" style="width:80px;max-width:100%">
         </div>
 
         <!-- ── Material & Quantity ── -->
@@ -1381,11 +1382,11 @@ document.addEventListener('change', function(ev){ enforceUpper(ev.target); });
         <div class="form-section-header">Document Information</div>
         <div class="form-group">
           <label>Document # *</label>
-          <input type="text" id="itm-doc" placeholder="e.g. DOC-2024-001">
+          <input type="text" id="itm-doc" placeholder="e.g. 1234567" data-maxdigits="7" style="width:105px;max-width:100%">
         </div>
         <div class="form-group">
           <label>PO #</label>
-          <input type="text" id="itm-po" placeholder="Purchase Order #">
+          <input type="text" id="itm-po" placeholder="Purchase Order #" data-maxdigits="7" style="width:105px;max-width:100%">
         </div>
         <div class="form-group">
           <label>Transfer #</label>
@@ -1522,7 +1523,29 @@ window.addEventListener('DOMContentLoaded', function(){
     console.error('Firebase error:', e);
     document.getElementById('app-loading').style.display = 'none';
   }
+  initDigitFields();
 });
+
+function initDigitFields(){
+  document.querySelectorAll('input[data-maxdigits]').forEach(function(el){
+    function check(){
+      var max = parseInt(el.getAttribute('data-maxdigits'));
+      var v = (el.value||'').replace(/[\s\-\/]/g,'');
+      var hint = el._dh;
+      if(!hint){
+        hint = document.createElement('span');
+        hint.className = 'len-warn';
+        el.parentNode.appendChild(hint);
+        el._dh = hint;
+      }
+      hint.textContent = '⚠ Max '+max+' digits';
+      hint.style.display = v.length > max ? 'block' : 'none';
+      el.style.borderColor = v.length > max ? '#dc2626' : '';
+    }
+    el.addEventListener('input', check);
+    el.addEventListener('change', check);
+  });
+}
 
 function processAuthUser(user){
   currentUser = user;
