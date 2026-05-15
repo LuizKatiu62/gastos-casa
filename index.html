@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260515-102">
+<meta name="app-version" content="20260515-103">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -880,6 +880,7 @@ body {
       <div class="cfg-actions">
         <button class="cfg-action-btn" onclick="fazerBackup()">☁️ Backup</button>
         <button class="cfg-action-btn" onclick="document.getElementById('inp-restaurar').click()">📂 Restaurar</button>
+        <button class="cfg-action-btn" onclick="recarregarDaNuvem()" style="background:rgba(16,185,129,.2);border-color:rgba(16,185,129,.4)">🔄 Nuvem</button>
         <button class="cfg-action-btn" onclick="sairApp()" style="background:rgba(249,115,22,.2);border-color:rgba(249,115,22,.4)">✕ Sair</button>
       </div>
     </div>
@@ -4755,6 +4756,21 @@ function sairApp() {
   if (confirm('Sair da conta?')) {
     fazerLogout();
   }
+}
+function recarregarDaNuvem() {
+  if (!_fbAtivo || !_fbRef) { mostrarToast('⚠️', 'Sem conexão com a nuvem'); return; }
+  if (!confirm('Recarregar todos os dados da nuvem? Isso substitui os dados locais pela versão mais recente salva no Firebase.')) return;
+  _fbRef.once('value').then(function(snap) {
+    var fbData = snap.val();
+    if (!fbData || !fbData.lancamentos || fbData.lancamentos.length === 0) {
+      mostrarToast('⚠️', 'Nuvem está vazia, nenhum dado para restaurar'); return;
+    }
+    var d = Object.assign({}, fbData); delete d._ts;
+    localStorage.setItem('gastos', JSON.stringify(d));
+    localStorage.setItem('gastos_ts', new Date(fbData._ts || Date.now()).toISOString());
+    renderizar();
+    mostrarToast('✅', 'Dados recarregados da nuvem: ' + fbData.lancamentos.length + ' lançamentos');
+  }).catch(function() { mostrarToast('⚠️', 'Erro ao acessar a nuvem'); });
 }
 
 // ─────────────────────────────
