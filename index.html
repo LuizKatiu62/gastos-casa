@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260515-105">
+<meta name="app-version" content="20260515-106">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -2425,7 +2425,7 @@ function atualizarProjecao() {
   var lista = lancamentosPeriodo(d.lancamentos, p);
   var tots = { carro:0, diversos:0, mercado:0, parcelados:0 };
   var total = 0;
-  lista.forEach(function(l){ tots[l.cat]=(tots[l.cat]||0)+parseFloat(l.valor||0); total+=parseFloat(l.valor||0); });
+  lista.forEach(function(l){ var cat=l.parcela?'parcelados':l.cat; tots[cat]=(tots[cat]||0)+parseFloat(l.valor||0); if(!l.parcela&&l.cat!=='parcelados') total+=parseFloat(l.valor||0); });
   renderizarProjecao(d, p, tots, total, hj);
   renderizarTermometroDivida();
   renderizarProjecaoParcelados();
@@ -2433,10 +2433,9 @@ function atualizarProjecao() {
 
 function renderizarProjecao(d, p, tots, total, hj) {
   var limite = d.limite || 0;
-  var orcParc = d.orcamentos.parcelados || 0;
   if (limite <= 0) return;
 
-  var dispDiario = Math.max(0, limite - orcParc); // orçamento p/ gastos comuns
+  var dispDiario = limite; // orçamento p/ gastos comuns (parcelados não contam)
 
   // Dias do período
   var dInicio = new Date(p.inicio + 'T12:00:00');
@@ -2446,7 +2445,7 @@ function renderizarProjecao(d, p, tots, total, hj) {
   var diasPassados = Math.min(totalDias, Math.max(1, Math.round((dHj - dInicio) / 86400000) + 1));
   var diasRestantes = Math.max(0, totalDias - diasPassados);
 
-  var gastoComum    = Math.max(0, total - (tots.parcelados || 0));
+  var gastoComum    = total; // total já exclui parcelados (filtrados no forEach acima)
   var realDiario    = diasPassados > 0 ? gastoComum / diasPassados : 0;
   var projecaoFinal = realDiario * totalDias;           // gasto comum projetado p/ todo o período
   var orcRestante   = dispDiario - gastoComum;           // orçamento livre restante (sem parcelados)
@@ -2460,7 +2459,7 @@ function renderizarProjecao(d, p, tots, total, hj) {
 
   // Subtitle
   document.getElementById('proj-subtitle').textContent =
-    'Limite ' + formatar(limite) + ' · Parcelados ' + formatar(orcParc) + ' · Livre ' + formatar(dispDiario);
+    'Limite ' + formatar(limite) + ' · Gasto comum: ' + formatar(gastoComum) + ' · Livre ' + formatar(dispDiario - gastoComum);
 
   // Badge de status
   var badge = document.getElementById('proj-badge');
@@ -3087,7 +3086,7 @@ function renderizarRelatorio() {
   var porDiaCat = { carro:{}, diversos:{}, mercado:{} };
   lista.forEach(function(l) {
     var v = parseFloat(l.valor||0);
-    if (l.cat === 'parcelados') return; // parcelados calculado separadamente abaixo
+    if (l.parcela || l.cat === 'parcelados') return; // parcelados calculado separadamente abaixo
     tots[l.cat] = (tots[l.cat]||0) + v;
     if (l.sub) { var subKey = SUBS[l.sub] || l.sub; stots[subKey] = (stots[subKey]||0) + v; }
     porDia[l.data] = (porDia[l.data]||0) + v;
@@ -3099,10 +3098,9 @@ function renderizarRelatorio() {
   // Total gasto = apenas categorias comuns (sem parcelados)
   var grand = (tots.carro||0) + (tots.diversos||0) + (tots.mercado||0);
 
-  // Limite disponível para gastos comuns = limite do cartão − orçamento de parcelados
+  // Limite disponível para gastos comuns = limite (parcelados excluídos do cálculo)
   var orc = d.orcamentos;
-  var orcParc   = orc.parcelados || 0;
-  var limComum  = Math.max(0, d.limite - orcParc);   // ex: 3050 − 550 = 2500
+  var limComum  = d.limite || 0;
   var dispLimite = limComum - grand;
   var pctLimite  = limComum > 0 ? (grand / limComum * 100) : 0;
 
