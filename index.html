@@ -1792,6 +1792,7 @@ function inicializarFirebase() {
           document.getElementById('inp-fim').value    = d.periodo.fim;
         }
         if (d.limite) document.getElementById('inp-limite').value = d.limite;
+        verificarAvancoPeriodo();
         renderizar();
         syncStatus('#43a047', 'atualizado ☁️');
         if (_pendingImportados === 0) mostrarToast('☁️', 'Dados atualizados da nuvem!');
@@ -2020,6 +2021,29 @@ function resolverGrupos(lancamentos) {
   return grupos;
 }
 
+// Retorna mapa grupoId → nº da última parcela com data ANTES de hoje (estritamente)
+// Usado para saber qual é a parcela "atual": pagas+1
+function buildPagasMap(lancamentos) {
+  var hj = hoje();
+  var map = {};
+  lancamentos.forEach(function(l) {
+    if (!l.parcela) return;
+    var gid = l.parcela.grupoId;
+    if (!(gid in map)) map[gid] = 0;
+    if (l.data < hj && l.parcela.n > map[gid]) map[gid] = l.parcela.n;
+  });
+  return map;
+}
+
+// Retorna HTML do badge de parcela com o número atualizado pela data
+function parcelaBadgeHtml(l, pagasMap, totalOverride) {
+  if (!l.parcela) return '';
+  var pagas = (pagasMap && l.parcela.grupoId in pagasMap) ? pagasMap[l.parcela.grupoId] : 0;
+  var nAtual = Math.min(pagas + 1, l.parcela.total);
+  var total  = (totalOverride != null) ? totalOverride : l.parcela.total;
+  return '<span class="lanc-parcela">'+nAtual+'/'+total+'</span>';
+}
+
 var _numParcelas = 1;
 var _parcelaInicial = 1;
 
@@ -2095,6 +2119,15 @@ var _cat = 'carro', _sub = 'gas', _mesHist = mesAtual(), _relTipo = 'periodo', _
 // ─────────────────────────────
 function renderizar() {
   var d = getDados(), p = d.periodo;
+  // One-time migration: parcelados saved via quick-add had wrong cat (e.g. 'diversos')
+  if (!d._migParc2) {
+    var needsMig = d.lancamentos.some(function(l){ return l.parcela && l.cat !== 'parcelados'; });
+    if (needsMig) {
+      d.lancamentos.forEach(function(l){ if (l.parcela && l.cat !== 'parcelados') l.cat = 'parcelados'; });
+    }
+    d._migParc2 = true;
+    salvarDados(d);
+  }
   var lista = lancamentosPeriodo(d.lancamentos, p);
 
   var tots = { carro:0, diversos:0, mercado:0, parcelados:0 };
@@ -2756,8 +2789,9 @@ function renderizarRecentes(todos) {
     el.innerHTML = '<div class="vazio">📭 Nenhum lançamento ainda.<br>Toque em <b>Registrar Gasto</b> para começar.</div>';
     return;
   }
+  var pagasMapRec = buildPagasMap(todos);
   el.innerHTML = rec.map(function(l) {
-    var parcBadge = l.parcela ? '<span class="lanc-parcela">'+l.parcela.n+'/'+l.parcela.total+'</span>' : '';
+    var parcBadge = parcelaBadgeHtml(l, pagasMapRec);
     return '<div class="lancamento">' +
       '<div class="lanc-ponto" style="background:'+CORES[l.cat]+'"></div>' +
       '<div class="lanc-info">' +
@@ -2793,8 +2827,9 @@ function irParaCategoria(cat) {
   if (!lista.length) {
     document.getElementById('lista-categoria').innerHTML = '<div class="vazio">📭 Sem lançamentos neste período</div>';
   } else {
+    var pagasMapCat = buildPagasMap(d.lancamentos);
     document.getElementById('lista-categoria').innerHTML = lista.map(function(l) {
-      var parcBadge = l.parcela ? '<span class="lanc-parcela">'+l.parcela.n+'/'+l.parcela.total+'</span>' : '';
+      var parcBadge = parcelaBadgeHtml(l, pagasMapCat);
       return '<div class="lancamento">' +
         '<div class="lanc-ponto" style="background:'+CORES[cat]+'"></div>' +
         '<div class="lanc-info">' +
@@ -2853,6 +2888,7 @@ function renderizarHistorico() {
   }
   // Resolve desc e total corretos para parcelamentos
   var grupos = resolverGrupos(d.lancamentos);
+  var pagasMapHist = buildPagasMap(d.lancamentos);
   var porDia = {};
   lista.forEach(function(l){ if(!porDia[l.data]) porDia[l.data]=[]; porDia[l.data].push(l); });
   Object.keys(porDia).forEach(function(data) {
@@ -2872,7 +2908,7 @@ function renderizarHistorico() {
         // Para parcelados, usa desc e total resolvidos (corrige "Identificar" e total errado)
         var gInfo = (l.parcela && grupos[l.parcela.grupoId]) ? grupos[l.parcela.grupoId] : null;
         var totalParcela = gInfo ? gInfo.total : (l.parcela ? l.parcela.total : 0);
-        var parcBadge = l.parcela ? '<span class="lanc-parcela">'+l.parcela.n+'/'+totalParcela+'</span>' : '';
+        var parcBadge = parcelaBadgeHtml(l, pagasMapHist, totalParcela);
         var descRaw = (gInfo && gInfo.desc) ? gInfo.desc : (l.desc || '');
         var descPrincipal = (descRaw && descRaw !== 'Identificar')
           ? descRaw
@@ -3431,10 +3467,11 @@ function renderizarRelcat() {
   }
 
   // ── Lista ──
+  var pagasMapRel = buildPagasMap(d.lancamentos);
   var listaHtml =
     '<div class="card"><div class="card-titulo">Lançamentos ('+lista.length+')</div>' +
     lista.map(function(l) {
-      var parcBadge = l.parcela ? '<span class="lanc-parcela">'+l.parcela.n+'/'+l.parcela.total+'</span>' : '';
+      var parcBadge = parcelaBadgeHtml(l, pagasMapRel);
       var subInfo   = l.loja || l.divsub || l.sub || '';
       return '<div class="lancamento">' +
         '<div class="lanc-ponto" style="background:'+cor+'"></div>' +
@@ -4557,6 +4594,20 @@ function salvarPeriodo() {
   renderizar();
 }
 
+function verificarAvancoPeriodo() {
+  var d = getDados();
+  var hj = hoje();
+  if (!d.periodo || hj <= d.periodo.fim) return;
+  var ini = d.periodo.inicio, fim = d.periodo.fim;
+  var meses = 0, maxIt = 36;
+  while (hj > addMeses(fim, meses) && maxIt-- > 0) meses++;
+  d.periodo = { inicio: addMeses(ini, meses), fim: addMeses(fim, meses) };
+  salvarDados(d);
+  document.getElementById('inp-inicio').value = d.periodo.inicio;
+  document.getElementById('inp-fim').value    = d.periodo.fim;
+  mostrarToast('📅', 'Período avançado: ' + formatarData(d.periodo.inicio) + ' → ' + formatarData(d.periodo.fim));
+}
+
 // ─────────────────────────────
 // WHATSAPP
 // ─────────────────────────────
@@ -5041,6 +5092,7 @@ window.onload = function() {
     console.log('[migração] ' + migrados + ' lançamento(s) movido(s) para Parcelados');
   }
 
+  verificarAvancoPeriodo();
   renderizar();
 
   // Verificar se o app foi aberto via compartilhamento (SMS do CIBC)
