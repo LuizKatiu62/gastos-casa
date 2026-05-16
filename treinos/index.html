@@ -358,8 +358,11 @@ input[type=range].esf::-webkit-slider-thumb{-webkit-appearance:none;width:22px;h
     <button class="chip" id="sp-mes"    onclick="setStatsPeriodo('mes')">Mês</button>
     <button class="chip" id="sp-ano"    onclick="setStatsPeriodo('ano')">Ano</button>
   </div>
-
-  <div class="sec"><span class="sec-title" id="stats-period-lbl">Esta semana</span></div>
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 12px 0">
+    <button onclick="statsNavegar(-1)" style="background:none;border:none;font-size:22px;color:var(--text2);cursor:pointer;padding:4px 8px">‹</button>
+    <span id="stats-period-lbl" style="font-weight:700;font-size:15px;color:var(--text1)">Esta semana</span>
+    <button onclick="statsNavegar(1)" id="stats-nav-next" style="background:none;border:none;font-size:22px;color:var(--text2);cursor:pointer;padding:4px 8px">›</button>
+  </div>
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:0 12px 10px" id="tri-year-card"></div>
 
   <div class="sec"><span class="sec-title" id="stats-vol-lbl">Volume por dia</span></div>
@@ -1658,36 +1661,62 @@ function statBoxHTML(val,lbl,cor){
 }
 
 // ── Render: Stats ──
-var _statsPeriodo='semana';
+var _statsPeriodo='semana', _statsOffset=0;
 function setStatsPeriodo(p){
-  _statsPeriodo=p;
+  _statsPeriodo=p; _statsOffset=0;
   ['semana','mes','ano'].forEach(function(x){
     var el=document.getElementById('sp-'+x);
     if(el) el.classList.toggle('ativo',x===p);
   });
   renderStats();
 }
+function statsNavegar(dir){
+  _statsOffset+=dir;
+  if(_statsOffset>0) _statsOffset=0; // não vai para o futuro
+  renderStats();
+}
 function _getStatRange(){
   var hj=hoje();
+  var MESES_NOMES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
   if(_statsPeriodo==='semana'){
-    var dt=new Date(hj+'T12:00:00'), dow=dt.getDay();
+    var dt=new Date(hj+'T12:00:00');
+    dt.setDate(dt.getDate()+_statsOffset*7);
+    var dow=dt.getDay();
     var mon=new Date(dt); mon.setDate(dt.getDate()-(dow===0?6:dow-1));
+    var sun=new Date(mon); sun.setDate(mon.getDate()+6);
     var s=mon.getFullYear()+'-'+pad(mon.getMonth()+1)+'-'+pad(mon.getDate());
-    return {start:s, end:hj, label:'Esta semana'};
+    var e=sun.getFullYear()+'-'+pad(sun.getMonth()+1)+'-'+pad(sun.getDate());
+    if(e>hj) e=hj;
+    var lbl=(_statsOffset===0?'Esta semana':mon.getDate()+'/'+(mon.getMonth()+1)+' → '+sun.getDate()+'/'+(sun.getMonth()+1));
+    return {start:s, end:e, label:lbl};
   }
   if(_statsPeriodo==='mes'){
-    return {start:hj.substring(0,7)+'-01', end:hj, label:'Este mês'};
+    var now=new Date(hj+'T12:00:00');
+    now.setMonth(now.getMonth()+_statsOffset);
+    var y=now.getFullYear(), m=now.getMonth();
+    var s2=y+'-'+pad(m+1)+'-01';
+    var lastDay=new Date(y,m+1,0).getDate();
+    var e2=y+'-'+pad(m+1)+'-'+pad(lastDay); if(e2>hj) e2=hj;
+    var lbl2=MESES_NOMES[m]+' '+y;
+    return {start:s2, end:e2, label:lbl2};
   }
-  return {start:hj.substring(0,4)+'-01-01', end:hj, label:'Este ano'};
+  // ano
+  var nowY=new Date(hj+'T12:00:00');
+  nowY.setFullYear(nowY.getFullYear()+_statsOffset);
+  var yr=nowY.getFullYear();
+  var e3=yr+'-12-31'; if(e3>hj) e3=hj;
+  return {start:yr+'-01-01', end:e3, label:''+yr};
 }
 
 function renderStats(){
   var d=getDados(), hj=hoje();
   var rng=_getStatRange();
 
-  // ── Period label ──
+  // ── Period label + disable next arrow when at current period ──
   var lbl=document.getElementById('stats-period-lbl');
   if(lbl) lbl.textContent=rng.label;
+  var nextBtn=document.getElementById('stats-nav-next');
+  if(nextBtn){ nextBtn.style.opacity=_statsOffset===0?'0.25':'1'; nextBtn.style.pointerEvents=_statsOffset===0?'none':'auto'; }
 
   // ── Summary cards: filtered by period ──
   var runY=d.treinos.filter(function(t){return t.data>=rng.start&&t.data<=rng.end;});
