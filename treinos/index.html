@@ -2217,20 +2217,35 @@ function renderEvolucao(){
             var ps=parsePaceSecs(t.pace);
             var eff=ps>0?Math.round((3600/ps)/t.fcMed*100*100)/100:0;
             var dt=new Date(t.data+'T12:00:00');
-            var dlbl=dt.getDate()+'/'+(dt.getMonth()+1);
+            var dlbl=dt.getDate()+'/'+(dt.getMonth()+1)+'/'+dt.getFullYear();
+            var isWalk=ps>=480; // >= 8:00/km = caminhada
+            var tipoIcon=isWalk?'🚶':'🏃';
+            var tipoLabel=isWalk?'Caminhada':'Corrida';
             var effColor=eff>=7.5?'#16a34a':eff>=6?'#d97706':'#be123c';
-            return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f8fafc">'+
-              '<div>'+
-                '<span style="font-size:11px;font-weight:700;color:#0f172a">'+dlbl+'</span>'+
-                '<span style="font-size:10px;color:#64748b;margin-left:6px">'+t.distancia.toFixed(1)+'km · '+t.pace+'/km · ❤️'+t.fcMed+'</span>'+
+            var effLabel=eff>=7.5?'✓ Meta atingida':eff>=6?'Abaixo da meta':'Baixo';
+            return '<div style="background:#fafafa;border-radius:10px;padding:8px 10px;margin-bottom:6px">'+
+              '<div style="display:flex;justify-content:space-between;align-items:flex-start">'+
+                '<div>'+
+                  '<div style="font-size:11px;font-weight:800;color:#0f172a">'+tipoIcon+' '+dlbl+' — '+tipoLabel+'</div>'+
+                  '<div style="margin-top:4px;display:flex;gap:10px;flex-wrap:wrap">'+
+                    '<span style="font-size:10px;color:#64748b">📏 <b>'+t.distancia.toFixed(1)+'</b> km</span>'+
+                    '<span style="font-size:10px;color:'+(isWalk?'#94a3b8':'#1d4ed8')+'">⚡ Pace: <b>'+t.pace+'</b>/km</span>'+
+                    '<span style="font-size:10px;color:#be123c">❤️ FC: <b>'+t.fcMed+'</b> bpm</span>'+
+                  '</div>'+
+                '</div>'+
+                '<div style="text-align:right;flex-shrink:0;margin-left:8px">'+
+                  '<div style="font-size:18px;font-weight:900;color:'+effColor+'">'+eff.toFixed(2)+'</div>'+
+                  '<div style="font-size:9px;color:'+effColor+'">'+effLabel+'</div>'+
+                '</div>'+
               '</div>'+
-              '<div style="font-size:14px;font-weight:900;color:'+effColor+'">'+eff.toFixed(2)+'</div>'+
             '</div>';
           }).join('');
           var avg=runs.reduce(function(s,t){var ps=parsePaceSecs(t.pace);return s+(ps>0?(3600/ps)/t.fcMed*100:0);},0)/runs.length;
+          var avgColor=avg>=7.5?'#16a34a':avg>=6?'#d97706':'#be123c';
           panel.innerHTML=
-            '<div style="font-size:10px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">'+
-              'Semana de '+wk.lbl+' · média: <span style="color:#be123c">'+avg.toFixed(2)+'</span> · meta: <span style="color:#16a34a">7.50</span>'+
+            '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
+              '<div style="font-size:10px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:.5px">📅 Semana '+wk.lbl+'</div>'+
+              '<div style="font-size:10px;color:#64748b">Média: <span style="font-weight:900;color:'+avgColor+'">'+avg.toFixed(2)+'</span> · Meta: <span style="color:#16a34a;font-weight:700">7.50</span></div>'+
             '</div>'+rows;
           panel.style.display='block';
         },
