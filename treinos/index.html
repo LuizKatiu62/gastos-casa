@@ -1546,18 +1546,20 @@ function renderStats(){
 
   // ── Weekly hours stacked chart ──
   var wLabels=[],runHrs=[],bikeHrs=[],swimHrs=[];
+  var _fdw=function(x){return x.getFullYear()+'-'+pad(x.getMonth()+1)+'-'+pad(x.getDate());};
   for(var w=11;w>=0;w--){
     var dt=new Date(hj+'T12:00:00'); dt.setDate(dt.getDate()-w*7);
     var dow=dt.getDay();
     var monW=new Date(dt); monW.setDate(dt.getDate()-(dow===0?6:dow-1));
     var sunW=new Date(monW); sunW.setDate(monW.getDate()+6);
-    function fdw(x){return x.getFullYear()+'-'+pad(x.getMonth()+1)+'-'+pad(x.getDate());}
-    var ini=fdw(monW),fim=fdw(sunW);
-    wLabels.push(monW.getDate()+'/'+(monW.getMonth()+1));
-    function wkHrs(arr){return Math.round(arr.filter(function(x){return x.data>=ini&&x.data<=fim;}).reduce(function(s,x){return s+parseDur(x.duracao);},0)/360)/10;}
-    runHrs.push(wkHrs(d.treinos));
-    bikeHrs.push(wkHrs(d.bike));
-    swimHrs.push(wkHrs(d.natacao));
+    var ini=_fdw(monW), fim=_fdw(sunW);
+    var lbl=monW.getDate()+'/'+(monW.getMonth()+1);
+    if(w===0) lbl+='→'+new Date(hj+'T12:00:00').getDate()+'/'+(new Date(hj+'T12:00:00').getMonth()+1);
+    wLabels.push(lbl);
+    var _ini=ini,_fim=fim;
+    runHrs.push(Math.round(d.treinos.filter(function(x){return x.data>=_ini&&x.data<=_fim;}).reduce(function(s,x){return s+parseDur(x.duracao);},0)/360)/10);
+    bikeHrs.push(Math.round(d.bike.filter(function(x){return x.data>=_ini&&x.data<=_fim;}).reduce(function(s,x){return s+parseDur(x.duracao);},0)/360)/10);
+    swimHrs.push(Math.round(d.natacao.filter(function(x){return x.data>=_ini&&x.data<=_fim;}).reduce(function(s,x){return s+parseDur(x.duracao);},0)/360)/10);
   }
   var ctxT=document.getElementById('tri-vol-chart'); if(ctxT){
     if(_triVolChart) _triVolChart.destroy();
