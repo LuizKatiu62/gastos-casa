@@ -2532,20 +2532,29 @@ function restaurarBackup(input){
   reader.readAsText(file);
 }
 
+// Returns true if an entry should NOT be in d.treinos (it's gym/non-run)
+function _isNonRunEntry(t){
+  if(t.stravaType && STRAVA_RUN_SPORTS.indexOf(t.stravaType)<0) return true;
+  if(t.stravaId && _isGymByName(t.notas)) return true;
+  return false;
+}
+
 // ── Firebase sync ──
 function mergeFromFirebase(fb){
   var localTs=localStorage.getItem('treinos_ts')?new Date(localStorage.getItem('treinos_ts')).getTime():0;
   var fbTs=fb&&fb._ts?fb._ts:0;
   if(!fb||!fb.treinos) return false;
   if(fbTs<=localTs+500) return false; // Firebase not newer — skip
-  _fbLatest=fb.treinos.slice();
+  // Strip non-run entries from Firebase before any merge
+  _fbLatest=fb.treinos.filter(function(t){return !_isNonRunEntry(t);});
   var dd=Object.assign({},fb); delete dd._ts;
+  dd.treinos=fb.treinos.filter(function(t){return !_isNonRunEntry(t);});
   if(!Array.isArray(dd.bike))    dd.bike=[];
   if(!Array.isArray(dd.natacao)) dd.natacao=[];
-  // Merge: keep any local-only entries not in Firebase
+  // Merge: keep any local-only entries not in Firebase (also strip non-run from local)
   var localData=getDados();
   localData.treinos.forEach(function(t){
-    if(t.id&&!dd.treinos.some(function(ft){return ft.id===t.id;})) dd.treinos.push(t);
+    if(t.id&&!_isNonRunEntry(t)&&!dd.treinos.some(function(ft){return ft.id===t.id;})) dd.treinos.push(t);
   });
   localData.bike.forEach(function(b){
     if(b.id&&!dd.bike.some(function(fb2){return fb2.id===b.id;})) dd.bike.push(b);
@@ -2553,8 +2562,9 @@ function mergeFromFirebase(fb){
   localData.natacao.forEach(function(n){
     if(n.id&&!dd.natacao.some(function(fn){return fn.id===n.id;})) dd.natacao.push(n);
   });
-  // Safety guard: never reduce record count — if merge result has fewer records than local, skip
-  if(dd.treinos.length < localData.treinos.length){
+  // Safety guard: compare only valid run entries
+  var localRunCount=localData.treinos.filter(function(t){return !_isNonRunEntry(t);}).length;
+  if(dd.treinos.length < localRunCount){
     syncStatus('#f59e0b','⚠️ sync ignorado (firebase incompleto)');
     return false;
   }
@@ -2600,8 +2610,10 @@ function iniciarSync(){
         var loc2=getDados();
         if(fb.treinos){
           fb.treinos.forEach(function(t){
-            if(t.id&&!loc2.treinos.some(function(lt){return lt.id===t.id;})) loc2.treinos.push(t);
+            if(t.id&&!_isNonRunEntry(t)&&!loc2.treinos.some(function(lt){return lt.id===t.id;})) loc2.treinos.push(t);
           });
+          // Strip gym from local treinos too
+          loc2.treinos=loc2.treinos.filter(function(t){return !_isNonRunEntry(t);});
         }
         if(fb.bike){
           fb.bike.forEach(function(b){
@@ -3188,8 +3200,6 @@ document.addEventListener('DOMContentLoaded',function(){
   });
   handleStravaCallback();
   renderDash();
-  // Cleanup mis-imported non-run activities immediately (works offline too)
-  setTimeout(purgeNonRunFromTreinos, 500);
   firebase.auth().signInAnonymously().then(iniciarSync).catch(iniciarSync);
 
   // Sync when app comes back to foreground (iOS: switching back from another app)
