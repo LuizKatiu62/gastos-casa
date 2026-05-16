@@ -2759,7 +2759,7 @@ async function stravaImportarPeriodo(){
     }
   }catch(e){lov.remove();stravaShowError('Erro de rede: '+e.message,false);return;}
 
-  // Filter by sport type
+  // Filter by sport type (when target=run, keep all and route per-activity below)
   var matching=sportFilter?allActs.filter(function(a){return sportFilter.indexOf(a.sport_type||a.type||'')>=0;}):allActs;
   lov.remove();
 
@@ -2796,7 +2796,12 @@ async function stravaImportarPeriodo(){
     var suffer=act.suffer_score?Math.round(act.suffer_score):0;
     var actDate=act.start_date_local?act.start_date_local.split('T')[0]:hoje();
     var sid=String(act.id);
-    if(target==='bike'){
+    var isBikeAct=STRAVA_BIKE_SPORTS.indexOf(st)>=0;
+    var isSwimAct=STRAVA_SWIM_SPORTS.indexOf(st)>=0;
+    var routeToBike=target==='bike'||(!target||target==='run')&&isBikeAct;
+    var routeToSwim=target==='natacao'||(!target||target==='run')&&isSwimAct;
+
+    if(routeToBike){
       var dist=Math.round(distM/10)/100;
       var vel=calcVelocidade(dist,dur);
       var tipo=detectStravaBikeTipo(st,act.name||'');
@@ -2805,7 +2810,7 @@ async function stravaImportarPeriodo(){
       var idx=stravaFindIdx(d.bike,sid,actDate,dist);
       if(idx>=0){d.bike[idx]=Object.assign(d.bike[idx],entry,{id:d.bike[idx].id});updated++;}
       else{d.bike.push(entry);added++;}
-    } else if(target==='natacao'){
+    } else if(routeToSwim){
       var distM2=Math.round(distM);
       var pace=calcPace100m(distM2,dur);
       var tipo2=detectStravaNatacaoTipo(st,act.name||'');
