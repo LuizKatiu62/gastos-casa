@@ -1542,30 +1542,33 @@ function renderDash(){
     var ds=dt.getFullYear()+'-'+pad(dt.getMonth()+1)+'-'+pad(dt.getDate());
     var runKm=d.treinos.filter(function(t){return t.data===ds;}).reduce(function(s,t){return s+(t.distancia||0);},0);
     var bikeKmDay=d.bike.filter(function(b){return b.data===ds;}).reduce(function(s,b){return s+(b.distancia||0);},0);
-    var total=runKm+bikeKmDay;
+    var natDay=d.natacao.filter(function(n){return n.data===ds;}).reduce(function(s,n){return s+(n.distancia||0);},0)/1000;
+    var total=runKm+bikeKmDay+natDay;
     if(total>maxKm) maxKm=total;
-    dayData.push({ds:ds,day:dt.getDay(),runKm:runKm,bikeKm:bikeKmDay,isToday:ds===hj});
+    dayData.push({ds:ds,day:dt.getDay(),runKm:runKm,bikeKm:bikeKmDay,natKm:natDay,isToday:ds===hj});
   }
   maxKm=maxKm||1;
   var stripH='';
   dayData.forEach(function(x){
-    var hasBoth=x.runKm>0&&x.bikeKm>0;
-    var runH=Math.max(Math.round((x.runKm/maxKm)*48),x.runKm>0?4:0);
-    var bkH=Math.max(Math.round((x.bikeKm/maxKm)*48),x.bikeKm>0?4:0);
+    var bars=[];
+    if(x.runKm>0)  bars.push({h:Math.max(Math.round((x.runKm/maxKm)*48),4), bg:'linear-gradient(to top,#3b82f6,#60a5fa)'});
+    if(x.bikeKm>0) bars.push({h:Math.max(Math.round((x.bikeKm/maxKm)*48),4),bg:'linear-gradient(to top,#f97316,#fb923c)'});
+    if(x.natKm>0)  bars.push({h:Math.max(Math.round((x.natKm/maxKm)*48),4), bg:'linear-gradient(to top,#0891b2,#22d3ee)'});
     var barInner='';
-    if(hasBoth){
-      barInner='<div style="display:flex;align-items:flex-end;width:100%;height:100%;gap:1px">'+
-        '<div style="flex:1;height:'+runH+'px;background:linear-gradient(to top,#3b82f6,#60a5fa);border-radius:3px 3px 0 0"></div>'+
-        '<div style="flex:1;height:'+bkH+'px;background:linear-gradient(to top,#f97316,#fb923c);border-radius:3px 3px 0 0"></div>'+
-      '</div>';
-    } else if(x.runKm>0){
-      barInner='<div class="day-bar run" style="height:'+runH+'px"></div>';
-    } else if(x.bikeKm>0){
-      barInner='<div class="day-bar" style="height:'+bkH+'px;background:linear-gradient(to top,#f97316,#fb923c)"></div>';
-    } else {
+    if(bars.length===0){
       barInner='<div class="day-bar"></div>';
+    } else if(bars.length===1){
+      barInner='<div class="day-bar" style="height:'+bars[0].h+'px;background:'+bars[0].bg+'"></div>';
+    } else {
+      barInner='<div style="display:flex;align-items:flex-end;width:100%;height:100%;gap:1px">'+
+        bars.map(function(b){return '<div style="flex:1;height:'+b.h+'px;background:'+b.bg+';border-radius:3px 3px 0 0"></div>';}).join('')+
+      '</div>';
     }
-    var kmLbl=x.runKm>0&&x.bikeKm>0?(x.runKm.toFixed(1)+'+'+x.bikeKm.toFixed(1)):x.runKm>0?x.runKm.toFixed(1):x.bikeKm>0?x.bikeKm.toFixed(1):'';
+    var parts=[];
+    if(x.runKm>0)  parts.push(x.runKm.toFixed(1));
+    if(x.bikeKm>0) parts.push(x.bikeKm.toFixed(1));
+    if(x.natKm>0)  parts.push(x.natKm.toFixed(1));
+    var kmLbl=parts.join('+');
     stripH+='<div class="day-col">'+
       '<div class="day-name">'+DIAS[x.day].slice(0,3)+'</div>'+
       '<div class="day-bar-wrap">'+barInner+'</div>'+
