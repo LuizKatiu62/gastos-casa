@@ -1058,6 +1058,30 @@ function salvarDados(d){
     }
   }catch(e){toast('🚨 Erro ao salvar!');}
 }
+// Remove from d.treinos any entry whose stravaType is a known non-run sport.
+// Runs automatically on startup so previously mis-imported gym/bike entries disappear
+// without requiring a full Strava reimport.
+function purgeNonRunFromTreinos(){
+  var d=getDados();
+  var before=d.treinos.length;
+  var removed=[];
+  d.treinos=d.treinos.filter(function(t){
+    if(!t.stravaType) return true; // no stravaType stored — manually entered, keep it
+    var isRun=STRAVA_RUN_SPORTS.indexOf(t.stravaType)>=0;
+    if(isRun) return true;
+    removed.push(t.id);
+    return false;
+  });
+  if(removed.length===0) return;
+  removed.forEach(function(id){
+    var fi=_fbLatest.findIndex(function(t){return t.id===id;});
+    if(fi>=0) _fbLatest.splice(fi,1);
+  });
+  salvarDados(d);
+  renderDash();
+  if(_tela==='log') renderLog();
+  toast('🧹 '+removed.length+' atividade'+(removed.length>1?'s':'')+' incorreta'+(removed.length>1?'s':'')+' removida'+(removed.length>1?'s':'')+' de corridas');
+}
 function syncStatus(cor,txt){
   var dot=document.getElementById('sync-dot'),el=document.getElementById('sync-txt');
   if(dot) dot.style.background=cor;
@@ -2585,6 +2609,8 @@ function iniciarSync(){
         loc2._ts=Date.now(); _fbRef.set(loc2);
         syncStatus('#22c55e','sincronizado');
       }
+      // One-time cleanup: remove gym/non-run activities mis-imported as corridas
+      purgeNonRunFromTreinos();
       // Real-time listener: fires when any other device saves
       _fbRef.on('value',function(snap2){
         if(_fbSalvando) return;
@@ -2834,7 +2860,7 @@ async function stravaImportarPeriodo(){
       var vel=calcVelocidade(dist,dur);
       var tipo=detectStravaBikeTipo(st,act.name||'');
       var amb=detectStravaAmbiente(st,act.name||'');
-      var entry={id:uid(),tipo:tipo,ambiente:amb,data:actDate,distancia:dist,duracao:dur,velocidade:vel,fcMed:hrVal,fcMax:hrMax,elevacao:elev,cadencia:cad,sufferScore:suffer,esforco:5,notas:act.name||'',stravaId:sid};
+      var entry={id:uid(),tipo:tipo,ambiente:amb,data:actDate,distancia:dist,duracao:dur,velocidade:vel,fcMed:hrVal,fcMax:hrMax,elevacao:elev,cadencia:cad,sufferScore:suffer,esforco:5,notas:act.name||'',stravaId:sid,stravaType:st};
       var idx=stravaFindIdx(d.bike,sid,actDate,dist);
       if(idx>=0){d.bike[idx]=Object.assign(d.bike[idx],entry,{id:d.bike[idx].id});updated++;}
       else{d.bike.push(entry);added++;}
@@ -2842,7 +2868,7 @@ async function stravaImportarPeriodo(){
       var distM2=Math.round(distM);
       var pace=calcPace100m(distM2,dur);
       var tipo2=detectStravaNatacaoTipo(st,act.name||'');
-      var entry2={id:uid(),tipo:tipo2,data:actDate,distancia:distM2,duracao:dur,pace:pace,fcMed:hrVal,fcMax:hrMax,elevacao:elev,cadencia:cad,sufferScore:suffer,esforco:5,notas:act.name||'',stravaId:sid};
+      var entry2={id:uid(),tipo:tipo2,data:actDate,distancia:distM2,duracao:dur,pace:pace,fcMed:hrVal,fcMax:hrMax,elevacao:elev,cadencia:cad,sufferScore:suffer,esforco:5,notas:act.name||'',stravaId:sid,stravaType:st};
       var idx2=stravaFindIdx(d.natacao,sid,actDate,distM2/1000);
       if(idx2>=0){d.natacao[idx2]=Object.assign(d.natacao[idx2],entry2,{id:d.natacao[idx2].id});updated++;}
       else{d.natacao.push(entry2);added++;}
@@ -2851,7 +2877,7 @@ async function stravaImportarPeriodo(){
       var paceS3=dist3>0?secs/dist3:0;
       var pace3=paceS3>0?Math.floor(paceS3/60)+':'+pad(Math.floor(paceS3%60)):'';
       var tipo3=detectStravaTipo(st,act.name||'');
-      var entry3={id:uid(),tipo:tipo3,data:actDate,distancia:dist3,duracao:dur,pace:pace3,fcMed:hrVal,fcMax:hrMax,elevacao:elev,cadencia:cad,sufferScore:suffer,esforco:5,notas:act.name||'',stravaId:sid};
+      var entry3={id:uid(),tipo:tipo3,data:actDate,distancia:dist3,duracao:dur,pace:pace3,fcMed:hrVal,fcMax:hrMax,elevacao:elev,cadencia:cad,sufferScore:suffer,esforco:5,notas:act.name||'',stravaId:sid,stravaType:st};
       var idx3=stravaFindIdx(d.treinos,sid,actDate,dist3);
       if(idx3>=0){d.treinos[idx3]=Object.assign(d.treinos[idx3],entry3,{id:d.treinos[idx3].id});updated++;}
       else{d.treinos.push(entry3);added++;}
@@ -3153,6 +3179,8 @@ document.addEventListener('DOMContentLoaded',function(){
   });
   handleStravaCallback();
   renderDash();
+  // Cleanup mis-imported non-run activities immediately (works offline too)
+  setTimeout(purgeNonRunFromTreinos, 500);
   firebase.auth().signInAnonymously().then(iniciarSync).catch(iniciarSync);
 
   // Sync when app comes back to foreground (iOS: switching back from another app)
