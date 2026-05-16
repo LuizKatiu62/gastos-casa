@@ -1062,8 +1062,14 @@ function getDados(){
     if(!Array.isArray(d.bike))     d.bike=[];
     if(!Array.isArray(d.natacao))  d.natacao=[];
     if(!Array.isArray(d.gym))      d.gym=[];
-    // Always strip non-run entries from treinos — gym/bike can never appear here
-    d.treinos=d.treinos.filter(function(t){return !_isNonRun(t);});
+    // Strip non-run entries and completely empty entries (no distance + no duration)
+    d.treinos=d.treinos.filter(function(t){
+      if(_isNonRun(t)) return false;
+      var hasDist=t.distancia&&t.distancia>0;
+      var hasDur=t.duracao&&t.duracao!=='0:00'&&t.duracao!=='00:00'&&t.duracao!=='0:00:00';
+      if(!hasDist&&!hasDur) return false;
+      return true;
+    });
     return d;
   }catch(e){ return {treinos:[],corridas:[],bike:[],natacao:[],gym:[]}; }
 }
