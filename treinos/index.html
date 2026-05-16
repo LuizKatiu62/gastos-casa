@@ -2798,8 +2798,12 @@ async function stravaImportarPeriodo(){
     var sid=String(act.id);
     var isBikeAct=STRAVA_BIKE_SPORTS.indexOf(st)>=0;
     var isSwimAct=STRAVA_SWIM_SPORTS.indexOf(st)>=0;
+    var isRunAct=STRAVA_RUN_SPORTS.indexOf(st)>=0;
     var routeToBike=target==='bike'||(!target||target==='run')&&isBikeAct;
     var routeToSwim=target==='natacao'||(!target||target==='run')&&isSwimAct;
+    var routeToRun=target==='run'&&isRunAct;
+    // Skip activities that don't match any known sport (e.g. WeightTraining, Yoga, Crossfit)
+    if(!routeToBike&&!routeToSwim&&!routeToRun&&target==='run') return;
 
     // Remove from d.treinos if it was mis-imported as run but is actually bike/swim
     if(routeToBike||routeToSwim){
@@ -2948,15 +2952,16 @@ function showStravaActList(date,acts){
   var sorted=acts.slice().sort(function(a,b){
     var st=a.sport_type||a.type||'';
     var sb=b.sport_type||b.type||'';
-    var aMatch=(target==='bike'&&STRAVA_BIKE_SPORTS.indexOf(st)>=0)||(target==='natacao'&&STRAVA_SWIM_SPORTS.indexOf(st)>=0)||(target==='run'&&STRAVA_BIKE_SPORTS.indexOf(st)<0&&STRAVA_SWIM_SPORTS.indexOf(st)<0);
-    var bMatch=(target==='bike'&&STRAVA_BIKE_SPORTS.indexOf(sb)>=0)||(target==='natacao'&&STRAVA_SWIM_SPORTS.indexOf(sb)>=0)||(target==='run'&&STRAVA_BIKE_SPORTS.indexOf(sb)<0&&STRAVA_SWIM_SPORTS.indexOf(sb)<0);
+    var aMatch=(target==='bike'&&STRAVA_BIKE_SPORTS.indexOf(st)>=0)||(target==='natacao'&&STRAVA_SWIM_SPORTS.indexOf(st)>=0)||(target==='run'&&STRAVA_RUN_SPORTS.indexOf(st)>=0);
+    var bMatch=(target==='bike'&&STRAVA_BIKE_SPORTS.indexOf(sb)>=0)||(target==='natacao'&&STRAVA_SWIM_SPORTS.indexOf(sb)>=0)||(target==='run'&&STRAVA_RUN_SPORTS.indexOf(sb)>=0);
     return (bMatch?1:0)-(aMatch?1:0);
   });
   var items=sorted.map(function(act){
     var st=act.sport_type||act.type||'';
     var isBike=STRAVA_BIKE_SPORTS.indexOf(st)>=0;
     var isSwim=STRAVA_SWIM_SPORTS.indexOf(st)>=0;
-    var isMatch=(target==='bike'&&isBike)||(target==='natacao'&&isSwim)||(target==='run'&&!isBike&&!isSwim);
+    var isRun=STRAVA_RUN_SPORTS.indexOf(st)>=0;
+    var isMatch=(target==='bike'&&isBike)||(target==='natacao'&&isSwim)||(target==='run'&&isRun);
     var km=(act.distance/1000).toFixed(2);
     var secs=act.moving_time;
     var h=Math.floor(secs/3600),mi=Math.floor((secs%3600)/60),s=secs%60;
@@ -2994,6 +2999,7 @@ var STRAVA_TIPO={
 };
 var STRAVA_BIKE_SPORTS=['Ride','VirtualRide','IndoorCycling','MountainBikeRide','EBikeRide','GravelRide','Handcycle','Velomobile','Cycling'];
 var STRAVA_SWIM_SPORTS=['Swim','OpenWaterSwim'];
+var STRAVA_RUN_SPORTS=['Run','TrailRun','VirtualRun','Treadmill','Walk','Hike'];
 
 function detectStravaTipo(sportType, actName){
   if(STRAVA_TIPO[sportType]) return STRAVA_TIPO[sportType];
