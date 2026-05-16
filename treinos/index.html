@@ -1549,7 +1549,7 @@ function renderDash(){
   var stripH='';
   dayData.forEach(function(x){
     var barH=Math.max(Math.round((x.km/maxKm)*48),x.km>0?4:0);
-    var cls='day-bar'+(x.isToday&&x.km>0?' now':x.km>0?' run':'');
+    var cls='day-bar'+(x.km>0?' run':'');
     stripH+='<div class="day-col">'+
       '<div class="day-name">'+DIAS[x.day].slice(0,3)+'</div>'+
       '<div class="day-bar-wrap"><div class="'+cls+'" style="height:'+barH+'px"></div></div>'+
