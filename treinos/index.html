@@ -2992,7 +2992,7 @@ var STRAVA_TIPO={
   'Walk':'caminhada','Hike':'caminhada',
   'Run':'facil','Workout':'facil'
 };
-var STRAVA_BIKE_SPORTS=['Ride','VirtualRide','MountainBikeRide','EBikeRide','GravelRide','Handcycle','Velomobile','Cycling'];
+var STRAVA_BIKE_SPORTS=['Ride','VirtualRide','IndoorCycling','MountainBikeRide','EBikeRide','GravelRide','Handcycle','Velomobile','Cycling'];
 var STRAVA_SWIM_SPORTS=['Swim','OpenWaterSwim'];
 
 function detectStravaTipo(sportType, actName){
@@ -3015,7 +3015,7 @@ function detectStravaBikeTipo(sportType, actName){
 }
 function detectStravaAmbiente(sportType, actName){
   // VirtualRide = trainer/smart trainer = indoor
-  if(sportType==='VirtualRide') return 'indoor';
+  if(sportType==='VirtualRide'||sportType==='IndoorCycling') return 'indoor';
   var n=(actName||'').toLowerCase();
   if(n.includes('indoor')||n.includes('trainer')||n.includes('zwift')||n.includes('rouvy')||n.includes('sufferfest')) return 'indoor';
   return 'outdoor';
