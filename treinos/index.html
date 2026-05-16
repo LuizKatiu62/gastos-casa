@@ -2796,6 +2796,7 @@ async function stravaImportarPeriodo(){
     var suffer=act.suffer_score?Math.round(act.suffer_score):0;
     var actDate=act.start_date_local?act.start_date_local.split('T')[0]:hoje();
     var sid=String(act.id);
+    var distKm=Math.round(distM/10)/100;
     var isBikeAct=STRAVA_BIKE_SPORTS.indexOf(st)>=0;
     var isSwimAct=STRAVA_SWIM_SPORTS.indexOf(st)>=0;
     var isRunAct=STRAVA_RUN_SPORTS.indexOf(st)>=0;
@@ -2805,15 +2806,27 @@ async function stravaImportarPeriodo(){
     var isUnknown=!isBikeAct&&!isSwimAct&&!isRunAct;
     // Skip and clean up activities that don't match any known sport (WeightTraining, Yoga, Crossfit…)
     if(isUnknown&&target==='run'){
-      var badIdx=d.treinos.findIndex(function(t){return t.stravaId===sid;});
-      if(badIdx>=0){ d.treinos.splice(badIdx,1); moved++; }
+      var badIdx=stravaFindIdx(d.treinos,sid,actDate,distKm);
+      if(badIdx>=0){
+        var badId=d.treinos[badIdx].id;
+        d.treinos.splice(badIdx,1);
+        var fbBad=_fbLatest.findIndex(function(t){return t.id===badId;});
+        if(fbBad>=0) _fbLatest.splice(fbBad,1);
+        moved++;
+      }
       return;
     }
 
     // Remove from d.treinos if it was mis-imported as run but is actually bike/swim
     if(routeToBike||routeToSwim){
-      var wrongIdx=d.treinos.findIndex(function(t){return t.stravaId===sid;});
-      if(wrongIdx>=0){ d.treinos.splice(wrongIdx,1); moved++; }
+      var wrongIdx=stravaFindIdx(d.treinos,sid,actDate,distKm);
+      if(wrongIdx>=0){
+        var wrongId=d.treinos[wrongIdx].id;
+        d.treinos.splice(wrongIdx,1);
+        var fbWrong=_fbLatest.findIndex(function(t){return t.id===wrongId;});
+        if(fbWrong>=0) _fbLatest.splice(fbWrong,1);
+        moved++;
+      }
     }
 
     if(routeToBike){
