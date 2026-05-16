@@ -2782,7 +2782,7 @@ async function stravaImportarPeriodo(){
     });
   }
 
-  var d=getDados(), added=0, updated=0;
+  var d=getDados(), added=0, updated=0, moved=0;
   matching.forEach(function(act){
     var st=act.sport_type||act.type||'';
     var distM=act.distance||0;
@@ -2800,6 +2800,12 @@ async function stravaImportarPeriodo(){
     var isSwimAct=STRAVA_SWIM_SPORTS.indexOf(st)>=0;
     var routeToBike=target==='bike'||(!target||target==='run')&&isBikeAct;
     var routeToSwim=target==='natacao'||(!target||target==='run')&&isSwimAct;
+
+    // Remove from d.treinos if it was mis-imported as run but is actually bike/swim
+    if(routeToBike||routeToSwim){
+      var wrongIdx=d.treinos.findIndex(function(t){return t.stravaId===sid;});
+      if(wrongIdx>=0){ d.treinos.splice(wrongIdx,1); moved++; }
+    }
 
     if(routeToBike){
       var dist=Math.round(distM/10)/100;
@@ -2834,7 +2840,7 @@ async function stravaImportarPeriodo(){
   if(_tela==='bike') renderBike();
   if(_tela==='natacao') renderNatacao();
   if(_tela==='log') renderLog();
-  toast('✅ '+added+' importados · '+updated+' atualizados');
+  toast('✅ '+added+' importados · '+updated+' atualizados'+(moved?' · '+moved+' corrigidos':''));
 }
 
 function openStravaSetup(pendingDate){
