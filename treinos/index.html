@@ -1061,16 +1061,25 @@ function salvarDados(d){
 // Remove from d.treinos any entry whose stravaType is a known non-run sport.
 // Runs automatically on startup so previously mis-imported gym/bike entries disappear
 // without requiring a full Strava reimport.
+var _GYM_KEYWORDS=['weight','muscula','muscu','força','gym','crossfit','yoga','pilates','elliptical','spinning','hiit','funcional','strength','lifting'];
+function _isGymByName(notas){
+  var n=(notas||'').toLowerCase();
+  return _GYM_KEYWORDS.some(function(k){return n.includes(k);});
+}
 function purgeNonRunFromTreinos(){
   var d=getDados();
-  var before=d.treinos.length;
   var removed=[];
   d.treinos=d.treinos.filter(function(t){
-    if(!t.stravaType) return true; // no stravaType stored — manually entered, keep it
-    var isRun=STRAVA_RUN_SPORTS.indexOf(t.stravaType)>=0;
-    if(isRun) return true;
-    removed.push(t.id);
-    return false;
+    // Has stravaType stored — check it directly
+    if(t.stravaType) {
+      if(STRAVA_RUN_SPORTS.indexOf(t.stravaType)>=0) return true;
+      removed.push(t.id); return false;
+    }
+    // No stravaType (old import) — check by activity name keywords
+    if(t.stravaId && _isGymByName(t.notas)){
+      removed.push(t.id); return false;
+    }
+    return true;
   });
   if(removed.length===0) return;
   removed.forEach(function(id){
@@ -1080,7 +1089,7 @@ function purgeNonRunFromTreinos(){
   salvarDados(d);
   renderDash();
   if(_tela==='log') renderLog();
-  toast('🧹 '+removed.length+' atividade'+(removed.length>1?'s':'')+' incorreta'+(removed.length>1?'s':'')+' removida'+(removed.length>1?'s':'')+' de corridas');
+  toast('🧹 '+removed.length+' atividade'+(removed.length>1?'s':'')+' removida'+(removed.length>1?'s':'')+' de corridas');
 }
 function syncStatus(cor,txt){
   var dot=document.getElementById('sync-dot'),el=document.getElementById('sync-txt');
@@ -2746,7 +2755,7 @@ async function stravaImportarPeriodo(){
 
   // Determine sport type filter
   var target=_stravaTarget;
-  var sportFilter=target==='bike'?STRAVA_BIKE_SPORTS:target==='natacao'?STRAVA_SWIM_SPORTS:null;
+  var sportFilter=target==='bike'?STRAVA_BIKE_SPORTS:target==='natacao'?STRAVA_SWIM_SPORTS:STRAVA_RUN_SPORTS;
 
   var lov=document.createElement('div'); lov.className='strava-overlay'; lov.id='strava-loading';
   lov.innerHTML='<div class="strava-modal" style="text-align:center;padding:2rem">'+
@@ -2786,7 +2795,7 @@ async function stravaImportarPeriodo(){
   }catch(e){lov.remove();stravaShowError('Erro de rede: '+e.message,false);return;}
 
   // Filter by sport type (when target=run, keep all and route per-activity below)
-  var matching=sportFilter?allActs.filter(function(a){return sportFilter.indexOf(a.sport_type||a.type||'')>=0;}):allActs;
+  var matching=allActs.filter(function(a){return sportFilter.indexOf(a.sport_type||a.type||'')>=0;});
   lov.remove();
 
   if(!matching.length){
