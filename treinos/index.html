@@ -2802,8 +2802,13 @@ async function stravaImportarPeriodo(){
     var routeToBike=target==='bike'||(!target||target==='run')&&isBikeAct;
     var routeToSwim=target==='natacao'||(!target||target==='run')&&isSwimAct;
     var routeToRun=target==='run'&&isRunAct;
-    // Skip activities that don't match any known sport (e.g. WeightTraining, Yoga, Crossfit)
-    if(!routeToBike&&!routeToSwim&&!routeToRun&&target==='run') return;
+    var isUnknown=!isBikeAct&&!isSwimAct&&!isRunAct;
+    // Skip and clean up activities that don't match any known sport (WeightTraining, Yoga, Crossfit…)
+    if(isUnknown&&target==='run'){
+      var badIdx=d.treinos.findIndex(function(t){return t.stravaId===sid;});
+      if(badIdx>=0){ d.treinos.splice(badIdx,1); moved++; }
+      return;
+    }
 
     // Remove from d.treinos if it was mis-imported as run but is actually bike/swim
     if(routeToBike||routeToSwim){
@@ -2986,9 +2991,13 @@ function showStravaActList(date,acts){
 }
 
 function importStravaSelected(date,actId,name,distM,movingSecs,hr,sportType,actDate,fcMax,elevacao,cadencia,sufferScore){
-  if(_stravaTarget==='bike') importStravaBike(date,actId,name,distM,movingSecs,hr,sportType,actDate,fcMax,elevacao,cadencia,sufferScore);
-  else if(_stravaTarget==='natacao') importStravaNatacao(date,actId,name,distM,movingSecs,hr,sportType,actDate,fcMax,elevacao,cadencia,sufferScore);
-  else importStravaTreino(date,actId,name,distM,movingSecs,hr,sportType,actDate,fcMax,elevacao,cadencia,sufferScore);
+  var isBike=STRAVA_BIKE_SPORTS.indexOf(sportType)>=0;
+  var isSwim=STRAVA_SWIM_SPORTS.indexOf(sportType)>=0;
+  var isRun=STRAVA_RUN_SPORTS.indexOf(sportType)>=0;
+  if(_stravaTarget==='bike'||isBike) importStravaBike(date,actId,name,distM,movingSecs,hr,sportType,actDate,fcMax,elevacao,cadencia,sufferScore);
+  else if(_stravaTarget==='natacao'||isSwim) importStravaNatacao(date,actId,name,distM,movingSecs,hr,sportType,actDate,fcMax,elevacao,cadencia,sufferScore);
+  else if(isRun) importStravaTreino(date,actId,name,distM,movingSecs,hr,sportType,actDate,fcMax,elevacao,cadencia,sufferScore);
+  else { showToast('Atividade ignorada: '+sportType+' não é corrida, bike ou natação'); }
 }
 
 var STRAVA_TIPO={
