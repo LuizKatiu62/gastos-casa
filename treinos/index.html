@@ -2771,7 +2771,17 @@ async function stravaImportarPeriodo(){
     document.body.appendChild(nem); return;
   }
 
-  // Bulk import
+  // Bulk import — dedup by stravaId first, then date+distance fallback
+  function stravaFindIdx(arr, sid, actDate, dist){
+    // 1. exact stravaId match
+    var i=arr.findIndex(function(x){return x.stravaId===sid;});
+    if(i>=0) return i;
+    // 2. same date + distance within 0.15 km (no stravaId yet)
+    return arr.findIndex(function(x){
+      return !x.stravaId && x.data===actDate && Math.abs((x.distancia||0)-dist)<0.15;
+    });
+  }
+
   var d=getDados(), added=0, updated=0;
   matching.forEach(function(act){
     var st=act.sport_type||act.type||'';
@@ -2792,7 +2802,7 @@ async function stravaImportarPeriodo(){
       var tipo=detectStravaBikeTipo(st,act.name||'');
       var amb=detectStravaAmbiente(st,act.name||'');
       var entry={id:uid(),tipo:tipo,ambiente:amb,data:actDate,distancia:dist,duracao:dur,velocidade:vel,fcMed:hrVal,fcMax:hrMax,elevacao:elev,cadencia:cad,sufferScore:suffer,esforco:5,notas:act.name||'',stravaId:sid};
-      var idx=d.bike.findIndex(function(b){return b.stravaId===sid;});
+      var idx=stravaFindIdx(d.bike,sid,actDate,dist);
       if(idx>=0){d.bike[idx]=Object.assign(d.bike[idx],entry,{id:d.bike[idx].id});updated++;}
       else{d.bike.push(entry);added++;}
     } else if(target==='natacao'){
@@ -2800,7 +2810,7 @@ async function stravaImportarPeriodo(){
       var pace=calcPace100m(distM2,dur);
       var tipo2=detectStravaNatacaoTipo(st,act.name||'');
       var entry2={id:uid(),tipo:tipo2,data:actDate,distancia:distM2,duracao:dur,pace:pace,fcMed:hrVal,fcMax:hrMax,elevacao:elev,cadencia:cad,sufferScore:suffer,esforco:5,notas:act.name||'',stravaId:sid};
-      var idx2=d.natacao.findIndex(function(n){return n.stravaId===sid;});
+      var idx2=stravaFindIdx(d.natacao,sid,actDate,distM2/1000);
       if(idx2>=0){d.natacao[idx2]=Object.assign(d.natacao[idx2],entry2,{id:d.natacao[idx2].id});updated++;}
       else{d.natacao.push(entry2);added++;}
     } else {
@@ -2809,7 +2819,7 @@ async function stravaImportarPeriodo(){
       var pace3=paceS3>0?Math.floor(paceS3/60)+':'+pad(Math.floor(paceS3%60)):'';
       var tipo3=detectStravaTipo(st,act.name||'');
       var entry3={id:uid(),tipo:tipo3,data:actDate,distancia:dist3,duracao:dur,pace:pace3,fcMed:hrVal,fcMax:hrMax,elevacao:elev,cadencia:cad,sufferScore:suffer,esforco:5,notas:act.name||'',stravaId:sid};
-      var idx3=d.treinos.findIndex(function(t){return t.stravaId===sid;});
+      var idx3=stravaFindIdx(d.treinos,sid,actDate,dist3);
       if(idx3>=0){d.treinos[idx3]=Object.assign(d.treinos[idx3],entry3,{id:d.treinos[idx3].id});updated++;}
       else{d.treinos.push(entry3);added++;}
     }
