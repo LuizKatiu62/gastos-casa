@@ -2436,6 +2436,10 @@ async function stravaImportarPeriodo(){
     var hh=Math.floor(secs/3600),mm=Math.floor((secs%3600)/60),ss=secs%60;
     var dur=hh>0?hh+':'+pad(mm)+':'+pad(ss):mm+':'+pad(ss);
     var hrVal=act.average_heartrate?Math.round(act.average_heartrate):0;
+    var hrMax=act.max_heartrate?Math.round(act.max_heartrate):0;
+    var elev=act.total_elevation_gain?Math.round(act.total_elevation_gain):0;
+    var cad=act.average_cadence?Math.round(act.average_cadence):0;
+    var suffer=act.suffer_score?Math.round(act.suffer_score):0;
     var actDate=act.start_date_local?act.start_date_local.split('T')[0]:hoje();
     var sid=String(act.id);
     if(target==='bike'){
@@ -2443,7 +2447,7 @@ async function stravaImportarPeriodo(){
       var vel=calcVelocidade(dist,dur);
       var tipo=detectStravaBikeTipo(st,act.name||'');
       var amb=detectStravaAmbiente(st,act.name||'');
-      var entry={id:uid(),tipo:tipo,ambiente:amb,data:actDate,distancia:dist,duracao:dur,velocidade:vel,fcMed:hrVal,fcMax:0,esforco:5,notas:act.name||'',stravaId:sid};
+      var entry={id:uid(),tipo:tipo,ambiente:amb,data:actDate,distancia:dist,duracao:dur,velocidade:vel,fcMed:hrVal,fcMax:hrMax,elevacao:elev,cadencia:cad,sufferScore:suffer,esforco:5,notas:act.name||'',stravaId:sid};
       var idx=d.bike.findIndex(function(b){return b.stravaId===sid;});
       if(idx>=0){d.bike[idx]=Object.assign(d.bike[idx],entry,{id:d.bike[idx].id});updated++;}
       else{d.bike.push(entry);added++;}
@@ -2451,7 +2455,7 @@ async function stravaImportarPeriodo(){
       var distM2=Math.round(distM);
       var pace=calcPace100m(distM2,dur);
       var tipo2=detectStravaNatacaoTipo(st,act.name||'');
-      var entry2={id:uid(),tipo:tipo2,data:actDate,distancia:distM2,duracao:dur,pace:pace,fcMed:hrVal,fcMax:0,esforco:5,notas:act.name||'',stravaId:sid};
+      var entry2={id:uid(),tipo:tipo2,data:actDate,distancia:distM2,duracao:dur,pace:pace,fcMed:hrVal,fcMax:hrMax,elevacao:elev,cadencia:cad,sufferScore:suffer,esforco:5,notas:act.name||'',stravaId:sid};
       var idx2=d.natacao.findIndex(function(n){return n.stravaId===sid;});
       if(idx2>=0){d.natacao[idx2]=Object.assign(d.natacao[idx2],entry2,{id:d.natacao[idx2].id});updated++;}
       else{d.natacao.push(entry2);added++;}
@@ -2460,7 +2464,7 @@ async function stravaImportarPeriodo(){
       var paceS3=dist3>0?secs/dist3:0;
       var pace3=paceS3>0?Math.floor(paceS3/60)+':'+pad(Math.floor(paceS3%60)):'';
       var tipo3=detectStravaTipo(st,act.name||'');
-      var entry3={id:uid(),tipo:tipo3,data:actDate,distancia:dist3,duracao:dur,pace:pace3,fcMed:hrVal,fcMax:0,esforco:5,notas:act.name||'',stravaId:sid};
+      var entry3={id:uid(),tipo:tipo3,data:actDate,distancia:dist3,duracao:dur,pace:pace3,fcMed:hrVal,fcMax:hrMax,elevacao:elev,cadencia:cad,sufferScore:suffer,esforco:5,notas:act.name||'',stravaId:sid};
       var idx3=d.treinos.findIndex(function(t){return t.stravaId===sid;});
       if(idx3>=0){d.treinos[idx3]=Object.assign(d.treinos[idx3],entry3,{id:d.treinos[idx3].id});updated++;}
       else{d.treinos.push(entry3);added++;}
@@ -2597,7 +2601,7 @@ function showStravaActList(date,acts){
     if(isBike&&act.distance>0){ var spd=(act.distance/1000)/(secs/3600); metricStr=' &nbsp;·&nbsp; ⚡ '+spd.toFixed(1)+' km/h'; }
     else if(act.distance>0){ var paceS=secs/(act.distance/1000); metricStr=' &nbsp;·&nbsp; ⚡ '+Math.floor(paceS/60)+':'+pad(Math.floor(paceS%60))+'/km'; }
     var dimStyle=isMatch?'':'opacity:.45;';
-    return '<div class="strava-act-item" style="'+dimStyle+'" onclick="importStravaSelected(\''+date+'\',\''+act.id+'\',\''+act.name.replace(/'/g,'`').replace(/"/g,'`')+'\','+act.distance+','+act.moving_time+','+(act.average_heartrate||0)+',\''+escAttr(st)+'\',\''+actDate+'\')">'+
+    return '<div class="strava-act-item" style="'+dimStyle+'" onclick="importStravaSelected(\''+date+'\',\''+act.id+'\',\''+act.name.replace(/'/g,'`').replace(/"/g,'`')+'\','+act.distance+','+act.moving_time+','+(act.average_heartrate||0)+',\''+escAttr(st)+'\',\''+actDate+'\','+(act.max_heartrate||0)+','+(act.total_elevation_gain||0)+','+(act.average_cadence||0)+','+(act.suffer_score||0)+')">'+
       '<div style="font-weight:700;font-size:.88rem;color:#fc4c02">'+act.name+'</div>'+
       '<div style="font-size:.75rem;color:#555;margin-top:.2rem">'+st+' · '+dlbl+(isMatch?' ✓':'')+'</div>'+
       '<div style="font-size:.78rem;color:#777;margin-top:.25rem">📏 '+km+' km &nbsp;·&nbsp; ⏱ '+dur+metricStr+(act.average_heartrate?' &nbsp;·&nbsp; ❤️ '+Math.round(act.average_heartrate)+' bpm':'')+'</div>'+
@@ -2608,10 +2612,10 @@ function showStravaActList(date,acts){
   document.body.appendChild(ov);
 }
 
-function importStravaSelected(date,actId,name,distM,movingSecs,hr,sportType,actDate){
-  if(_stravaTarget==='bike') importStravaBike(date,actId,name,distM,movingSecs,hr,sportType,actDate);
-  else if(_stravaTarget==='natacao') importStravaNatacao(date,actId,name,distM,movingSecs,hr,sportType,actDate);
-  else importStravaTreino(date,actId,name,distM,movingSecs,hr,sportType,actDate,0);
+function importStravaSelected(date,actId,name,distM,movingSecs,hr,sportType,actDate,fcMax,elevacao,cadencia,sufferScore){
+  if(_stravaTarget==='bike') importStravaBike(date,actId,name,distM,movingSecs,hr,sportType,actDate,fcMax,elevacao,cadencia,sufferScore);
+  else if(_stravaTarget==='natacao') importStravaNatacao(date,actId,name,distM,movingSecs,hr,sportType,actDate,fcMax,elevacao,cadencia,sufferScore);
+  else importStravaTreino(date,actId,name,distM,movingSecs,hr,sportType,actDate,fcMax,elevacao,cadencia,sufferScore);
 }
 
 var STRAVA_TIPO={
@@ -2657,7 +2661,7 @@ function detectStravaNatacaoTipo(sportType, actName){
   return 'recovery';
 }
 
-function importStravaTreino(date,actId,name,distM,movingSecs,hr,sportType,actDate,cadence){
+function importStravaTreino(date,actId,name,distM,movingSecs,hr,sportType,actDate,fcMax,elevacao,cadencia,sufferScore){
   var el=document.getElementById('strava-act-list'); if(el) el.remove();
   var dist=Math.round(distM/10)/100;
   var h=Math.floor(movingSecs/3600),m=Math.floor((movingSecs%3600)/60),s=movingSecs%60;
@@ -2666,7 +2670,7 @@ function importStravaTreino(date,actId,name,distM,movingSecs,hr,sportType,actDat
   var pace=paceS>0?Math.floor(paceS/60)+':'+pad(Math.floor(paceS%60)):'';
   var hrVal=hr&&+hr>0?Math.round(+hr):0;
   var tipo=detectStravaTipo(sportType,name);
-  var treino={id:uid(),tipo:tipo,data:actDate||date,distancia:dist,duracao:duracao,pace:pace,fcMed:hrVal,fcMax:0,esforco:5,notas:name||'',stravaId:String(actId)};
+  var treino={id:uid(),tipo:tipo,data:actDate||date,distancia:dist,duracao:duracao,pace:pace,fcMed:hrVal,fcMax:fcMax&&+fcMax>0?Math.round(+fcMax):0,elevacao:elevacao&&+elevacao>0?Math.round(+elevacao):0,cadencia:cadencia&&+cadencia>0?Math.round(+cadencia):0,sufferScore:sufferScore&&+sufferScore>0?Math.round(+sufferScore):0,esforco:5,notas:name||'',stravaId:String(actId)};
   var d=getDados();
   var idx=d.treinos.findIndex(function(t){return t.stravaId&&t.stravaId===treino.stravaId;});
   if(idx>=0){
@@ -2681,7 +2685,7 @@ function importStravaTreino(date,actId,name,distM,movingSecs,hr,sportType,actDat
   setTimeout(function(){ abrirTreino(treino.id); },400);
 }
 
-function importStravaBike(date,actId,name,distM,movingSecs,hr,sportType,actDate){
+function importStravaBike(date,actId,name,distM,movingSecs,hr,sportType,actDate,fcMax,elevacao,cadencia,sufferScore){
   var el=document.getElementById('strava-act-list'); if(el) el.remove();
   var dist=Math.round(distM/10)/100;
   var h=Math.floor(movingSecs/3600),m=Math.floor((movingSecs%3600)/60),s=movingSecs%60;
@@ -2690,7 +2694,7 @@ function importStravaBike(date,actId,name,distM,movingSecs,hr,sportType,actDate)
   var hrVal=hr&&+hr>0?Math.round(+hr):0;
   var tipo=detectStravaBikeTipo(sportType,name);
   var ambiente=detectStravaAmbiente(sportType,name);
-  var entry={id:uid(),tipo:tipo,ambiente:ambiente,data:actDate||date,distancia:dist,duracao:duracao,velocidade:vel,fcMed:hrVal,fcMax:0,esforco:5,notas:name||'',stravaId:String(actId)};
+  var entry={id:uid(),tipo:tipo,ambiente:ambiente,data:actDate||date,distancia:dist,duracao:duracao,velocidade:vel,fcMed:hrVal,fcMax:fcMax&&+fcMax>0?Math.round(+fcMax):0,elevacao:elevacao&&+elevacao>0?Math.round(+elevacao):0,cadencia:cadencia&&+cadencia>0?Math.round(+cadencia):0,sufferScore:sufferScore&&+sufferScore>0?Math.round(+sufferScore):0,esforco:5,notas:name||'',stravaId:String(actId)};
   var d=getDados();
   var idx=d.bike.findIndex(function(b){return b.stravaId&&b.stravaId===entry.stravaId;});
   if(idx>=0){
@@ -2704,7 +2708,7 @@ function importStravaBike(date,actId,name,distM,movingSecs,hr,sportType,actDate)
   setTimeout(function(){ abrirBike(entry.id); },400);
 }
 
-function importStravaNatacao(date,actId,name,distM,movingSecs,hr,sportType,actDate){
+function importStravaNatacao(date,actId,name,distM,movingSecs,hr,sportType,actDate,fcMax,elevacao,cadencia,sufferScore){
   var el=document.getElementById('strava-act-list'); if(el) el.remove();
   // Strava reports swim distance in meters — use as-is
   var distMetros=Math.round(distM);
@@ -2713,7 +2717,7 @@ function importStravaNatacao(date,actId,name,distM,movingSecs,hr,sportType,actDa
   var pace=calcPace100m(distMetros,duracao);
   var hrVal=hr&&+hr>0?Math.round(+hr):0;
   var tipo=detectStravaNatacaoTipo(sportType,name);
-  var entry={id:uid(),tipo:tipo,data:actDate||date,distancia:distMetros,duracao:duracao,pace:pace,fcMed:hrVal,fcMax:0,esforco:5,notas:name||'',stravaId:String(actId)};
+  var entry={id:uid(),tipo:tipo,data:actDate||date,distancia:distMetros,duracao:duracao,pace:pace,fcMed:hrVal,fcMax:fcMax&&+fcMax>0?Math.round(+fcMax):0,elevacao:elevacao&&+elevacao>0?Math.round(+elevacao):0,cadencia:cadencia&&+cadencia>0?Math.round(+cadencia):0,sufferScore:sufferScore&&+sufferScore>0?Math.round(+sufferScore):0,esforco:5,notas:name||'',stravaId:String(actId)};
   var d=getDados();
   var idx=d.natacao.findIndex(function(n){return n.stravaId&&n.stravaId===entry.stravaId;});
   if(idx>=0){
