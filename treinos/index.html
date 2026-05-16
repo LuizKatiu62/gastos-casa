@@ -1033,19 +1033,24 @@ function fmtDataLonga(s){ if(!s) return ''; var p=s.split('-'); return parseInt(
 function tipoInfo(t){ return TIPO_INFO[t]||{emoji:'🏃',label:t||'Treino',bg:'#eff6ff',cor:'#3b82f6'}; }
 
 // ── Data ──
-// Keywords that identify gym/non-run Strava activities by name
-var _GYM_KW=['weight','muscula','muscu','weight training','academia','gym ','crossfit','yoga','pilates','elliptical','spinning','hiit','strength','lifting','força'];
 function _isNonRun(t){
-  // Has Strava sport type and it's not a run sport → non-run
+  // Has stravaType → definitive check
   if(t.stravaType){
-    var RUN=['Run','TrailRun','VirtualRun','Treadmill','Walk','Hike'];
-    return RUN.indexOf(t.stravaType)<0;
+    return ['Run','TrailRun','VirtualRun','Treadmill','Walk','Hike'].indexOf(t.stravaType)<0;
   }
-  // Old entry without stravaType: check name keywords (only if from Strava)
-  if(t.stravaId){
-    var n=(t.notas||'').toLowerCase();
-    return _GYM_KW.some(function(k){return n.indexOf(k)>=0;});
+  // Manually entered (no stravaId) → always keep
+  if(!t.stravaId) return false;
+  // Zero or near-zero distance from Strava = gym/weight training (no real run has 0 km)
+  if(!t.distancia||t.distancia<0.1) return true;
+  // Pace faster than 3:30/km over >1 km = impossible for a human runner → it's a bike
+  if(t.distancia>1&&t.pace){
+    var pp=t.pace.split(':');
+    if(pp.length===2){var ps=parseInt(pp[0])*60+parseInt(pp[1]); if(ps>0&&ps<210) return true;}
   }
+  // Name-based detection for bike apps and gym activities
+  var n=(t.notas||'').toLowerCase();
+  if(['rouvy','group ride','zwift ride','indoor cycling','afternoon ride','morning ride','evening ride','virtual ride'].some(function(k){return n.indexOf(k)>=0;})) return true;
+  if(['weight training','weight lifting','muscula','muscu','academia','crossfit','yoga','pilates','gym workout','strength training','hiit','elliptical','spinning'].some(function(k){return n.indexOf(k)>=0;})) return true;
   return false;
 }
 
