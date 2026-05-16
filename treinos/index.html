@@ -1033,6 +1033,22 @@ function fmtDataLonga(s){ if(!s) return ''; var p=s.split('-'); return parseInt(
 function tipoInfo(t){ return TIPO_INFO[t]||{emoji:'🏃',label:t||'Treino',bg:'#eff6ff',cor:'#3b82f6'}; }
 
 // ── Data ──
+// Keywords that identify gym/non-run Strava activities by name
+var _GYM_KW=['weight','muscula','muscu','weight training','academia','gym ','crossfit','yoga','pilates','elliptical','spinning','hiit','strength','lifting','força'];
+function _isNonRun(t){
+  // Has Strava sport type and it's not a run sport → non-run
+  if(t.stravaType){
+    var RUN=['Run','TrailRun','VirtualRun','Treadmill','Walk','Hike'];
+    return RUN.indexOf(t.stravaType)<0;
+  }
+  // Old entry without stravaType: check name keywords (only if from Strava)
+  if(t.stravaId){
+    var n=(t.notas||'').toLowerCase();
+    return _GYM_KW.some(function(k){return n.indexOf(k)>=0;});
+  }
+  return false;
+}
+
 function getDados(){
   try{
     var d=JSON.parse(localStorage.getItem('treinos')||'{}');
@@ -1041,6 +1057,8 @@ function getDados(){
     if(!Array.isArray(d.bike))     d.bike=[];
     if(!Array.isArray(d.natacao))  d.natacao=[];
     if(!Array.isArray(d.gym))      d.gym=[];
+    // Always strip non-run entries from treinos — gym/bike can never appear here
+    d.treinos=d.treinos.filter(function(t){return !_isNonRun(t);});
     return d;
   }catch(e){ return {treinos:[],corridas:[],bike:[],natacao:[],gym:[]}; }
 }
@@ -1051,7 +1069,10 @@ function salvarDados(d){
     if(_fbAtivo&&_fbRef){
       _fbSalvando=true; syncStatus('#f59e0b','salvando...');
       var merged=d.treinos.slice();
-      _fbLatest.forEach(function(t){ if(t.id&&!merged.some(function(m){return m.id===t.id;})) merged.push(t); });
+      // Only merge _fbLatest entries that are valid run activities
+      _fbLatest.forEach(function(t){
+        if(t.id&&!_isNonRun(t)&&!merged.some(function(m){return m.id===t.id;})) merged.push(t);
+      });
       _fbRef.set(Object.assign({},d,{treinos:merged,_ts:Date.now()}))
         .then(function(){ syncStatus('#22c55e','sincronizado ✓'); setTimeout(function(){_fbSalvando=false;},2000); })
         .catch(function(){ _fbSalvando=false; syncStatus('#ef4444','erro sync'); });
@@ -2767,7 +2788,7 @@ async function stravaImportarPeriodo(){
 
   // Determine sport type filter
   var target=_stravaTarget;
-  var sportFilter=target==='bike'?STRAVA_BIKE_SPORTS:target==='natacao'?STRAVA_SWIM_SPORTS:STRAVA_RUN_SPORTS;
+  var sportFilter=target==='bike'?STRAVA_BIKE_SPORTS:target==='natacao'?STRAVA_SWIM_SPORTS:null;
 
   var lov=document.createElement('div'); lov.className='strava-overlay'; lov.id='strava-loading';
   lov.innerHTML='<div class="strava-modal" style="text-align:center;padding:2rem">'+
@@ -2807,7 +2828,7 @@ async function stravaImportarPeriodo(){
   }catch(e){lov.remove();stravaShowError('Erro de rede: '+e.message,false);return;}
 
   // Filter by sport type (when target=run, keep all and route per-activity below)
-  var matching=allActs.filter(function(a){return sportFilter.indexOf(a.sport_type||a.type||'')>=0;});
+  var matching=sportFilter?allActs.filter(function(a){return sportFilter.indexOf(a.sport_type||a.type||'')>=0;}):allActs;
   lov.remove();
 
   if(!matching.length){
