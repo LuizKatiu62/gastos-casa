@@ -617,6 +617,59 @@ input[type=range].esf::-webkit-slider-thumb{-webkit-appearance:none;width:22px;h
   <iframe id="pdf-viewer-iframe" src="about:blank" style="flex:1;width:100%;border:none;background:#f5f5f5"></iframe>
 </div>
 
+<!-- ══ EVOLUÇÃO ══ -->
+<div id="tela-evolucao" class="screen">
+  <div class="page-hero" style="background:linear-gradient(135deg,#0f172a 0%,#1d4ed8 60%,#7c3aed 100%)">
+    <div class="page-hero-title">📈 Evolução</div>
+    <div class="page-hero-sub">Performance · Eficiência · Carga</div>
+  </div>
+
+  <!-- Period selector -->
+  <div style="display:flex;gap:6px;padding:10px 12px 4px;overflow-x:auto">
+    <button id="evo-btn-4"  onclick="setEvoPeriod(4)"  style="flex-shrink:0;padding:5px 13px;border-radius:20px;border:1.5px solid #e2e8f0;background:#f8fafc;font-size:11px;font-weight:700;cursor:pointer;color:#64748b">4 sem</button>
+    <button id="evo-btn-8"  onclick="setEvoPeriod(8)"  style="flex-shrink:0;padding:5px 13px;border-radius:20px;border:1.5px solid #e2e8f0;background:#f8fafc;font-size:11px;font-weight:700;cursor:pointer;color:#64748b">8 sem</button>
+    <button id="evo-btn-12" onclick="setEvoPeriod(12)" style="flex-shrink:0;padding:5px 13px;border-radius:20px;border:1.5px solid #1d4ed8;background:#eff6ff;font-size:11px;font-weight:700;cursor:pointer;color:#1d4ed8">12 sem</button>
+    <button id="evo-btn-24" onclick="setEvoPeriod(24)" style="flex-shrink:0;padding:5px 13px;border-radius:20px;border:1.5px solid #e2e8f0;background:#f8fafc;font-size:11px;font-weight:700;cursor:pointer;color:#64748b">6 meses</button>
+  </div>
+
+  <!-- KPI comparison cards -->
+  <div id="evo-kpi" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:6px 12px 4px"></div>
+
+  <!-- Pace evolution -->
+  <div class="sec" style="padding-top:12px"><span class="sec-title">🏃 Pace Médio por Semana</span></div>
+  <div class="card" style="padding:10px 12px 14px">
+    <div style="font-size:10px;color:#94a3b8;margin-bottom:8px">Corridas &gt; 3 km · para cima = mais rápido</div>
+    <div style="position:relative;height:160px"><canvas id="evo-pace-chart"></canvas></div>
+  </div>
+
+  <!-- Aerobic efficiency -->
+  <div class="sec" style="padding-top:10px"><span class="sec-title">❤️ Eficiência Aeróbica</span></div>
+  <div class="card" style="padding:10px 12px 14px">
+    <div style="font-size:10px;color:#94a3b8;margin-bottom:8px">Velocidade ÷ FC média × 100 · para cima = mais eficiente</div>
+    <div style="position:relative;height:150px"><canvas id="evo-eff-chart"></canvas></div>
+  </div>
+
+  <!-- Training load -->
+  <div class="sec" style="padding-top:10px"><span class="sec-title">🔥 Carga Semanal</span></div>
+  <div class="card" style="padding:10px 12px 14px">
+    <div style="font-size:10px;color:#94a3b8;margin-bottom:8px" id="evo-load-lbl">Suffer Score acumulado por semana</div>
+    <div style="position:relative;height:140px"><canvas id="evo-load-chart"></canvas></div>
+  </div>
+
+  <!-- Cadence -->
+  <div class="sec" id="evo-cad-sec" style="padding-top:10px;display:none"><span class="sec-title">👟 Cadência Média</span></div>
+  <div class="card" id="evo-cad-card" style="padding:10px 12px 14px;display:none">
+    <div style="font-size:10px;color:#94a3b8;margin-bottom:8px">Passos por minuto · ideal: 170–180 spm</div>
+    <div style="position:relative;height:130px"><canvas id="evo-cad-chart"></canvas></div>
+  </div>
+
+  <!-- Long runs -->
+  <div class="sec" style="padding-top:10px"><span class="sec-title">🏔️ Long Runs Recentes</span></div>
+  <div id="evo-longruns" style="padding:0 12px 8px"></div>
+
+  <div style="height:20px"></div>
+</div>
+
 <!-- FABs -->
 <button class="fab" id="fab-treino" onclick="abrirTreino()">+</button>
 <button class="fab" id="fab-corrida" onclick="abrirCorrida()" style="display:none">+</button>
@@ -634,6 +687,7 @@ input[type=range].esf::-webkit-slider-thumb{-webkit-appearance:none;width:22px;h
   <button class="nav-btn" id="nav-desafio" onclick="irParaTela('desafio')"><span class="nav-icon">🏆</span><span>Desafio</span></button>
   <button class="nav-btn" id="nav-exames" onclick="irParaTela('exames')"><span class="nav-icon">🩺</span><span>Saúde</span></button>
   <button class="nav-btn" id="nav-stats" onclick="irParaTela('stats')"><span class="nav-icon">📊</span><span>Análise</span></button>
+  <button class="nav-btn" id="nav-evolucao" onclick="irParaTela('evolucao')"><span class="nav-icon">📈</span><span>Evolução</span></button>
   <button class="nav-btn" id="nav-corridas" onclick="irParaTela('corridas')"><span class="nav-icon">🏁</span><span>Provas</span></button>
 </nav>
 
@@ -1036,6 +1090,7 @@ function irParaTela(nome){
   if(nome==='gym')      renderGym();
   if(nome==='desafio')  renderDesafio();
   if(nome==='exames')   renderExames();
+  if(nome==='evolucao') renderEvolucao();
 }
 function fechar(id){ document.getElementById(id).classList.remove('aberto'); }
 
@@ -1794,6 +1849,252 @@ function toggleCalendario2026(){
   } else {
     sec.style.display='none';
   }
+}
+
+// ── Render: Evolução ──
+var _evoWeeks=12;
+var _evoPaceChart=null,_evoEffChart=null,_evoLoadChart=null,_evoCadChart=null;
+
+function setEvoPeriod(w){
+  _evoWeeks=w;
+  ['4','8','12','24'].forEach(function(n){
+    var b=document.getElementById('evo-btn-'+n);
+    if(!b) return;
+    var sel=parseInt(n)===w;
+    b.style.borderColor=sel?'#1d4ed8':'#e2e8f0';
+    b.style.background=sel?'#eff6ff':'#f8fafc';
+    b.style.color=sel?'#1d4ed8':'#64748b';
+  });
+  renderEvolucao();
+}
+
+function renderEvolucao(){
+  var d=getDados(), hj=hoje();
+  var runs=d.treinos.filter(function(t){return t.data&&(t.distancia||0)>=3;});
+
+  // Build week buckets
+  var wks=[];
+  var _fw=function(x){return x.getFullYear()+'-'+pad(x.getMonth()+1)+'-'+pad(x.getDate());};
+  for(var w=_evoWeeks-1;w>=0;w--){
+    var dt=new Date(hj+'T12:00:00'); dt.setDate(dt.getDate()-w*7);
+    var dow=dt.getDay();
+    var mon=new Date(dt); mon.setDate(dt.getDate()-(dow===0?6:dow-1));
+    var sun=new Date(mon); sun.setDate(mon.getDate()+6);
+    var ini=_fw(mon), fim=_fw(sun);
+    var lbl=mon.getDate()+'/'+(mon.getMonth()+1);
+    if(w===0) lbl+='→'+new Date(hj+'T12:00:00').getDate()+'/'+(new Date(hj+'T12:00:00').getMonth()+1);
+    var wRuns=runs.filter(function(t){return t.data>=ini&&t.data<=fim;});
+    var allActs=d.treinos.concat(d.bike||[]).concat(d.natacao||[]).filter(function(t){return t.data>=ini&&t.data<=fim;});
+    wks.push({lbl:lbl,ini:ini,fim:fim,runs:wRuns,all:allActs});
+  }
+
+  var labels=wks.map(function(w){return w.lbl;});
+
+  // ── KPI cards ──
+  var half=Math.floor(_evoWeeks/2);
+  var cutDate=_fw((function(){var d2=new Date(hj+'T12:00:00');d2.setDate(d2.getDate()-half*7);return d2;})());
+  var recentRuns=runs.filter(function(t){return t.data>=cutDate;});
+  var prevRuns=runs.filter(function(t){return t.data<cutDate&&t.data>=_fw((function(){var d2=new Date(hj+'T12:00:00');d2.setDate(d2.getDate()-_evoWeeks*7);return d2;})());});
+
+  function avgPaceSecs(arr){
+    var valid=arr.filter(function(t){return t.pace&&t.distancia>0;});
+    if(!valid.length) return 0;
+    var totalDist=valid.reduce(function(s,t){return s+t.distancia;},0);
+    var totalSecs=valid.reduce(function(s,t){return s+parsePaceSecs(t.pace)*t.distancia;},0);
+    return totalDist>0?totalSecs/totalDist:0;
+  }
+  function avgFC(arr){
+    var valid=arr.filter(function(t){return t.fcMed>0;});
+    return valid.length?Math.round(valid.reduce(function(s,t){return s+t.fcMed;},0)/valid.length):0;
+  }
+  function totalKm(arr){ return Math.round(arr.reduce(function(s,t){return s+(t.distancia||0);},0)*10)/10; }
+  function avgEff(arr){
+    var valid=arr.filter(function(t){return t.pace&&t.fcMed>0&&t.distancia>0;});
+    if(!valid.length) return 0;
+    var vals=valid.map(function(t){var ps=parsePaceSecs(t.pace);return ps>0?(3600/ps)/t.fcMed*100:0;}).filter(Boolean);
+    return vals.length?Math.round(vals.reduce(function(s,v){return s+v;},0)/vals.length*10)/10:0;
+  }
+
+  function paceStr(s){if(!s)return '—';return Math.floor(s/60)+':'+pad(Math.round(s%60))+'/km';}
+  function trend(a,b,lowerBetter){
+    if(!a||!b) return '';
+    var d=lowerBetter?(b-a)/b*100:(a-b)/b*100;
+    if(Math.abs(d)<1) return '<span style="color:#64748b">→ estável</span>';
+    var up=d>0;
+    return '<span style="color:'+(up?'#16a34a':'#dc2626')+'">'+(up?'▲':'▼')+Math.abs(d).toFixed(1)+'%</span>';
+  }
+
+  var rPace=avgPaceSecs(recentRuns), pPace=avgPaceSecs(prevRuns);
+  var rFC=avgFC(recentRuns), pFC=avgFC(prevRuns);
+  var rKm=totalKm(recentRuns), pKm=totalKm(prevRuns);
+  var rEff=avgEff(recentRuns), pEff=avgEff(prevRuns);
+
+  function kpiCard(icon,label,val,sub,trendHtml,bg,col){
+    return '<div style="background:'+bg+';border-radius:14px;padding:12px;min-height:80px">'+
+      '<div style="font-size:10px;font-weight:700;color:'+col+';text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">'+icon+' '+label+'</div>'+
+      '<div style="font-size:20px;font-weight:900;color:'+col+';line-height:1.1">'+val+'</div>'+
+      '<div style="font-size:10px;color:#94a3b8;margin-top:3px">'+sub+'</div>'+
+      '<div style="font-size:10px;margin-top:4px">'+trendHtml+'</div>'+
+    '</div>';
+  }
+  document.getElementById('evo-kpi').innerHTML=
+    kpiCard('🏃','Pace médio',rPace?paceStr(rPace):'—','últ. '+half+' sem · ant. '+paceStr(pPace),trend(rPace,pPace,true),'#eff6ff','#1d4ed8')+
+    kpiCard('❤️','FC média',rFC||'—','últ. '+half+' sem · ant. '+(pFC||'—')+' bpm',trend(rFC,pFC,true),'#fff1f2','#be123c')+
+    kpiCard('📏','Volume',rKm+' km','últ. '+half+' sem · ant. '+pKm+' km',trend(rKm,pKm,false),'#f0fdf4','#15803d')+
+    kpiCard('⚡','Eficiência',rEff||'—','últ. '+half+' sem · ant. '+(pEff||'—'),trend(rEff,pEff,false),'#faf5ff','#7c3aed');
+
+  // ── Pace chart (inverted: faster = higher bar) ──
+  var paceData=wks.map(function(wk){
+    var s=avgPaceSecs(wk.runs); return s>0?s:null;
+  });
+  var hasPace=paceData.some(function(v){return v!==null;});
+  var ctxP=document.getElementById('evo-pace-chart');
+  if(ctxP&&hasPace){
+    if(_evoPaceChart){_evoPaceChart.destroy();_evoPaceChart=null;}
+    _evoPaceChart=new Chart(ctxP.getContext('2d'),{
+      type:'line',
+      data:{labels:labels,datasets:[{
+        label:'Pace',data:paceData,
+        borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,.08)',
+        borderWidth:2,pointRadius:3,pointBackgroundColor:'#3b82f6',
+        tension:.3,spanGaps:true
+      }]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.raw?paceStr(c.raw):'';}}}},
+        scales:{
+          x:{grid:{display:false},ticks:{font:{size:9},color:'#94a3b8'}},
+          y:{reverse:true,grid:{color:'#f1f5f9'},
+             ticks:{font:{size:9},color:'#94a3b8',callback:function(v){return Math.floor(v/60)+':'+pad(Math.round(v%60));}}
+          }
+        }}
+    });
+  } else if(ctxP){
+    if(_evoPaceChart){_evoPaceChart.destroy();_evoPaceChart=null;}
+    ctxP.getContext('2d').clearRect(0,0,ctxP.width,ctxP.height);
+  }
+
+  // ── Efficiency chart ──
+  var effData=wks.map(function(wk){
+    var e=avgEff(wk.runs); return e>0?e:null;
+  });
+  var hasEff=effData.some(function(v){return v!==null;});
+  var ctxE=document.getElementById('evo-eff-chart');
+  if(ctxE&&hasEff){
+    if(_evoEffChart){_evoEffChart.destroy();_evoEffChart=null;}
+    _evoEffChart=new Chart(ctxE.getContext('2d'),{
+      type:'line',
+      data:{labels:labels,datasets:[{
+        label:'Eficiência',data:effData,
+        borderColor:'#be123c',backgroundColor:'rgba(190,18,60,.07)',
+        borderWidth:2,pointRadius:3,pointBackgroundColor:'#be123c',
+        tension:.3,spanGaps:true
+      }]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.raw?c.raw.toFixed(2):'';}}}},
+        scales:{
+          x:{grid:{display:false},ticks:{font:{size:9},color:'#94a3b8'}},
+          y:{grid:{color:'#f1f5f9'},ticks:{font:{size:9},color:'#94a3b8',callback:function(v){return v.toFixed(1);}}}
+        }}
+    });
+  } else if(ctxE){
+    if(_evoEffChart){_evoEffChart.destroy();_evoEffChart=null;}
+    ctxE.getContext('2d').clearRect(0,0,ctxE.width,ctxE.height);
+  }
+
+  // ── Training load chart (suffer score or hours) ──
+  var hasSuffer=runs.some(function(t){return t.sufferScore>0;});
+  var loadData=wks.map(function(wk){
+    if(hasSuffer){
+      return wk.all.reduce(function(s,t){return s+(t.sufferScore||0);},0)||null;
+    } else {
+      var secs=wk.all.reduce(function(s,t){return s+parseDur(t.duracao);},0);
+      return secs>0?Math.round(secs/360)/10:null;
+    }
+  });
+  document.getElementById('evo-load-lbl').textContent=hasSuffer?'Suffer Score acumulado por semana':'Horas de treino por semana (todos os esportes)';
+  var ctxL=document.getElementById('evo-load-chart');
+  if(ctxL){
+    if(_evoLoadChart){_evoLoadChart.destroy();_evoLoadChart=null;}
+    _evoLoadChart=new Chart(ctxL.getContext('2d'),{
+      type:'bar',
+      data:{labels:labels,datasets:[{
+        label:'Carga',data:loadData,
+        backgroundColor:loadData.map(function(v,i){return i===loadData.length-1?'rgba(124,58,237,.5)':'rgba(124,58,237,.25)';}),
+        borderColor:loadData.map(function(v,i){return i===loadData.length-1?'#7c3aed':'#a78bfa';}),
+        borderWidth:1.5,borderRadius:4
+      }]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return hasSuffer?'Suffer: '+c.raw:c.raw+'h';}}}},
+        scales:{
+          x:{grid:{display:false},ticks:{font:{size:9},color:'#94a3b8'}},
+          y:{grid:{color:'#f1f5f9'},ticks:{font:{size:9},color:'#94a3b8',callback:function(v){return hasSuffer?v:v+'h';}}}
+        }}
+    });
+  }
+
+  // ── Cadence chart (only if data exists) ──
+  var cadData=wks.map(function(wk){
+    var valid=wk.runs.filter(function(t){return t.cadencia>0;});
+    if(!valid.length) return null;
+    var avg=Math.round(valid.reduce(function(s,t){return s+t.cadencia;},0)/valid.length)*2;
+    return avg;
+  });
+  var hasCad=cadData.some(function(v){return v!==null;});
+  document.getElementById('evo-cad-sec').style.display=hasCad?'':'none';
+  document.getElementById('evo-cad-card').style.display=hasCad?'':'none';
+  var ctxC=document.getElementById('evo-cad-chart');
+  if(ctxC&&hasCad){
+    if(_evoCadChart){_evoCadChart.destroy();_evoCadChart=null;}
+    _evoCadChart=new Chart(ctxC.getContext('2d'),{
+      type:'line',
+      data:{labels:labels,datasets:[{
+        label:'Cadência',data:cadData,
+        borderColor:'#f97316',backgroundColor:'rgba(249,115,22,.07)',
+        borderWidth:2,pointRadius:3,pointBackgroundColor:'#f97316',
+        tension:.3,spanGaps:true
+      },{
+        label:'Ideal',data:labels.map(function(){return 174;}),
+        borderColor:'#86efac',borderDash:[4,4],borderWidth:1.5,
+        pointRadius:0,tension:0,spanGaps:true
+      }]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.datasetIndex===0?c.raw+' spm':'';}}}},
+        scales:{
+          x:{grid:{display:false},ticks:{font:{size:9},color:'#94a3b8'}},
+          y:{grid:{color:'#f1f5f9'},ticks:{font:{size:9},color:'#94a3b8',callback:function(v){return v+' spm';}},
+             min:150,max:200}
+        }}
+    });
+  }
+
+  // ── Long runs ──
+  var longRuns=d.treinos.filter(function(t){return (t.distancia||0)>=15&&t.data;})
+    .sort(function(a,b){return b.data.localeCompare(a.data);}).slice(0,12);
+  var lrHtml='';
+  if(!longRuns.length){
+    lrHtml='<div style="text-align:center;padding:20px;color:#94a3b8;font-size:13px">Nenhum long run encontrado (&gt;15 km)</div>';
+  } else {
+    lrHtml=longRuns.map(function(t){
+      var dt=new Date(t.data+'T12:00:00');
+      var dlbl=dt.getDate()+' '+MESES[dt.getMonth()]+' '+dt.getFullYear();
+      var effVal=(t.pace&&t.fcMed>0)?((3600/parsePaceSecs(t.pace))/t.fcMed*100).toFixed(2):'';
+      return '<div style="display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #f1f5f9;border-radius:12px;padding:10px 12px;margin-bottom:6px">'+
+        '<div style="background:#eff6ff;border-radius:10px;padding:8px 10px;text-align:center;min-width:52px">'+
+          '<div style="font-size:17px;font-weight:900;color:#1d4ed8;line-height:1">'+(t.distancia||0).toFixed(0)+'</div>'+
+          '<div style="font-size:9px;font-weight:700;color:#93c5fd">km</div>'+
+        '</div>'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="font-size:12px;font-weight:700;color:#0f172a">'+dlbl+'</div>'+
+          '<div style="font-size:11px;color:#64748b;margin-top:2px">'+
+            (t.duracao?'⏱ '+t.duracao:'')+(t.pace?' · ⚡ '+t.pace+'/km':'')+(t.fcMed?' · ❤️ '+t.fcMed+' bpm':'')+
+          '</div>'+
+          (t.elevacao?'<div style="font-size:10px;color:#94a3b8;margin-top:1px">⛰ '+t.elevacao+' m</div>':'')+
+        '</div>'+
+        (effVal?'<div style="text-align:right;flex-shrink:0"><div style="font-size:14px;font-weight:800;color:#7c3aed">'+effVal+'</div><div style="font-size:9px;color:#a78bfa">efic.</div></div>':'')+
+      '</div>';
+    }).join('');
+  }
+  document.getElementById('evo-longruns').innerHTML=lrHtml;
 }
 
 // ── Render: Corridas ──
