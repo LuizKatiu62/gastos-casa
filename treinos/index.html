@@ -218,7 +218,7 @@ input[type=range].esf::-webkit-slider-thumb{-webkit-appearance:none;width:22px;h
 .plan-day-label{font-size:13px;font-weight:700;color:var(--text)}
 .plan-day-detail{font-size:11px;color:var(--text2);margin-top:1px}
 .plan-hoje-tag{font-size:9px;font-weight:800;background:var(--blue);color:#fff;border-radius:5px;padding:2px 6px;flex-shrink:0}
-.plan-day.plan-custom{background:#f0fdf4;border:1.5px solid #86efac}
+.plan-day.plan-custom{background:#f0fdf4;border:1.5px solid #16a34a}
 .plan-edit-btn{background:none;border:none;font-size:14px;cursor:pointer;padding:2px 4px;border-radius:6px;flex-shrink:0;opacity:.5;transition:opacity .15s}
 .plan-edit-btn:hover{opacity:1;background:#e2e8f0}
 .plan-phase-banner{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;margin-bottom:10px}
@@ -326,7 +326,7 @@ input[type=range].esf::-webkit-slider-thumb{-webkit-appearance:none;width:22px;h
     <div class="page-hero-sub" id="log-sub">carregando...</div>
   </div>
   <div style="padding:10px 12px 0;display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap">
-    <button onclick="document.getElementById('import-file').click()" style="background:#f0fdf4;color:#15803d;border:1px solid #86efac;border-radius:20px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">⌚ Garmin JSON</button>
+    <button onclick="document.getElementById('import-file').click()" style="background:#f0fdf4;color:#15803d;border:1px solid #16a34a;border-radius:20px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">⌚ Garmin JSON</button>
     <button onclick="openStravaSyncModal()" style="background:#fff5f2;color:#c2410c;border:1px solid #fc4c02;border-radius:20px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">🟠 Strava</button>
     <button onclick="exportarBackup()" style="background:#eff6ff;color:#1d4ed8;border:1px solid #93c5fd;border-radius:20px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">📤 Exportar</button>
     <button onclick="document.getElementById('restore-file').click()" style="background:#faf5ff;color:#7e22ce;border:1px solid #d8b4fe;border-radius:20px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">📥 Restaurar</button>
@@ -604,7 +604,7 @@ input[type=range].esf::-webkit-slider-thumb{-webkit-appearance:none;width:22px;h
       <label class="fl">PDF do Exame</label>
       <div id="ex-pdf-status" style="font-size:12px;color:var(--text3);margin-bottom:6px;padding:8px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0">Nenhum PDF anexado</div>
       <div style="display:flex;gap:8px">
-        <button type="button" onclick="document.getElementById('ex-pdf-input').click()" style="flex:1;background:#f0fdf4;color:#15803d;border:1px solid #86efac;border-radius:10px;padding:9px;font-size:12px;font-weight:700;cursor:pointer">📎 Selecionar PDF</button>
+        <button type="button" onclick="document.getElementById('ex-pdf-input').click()" style="flex:1;background:#f0fdf4;color:#15803d;border:1px solid #16a34a;border-radius:10px;padding:9px;font-size:12px;font-weight:700;cursor:pointer">📎 Selecionar PDF</button>
         <button type="button" id="ex-pdf-remove-btn" onclick="removerPDFModal()" style="display:none;background:#fff1f2;color:#dc2626;border:1px solid #fecaca;border-radius:10px;padding:9px 14px;font-size:12px;font-weight:700;cursor:pointer">🗑️</button>
       </div>
       <input type="file" id="ex-pdf-input" accept=".pdf,application/pdf" style="position:fixed;top:-200%;left:-200%;width:1px;height:1px;opacity:0" onchange="handlePDFInput(this)">
@@ -2157,7 +2157,7 @@ function renderEvolucao(){
         tension:.3,spanGaps:true
       },{
         label:'Ideal',data:labels.map(function(){return 390;}),
-        borderColor:'#86efac',borderDash:[4,4],borderWidth:1.5,
+        borderColor:'#16a34a',borderDash:[4,4],borderWidth:1.5,
         pointRadius:0,tension:0,spanGaps:true,fill:false
       }]},
       options:{responsive:true,maintainAspectRatio:false,
@@ -2194,7 +2194,7 @@ function renderEvolucao(){
         tension:.3,spanGaps:true
       },{
         label:'Ideal',data:labels.map(function(){return 7.5;}),
-        borderColor:'#86efac',borderDash:[4,4],borderWidth:1.5,
+        borderColor:'#16a34a',borderDash:[4,4],borderWidth:1.5,
         pointRadius:0,tension:0,spanGaps:true,fill:false
       }]},
       options:{responsive:true,maintainAspectRatio:false,
@@ -2237,7 +2237,7 @@ function renderEvolucao(){
       },{
         type:'line',
         label:'Ideal',data:_idealLoad,
-        borderColor:'#86efac',borderDash:[4,4],borderWidth:1.5,
+        borderColor:'#16a34a',borderDash:[4,4],borderWidth:1.5,
         pointRadius:0,tension:0,spanGaps:true,fill:false
       }]},
       options:{responsive:true,maintainAspectRatio:false,
@@ -2274,7 +2274,7 @@ function renderEvolucao(){
         tension:.3,spanGaps:true
       },{
         label:'Ideal',data:labels.map(function(){return 174;}),
-        borderColor:'#86efac',borderDash:[4,4],borderWidth:1.5,
+        borderColor:'#16a34a',borderDash:[4,4],borderWidth:1.5,
         pointRadius:0,tension:0,spanGaps:true
       }]},
       options:{responsive:true,maintainAspectRatio:false,
