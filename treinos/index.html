@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0f172a">
-<meta name="app-version" content="20260516-v36">
+<meta name="app-version" content="20260516-v37">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <title>Luiz — Atleta</title>
 <link rel="manifest" href="manifest.json">
@@ -3464,21 +3464,17 @@ function importStravaNatacao(date,actId,name,distM,movingSecs,hr,sportType,actDa
 
 // ── Force update ──
 function forceUpdate(){
-  var verEl=document.getElementById('app-ver-txt');
-  if(verEl) verEl.textContent='⏳ Aguarde...';
-  function doReload(){
-    location.replace(location.pathname+'?nc='+Date.now());
-  }
-  if('serviceWorker' in navigator){
-    navigator.serviceWorker.getRegistrations()
-      .then(function(regs){ return Promise.all(regs.map(function(r){return r.unregister();})); })
-      .then(function(){ return caches.keys(); })
-      .then(function(keys){ return Promise.all(keys.map(function(k){return caches.delete(k);})); })
-      .then(doReload)
-      .catch(doReload);
-  } else {
-    doReload();
-  }
+  var btn=document.getElementById('app-ver-txt');
+  if(btn) btn.textContent='⏳ Aguarde...';
+  // Fire-and-forget cleanup (iOS blocks navigation inside Promise .then)
+  try{
+    if('serviceWorker' in navigator)
+      navigator.serviceWorker.getRegistrations().then(function(regs){regs.forEach(function(r){r.unregister();});});
+    if('caches' in window)
+      caches.keys().then(function(keys){keys.forEach(function(k){caches.delete(k);});});
+  }catch(e){}
+  // Navigate after 300ms — still within iOS gesture window, cleanup has started
+  setTimeout(function(){location.replace(location.pathname+'?nc='+Date.now());},300);
 }
 
 // ── Init ──
