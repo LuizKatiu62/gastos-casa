@@ -2806,20 +2806,36 @@ function renderizarRecentes(todos) {
 // ─────────────────────────────
 function irParaCategoria(cat) {
   var d = getDados(), p = d.periodo;
-  var lista = lancamentosPeriodo(d.lancamentos, p).filter(function(l){ return l.cat===cat; });
-  lista.sort(function(a,b){ return b.data.localeCompare(a.data); });
-  // Parcelados: deduplicate by grupoId — show only the most recent installment per group
+  var lista;
   if (cat === 'parcelados') {
-    var seen = {};
-    lista = lista.filter(function(l) {
-      if (!l.parcela || !l.parcela.grupoId) return true;
-      var gid = l.parcela.grupoId;
-      if (seen[gid]) return false;
-      seen[gid] = true;
+    // Build one entry per parcelamento group (like renderizarParcelas) — period-independent
+    var grupos = {}, ungrouped = [];
+    d.lancamentos.forEach(function(l) {
+      if (l.cat !== 'parcelados') return;
+      var gid = l.parcela && l.parcela.grupoId;
+      if (gid) {
+        if (!grupos[gid] || l.data > grupos[gid].data) grupos[gid] = l;
+      } else {
+        ungrouped.push(l);
+      }
+    });
+    // Deduplicate ungrouped by desc (case-insensitive)
+    var seenDesc = {};
+    ungrouped = ungrouped.filter(function(l) {
+      var key = (l.desc || '').toLowerCase().trim();
+      if (seenDesc[key]) return false;
+      seenDesc[key] = true;
       return true;
     });
+    lista = Object.keys(grupos).map(function(gid){ return grupos[gid]; }).concat(ungrouped);
+    lista.sort(function(a,b){ return b.data.localeCompare(a.data); });
+  } else {
+    lista = lancamentosPeriodo(d.lancamentos, p).filter(function(l){ return l.cat===cat; });
+    lista.sort(function(a,b){ return b.data.localeCompare(a.data); });
   }
-  var total = lista.reduce(function(s,l){ return s+parseFloat(l.valor||0); }, 0);
+  var total = cat === 'parcelados'
+    ? calcularMensalParcelados(d.lancamentos)
+    : lista.reduce(function(s,l){ return s+parseFloat(l.valor||0); }, 0);
 
   var cores = { carro:'#1565c0', diversos:'#e65100', mercado:'#2e7d32', parcelados:'#5b21b6' };
   document.getElementById('topo-categoria').style.background = 'linear-gradient(160deg,'+cores[cat]+','+CORES[cat]+')';
@@ -2827,7 +2843,9 @@ function irParaCategoria(cat) {
 
   document.getElementById('resumo-categoria').innerHTML =
     '<div style="text-align:center;padding:8px 0 12px">' +
-      '<div style="font-size:11px;color:#aaa;text-transform:uppercase;margin-bottom:4px">Total do Período</div>' +
+      '<div style="font-size:11px;color:#aaa;text-transform:uppercase;margin-bottom:4px">' +
+        (cat==='parcelados' ? 'Total Mensal Ativo' : 'Total do Período') +
+      '</div>' +
       '<div style="font-size:32px;font-weight:900;color:'+CORES[cat]+'">'+formatar(total)+'</div>' +
     '</div>';
 
