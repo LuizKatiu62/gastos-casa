@@ -2847,7 +2847,7 @@ function irParaCategoria(cat) {
 
   var cores = { carro:'#1565c0', diversos:'#e65100', mercado:'#2e7d32', parcelados:'#5b21b6' };
   document.getElementById('topo-categoria').style.background = 'linear-gradient(160deg,'+cores[cat]+','+CORES[cat]+')';
-  document.getElementById('titulo-categoria').textContent = {carro:'🚗 Carro', diversos:'🛍️ Diversos', mercado:'🛒 Supermercado', parcelados:'📦 Parcelados'}[cat];
+  document.getElementById('titulo-categoria').textContent = {carro:'🚗 Carro', diversos:'🛍️ Diversos', mercado:'🛒 Supermercado', parcelados:'📦 Parcelados ('+lista.length+')'}[cat];
 
   document.getElementById('resumo-categoria').innerHTML =
     '<div style="text-align:center;padding:8px 0 12px">' +
