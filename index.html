@@ -2808,7 +2808,7 @@ function irParaCategoria(cat) {
   var d = getDados(), p = d.periodo;
   var lista;
   if (cat === 'parcelados') {
-    // Build one entry per parcelamento group (like renderizarParcelas) — period-independent
+    // Step 1: group by grupoId — keep latest record per group
     var grupos = {}, ungrouped = [];
     d.lancamentos.forEach(function(l) {
       if (l.cat !== 'parcelados') return;
@@ -2819,7 +2819,7 @@ function irParaCategoria(cat) {
         ungrouped.push(l);
       }
     });
-    // Deduplicate ungrouped by desc (case-insensitive)
+    // Step 2: deduplicate ungrouped by desc (case-insensitive)
     var seenDesc = {};
     ungrouped = ungrouped.filter(function(l) {
       var key = (l.desc || '').toLowerCase().trim();
@@ -2828,6 +2828,14 @@ function irParaCategoria(cat) {
       return true;
     });
     lista = Object.keys(grupos).map(function(gid){ return grupos[gid]; }).concat(ungrouped);
+    // Step 3: secondary dedup by desc+valor in case same plan was entered twice with different grupoIds
+    var seenDV = {};
+    lista = lista.filter(function(l) {
+      var key = (l.desc || '').toLowerCase().trim() + '|' + parseFloat(l.valor||0).toFixed(2);
+      if (seenDV[key]) return false;
+      seenDV[key] = true;
+      return true;
+    });
     lista.sort(function(a,b){ return b.data.localeCompare(a.data); });
   } else {
     lista = lancamentosPeriodo(d.lancamentos, p).filter(function(l){ return l.cat===cat; });
