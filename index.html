@@ -3418,6 +3418,23 @@ function renderizarRelcat() {
   var lista = lancamentosPeriodo(d.lancamentos, per).filter(function(l){ return l.cat === _rcCat; });
   lista.sort(function(a,b){ return b.data.localeCompare(a.data); });
 
+  // Parcelados: one entry per plan group (deduplicate across months)
+  if (_rcCat === 'parcelados') {
+    var _grp = {}, _ung = [];
+    d.lancamentos.forEach(function(l) {
+      if (l.cat !== 'parcelados') return;
+      var gid = l.parcela && l.parcela.grupoId;
+      if (gid) { if (!_grp[gid] || l.data > _grp[gid].data) _grp[gid] = l; }
+      else _ung.push(l);
+    });
+    var _sdesc = {};
+    _ung = _ung.filter(function(l){ var k=(l.desc||'').toLowerCase().trim(); return _sdesc[k]?false:(_sdesc[k]=true); });
+    lista = Object.keys(_grp).map(function(g){ return _grp[g]; }).concat(_ung);
+    var _sdv = {};
+    lista = lista.filter(function(l){ var k=(l.desc||'').toLowerCase().trim()+'|'+parseFloat(l.valor||0).toFixed(2); return _sdv[k]?false:(_sdv[k]=true); });
+    lista.sort(function(a,b){ return b.data.localeCompare(a.data); });
+  }
+
   // Para parcelados: total real = soma mensal dos planos ativos (não depende de período)
   var total = _rcCat === 'parcelados'
     ? calcularMensalParcelados(d.lancamentos)
