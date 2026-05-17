@@ -2863,11 +2863,13 @@ function irParaCategoria(cat) {
     var pagasMapCat = buildPagasMap(d.lancamentos);
     document.getElementById('lista-categoria').innerHTML = lista.map(function(l) {
       var parcBadge = parcelaBadgeHtml(l, pagasMapCat);
+      var debugKey = cat==='parcelados' ? '<div style="font-size:9px;color:#999;word-break:break-all">id:'+l.id+'</div>' : '';
       return '<div class="lancamento">' +
         '<div class="lanc-ponto" style="background:'+CORES[cat]+'"></div>' +
         '<div class="lanc-info">' +
           '<div class="lanc-desc">'+(l.desc||NOMES[cat])+parcBadge+'</div>' +
           '<div class="lanc-meta">'+formatarData(l.data)+(l.sub?' · '+SUBS[l.sub]:'')+'</div>' +
+          debugKey +
         '</div>' +
         '<div class="lanc-valor" style="color:'+CORES[cat]+'">'+formatar(l.valor)+'</div>' +
         '<button class="lanc-edit" onclick="editarLancamento(\''+l.id+'\')">✏️</button>' +
