@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0f172a">
-<meta name="app-version" content="20260516-v34">
+<meta name="app-version" content="20260516-v35">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <title>Luiz — Atleta</title>
 <link rel="manifest" href="manifest.json">
@@ -3465,17 +3465,20 @@ function importStravaNatacao(date,actId,name,distM,movingSecs,hr,sportType,actDa
 
 // ── Force update ──
 function forceUpdate(){
+  var verEl=document.getElementById('app-ver-txt');
+  if(verEl) verEl.textContent='Atualizando...';
+  function doReload(){
+    location.replace(location.pathname+'?nc='+Date.now());
+  }
   if('serviceWorker' in navigator){
-    navigator.serviceWorker.getRegistrations().then(function(regs){
-      regs.forEach(function(r){r.unregister();});
-    });
-    caches.keys().then(function(keys){
-      keys.forEach(function(k){caches.delete(k);});
-    }).then(function(){
-      window.location.reload(true);
-    });
+    navigator.serviceWorker.getRegistrations()
+      .then(function(regs){ return Promise.all(regs.map(function(r){return r.unregister();})); })
+      .then(function(){ return caches.keys(); })
+      .then(function(keys){ return Promise.all(keys.map(function(k){return caches.delete(k);})); })
+      .then(doReload)
+      .catch(doReload);
   } else {
-    window.location.reload(true);
+    doReload();
   }
 }
 
