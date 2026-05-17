@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Atualizando...</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:system-ui,sans-serif;background:#1d4ed8;color:#fff;
+         display:flex;align-items:center;justify-content:center;
+         min-height:100vh;text-align:center;padding:2rem}
+    .icon{font-size:3.5rem;margin-bottom:1.2rem;
+          animation:spin 1s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .msg{font-size:1.3rem;font-weight:800;margin-bottom:.5rem}
+    .sub{font-size:.9rem;opacity:.75}
+    .step{font-size:.8rem;opacity:.5;margin-top:1.5rem}
+  </style>
+</head>
+<body>
+  <div>
+    <div class="icon">🔄</div>
+    <div class="msg">Atualizando app...</div>
+    <div class="sub">Aguarde um momento</div>
+    <div class="step" id="step">Limpando cache...</div>
+  </div>
+  <script>
+    var stepEl = document.getElementById('step');
+
+    // Fire-and-forget: unregister SWs
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(regs) {
+        regs.forEach(function(r) { r.unregister(); });
+      });
+    }
+
+    // Fire-and-forget: clear all caches
+    if ('caches' in window) {
+      caches.keys().then(function(keys) {
+        keys.forEach(function(k) { caches.delete(k); });
+      });
+    }
+
+    // After 1.5s navigate to main app — setTimeout redirect works on iOS
+    setTimeout(function() {
+      if (stepEl) stepEl.textContent = 'Redirecionando...';
+    }, 800);
+
+    setTimeout(function() {
+      location.replace('/treinos/?nc=' + Date.now());
+    }, 1500);
+  </script>
+</body>
+</html>
