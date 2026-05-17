@@ -2808,6 +2808,17 @@ function irParaCategoria(cat) {
   var d = getDados(), p = d.periodo;
   var lista = lancamentosPeriodo(d.lancamentos, p).filter(function(l){ return l.cat===cat; });
   lista.sort(function(a,b){ return b.data.localeCompare(a.data); });
+  // Parcelados: deduplicate by grupoId — show only the most recent installment per group
+  if (cat === 'parcelados') {
+    var seen = {};
+    lista = lista.filter(function(l) {
+      if (!l.parcela || !l.parcela.grupoId) return true;
+      var gid = l.parcela.grupoId;
+      if (seen[gid]) return false;
+      seen[gid] = true;
+      return true;
+    });
+  }
   var total = lista.reduce(function(s,l){ return s+parseFloat(l.valor||0); }, 0);
 
   var cores = { carro:'#1565c0', diversos:'#e65100', mercado:'#2e7d32', parcelados:'#5b21b6' };
