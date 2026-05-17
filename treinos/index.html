@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0f172a">
-<meta name="app-version" content="20260516-v33">
+<meta name="app-version" content="20260516-v34">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <title>Luiz — Atleta</title>
 <link rel="manifest" href="manifest.json">
@@ -239,7 +239,7 @@ input[type=range].esf::-webkit-slider-thumb{-webkit-appearance:none;width:22px;h
 .empty-icon{font-size:38px;margin-bottom:8px}
 
 /* Plan week */
-.plan-day{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;background:var(--bg);margin-bottom:5px;cursor:pointer;transition:opacity .15s}
+.plan-day{display:flex;align-items:flex-start;gap:10px;padding:9px 12px;border-radius:10px;background:var(--bg);margin-bottom:5px;cursor:pointer;transition:opacity .15s}
 .plan-day:last-child{margin-bottom:0}
 .plan-day.plan-hoje{background:var(--blue-light);border:1.5px solid var(--blue)}
 .plan-day.plan-race{background:#fefce8;border:1.5px solid var(--gold)}
@@ -250,7 +250,10 @@ input[type=range].esf::-webkit-slider-thumb{-webkit-appearance:none;width:22px;h
 .plan-day-body{flex:1;min-width:0}
 .plan-day-label{font-size:13px;font-weight:700;color:var(--text)}
 .plan-day-detail{font-size:11px;color:var(--text2);margin-top:1px}
-.plan-hoje-tag{font-size:9px;font-weight:800;background:var(--blue);color:#fff;border-radius:5px;padding:2px 6px;flex-shrink:0}
+.plan-day-items{margin-top:3px;}
+.plan-day-item{font-size:10px;color:var(--text2);padding-left:9px;position:relative;line-height:1.4;}
+.plan-day-item::before{content:'·';position:absolute;left:1px;color:var(--text3);}
+.plan-hoje-tag{font-size:9px;font-weight:800;background:var(--blue);color:#fff;border-radius:5px;padding:2px 6px;flex-shrink:0;margin-top:2px}
 .plan-day.plan-custom{background:#f0fdf4;border:1.5px solid #16a34a}
 .plan-edit-btn{background:none;border:none;font-size:14px;cursor:pointer;padding:2px 4px;border-radius:6px;flex-shrink:0;opacity:.5;transition:opacity .15s}
 .plan-edit-btn:hover{opacity:1;background:#e2e8f0}
@@ -1306,19 +1309,23 @@ function renderPlanoDesafio(){
     var d64done=!actual&&d64prog.run===true;
     var d64extra=!actual&&d64prog.extraRun&&(d64prog.extraRun.km||0)>0;
     var isToday=ds===hj, isPast=ds<hj, isRace=ds==='2026-06-13';
-    var detail=km>0?km+'km':'Descanso';
-    if(base&&base.detail&&!actual&&!d64done&&!d64extra) detail=(km>0?km+'km · ':'')+base.detail;
-    if(d64done) detail='✅ '+km+'km feito (Desafio 64)';
-    if(d64extra) detail='✅ '+d64prog.extraRun.km+'km feito (Desafio 64)';
-    if(actual) detail='✅ '+Math.round((actual.distancia||0)*10)/10+' km feito';
     var isDone=!!(actual||d64done||d64extra);
+    var detailHtml='', itemsHtml='';
+    if(d64done) detailHtml='<div class="plan-day-detail">✅ '+km+'km feito (Desafio 64)</div>';
+    else if(d64extra) detailHtml='<div class="plan-day-detail">✅ '+d64prog.extraRun.km+'km feito (Desafio 64)</div>';
+    else if(actual) detailHtml='<div class="plan-day-detail">✅ '+Math.round((actual.distancia||0)*10)/10+' km feito</div>';
+    else if(base&&base.items&&base.items.length){
+      itemsHtml='<div class="plan-day-items">'+base.items.map(function(it){return '<div class="plan-day-item">'+it+'</div>';}).join('')+'</div>';
+    } else {
+      detailHtml='<div class="plan-day-detail">'+(km>0?km+'km':'Descanso')+'</div>';
+    }
     var cls='plan-day'+(isRace?' plan-race':isToday?' plan-hoje':isPast&&isDone?' plan-custom':ov?' plan-custom':'');
     html+='<div class="'+cls+'">'
-      +'<div class="plan-day-name">'+DAY_NAMES[dayDow]+'</div>'
-      +'<div class="plan-day-icon">'+(typeIcon[type]||'🏃')+'</div>'
+      +'<div class="plan-day-name" style="padding-top:1px">'+DAY_NAMES[dayDow]+'</div>'
+      +'<div class="plan-day-icon" style="padding-top:0">'+(typeIcon[type]||'🏃')+'</div>'
       +'<div class="plan-day-body">'
         +'<div class="plan-day-label">'+title+'</div>'
-        +'<div class="plan-day-detail">'+detail+'</div>'
+        +detailHtml+itemsHtml
       +'</div>'
       +(isToday?'<div class="plan-hoje-tag">HOJE</div>':'')
       +(!isRace?'<button class="plan-edit-btn" onclick="openDsfEdit(\''+ds+'\')" title="Editar dia">✏️</button>':'')
@@ -3705,44 +3712,78 @@ function parseCSVLine(line){
 // ── Desafio 64km ──
 var PLAN_D64=[
   // ── S7 · Taper ──
-  {date:'2026-05-11',week:7,phase:'Taper',type:'easy',  km:10,title:'10km (Taper Começa)',            detail:'Ritmo fácil · o trabalho duro está feito'},
-  {date:'2026-05-12',week:7,phase:'Taper',type:'rest',  km:0, title:'Descanso Corrida',               detail:'Academia leve superior + core · caminhada 15 min opcional'},
-  {date:'2026-05-13',week:7,phase:'Taper',type:'medium',km:8, title:'8km + Manter Velocidade',        detail:'3×5min ritmo MD · manter velocidade, reduzir volume'},
-  {date:'2026-05-14',week:7,phase:'Taper',type:'easy',  km:6, title:'6km Tranquilo',                  detail:'Cadência leve · 7:00+ min/km'},
-  {date:'2026-05-15',week:7,phase:'Taper',type:'rest',  km:0, title:'Descanso Total',                 detail:'Pernas frescas para o longo de amanhã'},
-  {date:'2026-05-16',week:7,phase:'Taper',type:'long',  km:22,title:'🌟 22km Longo Taper — Little the Rez',detail:'7 voltas de 3.3km · reconhecimento do percurso'},
-  {date:'2026-05-17',week:7,phase:'Taper',type:'easy',  km:6, title:'6km Leve ou Descanso',           detail:'Escute o corpo · se precisar descansar, descanse'},
+  {date:'2026-05-11',week:7,phase:'Taper',type:'easy',km:10,title:'10km (Taper Começa)',
+   items:['10km TR · Volume começa a cair progressivamente','Ritmo fácil, nada de forçar','O trabalho duro está feito — agora é descansar','Esteira: boa opção para controlar ritmo no taper']},
+  {date:'2026-05-12',week:7,phase:'Taper',type:'rest',km:0,title:'Descanso Corrida',
+   items:['Descanso total das pernas · sem corrida hoje','Academia leve superior + core hoje','Caminhada suave 15 min opcional']},
+  {date:'2026-05-13',week:7,phase:'Taper',type:'medium',km:8,title:'8km + Manter Velocidade',
+   items:['8km com 3×5min ritmo MD','Manter velocidade mas reduzir volume','Aquecimento 1km + 3×5min MD + cooldown','Esteira: facilita controle de ritmo no taper']},
+  {date:'2026-05-14',week:7,phase:'Taper',type:'easy',km:6,title:'6km Tranquilo',
+   items:['6km TR · pernas começando a descansar','Cadência leve — 7:00+ min/km','Esteira: velocidade 8 km/h · inclinação 0']},
+  {date:'2026-05-15',week:7,phase:'Taper',type:'rest',km:0,title:'Descanso Total',
+   items:['Descanso completo · Pernas frescas para o longo de amanhã','Caminhada opcional 15 min']},
+  {date:'2026-05-16',week:7,phase:'Taper',type:'long',km:22,title:'🌟 22km Longo Taper — Little the Rez',
+   items:['22km ritmo LNG · ~2h40 · 7 voltas de 3.3km','Foco em fluência e ritmo — não em distância','Nada de forçar — pernas girando suavemente','Reconhecimento do percurso para o dia 13/06']},
+  {date:'2026-05-17',week:7,phase:'Taper',type:'easy',km:6,title:'6km Leve ou Descanso',
+   items:['6km TR ou descanso total','Escute o corpo · se precisar descansar, descanse','Esteira: sem pressão · 8 km/h se correr']},
   // ── S8 · Taper 2 ──
-  {date:'2026-05-18',week:8,phase:'Taper 2',type:'easy',  km:8, title:'8km Tranquilo',                detail:'Ritmo fácil e solto · 6:45–7:15 min/km'},
-  {date:'2026-05-19',week:8,phase:'Taper 2',type:'rest',  km:0, title:'Descanso Corrida',             detail:'Academia muito leve se quiser · opcional'},
-  {date:'2026-05-20',week:8,phase:'Taper 2',type:'medium',km:6, title:'6km + Strides',               detail:'4×100m strides ao final · pernas soltas e ativadas'},
-  {date:'2026-05-21',week:8,phase:'Taper 2',type:'easy',  km:5, title:'5km Leve',                    detail:'Sem cronômetro se quiser · só girar as pernas'},
-  {date:'2026-05-22',week:8,phase:'Taper 2',type:'rest',  km:0, title:'Descanso Total',              detail:'Carb loading suave · ↑ carboidratos no jantar'},
-  {date:'2026-05-23',week:8,phase:'Taper 2',type:'long',  km:16,title:'🌟 16km Longo Reduzido — Little the Rez',detail:'5 voltas de 3.3km · ritmo fácil e conversável'},
-  {date:'2026-05-24',week:8,phase:'Taper 2',type:'easy',  km:5, title:'5km ou Descanso',             detail:'Escute o corpo · se precisar descansar, descanse'},
+  {date:'2026-05-18',week:8,phase:'Taper 2',type:'easy',km:8,title:'8km Tranquilo',
+   items:['8km TR · Volume continua caindo','Ritmo fácil e solto · 6:45–7:15 min/km','Pernas cada vez mais frescas','Esteira: inclinação 0% · velocidade 8 km/h']},
+  {date:'2026-05-19',week:8,phase:'Taper 2',type:'rest',km:0,title:'Descanso Corrida',
+   items:['Descanso total das pernas · sem corrida hoje','Academia muito leve se quiser · opcional','Caminhada suave 20 min']},
+  {date:'2026-05-20',week:8,phase:'Taper 2',type:'medium',km:6,title:'6km + Strides',
+   items:['6km TR + 4×100m strides ao final','Objetivo: pernas soltas e ativadas','Manter velocidade mas volume mínimo','Esteira: 8 km/h · strides em 12 km/h por 30s']},
+  {date:'2026-05-21',week:8,phase:'Taper 2',type:'easy',km:5,title:'5km Leve',
+   items:['5km TR · pernas descansando bem','Sem cronômetro se quiser · só girar as pernas','Esteira: modo de passeio · 7,5 km/h']},
+  {date:'2026-05-22',week:8,phase:'Taper 2',type:'rest',km:0,title:'Descanso Total',
+   items:['Descanso completo · Pernas frescas para o longo','Caminhada 20 min opcional']},
+  {date:'2026-05-23',week:8,phase:'Taper 2',type:'long',km:16,title:'🌟 16km Longo Reduzido — Little the Rez',
+   items:['16km ritmo LNG · ~2h · 5 voltas de 3.3km','Foco total em fluência — não em distância','Ritmo fácil e conversável · 7:00–8:00 min/km','Confirmar equipamento para 13/06']},
+  {date:'2026-05-24',week:8,phase:'Taper 2',type:'easy',km:5,title:'5km ou Descanso',
+   items:['5km TR ou descanso total','Escute o corpo · se precisar descansar, descanse','Esteira: sem pressão · 7,5 km/h se correr']},
   // ── S9 · Pré-Prova ──
-  {date:'2026-05-25',week:9,phase:'Pré-Prova',type:'easy',km:8, title:'8km + Strides',               detail:'4×100m strides ao final · pace 6:30–7:00 min/km'},
-  {date:'2026-05-26',week:9,phase:'Pré-Prova',type:'rest',km:0, title:'Descanso Total',              detail:'Revisão mental da estratégia de prova'},
-  {date:'2026-05-27',week:9,phase:'Pré-Prova',type:'easy',km:6, title:'6km Tranquilo',               detail:'Ritmo leve e solto · sem esforço'},
-  {date:'2026-05-28',week:9,phase:'Pré-Prova',type:'easy',km:5, title:'5km + Mobilidade',            detail:'+ 20 min mobilidade pós-corrida · foam roller'},
-  {date:'2026-05-29',week:9,phase:'Pré-Prova',type:'rest',km:0, title:'Descanso Total',              detail:'Carb loading começa · preparar kit para sábado'},
-  {date:'2026-05-30',week:9,phase:'Pré-Prova',type:'long',km:10,title:'10km Reconhecimento — Little the Rez',detail:'3 voltas + 1km · verificar percurso e pontos de abastecimento'},
-  {date:'2026-05-31',week:9,phase:'Pré-Prova',type:'easy',km:5, title:'5km Leve',                    detail:'Girar as pernas apenas · sem cronômetro'},
+  {date:'2026-05-25',week:9,phase:'Pré-Prova',type:'easy',km:8,title:'8km + Strides',
+   items:['8km TR + 4×100m strides ao final','Pernas devem sentir leves e ativadas','Pace 6:30–7:00 min/km · sem pressão','Esteira: 8,5 km/h · strides em 12 km/h por 30s']},
+  {date:'2026-05-26',week:9,phase:'Pré-Prova',type:'rest',km:0,title:'Descanso Total',
+   items:['Descanso total das pernas','Caminhada suave 20 min opcional','Revisão mental da estratégia de prova']},
+  {date:'2026-05-27',week:9,phase:'Pré-Prova',type:'easy',km:6,title:'6km Tranquilo',
+   items:['6km TR · manutenção do condicionamento','Ritmo leve e solto','Sem esforço — apenas girar as pernas','Esteira: velocidade 8 km/h']},
+  {date:'2026-05-28',week:9,phase:'Pré-Prova',type:'easy',km:5,title:'5km + Mobilidade',
+   items:['5km TR muito tranquilo','+ 20 min mobilidade pós-corrida','Foam roller completo','Esteira: modo de passeio · 7,5–8 km/h']},
+  {date:'2026-05-29',week:9,phase:'Pré-Prova',type:'rest',km:0,title:'Descanso Total',
+   items:['Descanso absoluto · Pernas frescas para o longo de amanhã','Caminhada 15 min opcional','Preparar nutrição e kit para sábado']},
+  {date:'2026-05-30',week:9,phase:'Pré-Prova',type:'long',km:10,title:'10km Reconhecimento — Little the Rez',
+   items:['10km tranquilo · Reconhecimento final do percurso','3 voltas de 3.3km + 1km','Ritmo muito leve · 7:30–8:00 min/km','Verificar: superfície, pontos de abastecimento, terreno','Andar a parte restante do percurso — reconhecer cada metro']},
+  {date:'2026-05-31',week:9,phase:'Pré-Prova',type:'easy',km:5,title:'5km Leve',
+   items:['5km TR muito leve','Girar as pernas apenas · sem cronômetro','Esteira: velocidade 7,5 km/h']},
   // ── S10 · Semana da Corrida ──
-  {date:'2026-06-01',week:10,phase:'Semana da Corrida',type:'easy',km:6,title:'6km + Strides',       detail:'4×100m strides ao final · nenhuma academia esta semana'},
-  {date:'2026-06-02',week:10,phase:'Semana da Corrida',type:'rest',km:0,title:'Descanso Total',      detail:'Revisar estratégia de prova e kit'},
-  {date:'2026-06-03',week:10,phase:'Semana da Corrida',type:'easy',km:5,title:'5km Tranquilo',       detail:'Confirmar kit e equipamento definitivamente'},
-  {date:'2026-06-04',week:10,phase:'Semana da Corrida',type:'easy',km:4,title:'4km + 2×200m',        detail:'Objetivo: só manter pernas soltas · total ~25 min'},
-  {date:'2026-06-05',week:10,phase:'Semana da Corrida',type:'rest',km:0,title:'Descanso Total',      detail:'Carb loading intenso começa'},
-  {date:'2026-06-06',week:10,phase:'Semana da Corrida',type:'easy',km:3,title:'3km — Ativação',      detail:'⭐ Preparar TODO o kit esta noite!'},
-  {date:'2026-06-07',week:10,phase:'Semana da Corrida',type:'rest',km:0,title:'Descanso Total',      detail:'DESCANSO ABSOLUTO · 6 dias para a corrida!'},
+  {date:'2026-06-01',week:10,phase:'Semana da Corrida',type:'easy',km:6,title:'6km + Strides',
+   items:['6km TR leve','+ 4×100m strides ao final (acelerar suavemente, não sprint)','Objetivo: pernas soltas e ativadas','Nenhuma academia esta semana']},
+  {date:'2026-06-02',week:10,phase:'Semana da Corrida',type:'rest',km:0,title:'Descanso Total',
+   items:['Descanso total das pernas','Caminhada suave 20 min opcional','Revisar estratégia de prova e kit']},
+  {date:'2026-06-03',week:10,phase:'Semana da Corrida',type:'easy',km:5,title:'5km Tranquilo',
+   items:['5km TR · pernas leves e ativadas','Muito leve — sem cronômetro se quiser','Confirmar kit e equipamento definitivamente']},
+  {date:'2026-06-04',week:10,phase:'Semana da Corrida',type:'easy',km:4,title:'4km + 2×200m',
+   items:['4km TR muito tranquilo','2×200m no ritmo de corrida confortável (não sprint)','Objetivo: só manter pernas soltas · Total ~25 min','Início do carb loading sério']},
+  {date:'2026-06-05',week:10,phase:'Semana da Corrida',type:'rest',km:0,title:'Descanso Total',
+   items:['Descanso completo · pernas frescas e prontas','Caminhada 15 min opcional']},
+  {date:'2026-06-06',week:10,phase:'Semana da Corrida',type:'easy',km:3,title:'3km Opcional — Ativação',
+   items:['3km MUITO leve para ativar pernas (opcional)','Muitos preferem descanso total — ambos OK','Se correr: 20 min saindo e voltando, sem cronômetro','⭐ Preparar TODO o kit esta noite!']},
+  {date:'2026-06-07',week:10,phase:'Semana da Corrida',type:'rest',km:0,title:'Descanso Total',
+   items:['DESCANSO ABSOLUTO · 6 dias para a corrida!','Última semana de preparação','Revisar tudo: kit, nutrição, logística','Dormir bem esta noite']},
   // ── S11 · Race Week ──
-  {date:'2026-06-08',week:11,phase:'Race Week',type:'easy',km:3,title:'3km Leve — Ativação Final',   detail:'Última corrida de preparação · ritmo de passeio'},
-  {date:'2026-06-09',week:11,phase:'Race Week',type:'rest',km:0,title:'Descanso Total',              detail:'4 dias para a corrida · visualizar a prova'},
-  {date:'2026-06-10',week:11,phase:'Race Week',type:'easy',km:2,title:'2km Opcional',                detail:'Muitos preferem descanso total — ambos OK'},
-  {date:'2026-06-11',week:11,phase:'Race Week',type:'rest',km:0,title:'Descanso Total',              detail:'2 dias para a corrida · dormir às 22h'},
-  {date:'2026-06-12',week:11,phase:'Race Week',type:'rest',km:0,title:'🌅 Véspera — Descanso Absoluto',detail:'Preparar kit · jantar macarrão às 18h · cama às 21h30'},
-  {date:'2026-06-13',week:11,phase:'Race Week',type:'race',km:64,title:'🏁 DESAFIO 64KM',            detail:'7h00 LARGADA · Little the Rez · uma volta de cada vez!'},
+  {date:'2026-06-08',week:11,phase:'Race Week',type:'easy',km:3,title:'3km Leve — Ativação Final',
+   items:['3km MUITO leve · última corrida de preparação','Sentir as pernas leves e prontas','Ritmo de passeio · 7:30–8:00 min/km']},
+  {date:'2026-06-09',week:11,phase:'Race Week',type:'rest',km:0,title:'Descanso Total',
+   items:['Descanso total · 4 dias para a corrida!','Caminhada leve 15 min opcional','Visualizar a prova: imaginar cada volta com calma']},
+  {date:'2026-06-10',week:11,phase:'Race Week',type:'easy',km:2,title:'2km Opcional',
+   items:['2km MUITO leve para ativar pernas (opcional)','Muitos atletas preferem descanso total — ambos OK','Se correr: 15 min saindo e voltando, sem cronômetro']},
+  {date:'2026-06-11',week:11,phase:'Race Week',type:'rest',km:0,title:'Descanso Total',
+   items:['Descanso absoluto · 2 dias para a corrida!','Última revisão do kit e da estratégia','Confirmar horário de largada e logística','Dormir às 22h esta noite']},
+  {date:'2026-06-12',week:11,phase:'Race Week',type:'rest',km:0,title:'🌅 Véspera — Descanso Absoluto',
+   items:['DESCANSO TOTAL · Amanhã é o dia!','Preparar TODO o kit esta tarde: número, gels, roupas','Pasta com frango no jantar (18–19h)','Cama às 21h30 — dormir cedo','5h00 amanhã cedo — acordar e preparar']},
+  {date:'2026-06-13',week:11,phase:'Race Week',type:'race',km:64,title:'🏁 DESAFIO 64KM',
+   items:['5h00 Acordar','5h15 Café da manhã: Macarrão ou arroz + banana + café','6h30 Chegar ao Little the Rez · aquecimento 10 min','7h00 LARGADA! 🏁','Uma volta de cada vez — você treinou 11 semanas para isso!']},
 ];
 
 // All planned run days from plan start (for readiness calculation)
