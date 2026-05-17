@@ -1259,6 +1259,7 @@ function renderPlanoDesafio(){
   var hj=hoje();
   var d=getDados();
   var custom=dsfLoadCustom();
+  var _d64Progress={};try{_d64Progress=JSON.parse(localStorage.getItem('desafio64_progress'))||{};}catch(e){}
   var now=new Date(),dow=now.getDay();
   var mon=new Date(now); mon.setDate(now.getDate()-(dow===0?6:dow-1));
 
@@ -1301,11 +1302,17 @@ function renderPlanoDesafio(){
     var km=ov?(ov.km||0):(base?(base.km||0):0);
     var title=ov?ov.title:(base?base.title:(ds==='2026-06-13'?'🏁 DESAFIO 64KM':'Descanso'));
     var actual=d.treinos.find(function(t){return t.data===ds&&(t.distancia||0)>0;});
+    var d64prog=_d64Progress[ds]||{};
+    var d64done=!actual&&d64prog.run===true;
+    var d64extra=!actual&&d64prog.extraRun&&(d64prog.extraRun.km||0)>0;
     var isToday=ds===hj, isPast=ds<hj, isRace=ds==='2026-06-13';
     var detail=km>0?km+'km':'Descanso';
-    if(base&&base.detail&&!actual) detail=(km>0?km+'km · ':'')+base.detail;
+    if(base&&base.detail&&!actual&&!d64done&&!d64extra) detail=(km>0?km+'km · ':'')+base.detail;
+    if(d64done) detail='✅ '+km+'km feito (Desafio 64)';
+    if(d64extra) detail='✅ '+d64prog.extraRun.km+'km feito (Desafio 64)';
     if(actual) detail='✅ '+Math.round((actual.distancia||0)*10)/10+' km feito';
-    var cls='plan-day'+(isRace?' plan-race':isToday?' plan-hoje':isPast&&actual?' plan-custom':ov?' plan-custom':'');
+    var isDone=!!(actual||d64done||d64extra);
+    var cls='plan-day'+(isRace?' plan-race':isToday?' plan-hoje':isPast&&isDone?' plan-custom':ov?' plan-custom':'');
     html+='<div class="'+cls+'">'
       +'<div class="plan-day-name">'+DAY_NAMES[dayDow]+'</div>'
       +'<div class="plan-day-icon">'+(typeIcon[type]||'🏃')+'</div>'
@@ -3479,9 +3486,15 @@ document.addEventListener('DOMContentLoaded',function(){
 
   // Sync when app comes back to foreground (iOS: switching back from another app)
   document.addEventListener('visibilitychange',function(){
-    if(document.visibilityState==='visible'&&_fbRef){
-      syncManual();
+    if(document.visibilityState==='visible'){
+      if(_fbRef) syncManual();
+      // Re-render plan in case user just updated Desafio 64 app
+      if(_tela==='dash') renderPlanoDesafio();
     }
+  });
+  // Also re-render when localStorage changes from another tab (Desafio 64 app)
+  window.addEventListener('storage',function(e){
+    if(e.key==='desafio64_progress'&&_tela==='dash') renderPlanoDesafio();
   });
   // Show app version
   var verEl=document.getElementById('app-ver-txt');
