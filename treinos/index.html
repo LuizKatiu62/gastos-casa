@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0f172a">
-<meta name="app-version" content="20260516-v37">
+<meta name="app-version" content="20260517-v38">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <title>Luiz — Atleta</title>
 <link rel="manifest" href="manifest.json">
@@ -1184,8 +1184,10 @@ function irParaTela(nome){
   _tela=nome;
   document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('ativa');});
   document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.remove('ativo');});
-  document.getElementById('tela-'+nome).classList.add('ativa');
-  document.getElementById('nav-'+nome).classList.add('ativo');
+  var telaEl=document.getElementById('tela-'+nome);
+  if(telaEl) telaEl.classList.add('ativa');
+  var navEl=document.getElementById('nav-'+nome);
+  if(navEl) navEl.classList.add('ativo');
   document.getElementById('fab-treino').style.display=(nome==='dash'||nome==='log')?'flex':'none';
   document.getElementById('fab-corrida').style.display=nome==='corridas'?'flex':'none';
   document.getElementById('fab-bike').style.display=nome==='bike'?'flex':'none';
@@ -1313,7 +1315,7 @@ function renderPlanoDesafio(){
     if(d64done) detailHtml='<div class="plan-day-detail">✅ '+km+'km feito (Desafio 64)</div>';
     else if(d64extra) detailHtml='<div class="plan-day-detail">✅ '+d64prog.extraRun.km+'km feito (Desafio 64)</div>';
     else if(actual) detailHtml='<div class="plan-day-detail">✅ '+Math.round((actual.distancia||0)*10)/10+' km feito</div>';
-    else if(base&&base.items&&base.items.length){
+    else if(!ov&&base&&base.items&&base.items.length){
       itemsHtml='<div class="plan-day-items">'+base.items.map(function(it){return '<div class="plan-day-item">'+it+'</div>';}).join('')+'</div>';
     } else {
       detailHtml='<div class="plan-day-detail">'+(km>0?km+'km':'Descanso')+'</div>';
