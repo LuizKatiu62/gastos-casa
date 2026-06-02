@@ -1,0 +1,1556 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Luiz Silva — Training Hub</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f5f5f0;
+    --surface: #ffffff;
+    --surface2: #f0f0eb;
+    --border: rgba(0,0,0,0.1);
+    --border2: rgba(0,0,0,0.18);
+    --text: #1a1a18;
+    --text2: #5a5a56;
+    --text3: #9a9a94;
+    --green: #1D9E75;
+    --green2: #0F6E56;
+    --green-light: #E1F5EE;
+    --amber: #EF9F27;
+    --amber-light: #FAEEDA;
+    --blue: #3266ad;
+    --blue-light: #E6F1FB;
+    --red: #E24B4A;
+    --red-light: #FCEBEB;
+    --coral: #D85A30;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1a18;
+      --surface: #252522;
+      --surface2: #2e2e2b;
+      --border: rgba(255,255,255,0.1);
+      --border2: rgba(255,255,255,0.18);
+      --text: #f0f0eb;
+      --text2: #a0a09a;
+      --text3: #606059;
+      --green-light: #0a3326;
+      --amber-light: #3a2800;
+      --blue-light: #0a1f3a;
+      --red-light: #3a0a0a;
+    }
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    height: 60px;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    font-size: 16px;
+    color: var(--green);
+    text-decoration: none;
+  }
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: var(--green-light);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .header-nav {
+    display: flex;
+    gap: 2px;
+    margin-left: auto;
+    flex-wrap: wrap;
+  }
+  .nav-btn {
+    padding: 6px 14px;
+    border: none;
+    background: none;
+    color: var(--text2);
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    transition: all .18s;
+    white-space: nowrap;
+  }
+  .nav-btn:hover { background: var(--surface2); color: var(--text); }
+  .nav-btn.active { background: var(--green-light); color: var(--green2); font-weight: 600; }
+
+  /* MAIN */
+  .main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px 16px;
+  }
+
+  /* PANELS */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* PROFILE CARD */
+  .profile-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin-bottom: 20px;
+  }
+  .avatar {
+    width: 60px; height: 60px;
+    border-radius: 50%;
+    background: var(--green-light);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; font-weight: 700; color: var(--green2);
+    flex-shrink: 0;
+  }
+  .profile-info { flex: 1; }
+  .profile-name { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+  .profile-sub { font-size: 12px; color: var(--text2); margin-bottom: 6px; }
+  .tags { display: flex; gap: 5px; flex-wrap: wrap; }
+  .tag {
+    font-size: 11px; padding: 2px 9px; border-radius: 20px; font-weight: 600;
+  }
+  .tag-green { background: var(--green-light); color: var(--green2); }
+  .tag-blue { background: var(--blue-light); color: var(--blue); }
+  .tag-amber { background: var(--amber-light); color: #854F0B; }
+  .tag-red { background: var(--red-light); color: #A32D2D; }
+  .profile-stats { display: flex; gap: 20px; }
+  .pstat { text-align: center; }
+  .pstat-val { font-size: 22px; font-weight: 700; color: var(--green); }
+  .pstat-lbl { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+  /* GRID */
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  @media (max-width: 700px) {
+    .grid2, .grid3, .grid4 { grid-template-columns: 1fr 1fr; }
+    .header-nav { display: none; }
+    .mobile-nav { display: flex !important; }
+  }
+  @media (max-width: 480px) {
+    .grid2 { grid-template-columns: 1fr; }
+  }
+
+  /* MOBILE NAV */
+  .mobile-nav {
+    display: none;
+    overflow-x: auto;
+    gap: 6px;
+    padding: 10px 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    margin-bottom: -8px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* CARDS */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    margin-bottom: 14px;
+  }
+  .metric-card {
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    padding: 14px;
+    text-align: center;
+  }
+  .metric-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 5px; }
+  .metric-val { font-size: 24px; font-weight: 700; }
+  .metric-sub { font-size: 11px; color: var(--text3); margin-top: 3px; }
+
+  /* SECTION TITLE */
+  .section-title {
+    font-size: 11px; font-weight: 700; color: var(--text3);
+    text-transform: uppercase; letter-spacing: .08em;
+    margin-bottom: 12px;
+  }
+
+  /* RACE SELECTOR */
+  .race-selector {
+    display: flex; gap: 8px; margin-bottom: 18px;
+  }
+  .race-btn {
+    flex: 1; padding: 10px 8px;
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    text-align: center;
+    font-size: 12px; font-weight: 600;
+    color: var(--text2);
+    background: var(--surface);
+    transition: all .18s;
+    font-family: inherit;
+    line-height: 1.4;
+  }
+  .race-btn .sub { font-size: 10px; font-weight: 400; display: block; margin-top: 2px; }
+  .race-btn.active { background: var(--green-light); color: var(--green2); border-color: var(--green); }
+  .race-btn:hover:not(.active) { background: var(--surface2); }
+
+  /* PLAN ROW */
+  .plan-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .plan-row:last-child { border-bottom: none; }
+  .day-pill {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .day-active { background: var(--green-light); color: var(--green2); }
+  .day-rest { background: var(--surface2); color: var(--text3); }
+  .day-long { background: var(--amber-light); color: #854F0B; }
+  .plan-title { font-size: 13px; font-weight: 600; }
+  .plan-desc { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .day-pill.editable { cursor: pointer; position: relative; }
+  .day-pill.editable:hover { opacity: .78; }
+  .day-pill.customized { outline: 2px solid var(--blue); outline-offset: 2px; }
+  .day-picker-overlay { position: fixed; inset: 0; z-index: 500; }
+  .day-picker {
+    position: fixed; z-index: 501;
+    background: var(--surface); border: 1px solid var(--border2);
+    border-radius: 12px; padding: 8px;
+    box-shadow: 0 8px 32px rgba(0,0,0,.18);
+    display: flex; flex-wrap: wrap; gap: 6px; width: 196px;
+  }
+  .day-picker-btn {
+    width: 52px; height: 36px; border-radius: 8px; border: 1.5px solid var(--border);
+    background: var(--surface2); color: var(--text); font-size: 12px; font-weight: 700;
+    cursor: pointer; transition: background .12s;
+  }
+  .day-picker-btn:hover, .day-picker-btn.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+  .day-picker-reset { width: 100%; height: 32px; border-radius: 8px; border: none;
+    background: var(--red-light); color: var(--red); font-size: 11px; font-weight: 700; cursor: pointer; margin-top: 2px; }
+
+  /* ZONES */
+  .zone-row { margin-bottom: 10px; }
+  .zone-header { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; }
+  .zone-name { font-weight: 600; }
+  .zone-bpm { color: var(--text2); }
+  .zone-track { height: 20px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
+  .zone-fill { height: 100%; border-radius: 4px; display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; font-size: 10px; color: #fff; font-weight: 700; }
+
+  /* ZONE DETAIL */
+  .zone-detail-row {
+    display: flex; gap: 10px; align-items: flex-start;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .zone-detail-row:last-child { border-bottom: none; }
+  .zone-dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; margin-top: 2px; }
+
+  /* NUTRITION */
+  .nut-row {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .nut-row:last-child { border-bottom: none; }
+  .nut-time { width: 140px; font-size: 12px; font-weight: 700; color: var(--green); flex-shrink: 0; }
+  .nut-food { font-size: 12px; flex: 1; }
+  .nut-note { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .nut-kcal { font-size: 12px; font-weight: 700; color: var(--amber); flex-shrink: 0; }
+
+  /* CHAT */
+  .chat-wrap {
+    display: flex; flex-direction: column;
+    height: 380px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .chat-messages {
+    flex: 1; overflow-y: auto;
+    padding: 16px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .chat-messages::-webkit-scrollbar { width: 4px; }
+  .chat-messages::-webkit-scrollbar-track { background: transparent; }
+  .chat-messages::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+  .msg-user {
+    align-self: flex-end;
+    background: var(--green);
+    color: #fff;
+    border-radius: 14px 14px 2px 14px;
+    padding: 9px 14px;
+    max-width: 75%;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .msg-bot {
+    align-self: flex-start;
+    background: var(--surface2);
+    border-radius: 14px 14px 14px 2px;
+    padding: 9px 14px;
+    max-width: 82%;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .chat-footer {
+    padding: 10px 12px;
+    border-top: 1px solid var(--border);
+    display: flex; gap: 8px;
+    background: var(--surface);
+  }
+  .chat-input {
+    flex: 1; padding: 9px 14px;
+    border: 1px solid var(--border2);
+    border-radius: 20px;
+    background: var(--surface2);
+    color: var(--text);
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color .18s;
+  }
+  .chat-input:focus { border-color: var(--green); }
+  .chat-send {
+    padding: 9px 18px;
+    background: var(--green);
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background .18s;
+  }
+  .chat-send:hover { background: var(--green2); }
+
+  .quick-qs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+  .quick-q {
+    padding: 5px 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 20px;
+    font-size: 12px;
+    cursor: pointer;
+    color: var(--text2);
+    font-family: inherit;
+    transition: all .18s;
+  }
+  .quick-q:hover { background: var(--green-light); color: var(--green2); border-color: var(--green); }
+
+  /* SPINNER */
+  .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid var(--green-light);
+    border-top-color: var(--green);
+    border-radius: 50%;
+    animation: spin .6s linear infinite;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 5px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* PHASE HEADER */
+  .phase-header {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 12px;
+  }
+  .phase-badge {
+    font-size: 11px; padding: 3px 10px; border-radius: 20px; font-weight: 700;
+  }
+  .phase-week { font-size: 12px; color: var(--text3); }
+
+  /* CHARTS */
+  .chart-wrap { position: relative; width: 100%; }
+
+  /* FOOTER */
+  footer {
+    text-align: center;
+    padding: 24px 16px;
+    font-size: 12px;
+    color: var(--text3);
+    border-top: 1px solid var(--border);
+    margin-top: 32px;
+  }
+
+  /* HYDRATION TABLE */
+  .hyd-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .hyd-row:last-child { border-bottom: none; }
+  .hyd-val { font-weight: 700; color: var(--blue); }
+
+  /* LEGEND */
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; font-size: 12px; color: var(--text2); }
+  .legend-item { display: flex; align-items: center; gap: 5px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; }
+
+  h2.section-h { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+  h3.card-h { font-size: 14px; font-weight: 700; margin-bottom: 12px; color: var(--text); }
+
+  .dist-badge {
+    font-size: 11px; background: var(--green-light); color: var(--green2);
+    padding: 1px 7px; border-radius: 10px; font-weight: 700; margin-left: 4px;
+  }
+  .long-badge {
+    font-size: 11px; background: var(--amber-light); color: #854F0B;
+    padding: 1px 7px; border-radius: 10px; font-weight: 700; margin-left: 4px;
+  }
+  .tip-box {
+    background: var(--blue-light);
+    border-left: 3px solid var(--blue);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: var(--blue);
+    margin-bottom: 14px;
+  }
+
+  @media (max-width: 700px) {
+    .profile-stats { gap: 12px; }
+    .profile-card { flex-wrap: wrap; }
+    .race-selector { flex-direction: column; }
+    .race-btn { flex: none; }
+    .nut-time { width: 110px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-inner">
+    <a class="logo" href="https://luizkatiu62.github.io/treinos/" style="font-size:12px;color:var(--text2);font-weight:600;text-decoration:none;margin-right:8px;white-space:nowrap">← Treinos</a>
+    <a class="logo" href="#">
+      <div class="logo-icon">🏃</div>
+      Training Hub
+    </a>
+    <nav class="header-nav">
+      <button class="nav-btn active" onclick="showPanel('dashboard')">Dashboard</button>
+      <button class="nav-btn" onclick="showPanel('treinos')">Planos de Treino</button>
+      <button class="nav-btn" onclick="showPanel('zonas')">Zonas de FC</button>
+      <button class="nav-btn" onclick="showPanel('nutricao')">Nutrição</button>
+      <button class="nav-btn" onclick="showPanel('graficos')">Gráficos</button>
+      <button class="nav-btn" onclick="showPanel('assistente')">Assistente IA</button>
+      <button class="nav-btn" onclick="showPanel('garmin')" style="color:var(--coral);font-weight:700">⌚ Garmin</button>
+    </nav>
+  </div>
+</header>
+
+<!-- MOBILE NAV -->
+<div class="mobile-nav" id="mobile-nav">
+  <button class="nav-btn active" onclick="showPanel('dashboard')">Dashboard</button>
+  <button class="nav-btn" onclick="showPanel('treinos')">Treinos</button>
+  <button class="nav-btn" onclick="showPanel('zonas')">Zonas FC</button>
+  <button class="nav-btn" onclick="showPanel('nutricao')">Nutrição</button>
+  <button class="nav-btn" onclick="showPanel('graficos')">Gráficos</button>
+  <button class="nav-btn" onclick="showPanel('assistente')">Assistente</button>
+  <button class="nav-btn" onclick="showPanel('garmin')" style="color:var(--coral);font-weight:700">⌚ Garmin</button>
+</div>
+
+<main class="main">
+
+<!-- ==================== DASHBOARD ==================== -->
+<div id="panel-dashboard" class="panel active">
+
+  <div class="profile-card">
+    <div class="avatar">LS</div>
+    <div class="profile-info">
+      <div class="profile-name">Luiz Silva — luiz62</div>
+      <div class="profile-sub">Saint John, NB 🇧🇷🇨🇦 · 64 anos · Garmin Connect desde 2011</div>
+      <div class="tags">
+        <span class="tag tag-green">Corrida</span>
+        <span class="tag tag-blue">Ciclismo</span>
+        <span class="tag tag-amber">Natação</span>
+        <span class="tag tag-green">Triathlon</span>
+        <span class="tag tag-blue">Duathlon</span>
+        <span class="tag tag-red">MTB</span>
+      </div>
+    </div>
+    <div class="profile-stats">
+      <div class="pstat">
+        <div class="pstat-val" style="color:var(--red)">156</div>
+        <div class="pstat-lbl">FC máx</div>
+      </div>
+      <div class="pstat">
+        <div class="pstat-val" style="color:var(--green)">49</div>
+        <div class="pstat-lbl">FC repouso</div>
+      </div>
+      <div class="pstat">
+        <div class="pstat-val" style="color:var(--amber)">1.844</div>
+        <div class="pstat-lbl">BMR kcal</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tip-box">
+    💡 <strong>Dados baseados no Garmin Connect.</strong> Seu perfil (luiz62) tem histórico de atividades desde agosto de 2011. FC repouso calculada pela média dos registros mais recentes.
+  </div>
+
+  <div class="grid4" style="margin-bottom:20px">
+    <div class="metric-card">
+      <div class="metric-label">FC Repouso</div>
+      <div class="metric-val" style="color:var(--green)">49 bpm</div>
+      <div class="metric-sub">Excelente (atleta)</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">FC Máxima</div>
+      <div class="metric-val" style="color:var(--red)">156 bpm</div>
+      <div class="metric-sub">Estimada (220–64)</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">BMR</div>
+      <div class="metric-val" style="color:var(--amber)">1.844</div>
+      <div class="metric-sub">kcal/dia base</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Dias Disponíveis</div>
+      <div class="metric-val" style="color:var(--blue)">5</div>
+      <div class="metric-sub">Ter·Qua·Qui·Sáb·Dom</div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3 class="card-h">Resumo das zonas de treino</h3>
+      <div id="dash-zones"></div>
+    </div>
+    <div class="card">
+      <h3 class="card-h">Semana atual — Recuperação joelho (Mai–Jun 2026)</h3>
+      <div id="dash-week"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 class="card-h">Distribuição recomendada (método 80/20)</h3>
+    <div class="chart-wrap" style="height:200px">
+      <canvas id="dashZoneChart" role="img" aria-label="Distribuição de zonas de treino">80% Z1-Z2, 20% Z3-Z5</canvas>
+    </div>
+    <div class="legend" id="dashLegend"></div>
+  </div>
+
+</div>
+
+<!-- ==================== TREINOS ==================== -->
+<div id="panel-treinos" class="panel">
+
+  <div style="margin-bottom:20px">
+    <h2 class="section-h">Planos de Treino</h2>
+    <p style="font-size:13px;color:var(--text2)">Planos personalizados para seus 5 dias disponíveis (Ter/Qua/Qui/Sáb/Dom) com treino longo às Sábados.</p>
+  </div>
+
+  <div class="race-selector" id="race-selector">
+    <button class="race-btn active" onclick="selectRace(this,'hm')">🏅 Meia Maratona<span class="sub">21.1 km · 16 semanas</span></button>
+    <button class="race-btn" onclick="selectRace(this,'m')">🏆 Maratona<span class="sub">42.2 km · 20 semanas</span></button>
+    <button class="race-btn" onclick="selectRace(this,'um')">⛰️ Ultra Maratona<span class="sub">50 km+ · 24 semanas</span></button>
+    <button class="race-btn" onclick="selectRace(this,'d64')" style="border-color:#D85A30;color:#D85A30">🔥 Desafio 64 km<span class="sub">Jun 13 · Joelho · 4 sem</span></button>
+  </div>
+
+  <div id="race-content"></div>
+</div>
+
+<!-- ==================== ZONAS FC ==================== -->
+<div id="panel-zonas" class="panel">
+
+  <div style="margin-bottom:20px">
+    <h2 class="section-h">Zonas de Frequência Cardíaca</h2>
+    <p style="font-size:13px;color:var(--text2)">Calculadas pelo método Karvonen com seus dados reais do Garmin.</p>
+  </div>
+
+  <div class="grid4" style="margin-bottom:20px">
+    <div class="metric-card">
+      <div class="metric-label">FC Máxima</div>
+      <div class="metric-val" style="color:var(--red)">156</div>
+      <div class="metric-sub">bpm (220 – 64 anos)</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">FC Repouso</div>
+      <div class="metric-val" style="color:var(--green)">49</div>
+      <div class="metric-sub">bpm (dados Garmin)</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Reserva Cardíaca</div>
+      <div class="metric-val" style="color:var(--blue)">107</div>
+      <div class="metric-sub">bpm (HRR)</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Zona Aeróbica Ideal</div>
+      <div class="metric-val" style="color:var(--green);font-size:16px">116–130</div>
+      <div class="metric-sub">bpm (Z2)</div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:14px">
+    <h3 class="card-h">Suas zonas (Karvonen)</h3>
+    <div id="zones-bars"></div>
+  </div>
+
+  <div class="card" style="margin-bottom:14px">
+    <h3 class="card-h">Significado e aplicação</h3>
+    <div id="zones-detail"></div>
+  </div>
+
+  <div class="tip-box">
+    <strong>Regra 80/20:</strong> 80% dos seus treinos devem estar em Z1–Z2 (103–132 bpm). Apenas 20% em Z3–Z5. Isso maximiza adaptação aeróbica e minimiza risco de overtraining para atletas masters.
+  </div>
+
+</div>
+
+<!-- ==================== NUTRIÇÃO ==================== -->
+<div id="panel-nutricao" class="panel">
+
+  <div style="margin-bottom:20px">
+    <h2 class="section-h">Nutrição para Corrida</h2>
+    <p style="font-size:13px;color:var(--text2)">Ajustada ao seu BMR de 1.844 kcal/dia e peso estimado de 68 kg.</p>
+  </div>
+
+  <div class="race-selector" id="nut-selector">
+    <button class="race-btn active" onclick="selectNut(this,'base')">🌿 Dia Base</button>
+    <button class="race-btn" onclick="selectNut(this,'treino')">🏃 Dia de Treino</button>
+    <button class="race-btn" onclick="selectNut(this,'longo')">💪 Treino Longo</button>
+    <button class="race-btn" onclick="selectNut(this,'prova')">🏅 Dia de Prova</button>
+  </div>
+
+  <div id="nutrition-content"></div>
+
+</div>
+
+<!-- ==================== GRÁFICOS ==================== -->
+<div id="panel-graficos" class="panel">
+
+  <div style="margin-bottom:20px">
+    <h2 class="section-h">Gráficos de Progresso</h2>
+    <p style="font-size:13px;color:var(--text2)">Plano simulado de 20 semanas para Maratona — visualize a progressão.</p>
+  </div>
+
+  <div class="card">
+    <h3 class="card-h">Volume semanal (km de corrida)</h3>
+    <div class="chart-wrap" style="height:220px">
+      <canvas id="volumeChart" role="img" aria-label="Volume semanal de corrida em km ao longo de 20 semanas">Volume de treino em km por semana ao longo de 20 semanas.</canvas>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 class="card-h">Progressão do treino longo (km)</h3>
+    <div class="chart-wrap" style="height:200px">
+      <canvas id="longChart" role="img" aria-label="Progressão da distância do treino longo semanal">Progressão do treino longo ao longo do plano de 20 semanas.</canvas>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3 class="card-h">Calorias por modalidade</h3>
+      <div class="chart-wrap" style="height:200px">
+        <canvas id="calChart" role="img" aria-label="Distribuição de calorias por tipo de atividade">Calorias gastas por atividade: corrida, ciclismo, natação, força.</canvas>
+      </div>
+      <div class="legend" id="calLegend"></div>
+    </div>
+    <div class="card">
+      <h3 class="card-h">Distribuição de treino por zona</h3>
+      <div class="chart-wrap" style="height:200px">
+        <canvas id="zoneChart" role="img" aria-label="Distribuição de treino por zona de FC">Distribuição por zona de frequência cardíaca.</canvas>
+      </div>
+      <div class="legend" id="zoneLegend"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 class="card-h">Hidratação estimada por treino</h3>
+    <div class="chart-wrap" style="height:200px">
+      <canvas id="hydChart" role="img" aria-label="Hidratação estimada por duração de treino">Consumo de líquidos estimado por duração de treino.</canvas>
+    </div>
+  </div>
+
+</div>
+
+<!-- ==================== ASSISTENTE ==================== -->
+<div id="panel-assistente" class="panel">
+
+  <div style="margin-bottom:20px">
+    <h2 class="section-h">Assistente de Treinos IA</h2>
+    <p style="font-size:13px;color:var(--text2)">Pergunte qualquer coisa sobre seus treinos, nutrição, recuperação ou estratégias de prova. Powered by Claude.</p>
+  </div>
+
+  <div class="card" style="margin-bottom:14px">
+    <h3 class="card-h">Perguntas frequentes</h3>
+    <div class="quick-qs" id="quick-qs"></div>
+  </div>
+
+  <div class="chat-wrap">
+    <div class="chat-messages" id="chat-box">
+      <div class="msg-bot">
+        Olá Luiz! 👋 Sou seu assistente de treinos personalizado com base nos seus dados do Garmin.<br><br>
+        Posso responder perguntas sobre <strong>treinos, nutrição, zonas de FC, ritmos alvo, estratégias de prova, recuperação</strong> e muito mais — tudo personalizado para seus 64 anos, FC repouso de 49 bpm e histórico de atividades desde 2011.<br><br>
+        O que você quer saber hoje?
+      </div>
+    </div>
+    <div class="chat-footer">
+      <input type="text" class="chat-input" id="chat-input" placeholder="Pergunte algo sobre seus treinos..." onkeydown="if(event.key==='Enter')sendChat()">
+      <button class="chat-send" onclick="sendChat()">Enviar ↗</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- ==================== GARMIN ==================== -->
+<div id="panel-garmin" class="panel">
+
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap">
+    <div style="flex:1">
+      <h2 class="section-h">Meus Treinos — Garmin</h2>
+      <p style="font-size:13px;color:var(--text2)">Atividades sincronizadas do Garmin Connect via app Treinos.</p>
+    </div>
+    <button onclick="loadGarmin(true)" style="padding:8px 16px;background:var(--green);color:#fff;border:none;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">↺ Atualizar</button>
+  </div>
+
+  <div class="grid4" style="margin-bottom:16px" id="garmin-stats">
+    <div class="metric-card"><div class="metric-label">Status</div><div class="metric-val" style="font-size:14px;color:var(--text3)">—</div></div>
+  </div>
+
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px" id="garmin-chips"></div>
+
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px" id="garmin-range"></div>
+
+  <div class="card" style="padding:0;overflow:hidden" id="garmin-list">
+    <div style="text-align:center;padding:48px;color:var(--text3)">Clique em <strong>⌚ Garmin</strong> para carregar os treinos.</div>
+  </div>
+
+</div>
+
+</main>
+
+<footer>
+  Training Hub · Luiz Silva (luiz62) · Dados baseados no Garmin Connect · Gerado via Claude AI<br>
+  <span style="font-size:11px">Atividades registradas de 2011 a 2026 · Saint John, NB 🇧🇷🇨🇦</span>
+</footer>
+
+<script>
+// =========================================================
+//  DATA
+// =========================================================
+const PROFILE = {
+  name:'Luiz Silva', age:64, restHR:49, maxHR:156, bmr:1820, weight:68,
+  hrr: 107, // maxHR - restHR
+};
+
+const ZONES = [
+  {n:'Z1 — Recuperação',    pct:'50–60%', lo:103, hi:116, col:'#64B5F6', bg:'#E3F2FD',
+   desc:'Recuperação ativa, caminhada leve. Base aeróbica sem estresse. Use após treinos longos.'},
+  {n:'Z2 — Aeróbico base',  pct:'60–70%', lo:116, hi:130, col:'#4CAF50', bg:'#E8F5E9',
+   desc:'Ritmo de conversa. 80% do volume de treino deve ser aqui. Essencial para eficiência aeróbica.'},
+  {n:'Z3 — Aeróbico+',      pct:'70–80%', lo:130, hi:144, col:'#FFC107', bg:'#FFFDE7',
+   desc:'Corrida moderada, ritmo de prova de meia maratona. Usa a cada 2–3 semanas em sessões tempo.'},
+  {n:'Z4 — Limiar',         pct:'80–90%', lo:144, hi:156, col:'#FF7043', bg:'#FBE9E7',
+   desc:'Difícil mas sustentável. Limiar anaeróbico. Intervalos de 5–15 min.'},
+  {n:'Z5 — VO₂Max',         pct:'90–100%', lo:156, hi:164, col:'#E53935', bg:'#FFEBEE',
+   desc:'Máxima intensidade. Intervalos curtos (<2 min). Use raramente — 1x/sem no pico.'},
+];
+
+const RACES = {
+  hm: {
+    title:'Meia Maratona — 21.1 km', weeks:16, pace:'6:30–7:00/km',
+    goal:'Completar ou sub 2h30 para atleta master de 64 anos',
+    tips:['Priorize Z2 nos primeiros 10 km da prova','Gel a cada 45 min a partir do km 8','Largue 20 seg/km mais devagar que o ritmo alvo'],
+    phases:[
+      {name:'Base',week:'Sem 1–4',color:'tag-blue',sessions:[
+        {day:'Ter',type:'Fácil Z2',dist:'6 km',desc:'Ritmo 7:00–7:30/km, relaxado'},
+        {day:'Qua',type:'Intervalos',dist:'5 km',desc:'4×800m em Z4 com recuperação de 2 min'},
+        {day:'Qui',type:'Cross-train',dist:'—',desc:'Ciclismo 45 min Z2 ou natação'},
+        {day:'Sáb',type:'LONGO',dist:'12 km',desc:'Ritmo Z2, walk-run se necessário'},
+        {day:'Dom',type:'Recuperação',dist:'4 km',desc:'Caminhada ou trote Z1'},
+      ]},
+      {name:'Construção',week:'Sem 5–10',color:'tag-amber',sessions:[
+        {day:'Ter',type:'Fácil Z2',dist:'8 km',desc:'Inclui 2×15 min a ritmo de prova'},
+        {day:'Qua',type:'Tempo',dist:'7 km',desc:'5 km em Z3 contínuo'},
+        {day:'Qui',type:'Cross-train',dist:'—',desc:'Ciclismo 60 min ou musculação'},
+        {day:'Sáb',type:'LONGO',dist:'17 km',desc:'Progressivo, últimos 5 km em Z3'},
+        {day:'Dom',type:'Recuperação',dist:'5 km',desc:'Z1 fácil'},
+      ]},
+      {name:'Pico',week:'Sem 11–14',color:'tag-red',sessions:[
+        {day:'Ter',type:'Intervalos',dist:'8 km',desc:'6×1 km em Z4, recuperação 90 seg'},
+        {day:'Qua',type:'Médio',dist:'12 km',desc:'Ritmo de prova 6:45/km'},
+        {day:'Qui',type:'Cross-train',dist:'—',desc:'Natação ou core training'},
+        {day:'Sáb',type:'LONGO',dist:'21 km',desc:'Simular prova no ritmo alvo'},
+        {day:'Dom',type:'Recuperação',dist:'5 km',desc:'Z1, hidratação e alongamento'},
+      ]},
+      {name:'Afunilamento',week:'Sem 15–16',color:'tag-green',sessions:[
+        {day:'Ter',type:'Curto Z2',dist:'5 km',desc:'Z2 leve com 3 strides de 20 seg'},
+        {day:'Qua',type:'Ativação',dist:'4 km',desc:'Fácil + 4×100m em ritmo de prova'},
+        {day:'Qui',type:'Descanso',dist:'—',desc:'Repouso ou caminhada 20 min'},
+        {day:'Sáb',type:'🏅 PROVA!',dist:'21.1 km',desc:'Dia de competição — boa prova!'},
+      ]},
+    ]
+  },
+  m: {
+    title:'Maratona — 42.2 km', weeks:20, pace:'7:00–7:30/km',
+    goal:'Completar ou sub 5h00 para atleta master de 64 anos',
+    tips:['Divida a prova em 3: conservador, ritmo alvo, sobrevivência','Não pule nenhum posto de hidratação','Gels a cada 35–40 min a partir do km 15','Método Galloway: 9 min corrida + 1 min caminhada'],
+    phases:[
+      {name:'Base',week:'Sem 1–6',color:'tag-blue',sessions:[
+        {day:'Ter',type:'Fácil Z2',dist:'7 km',desc:'Ritmo 7:30/km, relaxado'},
+        {day:'Qua',type:'Cross-train',dist:'—',desc:'Ciclismo 60 min Z2'},
+        {day:'Qui',type:'Fácil',dist:'6 km',desc:'Z2 com strides ao final'},
+        {day:'Sáb',type:'LONGO',dist:'14 km',desc:'Z2 fácil, gel a cada 45 min'},
+        {day:'Dom',type:'Recuperação',dist:'5 km',desc:'Z1 caminhada/trote'},
+      ]},
+      {name:'Construção',week:'Sem 7–14',color:'tag-amber',sessions:[
+        {day:'Ter',type:'Intervalos',dist:'10 km',desc:'8×800m Z4, recuperação ativa'},
+        {day:'Qua',type:'Médio',dist:'12 km',desc:'Z2–Z3 progressivo'},
+        {day:'Qui',type:'Cross-train',dist:'—',desc:'Natação 45 min + musculação'},
+        {day:'Sáb',type:'LONGO',dist:'28 km',desc:'Walk-run: 9 min corrida + 1 min caminhada'},
+        {day:'Dom',type:'Recuperação',dist:'6 km',desc:'Z1 obrigatório'},
+      ]},
+      {name:'Pico',week:'Sem 15–18',color:'tag-red',sessions:[
+        {day:'Ter',type:'Tempo',dist:'10 km',desc:'8 km em ritmo de prova'},
+        {day:'Qua',type:'Cross-train',dist:'—',desc:'Ciclismo ou elíptico'},
+        {day:'Qui',type:'Intervalos',dist:'10 km',desc:'5×1 mi em Z4'},
+        {day:'Sáb',type:'LONGO',dist:'32 km',desc:'Simular prova com nutrição real'},
+        {day:'Dom',type:'Recuperação',dist:'6 km',desc:'Z1 + rolo de espuma'},
+      ]},
+      {name:'Afunilamento',week:'Sem 19–20',color:'tag-green',sessions:[
+        {day:'Ter',type:'Curto',dist:'6 km',desc:'Fácil com 4 strides'},
+        {day:'Qui',type:'Ativação',dist:'4 km',desc:'30 min fácil + 4×20 seg strides'},
+        {day:'Sáb',type:'🏆 PROVA!',dist:'42.2 km',desc:'Dia de Maratona — você chegou aqui!'},
+      ]},
+    ]
+  },
+  um: {
+    title:'Ultra Maratona — 50 km+', weeks:24, pace:'7:30–8:30/km + caminhadas',
+    goal:'Completar (finish is the goal) com estratégia walk-run',
+    tips:['Caminhe TODAS as subidas — economize quad','Treine back-to-back (sáb+dom) para simular fadiga','Pratique nutrição sólida em treinos longos','Teste o equipamento (mochila, bastões) com antecedência'],
+    phases:[
+      {name:'Base',week:'Sem 1–8',color:'tag-blue',sessions:[
+        {day:'Ter',type:'Trilha/Estrada',dist:'8 km',desc:'Z1–Z2, terreno variado'},
+        {day:'Qua',type:'Cross-train',dist:'—',desc:'Ciclismo 75 min ou natação'},
+        {day:'Qui',type:'Força',dist:'—',desc:'Quadríceps, glúteos, core 45 min'},
+        {day:'Sáb',type:'LONGO',dist:'20 km',desc:'Trilha com caminhadas em subidas'},
+        {day:'Dom',type:'B2B',dist:'10 km',desc:'Back-to-back: pernas cansadas'},
+      ]},
+      {name:'Volume Alto',week:'Sem 9–18',color:'tag-amber',sessions:[
+        {day:'Ter',type:'Fartlek Z3',dist:'12 km',desc:'20 min em Z3 dentro do treino'},
+        {day:'Qua',type:'Cross-train',dist:'—',desc:'Bike + Natação'},
+        {day:'Qui',type:'Médio',dist:'14 km',desc:'Incluindo subidas forçadas'},
+        {day:'Sáb',type:'ULTRALONG',dist:'36 km',desc:'Walk-run: 5 km corrida + 1 km caminhada'},
+        {day:'Dom',type:'B2B',dist:'16 km',desc:'Simular fadiga de ultra'},
+      ]},
+      {name:'Pico',week:'Sem 19–22',color:'tag-red',sessions:[
+        {day:'Ter',type:'Específico',dist:'14 km',desc:'Terreno similar à prova'},
+        {day:'Qua',type:'Força + Core',dist:'—',desc:'Prevenção de lesão'},
+        {day:'Qui',type:'Médio',dist:'16 km',desc:'Ritmo de prova + nutrição'},
+        {day:'Sáb',type:'ULTRA',dist:'45 km',desc:'Evento simulado com drop bags'},
+        {day:'Dom',type:'B2B',dist:'18 km',desc:'Treinar em pernas cansadas'},
+      ]},
+      {name:'Afunilamento',week:'Sem 23–24',color:'tag-green',sessions:[
+        {day:'Ter',type:'Curto',dist:'8 km',desc:'Z2 muito fácil'},
+        {day:'Qui',type:'Ativação',dist:'6 km',desc:'30 min + 4 strides curtos'},
+        {day:'Sáb',type:'⛰️ ULTRA!',dist:'50 km+',desc:'Dia do evento — divirta-se!'},
+      ]},
+    ]
+  },
+  d64: {
+    title:'Desafio 64 km — Plano de Chegada (Jun 13, 2026)', weeks:4, pace:'9:00–10:30/km',
+    goal:'Chegar na linha de largada saudável e completar os 64 km com joelho preservado',
+    tips:[
+      '⚠️ OBJETIVO: completar, não competir — pace Z1–Z2 do loop 1 ao loop 19',
+      '⚠️ Joelho: dor ≥ 3/10 = pare naquela volta, aplique gelo, reavalie na próxima',
+      'Método Galloway obrigatório: 3 min corrida + 1 min caminhada em TODOS os loops',
+      'A cada volta: água + eletrólitos + check rápido do joelho. A cada 3 loops: gel',
+      'Semana 1–2 (mai 16–29): apenas cross-train — nada de corrida para o joelho descansar',
+      'Semana 3 (jun 1–7): teste walk-run de 5–8 km para avaliar o joelho antes da prova',
+    ],
+    phases:[
+      {name:'🦵 Preservação',week:'Sem 1–2 · Mai 16–29',color:'tag-red',sessions:[
+        {day:'Ter',type:'Pool running',dist:'30 min',desc:'Colete flutuador — cardio sem impacto, mantém condicionamento aeróbico'},
+        {day:'Qua',type:'Fisio + força',dist:'—',desc:'Exercícios de quadríceps e glúteos sem carga axial — estabiliza o joelho'},
+        {day:'Qui',type:'Ciclismo Z1',dist:'45 min',desc:'Ergométrica, cadência 90+ rpm, resistência leve — sem dor'},
+        {day:'Sáb',type:'Natação Z2',dist:'40 min',desc:'Nado livre — cardio pleno sem impacto, mobilidade de quadril'},
+        {day:'Dom',type:'Caminhada plana',dist:'4 km',desc:'Superfície plana, ritmo confortável — avalie o joelho nas 24h seguintes'},
+      ]},
+      {name:'🚶 Teste Walk-Run',week:'Sem 3 · Jun 1–7',color:'tag-amber',sessions:[
+        {day:'Ter',type:'Walk-run teste',dist:'5 km',desc:'3 min corrida leve + 1 min caminhada — dor? Para. Sem dor? Continue'},
+        {day:'Qua',type:'Cross-train',dist:'—',desc:'Ciclismo 45 min Z2 — recuperação ativa, não sobrecarregue o joelho'},
+        {day:'Qui',type:'Walk-run',dist:'8 km',desc:'Mesmo ritmo: 3+1 min. Se joelho OK → isso é o ritmo que leva a Jun 13'},
+        {day:'Sáb',type:'Caminhada longa',dist:'14 km',desc:'Z1 plano, pace 10:00–11:00/km — simule tempo em pé para a prova'},
+        {day:'Dom',type:'Descanso',dist:'—',desc:'Repouso completo — prioridade máxima ao joelho antes da prova'},
+      ]},
+      {name:'✅ Afunilamento',week:'Sem 4 · Jun 8–12',color:'tag-green',sessions:[
+        {day:'Ter',type:'Walk-run leve',dist:'6 km',desc:'3+1 min, muito fácil — só sentir as pernas, nada de esforço'},
+        {day:'Qua',type:'Pool running',dist:'20 min',desc:'Manutenção leve — mobilidade, sem impacto'},
+        {day:'Qui',type:'Caminhada',dist:'3 km',desc:'15–20 min fácil + alongamento quadríceps, IT band, panturrilha'},
+        {day:'Sex',type:'Descanso',dist:'—',desc:'Hidrate bem, prepare o drop bag, confirme suporte na prova'},
+        {day:'Sáb',type:'Descanso',dist:'—',desc:'Pernas para cima, refeição familiar, durma cedo — prova amanhã!'},
+      ]},
+      {name:'🔥 PROVA',week:'Jun 13, 2026 · Saint John NB',color:'tag-red',sessions:[
+        {day:'Prova',type:'🔥 DESAFIO 64 KM!',dist:'64 km',desc:'Little the Rez Revoir · ~19 loops de 3.3 km · Galloway 3+1 min · Você chegou aqui!'},
+      ]},
+    ]
+  }
+};
+
+const NUTRITION = {
+  base:{
+    title:'Dia de base (sem treino ou treino leve)',
+    kcal:2100, carb:263, prot:157, fat:47,
+    timing:[
+      {time:'Café da manhã',foods:'Aveia 80g + frutas + iogurte grego 150g',kcal:450,note:''},
+      {time:'Almoço',foods:'Arroz integral 120g + frango 150g + vegetais variados',kcal:650,note:''},
+      {time:'Lanche',foods:'Banana + pasta de amendoim 2 col',kcal:300,note:''},
+      {time:'Jantar',foods:'Batata-doce 200g + salmão 150g + salada',kcal:550,note:''},
+      {time:'Snack noturno',foods:'Caseína 25g ou queijo cottage 150g',kcal:150,note:'Recuperação muscular noturna'},
+    ]
+  },
+  treino:{
+    title:'Dia de treino moderado (4–10 km)',
+    kcal:2600, carb:325, prot:163, fat:52,
+    timing:[
+      {time:'Pré-treino (1h antes)',foods:'Banana + torrada integral 2 fatias + café preto',kcal:350,note:'↑ Glicogênio disponível'},
+      {time:'Durante (>60 min)',foods:'Gel energético ou 4–5 tâmaras',kcal:100,note:'1 gel a cada 45 min de exercício'},
+      {time:'Pós-treino (30 min)',foods:'Whey 30g + leite 250ml + banana',kcal:350,note:'Janela anabólica — essencial'},
+      {time:'Almoço',foods:'Macarrão integral 120g + carne magra + legumes',kcal:750,note:'Recarregar glicogênio muscular'},
+      {time:'Jantar',foods:'Arroz + feijão + frango + salada + azeite',kcal:600,note:''},
+      {time:'Hidratação',foods:'500–700 ml/hora de exercício + eletrólitos',kcal:0,note:'Sódio, potássio, magnésio'},
+    ]
+  },
+  longo:{
+    title:'Dia de treino longo (>16 km / >90 min)',
+    kcal:3200, carb:450, prot:160, fat:55,
+    timing:[
+      {time:'Café 2h antes',foods:'Panquecas de aveia + mel + banana + café',kcal:550,note:'↑ Carboidratos — base sólida'},
+      {time:'15 min antes',foods:'Gel de cafeína (100 mg) + água 500 ml',kcal:100,note:'Ativação do sistema nervoso central'},
+      {time:'A cada 45 min',foods:'Gel energético ou mastigáveis (25–30g carbo)',kcal:120,note:'Manter glicemia estável'},
+      {time:'Pós-treino (30 min)',foods:'Recovery shake: whey 40g + malto 50g + eletrólitos',kcal:400,note:'ESSENCIAL — não pule esta etapa'},
+      {time:'Almoço (2h depois)',foods:'Massa integral + frango + azeite + pão',kcal:900,note:'Reposição completa de glicogênio'},
+      {time:'Jantar',foods:'Batata-doce + ovo + salada + abacate',kcal:650,note:'Gorduras boas para recuperação'},
+      {time:'Snack',foods:'Leite integral + granola',kcal:300,note:'Proteína contínua para reparo muscular'},
+    ]
+  },
+  prova:{
+    title:'Dia de prova (Meia Maratona / Maratona)',
+    kcal:3500, carb:520, prot:140, fat:50,
+    timing:[
+      {time:'3h antes da largada',foods:'Arroz branco 150g + ovo mexido + banana + café',kcal:700,note:'⚠️ Testado em treino — sem surpresas'},
+      {time:'30 min antes',foods:'Gel de cafeína (100 mg) + água 500 ml',kcal:100,note:'Cafeína = +3–5% de performance comprovado'},
+      {time:'Km 10–15 (meia)',foods:'Gel energético + água nos postos',kcal:120,note:'Não salte postos de abastecimento'},
+      {time:'Km 20–30 (maratona)',foods:'Gel + mastigáveis com sódio',kcal:240,note:'Sódio previne câimbras'},
+      {time:'Km 30–35 (maratona)',foods:'Gel de cafeína + cola se disponível',kcal:150,note:'Boost final para os últimos km'},
+      {time:'Pós-prova imediato',foods:'Recovery shake + banana + salgadinho',kcal:600,note:'Sal repõe sódio perdido no suor'},
+      {time:'Jantar pós-prova',foods:'Pizza ou macarrão à vontade 🎉',kcal:900,note:'Você merece celebrar!'},
+    ]
+  }
+};
+
+// =========================================================
+//  PANEL SWITCHING
+// =========================================================
+
+let chartsBuilt = false;
+
+function showPanel(id) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + id).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b => {
+    if (b.textContent.toLowerCase().includes(id) || b.getAttribute('onclick').includes(id))
+      b.classList.add('active');
+  });
+  if (id === 'graficos' && !chartsBuilt) { chartsBuilt = true; setTimeout(buildCharts, 80); }
+  if (id === 'dashboard') buildDashboard();
+  if (id === 'garmin' && !garminLoaded) loadGarmin(false);
+}
+
+// =========================================================
+//  GARMIN — leitura do Firebase
+// =========================================================
+let garminData    = [];
+let garminLoaded  = false;
+let garminTipo    = 'all';
+let garminRange   = '90';
+
+const TIPO_INFO = {
+  facil:      { emoji:'🟢', label:'Fácil',      cor:'#4CAF50' },
+  intervalado:{ emoji:'🔴', label:'Intervalado', cor:'#E53935' },
+  trilha:     { emoji:'⛰️',  label:'Trilha',     cor:'#6D4C41' },
+  caminhada:  { emoji:'🚶', label:'Caminhada',   cor:'#1565c0' },
+  virtual:    { emoji:'🖥️', label:'Virtual',     cor:'#6a1b9a' },
+};
+
+function loadGarmin(forcar) {
+  if (!forcar && garminLoaded) { renderGarmin(); return; }
+  const list = document.getElementById('garmin-list');
+  list.innerHTML = '<div style="text-align:center;padding:48px;color:var(--text3)"><div style="font-size:28px;margin-bottom:8px">⌚</div>Carregando treinos...</div>';
+
+  // Read directly from localStorage — same origin as the Treinos app
+  try {
+    const raw = JSON.parse(localStorage.getItem('treinos') || '{}');
+    const src = Array.isArray(raw.treinos) ? raw.treinos
+              : (raw.treinos && typeof raw.treinos === 'object') ? Object.values(raw.treinos).filter(Boolean)
+              : [];
+    garminData = src.filter(function(r){ return r && r.data; })
+                    .sort(function(a,b){ return b.data.localeCompare(a.data); });
+  } catch(e) {
+    garminData = [];
+  }
+
+  if (garminData.length > 0) garminRange = 'all';
+  garminLoaded = true;
+  buildGarminFilters();
+  renderGarmin();
+  if (garminData.length === 0) {
+    list.innerHTML = '<div style="text-align:center;padding:48px;color:var(--text3)">Nenhum treino encontrado.<br><small>Os treinos precisam estar registrados no app Treinos neste dispositivo.</small></div>';
+  }
+}
+
+function buildGarminFilters() {
+  // chips de tipo
+  const tipos = ['all', ...new Set(garminData.map(r => r.tipo).filter(Boolean))];
+  const chips = document.getElementById('garmin-chips');
+  chips.innerHTML = tipos.map(t => {
+    const ti = TIPO_INFO[t] || { emoji:'🏃', label:'Todos' };
+    const label = t === 'all' ? '🏃 Todos' : `${ti.emoji} ${ti.label}`;
+    return `<button onclick="garminTipo='${t}';buildGarminFilters();renderGarmin()" style="padding:5px 12px;border-radius:20px;border:1px solid ${garminTipo===t?'var(--green)':'var(--border2)'};background:${garminTipo===t?'var(--green-light)':'var(--surface)'};color:${garminTipo===t?'var(--green2)':'var(--text2)'};font-size:12px;cursor:pointer;font-family:inherit">${label}</button>`;
+  }).join('');
+
+  // chips de período
+  const ranges = [['30','30 dias'],['90','3 meses'],['180','6 meses'],['365','1 ano'],['all','Tudo']];
+  document.getElementById('garmin-range').innerHTML = ranges.map(([v,l]) =>
+    `<button onclick="garminRange='${v}';buildGarminFilters();renderGarmin()" style="padding:4px 10px;border-radius:20px;border:1px solid ${garminRange===v?'var(--blue)':'var(--border2)'};background:${garminRange===v?'var(--blue-light)':'var(--surface)'};color:${garminRange===v?'var(--blue)':'var(--text2)'};font-size:11px;cursor:pointer;font-family:inherit">${l}</button>`
+  ).join('');
+}
+
+function renderGarmin() {
+  // filtro de período
+  const cutoff = garminRange === 'all' ? '' : (() => {
+    const d = new Date(); d.setDate(d.getDate() - parseInt(garminRange));
+    return d.toISOString().slice(0,10);
+  })();
+
+  const filtered = garminData.filter(r =>
+    (garminTipo === 'all' || r.tipo === garminTipo) &&
+    (!cutoff || r.data >= cutoff)
+  );
+
+  // stats
+  const kmTotal  = filtered.reduce((s,r) => s + (parseFloat(r.distancia)||0), 0);
+  const kmMes    = filtered.filter(r => r.data >= new Date().toISOString().slice(0,7)+'-01').reduce((s,r) => s + (parseFloat(r.distancia)||0), 0);
+  const fcMeds   = filtered.filter(r => r.fcMed > 0).map(r => r.fcMed);
+  const fcMedia  = fcMeds.length ? Math.round(fcMeds.reduce((a,b)=>a+b,0)/fcMeds.length) : '—';
+
+  document.getElementById('garmin-stats').innerHTML = `
+    <div class="metric-card"><div class="metric-label">Km no período</div><div class="metric-val" style="color:var(--green)">${kmTotal.toFixed(0)}</div><div class="metric-sub">km total</div></div>
+    <div class="metric-card"><div class="metric-label">Treinos</div><div class="metric-val" style="color:var(--blue)">${filtered.length}</div><div class="metric-sub">sessões</div></div>
+    <div class="metric-card"><div class="metric-label">Km este mês</div><div class="metric-val" style="color:var(--amber)">${kmMes.toFixed(0)}</div><div class="metric-sub">km</div></div>
+    <div class="metric-card"><div class="metric-label">FC média</div><div class="metric-val" style="color:var(--red)">${fcMedia}</div><div class="metric-sub">bpm</div></div>`;
+
+  if (!filtered.length) {
+    document.getElementById('garmin-list').innerHTML = '<div style="text-align:center;padding:48px;color:var(--text3)">Nenhum treino no período selecionado.</div>';
+    return;
+  }
+
+  // agrupa por mês
+  let html = '';
+  let lastMonth = '';
+  filtered.forEach(r => {
+    const mes = r.data.slice(0,7);
+    if (mes !== lastMonth) {
+      lastMonth = mes;
+      const [y,m] = mes.split('-');
+      const nome = new Date(+y, +m-1).toLocaleString('pt-BR',{month:'long',year:'numeric'});
+      html += `<div style="padding:10px 16px 4px;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;background:var(--surface2);border-top:1px solid var(--border)">${nome}</div>`;
+    }
+    const ti = TIPO_INFO[r.tipo] || { emoji:'🏃', label:r.tipo||'Corrida', cor:'#555' };
+    const tituloTreino = r.notas && r.notas.trim() ? r.notas : ti.label;
+    const dataFmt = new Date(r.data+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit'});
+    html += `<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border)">
+      <div style="font-size:22px;width:32px;text-align:center;flex-shrink:0">${ti.emoji}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${tituloTreino}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">${dataFmt}${r.distancia?` · ${parseFloat(r.distancia).toFixed(2)} km`:''}${r.duracao?` · ${r.duracao}`:''}${r.pace?` · ${r.pace}/km`:''}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0;font-size:12px">
+        ${r.fcMed ? `<div style="color:var(--red);font-weight:700">❤️ ${r.fcMed}</div><div style="color:var(--text3);font-size:10px">bpm med</div>` : ''}
+        ${r.distancia ? `<div style="color:var(--green);font-weight:700;margin-top:2px">${parseFloat(r.distancia).toFixed(1)} km</div>` : ''}
+      </div>
+    </div>`;
+  });
+  document.getElementById('garmin-list').innerHTML = html;
+}
+
+// =========================================================
+//  DASHBOARD
+// =========================================================
+function buildDashboard() {
+  // zones mini
+  const zc = document.getElementById('dash-zones');
+  if (!zc) return;
+  let zh = '';
+  ZONES.forEach(z => {
+    const w = Math.min(((z.hi - PROFILE.restHR) / PROFILE.hrr) * 100, 100);
+    zh += `<div class="zone-row">
+      <div class="zone-header"><span class="zone-name">${z.n}</span><span class="zone-bpm">${z.lo}–${z.hi} bpm</span></div>
+      <div class="zone-track"><div class="zone-fill" style="width:${w}%;background:${z.col}">${z.lo}–${z.hi}</div></div>
+    </div>`;
+  });
+  zc.innerHTML = zh;
+
+  // week mini
+  const wc = document.getElementById('dash-week');
+  const days = [
+    {d:'Seg',t:'Descanso',c:'day-rest'},
+    {d:'Ter',t:'Pool run',c:'day-active'},
+    {d:'Qua',t:'Fisio/Força',c:'day-active'},
+    {d:'Qui',t:'Ciclismo Z1',c:'day-active'},
+    {d:'Sex',t:'Descanso',c:'day-rest'},
+    {d:'Sáb',t:'Natação Z2',c:'day-long'},
+    {d:'Dom',t:'Caminhada',c:'day-active'},
+  ];
+  let wh = '';
+  days.forEach(d => {
+    wh += `<div class="plan-row">
+      <div class="day-pill ${d.c}">${d.d}</div>
+      <div><div class="plan-title">${d.t}</div></div>
+    </div>`;
+  });
+  wc.innerHTML = wh;
+
+  // donut
+  if (document.getElementById('dashZoneChart').dataset.built) return;
+  document.getElementById('dashZoneChart').dataset.built = '1';
+  const colors = ['#64B5F6','#4CAF50','#FFC107','#FF7043','#E53935'];
+  const labels = ['Z1 Recuperação (5%)','Z2 Aeróbico base (75%)','Z3 Aeróbico+ (12%)','Z4 Limiar (6%)','Z5 VO₂Max (2%)'];
+  const data2 = [5,75,12,6,2];
+  new Chart(document.getElementById('dashZoneChart'), {
+    type:'doughnut',
+    data:{labels,datasets:[{data:data2,backgroundColor:colors,borderWidth:2,borderColor:'transparent'}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+c.label}}}}
+  });
+  const dl = document.getElementById('dashLegend');
+  labels.forEach((l,i) => {
+    dl.innerHTML += `<span class="legend-item"><span class="legend-dot" style="background:${colors[i]}"></span>${l}</span>`;
+  });
+}
+
+// =========================================================
+//  RACES
+// =========================================================
+let currentRace = 'hm';
+function selectRace(btn, race) {
+  document.querySelectorAll('#race-selector .race-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentRace = race;
+  renderRace();
+}
+
+function renderRace() {
+  const r = RACES[currentRace];
+  let html = `<div class="grid4" style="margin-bottom:16px">
+    <div class="metric-card"><div class="metric-label">Duração</div><div class="metric-val">${r.weeks}</div><div class="metric-sub">semanas</div></div>
+    <div class="metric-card"><div class="metric-label">Ritmo alvo</div><div class="metric-val" style="font-size:16px">${r.pace}</div></div>
+    <div class="metric-card"><div class="metric-label">Meta</div><div class="metric-val" style="font-size:12px;line-height:1.3">${r.goal}</div></div>
+    <div class="metric-card"><div class="metric-label">Sessões/semana</div><div class="metric-val">4–5</div><div class="metric-sub">Ter·Qua·Qui·Sáb·Dom</div></div>
+  </div>`;
+
+  // tips
+  html += `<div class="tip-box">💡 <strong>Dicas de prova:</strong> `;
+  html += r.tips.map(t => `<span style="display:block;margin-top:4px">• ${t}</span>`).join('');
+  html += `</div>`;
+
+  r.phases.forEach(phase => {
+    html += `<div class="card">
+      <div class="phase-header">
+        <span class="tag ${phase.color}">${phase.name}</span>
+        <span class="phase-week">${phase.week}</span>
+      </div>`;
+    phase.sessions.forEach(s => {
+      const effDay = getEffectiveDay(s.day);
+      const isLong = effDay === 'Sáb' || s.day === 'Sáb';
+      const isRest = s.dist === '—';
+      const isCustom = effDay !== s.day;
+      html += `<div class="plan-row">
+        <div class="day-pill editable ${isLong?'day-long':isRest?'day-rest':'day-active'}${isCustom?' customized':''}"
+             onclick="openDayPicker(event,'${s.day}')" title="Toque para mudar o dia">${effDay}</div>
+        <div style="flex:1">
+          <div class="plan-title">${s.type}${s.dist !== '—' ? `<span class="${isLong?'long-badge':'dist-badge'}">${s.dist}</span>` : ''}</div>
+          <div class="plan-desc">${s.desc}</div>
+        </div>
+      </div>`;
+    });
+    html += `</div>`;
+  });
+  document.getElementById('race-content').innerHTML = html;
+}
+
+// =========================================================
+//  ZONES
+// =========================================================
+function renderZones() {
+  const zb = document.getElementById('zones-bars');
+  const zd = document.getElementById('zones-detail');
+  if (!zb) return;
+  let bh = '', dh = '';
+  ZONES.forEach(z => {
+    const w = Math.min(((z.hi - PROFILE.restHR) / PROFILE.hrr) * 100, 100);
+    bh += `<div class="zone-row">
+      <div class="zone-header">
+        <span class="zone-name">${z.n}</span>
+        <span class="zone-bpm">${z.lo}–${z.hi} bpm &nbsp; <span style="color:var(--text3)">${z.pct}</span></span>
+      </div>
+      <div class="zone-track"><div class="zone-fill" style="width:${w}%;background:${z.col}">${z.lo}–${z.hi}</div></div>
+    </div>`;
+    dh += `<div class="zone-detail-row">
+      <div class="zone-dot" style="background:${z.col}"></div>
+      <div><div style="font-size:13px;font-weight:600">${z.n} · ${z.lo}–${z.hi} bpm</div>
+      <div style="font-size:12px;color:var(--text2);margin-top:2px">${z.desc}</div></div>
+    </div>`;
+  });
+  zb.innerHTML = bh;
+  zd.innerHTML = dh;
+}
+
+// =========================================================
+//  NUTRITION
+// =========================================================
+let currentNut = 'base';
+function selectNut(btn, nut) {
+  document.querySelectorAll('#nut-selector .race-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentNut = nut;
+  renderNutrition();
+}
+
+function renderNutrition() {
+  const n = NUTRITION[currentNut];
+  const carbPct = Math.round(n.carb*4/n.kcal*100);
+  const protPct = Math.round(n.prot*4/n.kcal*100);
+  const fatPct  = Math.round(n.fat*9/n.kcal*100);
+  const protKg  = (n.prot/PROFILE.weight).toFixed(1);
+
+  let html = `<div class="grid4" style="margin-bottom:16px">
+    <div class="metric-card"><div class="metric-label">Calorias</div><div class="metric-val" style="color:var(--amber)">${n.kcal.toLocaleString('pt-BR')}</div><div class="metric-sub">kcal/dia</div></div>
+    <div class="metric-card"><div class="metric-label">Carboidratos</div><div class="metric-val" style="color:var(--blue)">${n.carb}g</div><div class="metric-sub">${carbPct}% das kcal</div></div>
+    <div class="metric-card"><div class="metric-label">Proteínas</div><div class="metric-val" style="color:var(--green)">${n.prot}g</div><div class="metric-sub">${protKg}g/kg peso</div></div>
+    <div class="metric-card"><div class="metric-label">Gorduras</div><div class="metric-val" style="color:var(--coral)">${n.fat}g</div><div class="metric-sub">${fatPct}% das kcal</div></div>
+  </div>
+  <div class="card" style="margin-bottom:14px">
+    <h3 class="card-h">${n.title}</h3>`;
+
+  n.timing.forEach(t => {
+    html += `<div class="nut-row">
+      <div class="nut-time">${t.time}</div>
+      <div style="flex:1">
+        <div class="nut-food">${t.foods}</div>
+        ${t.note ? `<div class="nut-note">${t.note}</div>` : ''}
+      </div>
+      ${t.kcal > 0 ? `<div class="nut-kcal">${t.kcal} kcal</div>` : ''}
+    </div>`;
+  });
+  html += `</div>
+  <div class="card">
+    <h3 class="card-h">Hidratação e suplementos</h3>
+    <div class="hyd-row"><span>Meta base diária</span><span class="hyd-val">2.5 L</span></div>
+    <div class="hyd-row"><span>Adicional por hora de exercício</span><span class="hyd-val">+500–700 ml</span></div>
+    <div class="hyd-row"><span>Eletrólitos (treino >1 hora)</span><span class="hyd-val">Na⁺ · K⁺ · Mg²⁺</span></div>
+    <div class="hyd-row"><span>Suplementos recomendados (64 anos)</span><span class="hyd-val" style="color:var(--amber)">Vit D3 · Ômega-3 · Magnésio</span></div>
+    <div class="hyd-row" style="border:none"><span>Bebida isotônica em treinos >90 min</span><span class="hyd-val" style="color:var(--green)">Sim ✓</span></div>
+  </div>`;
+
+  document.getElementById('nutrition-content').innerHTML = html;
+}
+
+// =========================================================
+//  CHARTS
+// =========================================================
+function buildCharts() {
+  const weeks20 = Array.from({length:20},(_,i)=>'S'+(i+1));
+  const vol = [28,30,33,30,35,38,36,40,43,45,48,50,52,54,50,44,36,28,20,42];
+  const long = [12,14,16,14,18,20,18,22,24,26,28,30,32,28,24,18,14,10,8,42];
+
+  // Volume
+  new Chart(document.getElementById('volumeChart'), {
+    type:'bar',
+    data:{labels:weeks20,datasets:[{label:'km',data:vol,backgroundColor:vol.map((v,i)=>[3,7,11].includes(i)?'#9FE1CB':'#1D9E75'),borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw+' km'}}},
+      scales:{x:{ticks:{font:{size:10}}},y:{beginAtZero:true,ticks:{font:{size:10}},grid:{color:'rgba(0,0,0,0.05)'}}}
+    }
+  });
+
+  // Long run
+  new Chart(document.getElementById('longChart'), {
+    type:'line',
+    data:{labels:weeks20,datasets:[{label:'Treino longo (km)',data:long,borderColor:'#1D9E75',backgroundColor:'rgba(29,158,117,0.12)',fill:true,tension:.35,pointRadius:3,pointBackgroundColor:'#1D9E75'}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw+' km'}}},
+      scales:{x:{ticks:{font:{size:10}}},y:{beginAtZero:true,ticks:{font:{size:10}},grid:{color:'rgba(0,0,0,0.05)'}}}
+    }
+  });
+
+  // Calories donut
+  const calColors = ['#1D9E75','#3266ad','#EF9F27','#D85A30'];
+  const calLabels = ['Corrida 52%','Ciclismo 28%','Natação 12%','Força 8%'];
+  new Chart(document.getElementById('calChart'), {
+    type:'doughnut',
+    data:{labels:calLabels,datasets:[{data:[52,28,12,8],backgroundColor:calColors,borderWidth:2,borderColor:'transparent'}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}
+  });
+  const cl = document.getElementById('calLegend');
+  calLabels.forEach((l,i) => { cl.innerHTML += `<span class="legend-item"><span class="legend-dot" style="background:${calColors[i]}"></span>${l}</span>`; });
+
+  // Zone donut
+  const zColors = ['#64B5F6','#4CAF50','#FFC107','#FF7043','#E53935'];
+  const zLabels = ['Z1 5%','Z2 75%','Z3 12%','Z4 6%','Z5 2%'];
+  new Chart(document.getElementById('zoneChart'), {
+    type:'doughnut',
+    data:{labels:zLabels,datasets:[{data:[5,75,12,6,2],backgroundColor:zColors,borderWidth:2,borderColor:'transparent'}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}
+  });
+  const zl = document.getElementById('zoneLegend');
+  zLabels.forEach((l,i) => { zl.innerHTML += `<span class="legend-item"><span class="legend-dot" style="background:${zColors[i]}"></span>${l}</span>`; });
+
+  // Hydration
+  const dur = ['30 min','45 min','60 min','90 min','2h','3h','4h','5h+'];
+  const hyd = [350,500,650,950,1400,2100,2800,3800];
+  new Chart(document.getElementById('hydChart'), {
+    type:'bar',
+    data:{labels:dur,datasets:[{label:'ml',data:hyd,backgroundColor:'#64B5F6',borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw+' ml'}}},
+      scales:{x:{ticks:{font:{size:10}}},y:{beginAtZero:true,ticks:{font:{size:10},callback:v=>v/1000+'L'},grid:{color:'rgba(0,0,0,0.05)'}}}
+    }
+  });
+}
+
+// =========================================================
+//  CHAT / ASSISTENTE
+// =========================================================
+const QQ = [
+  'Como é o plano de recuperação do joelho para o Desafio 64 km?',
+  'Como é a estratégia de loops no Desafio 64 km?',
+  'Qual meu ritmo alvo para meia maratona?',
+  'Como calcular minhas zonas de FC?',
+  'O que comer antes de um treino longo?',
+  'Quantos km devo correr por semana?',
+  'Como evitar câimbras na corrida?',
+  'O que é o método walk-run de Galloway?',
+  'Qual a estratégia de prova para maratona?',
+  'Qual suplemento tomar para corrida?',
+];
+
+const LOCAL = {
+  'desafio 64': `🔥 Desafio 64 km — Jun 13, 2026 · 4 semanas restantes:\n\n📅 Plano de chegada (não de construção):\n🦵 Mai 16–29: Zero corrida — pool running, bike, fisio\n🚶 Jun 1–7: Teste walk-run (3+1 min) de 5–8 km\n✅ Jun 8–12: Afunilamento leve + descanso\n🔥 Jun 13: DESAFIO — ~19 loops de 3.3 km!\n\n🎯 Pace alvo: 9:00–10:30/km (Z1) — completar é a vitória\n⚠️ Joelho: dor ≥ 3/10 = pare naquela volta, gelo, reavalie.`,
+  'estratégia de loop': `🔥 Estratégia de loops no Desafio 64 km:\n\n✅ Vantagem do loop: suporte a cada 3.3 km — use isso!\n📋 Planeje: meias secas a cada 20 km, sandálias no check-in, drop bag\n🧠 Mental: foque em 1 volta de cada vez — não pense em 64 km!\n🦵 Cuide do joelho: se sentir dor, adicione 1 min extra de caminhada naquela volta\n⚡ Crise entre km 32–48 é normal — beba mais, coma e ande 1 min extra\n🥊 Km 48–64: é onde a prova começa de verdade\n\n☁️ Abril em Saint John: prepare camadas e impermeável leve na mochila de suporte.`,
+  'ritmo alvo': `🏃 Ritmos alvo para Luiz (64 anos, FC repouso 49 bpm):\n\n🏅 Meia Maratona: 6:30–7:00/km (Z3, ~130–144 bpm)\n🏆 Maratona: 7:00–7:30/km (Z2–Z3, ~116–138 bpm)\n⛰️ Ultra: 7:30–8:30/km com caminhadas em subidas\n🔥 Desafio 64 km: 8:00–9:30/km (loop strategy) — 4 km corrida + 400m caminhada\n\nDica principal: nos primeiros km/loops da prova, vá 30 seg/km mais devagar que o ritmo alvo. Você recupera tudo no final!`,
+  'zona': `❤️ Suas zonas pelo método Karvonen (FCmax 156, repouso 49, HRR 107):\n\nZ1 Recuperação:  103–116 bpm\nZ2 Aeróbico: 116–130 bpm ← 80% do tempo aqui!\nZ3 Aeróbico+: 130–144 bpm\nZ4 Limiar: 144–156 bpm\nZ5 VO₂Max: >156 bpm\n\nRegra de ouro: 80% dos treinos em Z1–Z2, 20% em Z3–Z5.`,
+  'comer antes': `🥗 Nutrição pré-treino longo para Luiz:\n\n⏰ 2h antes: Panquecas de aveia + mel + banana + café\n⏰ 30 min antes: Gel de cafeína (100mg) + 500ml água\n🏃 A cada 45 min: 25–30g carboidratos (gel ou mastigáveis)\n\nSeu BMR é ~1.820 kcal/dia. Em treinos longos, adicione ~500–700 kcal por hora de exercício.`,
+  'quantos km': `📏 Volume semanal recomendado:\n\n🏅 Meia Maratona: 40–55 km/semana (pico semana 14)\n🏆 Maratona: 55–70 km/semana (pico semana 17)\n⛰️ Ultra: 70–90 km/semana (back-to-back fins de semana)\n\nA cada 4ª semana: reduza 30% do volume (semana de recuperação). Com 5 dias disponíveis, você está bem posicionado!`,
+  'câimbra': `⚡ Estratégias anti-câimbras para atleta de 64 anos:\n\n💧 Hidratação: 500–700 ml/hora + eletrólitos\n🧂 Sódio: 500–700 mg/hora em provas longas\n💊 Magnésio: suplemento noturno (310 mg/dia)\n🏋️ Força: fortalecer quadríceps e panturrilhas 2x/semana\n🧘 Mobilidade: 10 min de alongamento pós-treino\n\nAos 64 anos, magnésio e potássio são especialmente importantes!`,
+  'galloway': `🚶 Método Jeff Galloway (Walk-Run):\n\nEstratégia: corrida por X min → caminhada por Y min\n\n🏅 Meia Maratona: 9 min corrida + 1 min caminhada\n🏆 Maratona: 8 min corrida + 1 min caminhada\n⛰️ Ultra: 5 min corrida + 1 min (subidas: sempre caminhando)\n\nBenefícios: reduz tempo de recuperação, previne "hitting the wall", ideal para atletas masters. Muitos terminam mais rápido com este método!`,
+  'estratégia': `🏆 Estratégia de prova para maratona:\n\n1. Km 1–5: 15–20 seg/km MAIS devagar que o alvo\n2. Km 5–30: ritmo alvo estável (7:00–7:30/km)\n3. Km 30–42: o que sobrar nas pernas!\n4. Não pule NENHUM posto de hidratação\n5. Gels a cada 35–40 min a partir do km 15\n6. Método Galloway se necessário: 9+1 min`,
+  'cross': `🚴 Cross-training para corredores:\n\nCom ciclismo e natação no repertório, você tem ótimas opções:\n\n🚴 Ciclismo: constrói base aeróbica sem impacto nas articulações\n🏊 Natação: recuperação ativa + mobilidade + cardio completo\n💪 Musculação: 2x/semana — squat, deadlift, hip thrust\n\nUse Qua ou Qui para cross-train. Pelo menos 1 sessão/semana é essencial para longevidade na corrida!`,
+  'recuperação': `💆 Recuperação pós-maratona (para 64 anos):\n\nSemana 1: apenas caminhada, mobilidade, massagem\nSemana 2: 2–3 corridas leves 20–30 min Z1\nSemana 3: retorno gradual ao volume normal (50%)\nSemana 4: volume normal retomado\n\nRegra de ouro: 1 dia de recuperação para cada km de prova. 42.2 km = ~6 semanas até próximo treino sério. Não apresse este processo!`,
+  'suplemento': `💊 Suplementos recomendados para Luiz (64 anos):\n\nEssenciais:\n• Vitamina D3: 2.000–4.000 UI/dia (inverno canadense!)\n• Ômega-3: 1–2g/dia (anti-inflamatório)\n• Magnésio: 310 mg/noite (câimbras + sono)\n\nEsportivos:\n• Whey proteína pós-treino: 25–30g\n• Creatina: 3–5g/dia (preserva massa muscular)\n• Eletrólitos (em treinos >90 min)\n\nSempre converse com seu médico antes de iniciar suplementação.`,
+};
+
+const SYSTEM_PROMPT = `Você é um coach de corrida pessoal especializado em meia maratona, maratona, ultra maratona e provas de loop (desafios por voltas) para atletas masters.
+
+Dados do atleta (Garmin Connect - luiz62):
+- Nome: Luiz Silva, 64 anos (aniversário 30/04/2026), Saint John, NB, Canadá (origem brasileira)
+- FC repouso: 49 bpm (excelente), FC máxima estimada: 156 bpm (220–64)
+- BMR: ~1.820 kcal/dia, peso estimado: 68 kg
+- Atividades: corrida, ciclismo, natação, triathlon, duathlon, MTB
+- Dias disponíveis: Ter, Qua, Qui, Sáb, Dom (sábado = treino longo preferido)
+- Velocidade de treino Garmin: 3.0 m/s corrida (~5:33/km pace base)
+- Zonas (Karvonen, hrr=107): Z1 103–116 bpm, Z2 116–130 bpm, Z3 130–144 bpm, Z4 144–156 bpm, Z5 >156 bpm
+- Evento alvo: Desafio 64 km (Little the Rez Revoir, Saint John NB, loops de 3.3 km, 13 jun 2026)
+- Situação atual: recuperando lesão no joelho, apenas 4 semanas até a prova — plano de manutenção/chegada
+- Restrição: zero corrida mai 16–29 (cross-train apenas), walk-run leve jun 1–7, afunilamento jun 8–12
+- Histórico Garmin: ativo desde 2011, dados até 2026
+
+Responda SEMPRE em português brasileiro. Seja específico, prático e motivador.
+Personalize sempre para os dados do Luiz. Máximo 200 palavras por resposta.`;
+
+function buildQuickQs() {
+  const div = document.getElementById('quick-qs');
+  if (!div || div.children.length) return;
+  QQ.forEach(q => {
+    const btn = document.createElement('button');
+    btn.className = 'quick-q';
+    btn.textContent = q;
+    btn.onclick = () => { document.getElementById('chat-input').value = q; sendChat(); };
+    div.appendChild(btn);
+  });
+}
+
+async function sendChat() {
+  const inp = document.getElementById('chat-input');
+  const msg = inp.value.trim();
+  if (!msg) return;
+  inp.value = '';
+
+  const box = document.getElementById('chat-box');
+  const userDiv = document.createElement('div');
+  userDiv.className = 'msg-user';
+  userDiv.textContent = msg;
+  box.appendChild(userDiv);
+
+  const botDiv = document.createElement('div');
+  botDiv.className = 'msg-bot';
+  botDiv.innerHTML = '<span class="spinner"></span> Analisando seus dados Garmin...';
+  box.appendChild(botDiv);
+  box.scrollTop = box.scrollHeight;
+
+  // check local answers
+  const low = msg.toLowerCase();
+  for (const [k, v] of Object.entries(LOCAL)) {
+    if (k.split(' ').some(w => low.includes(w))) {
+      await new Promise(r => setTimeout(r, 700));
+      botDiv.innerHTML = v.replace(/\n/g, '<br>');
+      box.scrollTop = box.scrollHeight;
+      return;
+    }
+  }
+
+  // call Claude API
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: msg }]
+      })
+    });
+    const data = await res.json();
+    const text = data.content?.[0]?.text || 'Não foi possível processar. Tente novamente.';
+    botDiv.innerHTML = text.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  } catch (e) {
+    botDiv.innerHTML = 'Erro de conexão. Verifique sua internet e tente novamente.';
+  }
+  box.scrollTop = box.scrollHeight;
+}
+
+// =========================================================
+//  INIT
+// =========================================================
+window.addEventListener('DOMContentLoaded', () => {
+  buildDashboard();
+  renderRace();
+  renderZones();
+  renderNutrition();
+  buildQuickQs();
+});
+
+// =========================================================
+//  DIAS CUSTOMIZADOS
+// =========================================================
+const DAYS_KEY = 'treinos_custom_days';
+const ALL_DAYS = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
+
+function loadCustomDays(){ try{ return JSON.parse(localStorage.getItem(DAYS_KEY))||{}; }catch(e){ return {}; } }
+function saveCustomDays(m){ localStorage.setItem(DAYS_KEY, JSON.stringify(m)); }
+
+function getEffectiveDay(defaultDay){
+  const m = loadCustomDays();
+  return m[defaultDay] || defaultDay;
+}
+
+function openDayPicker(evt, defaultDay){
+  evt.stopPropagation();
+  document.getElementById('day-picker-overlay')?.remove();
+
+  const current = getEffectiveDay(defaultDay);
+  const rect = evt.currentTarget.getBoundingClientRect();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'day-picker-overlay';
+  overlay.className = 'day-picker-overlay';
+  overlay.onclick = function(){ overlay.remove(); };
+
+  const picker = document.createElement('div');
+  picker.className = 'day-picker';
+  picker.onclick = function(e){ e.stopPropagation(); };
+
+  // Position near the pill
+  const top = Math.min(rect.bottom + 6, window.innerHeight - 160);
+  const left = Math.max(4, Math.min(rect.left - 8, window.innerWidth - 204));
+  picker.style.top  = top  + 'px';
+  picker.style.left = left + 'px';
+
+  ALL_DAYS.forEach(function(d){
+    var btn = document.createElement('button');
+    btn.className = 'day-picker-btn' + (d === current ? ' active' : '');
+    btn.textContent = d;
+    btn.onclick = function(){
+      var m = loadCustomDays();
+      if(d === defaultDay){ delete m[defaultDay]; }
+      else { m[defaultDay] = d; }
+      saveCustomDays(m);
+      overlay.remove();
+      renderRace();
+    };
+    picker.appendChild(btn);
+  });
+
+  var reset = document.createElement('button');
+  reset.className = 'day-picker-reset';
+  reset.textContent = '↩️ Restaurar padrão (este dia)';
+  reset.onclick = function(){
+    var m = loadCustomDays();
+    delete m[defaultDay];
+    saveCustomDays(m);
+    overlay.remove();
+    renderRace();
+  };
+  picker.appendChild(reset);
+
+  overlay.appendChild(picker);
+  document.body.appendChild(overlay);
+}
+</script>
+</body>
+</html>
