@@ -1760,6 +1760,21 @@ function renderHistorySection(){
   renderHistorySection();
   window.addEventListener('pagehide',saveState);
 
+  // Version check — fetch version.json (always network) and reload if behind
+  var _myV='116';
+  var _reloadedFor=sessionStorage.getItem('_tpReload');
+  if(_reloadedFor!==_myV){
+    fetch('./version.json',{cache:'no-store'})
+      .then(function(r){return r.json();})
+      .then(function(d){
+        var sv=String(d.v);
+        if(sv!==_myV){
+          sessionStorage.setItem('_tpReload',sv);
+          window.location.replace('./travel.html?_v='+sv);
+        }
+      }).catch(function(){});
+  }
+
   // Register service worker for offline / PWA
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('./sw.js').catch(function(){});

@@ -1,7 +1,8 @@
-const CACHE = 'gastos-v115';
+const CACHE = 'gastos-v116';
 
 const CORE_ASSETS = [
   './index.html',
+  './travel.html',
   './manifest.json',
 ];
 
