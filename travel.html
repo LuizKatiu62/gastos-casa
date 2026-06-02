@@ -260,7 +260,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif}
 
 <!-- HERO -->
 <div class="hero">
-  <button class="hero-back" onclick="window.location.href='index.html'">← Gastos Casa</button>
+  <button class="hero-back" onclick="saveState();window.location.href='index.html'">← Gastos Casa</button>
   <div class="hero-badge">✈️ &nbsp; Trip Planner</div>
   <div class="hero-title">Plan Your Next Trip</div>
   <div class="hero-sub">Hotels, restaurants, events & parking —<br>all in one place, in seconds.</div>
@@ -381,6 +381,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif}
     <button class="btn-plan" onclick="calculateRoute()">🚗 &nbsp; Calculate Route & Costs</button>
     <button class="btn-clear" onclick="clearRT()">🗑️ &nbsp; Clear & Start Over</button>
   </div>
+</div>
+
+<!-- ═══ TRIP HISTORY ═══ -->
+<div class="form-wrap" id="rt-history-wrap" style="padding-top:0">
+  <div style="padding:0 20px 4px;display:flex;align-items:center;justify-content:space-between">
+    <span style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">📚 Viagens Salvas</span>
+  </div>
+  <div style="padding:0 20px 16px" id="rt-history-list"></div>
 </div>
 
 <!-- ═══ DESTINATION FORM ═══ -->
@@ -806,6 +814,7 @@ async function calculateRoute(){
   };
 
   document.getElementById('rt-results-content').innerHTML=buildRTHTML(_rtData);
+  saveState();
 
   for(const s of stops){
     await rtSleep(1100);
@@ -1010,7 +1019,7 @@ function buildExpensesHTML(d){
     '<div class="exp-period">📅 '+dateLabel+'</div></div>'+
     '</div>'+
     '<div style="margin-bottom:14px">'+
-    '<button onclick="window.location.href=\'index.html\'" style="display:flex;align-items:center;justify-content:space-between;width:100%;background:linear-gradient(135deg,#064e3b,#059669);color:#fff;border:none;border-radius:12px;padding:13px 16px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(5,150,105,.3)">'+
+    '<button onclick="saveState();window.location.href=\'index.html\'" style="display:flex;align-items:center;justify-content:space-between;width:100%;background:linear-gradient(135deg,#064e3b,#059669);color:#fff;border:none;border-radius:12px;padding:13px 16px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(5,150,105,.3)">'+
     '<span>📝 Registrar gasto em Gastos Casa</span><span style="font-size:18px">›</span>'+
     '</button>'+
     '</div>'+
@@ -1080,6 +1089,7 @@ function buildRTHTML(d){
   h+='<div style="background:#e0f2fe;border-radius:12px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--teal2)">'+
     '💡 Para ver estacionamento e detalhes do local, acesse a aba <strong>🏙️ Local Trip</strong></div>';
 
+  h+='<button onclick="saveTripToHistory()" style="display:block;width:100%;margin:0 0 8px;padding:14px;background:linear-gradient(135deg,#064e3b,#059669);color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(5,150,105,.3)">💾 &nbsp; Salvar Viagem no Histórico</button>';
   h+='<button class="btn-reset" onclick="resetRT()">← Edit Route</button>';
   return h;
 }
@@ -1423,6 +1433,124 @@ function editLocalTrip(){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
+// ── STATE PERSISTENCE & TRIP HISTORY ─────────────────────────────────────────
+const _STATE_KEY='trip_planner_state';
+const _HIST_KEY='trip_history';
+
+function saveState(){
+  try{
+    localStorage.setItem(_STATE_KEY,JSON.stringify({
+      rtView:_rtView,destView:_destView,rtData:_rtData,
+      fields:{
+        rtOC:document.getElementById('rt-origin-city').value,
+        rtOS:document.getElementById('rt-origin-state').value,
+        rtON:document.getElementById('rt-origin-country').value,
+        rtDC:document.getElementById('rt-dest-city').value,
+        rtDS:document.getElementById('rt-dest-state').value,
+        rtDN:document.getElementById('rt-dest-country').value,
+        rtV: document.getElementById('rt-venue').value,
+        rtT: document.getElementById('rt-travelers').value,
+        rtR: document.getElementById('rt-roundtrip').checked,
+        rtCO:document.getElementById('rt-consumption').value,
+        rtFP:document.getElementById('rt-fuelprice').value,
+        fC: document.getElementById('f-city').value,
+        fS: document.getElementById('f-state').value,
+        fN: document.getElementById('f-country').value,
+        fV: document.getElementById('f-venue').value,
+        fCI:document.getElementById('f-checkin').value,
+        fCO:document.getElementById('f-checkout').value,
+        fP: document.getElementById('f-purpose').value,
+      }
+    }));
+  }catch(e){}
+}
+
+function restoreState(){
+  try{
+    var s=JSON.parse(localStorage.getItem(_STATE_KEY));
+    if(!s) return false;
+    var f=s.fields||{};
+    function sv(id,v){var el=document.getElementById(id);if(el&&v)el.value=v;}
+    sv('rt-origin-city',f.rtOC);sv('rt-origin-state',f.rtOS);sv('rt-origin-country',f.rtON);
+    sv('rt-dest-city',f.rtDC);sv('rt-dest-state',f.rtDS);sv('rt-dest-country',f.rtDN);
+    sv('rt-venue',f.rtV);sv('rt-travelers',f.rtT);sv('rt-consumption',f.rtCO);sv('rt-fuelprice',f.rtFP);
+    var rr=document.getElementById('rt-roundtrip');if(rr&&f.rtR!==undefined)rr.checked=f.rtR;
+    sv('f-city',f.fC);sv('f-state',f.fS);sv('f-country',f.fN);
+    sv('f-venue',f.fV);sv('f-checkin',f.fCI);sv('f-checkout',f.fCO);sv('f-purpose',f.fP);
+    _rtView=s.rtView||'form';
+    _destView=s.destView||'form';
+    if(s.rtData){
+      _rtData=s.rtData;
+      if(_rtView==='results')
+        document.getElementById('rt-results-content').innerHTML=buildRTHTML(_rtData);
+    }
+    calcDays();
+    return true;
+  }catch(e){return false;}
+}
+
+function saveTripToHistory(){
+  if(!_rtData){alert('Calcule uma rota primeiro.');return;}
+  var hist=[];
+  try{hist=JSON.parse(localStorage.getItem(_HIST_KEY)||'[]');}catch(e){}
+  hist.unshift({
+    id:Date.now().toString(36),
+    savedAt:new Date().toISOString().slice(0,10),
+    name:(_rtData.origShort||'?')+' → '+(_rtData.destShort||'?'),
+    checkin:document.getElementById('f-checkin').value,
+    checkout:document.getElementById('f-checkout').value,
+    rtData:_rtData
+  });
+  if(hist.length>30)hist=hist.slice(0,30);
+  localStorage.setItem(_HIST_KEY,JSON.stringify(hist));
+  renderHistorySection();
+  // Show confirmation in button area
+  var btn=event&&event.target;
+  if(btn){var t=btn.textContent;btn.textContent='✅ Salvo!';setTimeout(function(){btn.textContent=t;},1800);}
+}
+
+function deleteHistoryEntry(id){
+  try{
+    var hist=JSON.parse(localStorage.getItem(_HIST_KEY)||'[]');
+    localStorage.setItem(_HIST_KEY,JSON.stringify(hist.filter(function(h){return h.id!==id;})));
+    renderHistorySection();
+  }catch(e){}
+}
+
+function loadHistoryEntry(id){
+  try{
+    var hist=JSON.parse(localStorage.getItem(_HIST_KEY)||'[]');
+    var entry=hist.find(function(h){return h.id===id;});
+    if(!entry)return;
+    _rtData=entry.rtData;
+    _rtView='results';
+    document.getElementById('rt-results-content').innerHTML=buildRTHTML(_rtData);
+    switchTab('rt');
+    window.scrollTo({top:0,behavior:'smooth'});
+  }catch(e){}
+}
+
+function renderHistorySection(){
+  var el=document.getElementById('rt-history-list');
+  if(!el)return;
+  var hist=[];
+  try{hist=JSON.parse(localStorage.getItem(_HIST_KEY)||'[]');}catch(e){}
+  var wrap=document.getElementById('rt-history-wrap');
+  if(wrap)wrap.style.display=hist.length?'block':'none';
+  if(!hist.length){el.innerHTML='';return;}
+  el.innerHTML=hist.map(function(h){
+    var dates=h.checkin&&h.checkout?' · '+h.checkin+' → '+h.checkout:'';
+    return '<div style="display:flex;align-items:center;gap:8px;background:#fff;border-radius:12px;border:1.5px solid #e0f2fe;padding:10px 12px;margin-bottom:8px">'+
+      '<div style="flex:1;min-width:0">'+
+      '<div style="font-size:13px;font-weight:700;color:var(--text)">'+h.name+'</div>'+
+      '<div style="font-size:11px;color:var(--muted)">'+h.savedAt+dates+'</div>'+
+      '</div>'+
+      '<button onclick="loadHistoryEntry(\''+h.id+'\')" style="background:var(--teal);color:#fff;border:none;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">📂 Abrir</button>'+
+      '<button onclick="deleteHistoryEntry(\''+h.id+'\')" style="background:none;border:none;font-size:16px;cursor:pointer;opacity:.4;padding:2px 4px;flex-shrink:0">🗑</button>'+
+      '</div>';
+  }).join('');
+}
+
 // ── INIT ──────────────────────────────────────────────────────────────────────
 (function(){
   const today=new Date().toISOString().slice(0,10);
@@ -1430,7 +1558,10 @@ function editLocalTrip(){
   document.getElementById('f-checkin').value=today;
   document.getElementById('f-checkout').value=tomorrow;
   calcDays();
-  switchTab('rt');
+  var restored=restoreState();
+  switchTab(restored&&_rtView==='results'?'rt':'rt');
+  renderHistorySection();
+  window.addEventListener('pagehide',saveState);
 
   // Register service worker for offline / PWA
   if('serviceWorker' in navigator){
