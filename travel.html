@@ -963,7 +963,7 @@ function refreshExpenses(){
 function destCostBoxContent(d){
   if(!d||!d.nights) return '';
   var rooms=Math.ceil((d.travelers||2)/2);
-  var hotelRate=d.hotelRate||(d.budget==='luxury'?225:d.budget==='moderate'?155:95);
+  var hotelRate=d.hotelRate!=null?d.hotelRate:(d.budget==='luxury'?225:d.budget==='moderate'?155:95);
   var hotelTotal=d.nights*hotelRate*rooms;
   var bf=(d.breakfastRate==null?15:d.breakfastRate), lu=(d.lunchRate==null?20:d.lunchRate), di=(d.dinnerRate==null?35:d.dinnerRate), sn=(d.snacksRate==null?10:d.snacksRate);
   var breakfast=d.nights*bf*d.travelers, lunch=d.nights*lu*d.travelers;
@@ -1044,10 +1044,15 @@ function buildEstTotalHTML(rd, dd){
     estRT=rd.roundTrip?base*2:base;
   }
   if(dd&&dd.nights){
-    var hrts={budget:95,moderate:155,luxury:225};
-    var hr=hrts[dd.budget]||95, dr=Math.ceil((dd.travelers||2)/2);
-    var ht=dd.nights*hr*dr;
-    var mt=dd.nights*((dd.breakfastRate||15)+(dd.lunchRate||20)+(dd.dinnerRate||35)+(dd.snacksRate||10))*(dd.travelers||2);
+    // Use exact same formula as destCostBoxContent so values always match
+    var rooms=Math.ceil((dd.travelers||2)/2);
+    var hotelRate=dd.hotelRate!=null?dd.hotelRate:(dd.budget==='luxury'?225:dd.budget==='moderate'?155:95);
+    var ht=dd.nights*hotelRate*rooms;
+    var bf=(dd.breakfastRate==null?15:dd.breakfastRate);
+    var lu=(dd.lunchRate==null?20:dd.lunchRate);
+    var di=(dd.dinnerRate==null?35:dd.dinnerRate);
+    var sn=(dd.snacksRate==null?10:dd.snacksRate);
+    var mt=dd.nights*(bf+lu+di+sn)*(dd.travelers||2);
     estLocal=ht+mt;
   }
   var combined=estRT+estLocal;
@@ -1761,7 +1766,7 @@ function renderHistorySection(){
   window.addEventListener('pagehide',saveState);
 
   // Version check — fetch version.json (always network) and reload if behind
-  var _myV='119';
+  var _myV='120';
   fetch('./version.json',{cache:'no-store'})
     .then(function(r){return r.json();})
     .then(function(d){
