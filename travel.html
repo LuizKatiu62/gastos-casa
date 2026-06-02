@@ -963,8 +963,7 @@ function refreshExpenses(){
 function destCostBoxContent(d){
   if(!d||!d.nights) return '';
   var rooms=Math.ceil((d.travelers||2)/2);
-  var hotelRates={budget:95,moderate:155,luxury:225};
-  var hotelRate=hotelRates[d.budget]||95;
+  var hotelRate=d.hotelRate||(d.budget==='luxury'?225:d.budget==='moderate'?155:95);
   var hotelTotal=d.nights*hotelRate*rooms;
   var bf=(d.breakfastRate||15), lu=(d.lunchRate||20), di=(d.dinnerRate||35), sn=(d.snacksRate||10);
   var breakfast=d.nights*bf*d.travelers, lunch=d.nights*lu*d.travelers;
@@ -973,9 +972,26 @@ function destCostBoxContent(d){
   var grandTotal=hotelTotal+mealsTotal;
   var ppl=d.travelers===1?'1 person':d.travelers+' people';
   var rmLabel=rooms===1?'1 room':rooms+' rooms';
-  var budgetLabels={budget:'🎒 Budget',moderate:'🏨 Moderate',luxury:'⭐ Luxury'};
-  return '<div class="cost-box" style="margin-bottom:16px">'+
-    '<div class="cost-box-title">💰 Custo Estimado — '+ppl+'</div>'+
+  var editPanel=d.editOpen
+    ?'<div class="cost-edit-panel">'+
+      '<div class="cost-edit-title">✏️ Atualizar valores reais</div>'+
+      '<div class="cost-edit-row"><label>🏨 Hotel ($/quarto/noite)</label>'+
+      '<input type="number" id="de-hotel" value="'+hotelRate+'" min="20" max="2000" step="5" inputmode="decimal" placeholder="ex: 155"></div>'+
+      '<div class="cost-edit-row"><label>☕ Café da manhã ($/pessoa)</label>'+
+      '<input type="number" id="de-bf" value="'+bf+'" min="0" max="200" step="1" inputmode="decimal"></div>'+
+      '<div class="cost-edit-row"><label>🍱 Almoço ($/pessoa)</label>'+
+      '<input type="number" id="de-lu" value="'+lu+'" min="0" max="200" step="1" inputmode="decimal"></div>'+
+      '<div class="cost-edit-row"><label>🍽️ Jantar ($/pessoa)</label>'+
+      '<input type="number" id="de-di" value="'+di+'" min="0" max="200" step="1" inputmode="decimal"></div>'+
+      '<div class="cost-edit-row"><label>🍿 Lanches ($/pessoa)</label>'+
+      '<input type="number" id="de-sn" value="'+sn+'" min="0" max="200" step="1" inputmode="decimal"></div>'+
+      '<button class="cost-apply-btn" onclick="applyDestEdits()">✓ Aplicar e recalcular</button>'+
+      '</div>'
+    :'';
+  return '<div class="cost-box" id="dest-cost-box-inner" style="margin-bottom:16px">'+
+    '<div class="cost-box-title">💰 Custo Estimado — '+ppl+
+    '<button class="cost-edit-btn" onclick="toggleDestEdit()">'+(d.editOpen?'✕ Fechar':'✏️ Editar')+'</button></div>'+
+    editPanel+
     '<div class="cost-rows">'+
     '<div class="cost-row"><span class="cost-row-label">🏨 Hotel ('+d.nights+' noites × '+rmLabel+' × $'+hotelRate+'/quarto)</span><span class="cost-row-val">$'+hotelTotal.toFixed(2)+'</span></div>'+
     '<div class="cost-sep"></div>'+
@@ -991,8 +1007,30 @@ function destCostBoxContent(d){
     '<div class="cost-total-item"><div class="cti-lbl">🍴 Alimentação</div><div class="cti-val">$'+mealsTotal.toFixed(2)+'</div></div>'+
     '<div class="cost-total-item rt-total"><div class="cti-lbl">💰 Total</div><div class="cti-val">$'+grandTotal.toFixed(2)+'</div></div>'+
     '</div>'+
-    '<div class="cost-note">* '+budgetLabels[d.budget]+' (~$'+hotelRate+'/quarto/noite). Alimentação por pessoa/dia.</div>'+
+    '<div class="cost-note">* $'+hotelRate+'/quarto/noite · '+rmLabel+'. Alimentação por pessoa/dia.</div>'+
     '</div>';
+}
+
+function toggleDestEdit(){
+  if(!_destData) return;
+  _destData.editOpen=!_destData.editOpen;
+  document.getElementById('dest-cost-box').innerHTML=destCostBoxContent(_destData);
+}
+
+function applyDestEdits(){
+  if(!_destData) return;
+  var hr=parseFloat(document.getElementById('de-hotel').value);
+  var bf=parseFloat(document.getElementById('de-bf').value);
+  var lu=parseFloat(document.getElementById('de-lu').value);
+  var di=parseFloat(document.getElementById('de-di').value);
+  var sn=parseFloat(document.getElementById('de-sn').value);
+  if(!isNaN(hr)&&hr>=0) _destData.hotelRate=hr;
+  if(!isNaN(bf)&&bf>=0) _destData.breakfastRate=bf;
+  if(!isNaN(lu)&&lu>=0) _destData.lunchRate=lu;
+  if(!isNaN(di)&&di>=0) _destData.dinnerRate=di;
+  if(!isNaN(sn)&&sn>=0) _destData.snacksRate=sn;
+  _destData.editOpen=false;
+  document.getElementById('dest-cost-box').innerHTML=destCostBoxContent(_destData);
 }
 
 // ── COMBINED ESTIMATE FOR GASTOS TAB ─────────────────────────────────────────
