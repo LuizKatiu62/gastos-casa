@@ -965,7 +965,7 @@ function destCostBoxContent(d){
   var rooms=Math.ceil((d.travelers||2)/2);
   var hotelRate=d.hotelRate||(d.budget==='luxury'?225:d.budget==='moderate'?155:95);
   var hotelTotal=d.nights*hotelRate*rooms;
-  var bf=(d.breakfastRate||15), lu=(d.lunchRate||20), di=(d.dinnerRate||35), sn=(d.snacksRate||10);
+  var bf=(d.breakfastRate==null?15:d.breakfastRate), lu=(d.lunchRate==null?20:d.lunchRate), di=(d.dinnerRate==null?35:d.dinnerRate), sn=(d.snacksRate==null?10:d.snacksRate);
   var breakfast=d.nights*bf*d.travelers, lunch=d.nights*lu*d.travelers;
   var dinner=d.nights*di*d.travelers, snacks=d.nights*sn*d.travelers;
   var mealsTotal=breakfast+lunch+dinner+snacks;
@@ -976,15 +976,15 @@ function destCostBoxContent(d){
     ?'<div class="cost-edit-panel">'+
       '<div class="cost-edit-title">✏️ Atualizar valores reais</div>'+
       '<div class="cost-edit-row"><label>🏨 Hotel ($/quarto/noite)</label>'+
-      '<input type="number" id="de-hotel" value="'+hotelRate+'" min="20" max="2000" step="5" inputmode="decimal" placeholder="ex: 155"></div>'+
-      '<div class="cost-edit-row"><label>☕ Café da manhã ($/pessoa)</label>'+
-      '<input type="number" id="de-bf" value="'+bf+'" min="0" max="200" step="1" inputmode="decimal"></div>'+
+      '<input type="text" id="de-hotel" value="'+hotelRate+'" inputmode="decimal" placeholder="ex: 155"></div>'+
+      '<div class="cost-edit-row"><label>☕ Café da manhã ($/pessoa — 0 se incluso)</label>'+
+      '<input type="text" id="de-bf" value="'+bf+'" inputmode="decimal" placeholder="0"></div>'+
       '<div class="cost-edit-row"><label>🍱 Almoço ($/pessoa)</label>'+
-      '<input type="number" id="de-lu" value="'+lu+'" min="0" max="200" step="1" inputmode="decimal"></div>'+
+      '<input type="text" id="de-lu" value="'+lu+'" inputmode="decimal" placeholder="20"></div>'+
       '<div class="cost-edit-row"><label>🍽️ Jantar ($/pessoa)</label>'+
-      '<input type="number" id="de-di" value="'+di+'" min="0" max="200" step="1" inputmode="decimal"></div>'+
+      '<input type="text" id="de-di" value="'+di+'" inputmode="decimal" placeholder="35"></div>'+
       '<div class="cost-edit-row"><label>🍿 Lanches ($/pessoa)</label>'+
-      '<input type="number" id="de-sn" value="'+sn+'" min="0" max="200" step="1" inputmode="decimal"></div>'+
+      '<input type="text" id="de-sn" value="'+sn+'" inputmode="decimal" placeholder="10"></div>'+
       '<button class="cost-apply-btn" onclick="applyDestEdits()">✓ Aplicar e recalcular</button>'+
       '</div>'
     :'';
@@ -1019,11 +1019,8 @@ function toggleDestEdit(){
 
 function applyDestEdits(){
   if(!_destData) return;
-  var hr=parseFloat(document.getElementById('de-hotel').value);
-  var bf=parseFloat(document.getElementById('de-bf').value);
-  var lu=parseFloat(document.getElementById('de-lu').value);
-  var di=parseFloat(document.getElementById('de-di').value);
-  var sn=parseFloat(document.getElementById('de-sn').value);
+  function pn(id){ return parseFloat(document.getElementById(id).value.replace(',','.')); }
+  var hr=pn('de-hotel'), bf=pn('de-bf'), lu=pn('de-lu'), di=pn('de-di'), sn=pn('de-sn');
   if(!isNaN(hr)&&hr>=0) _destData.hotelRate=hr;
   if(!isNaN(bf)&&bf>=0) _destData.breakfastRate=bf;
   if(!isNaN(lu)&&lu>=0) _destData.lunchRate=lu;
