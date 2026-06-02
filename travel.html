@@ -132,10 +132,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif}
 .tab-top{flex:1;padding:13px 8px;border:none;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;transition:background .15s}
 .tab-top:first-child{border-radius:14px 0 0 0}
 .tab-top:last-child{border-radius:0 14px 0 0}
-.tab-top.tab-green{background:rgba(22,163,74,.22);color:rgba(255,255,255,.95)}
+.tab-top.tab-green:not(.active){background:rgba(22,163,74,.48);color:#fff;border:1.5px solid rgba(255,255,255,.35)}
 .tab-top.tab-green.active{background:#fff;color:#166534}
 .tab-top.active{background:#fff;color:var(--teal2)}
-.tab-top:not(.active){background:rgba(255,255,255,.22);color:rgba(255,255,255,.95)}
+.tab-top:not(.active){background:rgba(255,255,255,.28);color:#fff;border:1.5px solid rgba(255,255,255,.4)}
 .rt-form-wrap{max-width:680px;margin:0 auto;padding:0 16px 32px;position:relative;z-index:10}
 .rt-form-card{background:#fff;border-radius:0 20px 20px 20px;box-shadow:0 8px 32px rgba(8,145,178,.18);overflow:hidden}
 .form-card{border-radius:20px 0 20px 20px!important}
@@ -445,6 +445,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif}
       <div id="days-display" class="hidden">
         <span class="days-badge">🌙 <span id="days-num">0</span> nights &nbsp;·&nbsp; <span id="days-stay">0</span> days</span>
       </div>
+      <div class="field-row" style="margin-top:10px">
+        <div class="field">
+          <label>Travelers</label>
+          <input type="number" id="f-travelers" value="2" min="1" max="20" step="1" inputmode="numeric">
+        </div>
+      </div>
     </div>
 
     <div class="divider" style="margin:14px 0 0"></div>
@@ -531,6 +537,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif}
     <div style="font-size:12px;color:#7c3aed;margin-top:6px" id="event-date-display"></div>
   </div>
 
+  <div id="dest-cost-box"></div>
+
   <div class="sec">
     <div class="sec-header"><span class="sec-icon">🏨</span><span class="sec-title">Where to Stay</span></div>
     <div class="link-grid" id="hotel-links"></div>
@@ -566,9 +574,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif}
 
 <script>
 // ── STATE ─────────────────────────────────────────────────────────────────────
-var _rtView  = 'form';   // 'form' | 'results'
-var _destView= 'form';   // 'form' | 'results'
-var _rtData  = null;     // stored after calculateRoute()
+var _rtView   = 'form';   // 'form' | 'results'
+var _destView = 'form';   // 'form' | 'results'
+var _rtData   = null;     // stored after calculateRoute()
+var _destData = null;     // stored after planTrip()
+var _activeTab= 'rt';     // last active tab
 
 // ── CITY → PROVINCE LOOKUP ───────────────────────────────────────────────────
 const CITY_PROV = {
@@ -681,6 +691,7 @@ async function geocodeForProvince(city, stateId, countryId){
 
 // ── TAB SWITCHING ─────────────────────────────────────────────────────────────
 function switchTab(tab){
+  _activeTab = tab;
   document.getElementById('tab-rt').classList.toggle('active', tab==='rt');
   document.getElementById('tab-dest').classList.toggle('active', tab==='dest');
   document.getElementById('tab-exp').classList.toggle('active', tab==='exp');
@@ -696,6 +707,7 @@ function switchTab(tab){
   } else if(tab==='exp'){
     expS.classList.remove('hidden');
     document.getElementById('exp-section-content').innerHTML=buildExpensesHTML(_rtData);
+    saveState();
   } else {
     // Auto-fill destination from RT if dest city is empty
     const rtDest = document.getElementById('rt-dest-city').value.trim();
@@ -711,6 +723,7 @@ function switchTab(tab){
     if(_destView==='results') dtR.classList.remove('hidden');
     else dtF.classList.remove('hidden');
   }
+  saveState();
 }
 
 // ── GEO / ROUTING ────────────────────────────────────────────────────────────
@@ -946,14 +959,107 @@ function refreshExpenses(){
     el.innerHTML=buildExpensesHTML(_rtData);
 }
 
+// ── LOCAL TRIP COST BOX ───────────────────────────────────────────────────────
+function destCostBoxContent(d){
+  if(!d||!d.nights) return '';
+  var rooms=Math.ceil((d.travelers||2)/2);
+  var hotelRates={budget:95,moderate:155,luxury:225};
+  var hotelRate=hotelRates[d.budget]||95;
+  var hotelTotal=d.nights*hotelRate*rooms;
+  var bf=(d.breakfastRate||15), lu=(d.lunchRate||20), di=(d.dinnerRate||35), sn=(d.snacksRate||10);
+  var breakfast=d.nights*bf*d.travelers, lunch=d.nights*lu*d.travelers;
+  var dinner=d.nights*di*d.travelers, snacks=d.nights*sn*d.travelers;
+  var mealsTotal=breakfast+lunch+dinner+snacks;
+  var grandTotal=hotelTotal+mealsTotal;
+  var ppl=d.travelers===1?'1 person':d.travelers+' people';
+  var rmLabel=rooms===1?'1 room':rooms+' rooms';
+  var budgetLabels={budget:'🎒 Budget',moderate:'🏨 Moderate',luxury:'⭐ Luxury'};
+  return '<div class="cost-box" style="margin-bottom:16px">'+
+    '<div class="cost-box-title">💰 Custo Estimado — '+ppl+'</div>'+
+    '<div class="cost-rows">'+
+    '<div class="cost-row"><span class="cost-row-label">🏨 Hotel ('+d.nights+' noites × '+rmLabel+' × $'+hotelRate+'/quarto)</span><span class="cost-row-val">$'+hotelTotal.toFixed(2)+'</span></div>'+
+    '<div class="cost-sep"></div>'+
+    '<div class="cost-row"><span class="cost-row-label">☕ Café da manhã ($'+bf+'/pp × '+d.nights+' dias)</span><span class="cost-row-val">$'+breakfast.toFixed(2)+'</span></div>'+
+    '<div class="cost-row"><span class="cost-row-label">🍱 Almoço ($'+lu+'/pp × '+d.nights+' dias)</span><span class="cost-row-val">$'+lunch.toFixed(2)+'</span></div>'+
+    '<div class="cost-row"><span class="cost-row-label">🍽️ Jantar ($'+di+'/pp × '+d.nights+' dias)</span><span class="cost-row-val">$'+dinner.toFixed(2)+'</span></div>'+
+    '<div class="cost-row"><span class="cost-row-label">🍿 Lanches ($'+sn+'/pp × '+d.nights+' dias)</span><span class="cost-row-val">$'+snacks.toFixed(2)+'</span></div>'+
+    '<div class="cost-sep"></div>'+
+    '<div class="cost-row"><span class="cost-row-label">🍴 Total Alimentação</span><span class="cost-row-val">$'+mealsTotal.toFixed(2)+'</span></div>'+
+    '</div>'+
+    '<div class="cost-totals">'+
+    '<div class="cost-total-item"><div class="cti-lbl">🏨 Hotel</div><div class="cti-val">$'+hotelTotal.toFixed(2)+'</div></div>'+
+    '<div class="cost-total-item"><div class="cti-lbl">🍴 Alimentação</div><div class="cti-val">$'+mealsTotal.toFixed(2)+'</div></div>'+
+    '<div class="cost-total-item rt-total"><div class="cti-lbl">💰 Total</div><div class="cti-val">$'+grandTotal.toFixed(2)+'</div></div>'+
+    '</div>'+
+    '<div class="cost-note">* '+budgetLabels[d.budget]+' (~$'+hotelRate+'/quarto/noite). Alimentação por pessoa/dia.</div>'+
+    '</div>';
+}
+
+// ── COMBINED ESTIMATE FOR GASTOS TAB ─────────────────────────────────────────
+function buildEstTotalHTML(rd, dd){
+  var estRT=0, estLocal=0;
+  if(rd){
+    var mealR=rd.mealRate||18, stps=(rd.stops||[]).length, trv=rd.travelers||1;
+    var rms=Math.ceil(trv/2);
+    var base=(rd.fuelCost||0)+stps*mealR*trv+(rd.hotelCost||0)*rms;
+    estRT=rd.roundTrip?base*2:base;
+  }
+  if(dd&&dd.nights){
+    var hrts={budget:95,moderate:155,luxury:225};
+    var hr=hrts[dd.budget]||95, dr=Math.ceil((dd.travelers||2)/2);
+    var ht=dd.nights*hr*dr;
+    var mt=dd.nights*((dd.breakfastRate||15)+(dd.lunchRate||20)+(dd.dinnerRate||35)+(dd.snacksRate||10))*(dd.travelers||2);
+    estLocal=ht+mt;
+  }
+  var combined=estRT+estLocal;
+  if(!combined&&!rd&&!dd) return '';
+  return '<div style="background:linear-gradient(135deg,#1e3a5f,#0891b2);border-radius:16px;padding:16px 18px;margin-bottom:16px;color:#fff">'+
+    '<div style="font-size:14px;font-weight:900;margin-bottom:12px">📊 Total Estimado da Viagem</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">'+
+    '<div style="background:rgba(255,255,255,.15);border-radius:10px;padding:10px;text-align:center">'+
+    '<div style="font-size:9px;color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">🚗 Road Trip</div>'+
+    '<div style="font-size:18px;font-weight:900">'+(estRT>0?'$'+estRT.toFixed(2):'—')+'</div></div>'+
+    '<div style="background:rgba(255,255,255,.15);border-radius:10px;padding:10px;text-align:center">'+
+    '<div style="font-size:9px;color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">🏙️ Local Trip</div>'+
+    '<div style="font-size:18px;font-weight:900">'+(estLocal>0?'$'+estLocal.toFixed(2):'—')+'</div></div>'+
+    '<div style="background:rgba(255,255,255,.25);border-radius:10px;padding:10px;text-align:center">'+
+    '<div style="font-size:9px;color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">💰 TOTAL</div>'+
+    '<div style="font-size:18px;font-weight:900">'+(combined>0?'$'+combined.toFixed(2):'—')+'</div></div>'+
+    '</div></div>';
+}
+
+// ── EXCLUDE EXPENSES FROM TRIP VIEW ──────────────────────────────────────────
+var _EXCL_KEY='trip_excluded_ids';
+
+function excludeExpense(id){
+  var excl=[];
+  try{excl=JSON.parse(localStorage.getItem(_EXCL_KEY)||'[]');}catch(e){}
+  if(excl.indexOf(id)===-1) excl.push(id);
+  localStorage.setItem(_EXCL_KEY,JSON.stringify(excl));
+  refreshExpenses();
+}
+
+function includeExpense(id){
+  var excl=[];
+  try{excl=JSON.parse(localStorage.getItem(_EXCL_KEY)||'[]');}catch(e){}
+  localStorage.setItem(_EXCL_KEY,JSON.stringify(excl.filter(function(x){return x!==id;})));
+  refreshExpenses();
+}
+
 function buildExpensesHTML(d){
   const ci=document.getElementById('f-checkin').value;
   const co=document.getElementById('f-checkout').value;
   let all=getExpenses();
   const filtered=ci&&co?all.filter(function(e){return e.date>=ci&&e.date<=co;}):all;
 
+  var excl=[];
+  try{excl=JSON.parse(localStorage.getItem(_EXCL_KEY)||'[]');}catch(e){}
+
+  const active=filtered.filter(function(e){return excl.indexOf(e.id)===-1;});
+  const excluded=filtered.filter(function(e){return excl.indexOf(e.id)!==-1;});
+
   const totals={gasolina:0,hotel:0,alimentacao:0,outros:0};
-  filtered.forEach(function(e){
+  active.forEach(function(e){
     const mapped=['gasolina','hotel','alimentacao'].includes(e.cat)?e.cat:'outros';
     totals[mapped]+=e.amount;
   });
@@ -993,32 +1099,50 @@ function buildExpensesHTML(d){
       '</div>';
   });
 
-  const entryList=filtered.length===0
+  function entryHTML(e, isExcluded){
+    const mapped=['gasolina','hotel','alimentacao'].includes(e.cat)?e.cat:'outros';
+    const info=CATS[mapped];
+    const sty=isExcluded?'opacity:.45;':'';
+    const txtSty=isExcluded?'style="text-decoration:line-through"':'';
+    const btn=isExcluded
+      ?'<button class="exp-del-btn" onclick="includeExpense(\''+e.id+'\')" title="Restaurar na viagem" style="opacity:1;font-size:14px">↩️</button>'
+      :'<button class="exp-del-btn" onclick="excludeExpense(\''+e.id+'\')" title="Remover da viagem">🗑</button>';
+    return '<div class="exp-entry" style="'+sty+'">'+
+      '<span class="exp-entry-ico">'+info.ico+'</span>'+
+      '<div class="exp-entry-body">'+
+      '<div class="exp-entry-top"><span class="exp-entry-cat" '+txtSty+'>'+info.label+'</span>'+
+      '<span class="exp-entry-date">'+e.date+'</span></div>'+
+      (e.desc?'<div class="exp-entry-desc" '+txtSty+'>'+e.desc+'</div>':'')+
+      '</div>'+
+      '<span class="exp-entry-amt" '+txtSty+'>$'+e.amount.toFixed(2)+'</span>'+
+      btn+
+      '</div>';
+  }
+
+  const sortedActive=active.slice().sort(function(a,b){return b.date.localeCompare(a.date);});
+  const sortedExcluded=excluded.slice().sort(function(a,b){return b.date.localeCompare(a.date);});
+
+  const entryList=sortedActive.length===0
     ?'<div style="text-align:center;padding:16px 0;font-size:13px;color:var(--muted)">'+
       'Nenhum gasto registrado'+(ci&&co?' neste período':'')+'.</div>'
-    :filtered.slice().sort(function(a,b){return b.date.localeCompare(a.date);}).map(function(e){
-      const mapped=['gasolina','hotel','alimentacao'].includes(e.cat)?e.cat:'outros';
-      const info=CATS[mapped];
-      return '<div class="exp-entry">'+
-        '<span class="exp-entry-ico">'+info.ico+'</span>'+
-        '<div class="exp-entry-body">'+
-        '<div class="exp-entry-top"><span class="exp-entry-cat">'+info.label+'</span>'+
-        '<span class="exp-entry-date">'+e.date+'</span></div>'+
-        (e.desc?'<div class="exp-entry-desc">'+e.desc+'</div>':'')+
-        '</div>'+
-        '<span class="exp-entry-amt">$'+e.amount.toFixed(2)+'</span>'+
-        '</div>';
-    }).join('');
+    :sortedActive.map(function(e){return entryHTML(e,false);}).join('');
+
+  const exclSection=sortedExcluded.length===0?'':
+    '<div style="padding:8px 16px 4px;border-top:1px dashed #bbf7d0">'+
+    '<div style="font-size:11px;font-weight:700;color:#64748b;margin-bottom:4px">'+sortedExcluded.length+' excluído(s) da viagem</div>'+
+    sortedExcluded.map(function(e){return entryHTML(e,true);}).join('')+
+    '</div>';
 
   const dateLabel=ci&&co?ci+' → '+co:'Todos os períodos';
   const diffTotal=grandTotal-estTotal;
 
-  return '<div class="exp-box">'+
+  return buildEstTotalHTML(d, _destData)+
+    '<div class="exp-box">'+
     '<div class="exp-header">'+
     '<div><div class="exp-title">📋 Gastos Reais da Viagem</div>'+
     '<div class="exp-period">📅 '+dateLabel+'</div></div>'+
     '</div>'+
-    '<div style="margin-bottom:14px">'+
+    '<div style="margin:12px 16px 12px">'+
     '<button onclick="saveState();window.location.href=\'index.html\'" style="display:flex;align-items:center;justify-content:space-between;width:100%;background:linear-gradient(135deg,#064e3b,#059669);color:#fff;border:none;border-radius:12px;padding:13px 16px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(5,150,105,.3)">'+
     '<span>📝 Registrar gasto em Gastos Casa</span><span style="font-size:18px">›</span>'+
     '</button>'+
@@ -1032,6 +1156,7 @@ function buildExpensesHTML(d){
       '</span>':'')+
     '</div>'+
     '<div class="exp-entries">'+entryList+'</div>'+
+    exclSection+
     '</div>';
 }
 
@@ -1185,6 +1310,7 @@ async function planTrip(){
   const purpose=document.getElementById('f-purpose').value;
   const evtName=document.getElementById('f-event-name').value.trim();
   const budget=document.querySelector('input[name="budget"]:checked').value;
+  const destTravelers=parseInt(document.getElementById('f-travelers').value)||2;
 
   if(!city){alert('Please enter a city.');return;}
   if(!checkin||!checkout){alert('Please select check-in and check-out dates.');return;}
@@ -1237,6 +1363,13 @@ async function planTrip(){
   document.getElementById('dining-sec').style.display=foods.length?'':'none';
   document.getElementById('event-links').innerHTML=buildEventCards(city,state,country,locShort,purpose,evtName,checkin);
   document.getElementById('parking-links').innerHTML=buildParkingCards(city,state,locShort,nearAnchor);
+
+  _destData={
+    locShort:locShort, nights:nights, travelers:destTravelers,
+    budget:budget, checkin:checkin, checkout:checkout,
+    breakfastRate:15, lunchRate:20, dinnerRate:35, snacksRate:10
+  };
+  document.getElementById('dest-cost-box').innerHTML=destCostBoxContent(_destData);
 
   _destView='results';
   document.getElementById('form-section').classList.add('hidden');
@@ -1440,7 +1573,9 @@ const _HIST_KEY='trip_history';
 function saveState(){
   try{
     localStorage.setItem(_STATE_KEY,JSON.stringify({
-      rtView:_rtView,destView:_destView,rtData:_rtData,
+      rtView:_rtView,destView:_destView,rtData:_rtData,destData:_destData,
+      activeTab:_activeTab,
+      destResultsHTML:document.getElementById('results-section').innerHTML,
       fields:{
         rtOC:document.getElementById('rt-origin-city').value,
         rtOS:document.getElementById('rt-origin-state').value,
@@ -1460,6 +1595,10 @@ function saveState(){
         fCI:document.getElementById('f-checkin').value,
         fCO:document.getElementById('f-checkout').value,
         fP: document.getElementById('f-purpose').value,
+        fE: document.getElementById('f-event-name').value,
+        fT: document.getElementById('f-travelers').value,
+        foods:[...document.querySelectorAll('.food-chip input:checked')].map(function(i){return i.value;}),
+        budget:(document.querySelector('input[name="budget"]:checked')||{}).value||'budget',
       }
     }));
   }catch(e){}
@@ -1470,19 +1609,33 @@ function restoreState(){
     var s=JSON.parse(localStorage.getItem(_STATE_KEY));
     if(!s) return false;
     var f=s.fields||{};
-    function sv(id,v){var el=document.getElementById(id);if(el&&v)el.value=v;}
+    function sv(id,v){var el=document.getElementById(id);if(el&&v!=null&&v!=='')el.value=v;}
     sv('rt-origin-city',f.rtOC);sv('rt-origin-state',f.rtOS);sv('rt-origin-country',f.rtON);
     sv('rt-dest-city',f.rtDC);sv('rt-dest-state',f.rtDS);sv('rt-dest-country',f.rtDN);
     sv('rt-venue',f.rtV);sv('rt-travelers',f.rtT);sv('rt-consumption',f.rtCO);sv('rt-fuelprice',f.rtFP);
     var rr=document.getElementById('rt-roundtrip');if(rr&&f.rtR!==undefined)rr.checked=f.rtR;
     sv('f-city',f.fC);sv('f-state',f.fS);sv('f-country',f.fN);
     sv('f-venue',f.fV);sv('f-checkin',f.fCI);sv('f-checkout',f.fCO);sv('f-purpose',f.fP);
+    sv('f-event-name',f.fE);sv('f-travelers',f.fT);
+    if(f.foods&&f.foods.length){
+      document.querySelectorAll('.food-chip input').forEach(function(inp){inp.checked=f.foods.indexOf(inp.value)!==-1;});
+    }
+    if(f.budget){
+      var bel=document.querySelector('input[name="budget"][value="'+f.budget+'"]');
+      if(bel)bel.checked=true;
+    }
+    onPurposeChange();
     _rtView=s.rtView||'form';
     _destView=s.destView||'form';
+    _activeTab=s.activeTab||'rt';
+    if(s.destData) _destData=s.destData;
     if(s.rtData){
       _rtData=s.rtData;
       if(_rtView==='results')
         document.getElementById('rt-results-content').innerHTML=buildRTHTML(_rtData);
+    }
+    if(_destView==='results'&&s.destResultsHTML){
+      document.getElementById('results-section').innerHTML=s.destResultsHTML;
     }
     calcDays();
     return true;
@@ -1559,7 +1712,7 @@ function renderHistorySection(){
   document.getElementById('f-checkout').value=tomorrow;
   calcDays();
   var restored=restoreState();
-  switchTab(restored&&_rtView==='results'?'rt':'rt');
+  switchTab(restored?_activeTab:'rt');
   renderHistorySection();
   window.addEventListener('pagehide',saveState);
 
