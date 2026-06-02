@@ -1,4 +1,4 @@
-const CACHE = 'gastos-v122';
+const CACHE = 'gastos-v123';
 
 const CORE_ASSETS = [
   './index.html',
@@ -49,10 +49,11 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // travel.html — sempre da rede (sem-store), mas salva no cache para fallback offline
+  // travel.html — sempre da rede; se vier com ?_nc= passa o query para bustar CDN
   if (url.includes('travel.html')) {
+    const fetchUrl = url.includes('_nc=') ? url : url.split('?')[0] + '?_sw=' + CACHE;
     e.respondWith(
-      fetch(new Request(url.split('?')[0], { cache: 'no-store' }))
+      fetch(new Request(fetchUrl, { cache: 'no-store' }))
         .then(res => {
           if (res.ok) caches.open(CACHE).then(c => c.put('./travel.html', res.clone()));
           return res;

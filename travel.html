@@ -1791,14 +1791,14 @@ function renderHistorySection(){
   renderHistorySection();
   window.addEventListener('pagehide',saveState);
 
-  // Version check — fetch version.json (always network) and reload if behind
-  var _myV='122';
-  fetch('./version.json',{cache:'no-store'})
+  // Version check — fetch version.json (always network) and hard-navigate if behind
+  var _myV='123';
+  fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
     .then(function(r){return r.json();})
     .then(function(d){
-      if(String(d.v)!==_myV&&sessionStorage.getItem('_tpReload')!==String(d.v)){
-        sessionStorage.setItem('_tpReload',String(d.v));
-        window.location.reload();
+      if(String(d.v)!==_myV){
+        // Navigate with timestamp — busts SW cache and CDN cache, no loop risk
+        window.location.replace('./travel.html?_nc='+Date.now());
       }
     }).catch(function(){});
 
