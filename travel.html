@@ -1674,6 +1674,11 @@ function restoreState(){
     }
     if(_destView==='results'&&s.destResultsHTML){
       document.getElementById('results-section').innerHTML=s.destResultsHTML;
+      // Re-render cost box with current code so new features always show
+      if(_destData){
+        var cb=document.getElementById('dest-cost-box');
+        if(cb) cb.innerHTML=destCostBoxContent(_destData);
+      }
     }
     calcDays();
     return true;
@@ -1757,6 +1762,9 @@ function renderHistorySection(){
   // Register service worker for offline / PWA
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('./sw.js').catch(function(){});
+    navigator.serviceWorker.addEventListener('message',function(e){
+      if(e.data&&e.data.type==='SW_UPDATED') window.location.reload();
+    });
   }
 
   // Show "Add to Home Screen" hint on iOS Safari (not standalone, not dismissed)
