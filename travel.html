@@ -1761,19 +1761,15 @@ function renderHistorySection(){
   window.addEventListener('pagehide',saveState);
 
   // Version check — fetch version.json (always network) and reload if behind
-  var _myV='118';
-  var _reloadedFor=sessionStorage.getItem('_tpReload');
-  if(_reloadedFor!==_myV){
-    fetch('./version.json',{cache:'no-store'})
-      .then(function(r){return r.json();})
-      .then(function(d){
-        var sv=String(d.v);
-        if(sv!==_myV){
-          sessionStorage.setItem('_tpReload',sv);
-          window.location.replace('./travel.html?_v='+sv);
-        }
-      }).catch(function(){});
-  }
+  var _myV='119';
+  fetch('./version.json',{cache:'no-store'})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(String(d.v)!==_myV&&sessionStorage.getItem('_tpReload')!==String(d.v)){
+        sessionStorage.setItem('_tpReload',String(d.v));
+        window.location.reload();
+      }
+    }).catch(function(){});
 
   // Register service worker for offline / PWA
   if('serviceWorker' in navigator){

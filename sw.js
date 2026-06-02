@@ -1,4 +1,4 @@
-const CACHE = 'gastos-v118';
+const CACHE = 'gastos-v119';
 
 const CORE_ASSETS = [
   './index.html',
@@ -43,9 +43,22 @@ self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   const url = e.request.url;
 
-  // version.json e travel.html — sempre da rede, nunca do cache
-  if (url.includes('version.json') || url.includes('travel.html')) {
-    e.respondWith(fetch(e.request, { cache: 'no-store' }).catch(() => caches.match(e.request)));
+  // version.json — sempre da rede, nunca do cache
+  if (url.includes('version.json')) {
+    e.respondWith(fetch(e.request, { cache: 'no-store' }).catch(() => new Response('{"v":0}', { status: 200 })));
+    return;
+  }
+
+  // travel.html — sempre da rede (sem-store), mas salva no cache para fallback offline
+  if (url.includes('travel.html')) {
+    e.respondWith(
+      fetch(new Request(url.split('?')[0], { cache: 'no-store' }))
+        .then(res => {
+          if (res.ok) caches.open(CACHE).then(c => c.put('./travel.html', res.clone()));
+          return res;
+        })
+        .catch(() => caches.match('./travel.html'))
+    );
     return;
   }
 
