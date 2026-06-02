@@ -879,10 +879,12 @@ function costBoxContent(d){
   const editPanel=d.editOpen
     ? '<div class="cost-edit-panel">'+
       '<div class="cost-edit-title">✏️ Atualizar valores reais</div>'+
+      '<div class="cost-edit-row"><label>⏱ Tempo de direção real (h:mm — ex: 7:00)</label>'+
+      '<input type="text" id="rt-edit-time" value="'+Math.floor(d.durMin/60)+':'+String(Math.round(d.durMin%60)).padStart(2,'0')+'" inputmode="text" placeholder="ex: 7:00"></div>'+
       '<div class="cost-edit-row"><label>⛽ Combustível ($/L)</label>'+
-      '<input type="number" id="rt-edit-fuel" value="'+d.fuelPrice.toFixed(2)+'" min="0.50" max="5.00" step="0.01" inputmode="decimal" placeholder="ex: 1.75"></div>'+
+      '<input type="text" id="rt-edit-fuel" value="'+d.fuelPrice.toFixed(2)+'" inputmode="decimal" placeholder="ex: 1.75"></div>'+
       '<div class="cost-edit-row"><label>🍔 Refeição média ($/pessoa/parada)</label>'+
-      '<input type="number" id="rt-edit-meal" value="'+mealRate+'" min="5" max="300" step="1" inputmode="decimal" placeholder="ex: 25"></div>'+
+      '<input type="text" id="rt-edit-meal" value="'+mealRate+'" inputmode="decimal" placeholder="ex: 25"></div>'+
       '<button class="cost-apply-btn" onclick="applyRTEdits()">✓ Aplicar e recalcular</button>'+
       '</div>'
     : '';
@@ -920,12 +922,22 @@ function toggleRTEdit(){
 
 function applyRTEdits(){
   if(!_rtData) return;
-  const newFuel=parseFloat(document.getElementById('rt-edit-fuel').value);
-  const newMeal=parseFloat(document.getElementById('rt-edit-meal').value);
+  const timeStr=document.getElementById('rt-edit-time').value.trim();
+  const newFuel=parseFloat(document.getElementById('rt-edit-fuel').value.replace(',','.'));
+  const newMeal=parseFloat(document.getElementById('rt-edit-meal').value.replace(',','.'));
+  if(timeStr){
+    const parts=timeStr.split(':');
+    const mins=parts.length===2
+      ?parseInt(parts[0])*60+parseInt(parts[1])
+      :parseFloat(parts[0])*60;
+    if(!isNaN(mins)&&mins>0) _rtData.durMin=mins;
+  }
   if(!isNaN(newFuel)&&newFuel>0){ _rtData.fuelPrice=newFuel; _rtData.fuelCost=_rtData.fuelL*newFuel; }
   if(!isNaN(newMeal)&&newMeal>0){ _rtData.mealRate=newMeal; }
   _rtData.editOpen=false;
-  document.getElementById('rt-cost-box').innerHTML=costBoxContent(_rtData);
+  // Rebuild full RT HTML so route summary card also reflects new drive time
+  document.getElementById('rt-results-content').innerHTML=buildRTHTML(_rtData);
+  saveState();
 }
 
 // ── REAL EXPENSES ────────────────────────────────────────────────────────────
@@ -1208,16 +1220,25 @@ function buildExpensesHTML(d){
 function buildRTHTML(d){
   const hrs=Math.floor(d.durMin/60), mins=Math.round(d.durMin%60);
   const time=hrs>0?(hrs+'h '+String(mins).padStart(2,'0')+'min'):(mins+'min');
+  const stopMins=d.stops.length*30;
+  const totalMin=d.durMin+stopMins;
+  const thrs=Math.floor(totalMin/60), tmins=Math.round(totalMin%60);
+  const totalTime=thrs>0?(thrs+'h '+String(tmins).padStart(2,'0')+'min'):(tmins+'min');
   let h='';
 
   // Route summary
   h+='<div class="route-sum">'+
     '<div class="rs-title">🚗 '+d.origShort+' → '+d.destShort+'</div>'+
     '<div class="rs-metrics">'+
-    '<div class="rm"><div class="rm-val">'+Math.round(d.distKm)+' km</div><div class="rm-lbl">Total distance</div></div>'+
-    '<div class="rm"><div class="rm-val">~'+time+'</div><div class="rm-lbl">Drive time</div></div>'+
-    '<div class="rm"><div class="rm-val">'+d.fuelL.toFixed(1)+' L</div><div class="rm-lbl">Fuel ('+d.consumption+' L/100km)</div></div>'+
-    '<div class="rm"><div class="rm-val">~$'+d.fuelCost.toFixed(2)+'</div><div class="rm-lbl">Fuel cost @ $'+d.fuelPrice.toFixed(2)+'/L</div></div>'+
+    '<div class="rm"><div class="rm-val">'+Math.round(d.distKm)+' km</div><div class="rm-lbl">Distância total</div></div>'+
+    '<div class="rm"><div class="rm-val">~'+time+'</div><div class="rm-lbl">Direção pura</div></div>'+
+    '<div class="rm"><div class="rm-val">'+d.fuelL.toFixed(1)+' L</div><div class="rm-lbl">Combustível ('+d.consumption+' L/100km)</div></div>'+
+    '<div class="rm"><div class="rm-val">~$'+d.fuelCost.toFixed(2)+'</div><div class="rm-lbl">Custo @ $'+d.fuelPrice.toFixed(2)+'/L</div></div>'+
+    (d.stops.length>0
+      ?'<div class="rm" style="grid-column:span 2;background:rgba(255,255,255,.2)">'+
+        '<div class="rm-val">~'+totalTime+'</div>'+
+        '<div class="rm-lbl">⏱ Total estimado c/ '+d.stops.length+' parada'+(d.stops.length>1?'s':'')+' (~30 min cada)</div></div>'
+      :'')+
     '</div></div>';
 
   // Cost box
@@ -1766,7 +1787,7 @@ function renderHistorySection(){
   window.addEventListener('pagehide',saveState);
 
   // Version check — fetch version.json (always network) and reload if behind
-  var _myV='120';
+  var _myV='121';
   fetch('./version.json',{cache:'no-store'})
     .then(function(r){return r.json();})
     .then(function(d){
