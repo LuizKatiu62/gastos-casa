@@ -907,12 +907,29 @@ function applyRTEdits(){
 }
 
 // ── REAL EXPENSES ────────────────────────────────────────────────────────────
-const EXPENSE_KEY='trip_expenses';
-
+// Reads from gastos-casa's own storage key ('gastos') and maps to trip format.
+// Category mapping: carro→gasolina, mercado→alimentacao,
+//   diversos(restaurantes/mcdonalds)→alimentacao, rest→outros, parcelados→outros
 function getExpenses(){
-  try{return JSON.parse(localStorage.getItem(EXPENSE_KEY)||'[]');}catch(e){return[];}
+  var result=[];
+  try{
+    var g=JSON.parse(localStorage.getItem('gastos')||'{}');
+    var lancs=g.lancamentos||[];
+    lancs.forEach(function(l){
+      var cat;
+      if(l.cat==='carro') cat='gasolina';
+      else if(l.cat==='mercado') cat='alimentacao';
+      else if(l.cat==='diversos'){
+        var s=l.divsub||'';
+        cat=(s==='restaurantes'||s==='mcdonalds')?'alimentacao':'outros';
+      }
+      else cat='outros';
+      result.push({id:l.id,date:l.data,cat:cat,amount:parseFloat(l.valor)||0,
+        desc:l.desc||(l.loja?String(l.loja):'')});
+    });
+  }catch(e){}
+  return result;
 }
-function saveExpenses(arr){localStorage.setItem(EXPENSE_KEY,JSON.stringify(arr));}
 
 function refreshExpenses(){
   const el=document.getElementById('exp-section-content');
