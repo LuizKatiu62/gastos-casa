@@ -1754,7 +1754,8 @@ function inicializarFirebase() {
           var localD = getDados();
           pendingKeys.forEach(function(k) {
             var lanc = fbData.pending[k];
-            if (lanc && lanc.id && !localD.lancamentos.some(function(l){ return l.id === lanc.id; })) {
+            var _pDelIds = localD.deleted_ids || [];
+            if (lanc && lanc.id && !localD.lancamentos.some(function(l){ return l.id === lanc.id; }) && _pDelIds.indexOf(lanc.id) === -1) {
               localD.lancamentos.push(lanc);
               _pendingImportados++;
             }
@@ -1782,8 +1783,14 @@ function inicializarFirebase() {
         _fbLatest = fbData.lancamentos.slice();
         var d = Object.assign({}, fbData); delete d._ts;
         var localNow = getDados();
+        var _delIds = localNow.deleted_ids || [];
+        // Preserva deleted_ids no dado mesclado
+        if (_delIds.length) d.deleted_ids = _delIds;
+        // Remove do Firebase entradas que foram deletadas localmente
+        d.lancamentos = d.lancamentos.filter(function(l){ return _delIds.indexOf(l.id) === -1; });
+        // Adiciona entradas locais que não estão no Firebase (exceto deletadas)
         localNow.lancamentos.forEach(function(l) {
-          if (l.id && !d.lancamentos.some(function(fl){ return fl.id === l.id; })) {
+          if (l.id && !d.lancamentos.some(function(fl){ return fl.id === l.id; }) && _delIds.indexOf(l.id) === -1) {
             d.lancamentos.push(l);
           }
         });
@@ -1899,10 +1906,11 @@ function salvarDados(d) {
     if (_fbAtivo && _fbRef) {
       _fbSalvando = true;
       syncStatus('#ffb300', 'salvando...');
-      // Mesclar com _fbLatest para nunca apagar entradas que existem só no Firebase
+      // Mesclar com _fbLatest respeitando exclusões intencionais
+      var _deletedIds = d.deleted_ids || [];
       var merged = d.lancamentos ? d.lancamentos.slice() : [];
       _fbLatest.forEach(function(l) {
-        if (l.id && !merged.some(function(ml){ return ml.id === l.id; })) {
+        if (l.id && !merged.some(function(ml){ return ml.id === l.id; }) && _deletedIds.indexOf(l.id) === -1) {
           merged.push(l);
         }
       });
@@ -4212,6 +4220,8 @@ function excluir(id) {
   var l = d.lancamentos.find(function(x){ return x.id === id; });
   if (!l) return;
 
+  var idsRemovidos = [];
+
   if (l.parcela) {
     var restantes = d.lancamentos.filter(function(x) {
       return x.parcela && x.parcela.grupoId === l.parcela.grupoId && x.parcela.n >= l.parcela.n;
@@ -4221,6 +4231,9 @@ function excluir(id) {
               'Cancelar → Excluir só esta parcela';
     var excluirTodas = confirm(msg);
     if (excluirTodas) {
+      idsRemovidos = d.lancamentos.filter(function(x) {
+        return x.parcela && x.parcela.grupoId === l.parcela.grupoId && x.parcela.n >= l.parcela.n;
+      }).map(function(x){ return x.id; });
       d.lancamentos = d.lancamentos.filter(function(x) {
         if (!x.parcela || x.parcela.grupoId !== l.parcela.grupoId) return true;
         return x.parcela.n < l.parcela.n;
@@ -4228,16 +4241,26 @@ function excluir(id) {
       mostrarToast('🗑️', restantes + ' parcela(s) excluída(s)');
       enviarNotifExclusao(l, true, restantes);
     } else {
+      idsRemovidos = [id];
       d.lancamentos = d.lancamentos.filter(function(x){ return x.id !== id; });
       mostrarToast('🗑️', 'Parcela ' + l.parcela.n + '/' + l.parcela.total + ' excluída');
       enviarNotifExclusao(l, false, 1);
     }
   } else {
     if (!confirm('Excluir este lançamento?')) return;
+    idsRemovidos = [id];
     d.lancamentos = d.lancamentos.filter(function(x){ return x.id !== id; });
     mostrarToast('🗑️', 'Excluído');
     enviarNotifExclusao(l, false, 1);
   }
+
+  // Registra IDs deletados para que o sync Firebase não os restaure
+  if (!d.deleted_ids) d.deleted_ids = [];
+  idsRemovidos.forEach(function(did){
+    if (d.deleted_ids.indexOf(did) === -1) d.deleted_ids.push(did);
+  });
+  if (d.deleted_ids.length > 500) d.deleted_ids = d.deleted_ids.slice(-500);
+
   salvarDados(d);
   renderizar();
 }
