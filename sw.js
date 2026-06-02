@@ -1,8 +1,7 @@
-const CACHE = 'gastos-v116';
+const CACHE = 'gastos-v117';
 
 const CORE_ASSETS = [
   './index.html',
-  './travel.html',
   './manifest.json',
 ];
 
@@ -44,9 +43,9 @@ self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   const url = e.request.url;
 
-  // version.json — sempre da rede, nunca do cache
-  if (url.includes('version.json')) {
-    e.respondWith(fetch(e.request, { cache: 'no-store' }).catch(() => new Response('{"v":0}', { status: 200 })));
+  // version.json e travel.html — sempre da rede, nunca do cache
+  if (url.includes('version.json') || url.includes('travel.html')) {
+    e.respondWith(fetch(e.request, { cache: 'no-store' }).catch(() => caches.match(e.request)));
     return;
   }
 

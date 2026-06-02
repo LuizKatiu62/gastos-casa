@@ -1761,7 +1761,7 @@ function renderHistorySection(){
   window.addEventListener('pagehide',saveState);
 
   // Version check — fetch version.json (always network) and reload if behind
-  var _myV='116';
+  var _myV='117';
   var _reloadedFor=sessionStorage.getItem('_tpReload');
   if(_reloadedFor!==_myV){
     fetch('./version.json',{cache:'no-store'})
