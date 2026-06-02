@@ -975,6 +975,8 @@ function destCostBoxContent(d){
   var editPanel=d.editOpen
     ?'<div class="cost-edit-panel">'+
       '<div class="cost-edit-title">✏️ Atualizar valores reais</div>'+
+      '<div class="cost-edit-row"><label>🌙 Número de noites</label>'+
+      '<input type="text" id="de-nights" value="'+d.nights+'" inputmode="numeric" placeholder="ex: 3"></div>'+
       '<div class="cost-edit-row"><label>🏨 Hotel ($/quarto/noite)</label>'+
       '<input type="text" id="de-hotel" value="'+hotelRate+'" inputmode="decimal" placeholder="ex: 155"></div>'+
       '<div class="cost-edit-row"><label>☕ Café da manhã ($/pessoa — 0 se incluso)</label>'+
@@ -1020,7 +1022,9 @@ function toggleDestEdit(){
 function applyDestEdits(){
   if(!_destData) return;
   function pn(id){ return parseFloat(document.getElementById(id).value.replace(',','.')); }
+  var nights=parseInt(document.getElementById('de-nights').value);
   var hr=pn('de-hotel'), bf=pn('de-bf'), lu=pn('de-lu'), di=pn('de-di'), sn=pn('de-sn');
+  if(!isNaN(nights)&&nights>0) _destData.nights=nights;
   if(!isNaN(hr)&&hr>=0) _destData.hotelRate=hr;
   if(!isNaN(bf)&&bf>=0) _destData.breakfastRate=bf;
   if(!isNaN(lu)&&lu>=0) _destData.lunchRate=lu;
