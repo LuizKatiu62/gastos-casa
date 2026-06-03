@@ -322,7 +322,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Sego
     <div class="hero-badge">✈️ &nbsp; Trip Planner</div>
     <div class="hero-title">Plan Your Perfect Trip</div>
     <div class="hero-sub">Routes · Hotels · Dining · Events · Budget</div>
-    <div style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v159</div>
+    <div style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v160</div>
   </div>
 </div>
 
@@ -906,6 +906,7 @@ async function calculateRoute(){
   document.getElementById('rt-results-content').innerHTML=buildRTHTML(_rtData);
   updateOverviewTab();
   saveState();
+  syncActiveStateToFirebase();
 
   for(const s of stops){
     await rtSleep(1100);
@@ -1606,6 +1607,7 @@ async function planTrip(){
   _destView='results';
   updateOverviewTab();
   saveState();
+  syncActiveStateToFirebase();
   document.getElementById('form-section').classList.add('hidden');
   document.getElementById('results-section').classList.remove('hidden');
   document.querySelectorAll('#results-section .sec-body').forEach(function(b){
@@ -1998,6 +2000,7 @@ function loadHistoryEntry(id){
   }
   updateOverviewTab();
   saveState();
+  syncActiveStateToFirebase();
   switchTab(entry.rtData?'rt':'dest');
   window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -2058,7 +2061,7 @@ function renderHistorySection(){
   });
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='159';
+  var _myV='160';
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
     .then(function(r){return r.json();})
     .then(function(d){
@@ -2332,7 +2335,7 @@ function buildDashboardHTML(rd, dd){
 }
 
 // ── FIREBASE TRIP SYNC ───────────────────────────────────────────────────────
-var _tvRef=null, _tvSaving=false;
+var _tvRef=null, _tvSaving=false, _activeStateRef=null;
 var _TV_CFG={apiKey:'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU',databaseURL:'https://gastos-casa-7f431-default-rtdb.firebaseio.com'};
 var _TV_SEC='lk62-gastos-9f3a7b2e';
 
@@ -2348,12 +2351,21 @@ function syncTripsToFirebase(){
   var obj={};_tvTrips().forEach(function(t){obj[t.id]=t;});
   _tvRef.set(obj).then(function(){_tvSaving=false;}).catch(function(){_tvSaving=false;});
 }
+function syncActiveStateToFirebase(){
+  if(!_activeStateRef) return;
+  try{
+    var state={rtView:_rtView,destView:_destView,rtData:_rtData,destData:_destData,
+      activeTab:_activeTab,fields:_captureFields(),savedAt:new Date().toISOString()};
+    _activeStateRef.set(state).catch(function(){});
+  }catch(e){}
+}
 function initTripSync(){
   try{
     var app;
     try{app=firebase.app('tv');}catch(e){}
     if(!app)app=firebase.initializeApp(_TV_CFG,'tv');
     _tvRef=firebase.database(app).ref('gastos/'+_TV_SEC+'/trips');
+    _activeStateRef=firebase.database(app).ref('gastos/'+_TV_SEC+'/activeState');
     _tvRef.once('value').then(function(snap){
       var fb=snap.val();
       if(fb&&typeof fb==='object'){
@@ -2377,6 +2389,27 @@ function initTripSync(){
         }
       } else {
         syncTripsToFirebase();
+      }
+      // If still no active data, try to restore from Firebase activeState backup
+      if(!_rtData&&!_destData&&_activeStateRef){
+        _activeStateRef.once('value').then(function(stSnap){
+          var fbS=stSnap.val();
+          if(!fbS||(fbS.rtData===null&&fbS.destData===null)) return;
+          if(fbS.rtData||fbS.destData){
+            try{_applyFields(fbS.fields);}catch(e){}
+            try{onPurposeChange();}catch(e){}
+            if(fbS.rtData){
+              _rtData=fbS.rtData; _rtView='results';
+              try{document.getElementById('rt-results-content').innerHTML=buildRTHTML(_rtData);}catch(e){}
+            }
+            if(fbS.destData&&fbS.fields){
+              try{replayLocalTrip(fbS.fields,fbS.destData);}catch(e){}
+            }
+            saveState();
+            updateOverviewTab();
+            switchTab((_rtData&&_rtView==='results')?'rt':(fbS.activeTab||'rt'));
+          }
+        }).catch(function(){});
       }
       // real-time listener
       _tvRef.on('value',function(snap){
