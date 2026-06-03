@@ -977,7 +977,7 @@ function refreshExpenses(){
 // ── LOCAL TRIP COST BOX ───────────────────────────────────────────────────────
 function destCostBoxContent(d){
   if(!d||!d.nights) return '';
-  var rooms=Math.ceil((d.travelers||2)/2);
+  var rooms=d.rooms!=null?d.rooms:Math.ceil((d.travelers||2)/2);
   var hotelRate=d.hotelRate!=null?d.hotelRate:(d.budget==='luxury'?225:d.budget==='moderate'?155:95);
   var hotelTotal=d.nights*hotelRate*rooms;
   var bf=(d.breakfastRate==null?15:d.breakfastRate), lu=(d.lunchRate==null?20:d.lunchRate), di=(d.dinnerRate==null?35:d.dinnerRate), sn=(d.snacksRate==null?10:d.snacksRate);
@@ -992,6 +992,8 @@ function destCostBoxContent(d){
       '<div class="cost-edit-title">✏️ Update actual values</div>'+
       '<div class="cost-edit-row"><label>🌙 Number of nights</label>'+
       '<input type="text" id="de-nights" value="'+d.nights+'" inputmode="numeric" placeholder="e.g. 3"></div>'+
+      '<div class="cost-edit-row"><label>🛏️ Number of rooms</label>'+
+      '<input type="text" id="de-rooms" value="'+rooms+'" inputmode="numeric" placeholder="e.g. 1"></div>'+
       '<div class="cost-edit-row"><label>🏨 Hotel ($/room/night)</label>'+
       '<input type="text" id="de-hotel" value="'+hotelRate+'" inputmode="decimal" placeholder="e.g. 155"></div>'+
       '<div class="cost-edit-row"><label>☕ Breakfast ($/person — 0 if included)</label>'+
@@ -1038,8 +1040,10 @@ function applyDestEdits(){
   if(!_destData) return;
   function pn(id){ return parseFloat(document.getElementById(id).value.replace(',','.')); }
   var nights=parseInt(document.getElementById('de-nights').value);
+  var rm=parseInt(document.getElementById('de-rooms').value);
   var hr=pn('de-hotel'), bf=pn('de-bf'), lu=pn('de-lu'), di=pn('de-di'), sn=pn('de-sn');
   if(!isNaN(nights)&&nights>0) _destData.nights=nights;
+  if(!isNaN(rm)&&rm>0) _destData.rooms=rm;
   if(!isNaN(hr)&&hr>=0) _destData.hotelRate=hr;
   if(!isNaN(bf)&&bf>=0) _destData.breakfastRate=bf;
   if(!isNaN(lu)&&lu>=0) _destData.lunchRate=lu;
@@ -1060,7 +1064,7 @@ function buildEstTotalHTML(rd, dd){
   }
   if(dd&&dd.nights){
     // Use exact same formula as destCostBoxContent so values always match
-    var rooms=Math.ceil((dd.travelers||2)/2);
+    var rooms=dd.rooms!=null?dd.rooms:Math.ceil((dd.travelers||2)/2);
     var hotelRate=dd.hotelRate!=null?dd.hotelRate:(dd.budget==='luxury'?225:dd.budget==='moderate'?155:95);
     var ht=dd.nights*hotelRate*rooms;
     var bf=(dd.breakfastRate==null?15:dd.breakfastRate);
@@ -1893,7 +1897,7 @@ function renderHistorySection(){
   window.addEventListener('pagehide',saveState);
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='129';
+  var _myV='130';
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
     .then(function(r){return r.json();})
     .then(function(d){
