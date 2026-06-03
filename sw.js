@@ -1,4 +1,4 @@
-const CACHE = 'gastos-v165';
+const CACHE = 'gastos-v166';
 
 const CORE_ASSETS = [
   './index.html',
@@ -63,8 +63,8 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // Firebase / Firestore — sempre rede
-  if (url.includes('firebaseio.com') || url.includes('firebase.googleapis.com') || url.includes('firebaseapp.com')) {
+  // Firebase / auth APIs — sempre rede
+  if (url.includes('firebaseio.com') || url.includes('googleapis.com') || url.includes('firebaseapp.com')) {
     e.respondWith(fetch(e.request).catch(() => new Response('', { status: 503 })));
     return;
   }
@@ -83,7 +83,7 @@ self.addEventListener('fetch', e => {
   }
 
   // External CDN — cache-first
-  const isExt = url.includes('gstatic.com') || url.includes('googleapis.com') || url.includes('cloudflare.com');
+  const isExt = url.includes('gstatic.com') || url.includes('cloudflare.com');
   if (isExt) {
     e.respondWith(
       caches.match(e.request).then(cached => {

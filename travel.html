@@ -310,6 +310,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Sego
 #tv-toast.show{transform:translateX(-50%) translateY(0);opacity:1}
 </style>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
 <body>
@@ -325,7 +326,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Sego
     <div class="hero-badge">✈️ &nbsp; Trip Planner</div>
     <div class="hero-title">Plan Your Perfect Trip</div>
     <div class="hero-sub">Routes · Hotels · Dining · Events · Budget</div>
-    <div style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v165</div>
+    <div style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v166</div>
   </div>
 </div>
 
@@ -2079,14 +2080,14 @@ function renderHistorySection(){
   initTripSync();
   // Safety net: re-check Overview visibility after Firebase async init settles
   setTimeout(updateOverviewTab, 1500);
-  window.addEventListener('pagehide',saveState);
+  window.addEventListener('pagehide',function(){ saveState(); syncActiveStateToFirebase(); });
   // visibilitychange fires more reliably than pagehide on iOS PWA
   document.addEventListener('visibilitychange',function(){
-    if(document.visibilityState==='hidden') saveState();
+    if(document.visibilityState==='hidden'){ saveState(); syncActiveStateToFirebase(); }
   });
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='165';
+  var _myV='166';
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
     .then(function(r){return r.json();})
     .then(function(d){
@@ -2361,7 +2362,7 @@ function buildDashboardHTML(rd, dd){
 
 // ── FIREBASE TRIP SYNC ───────────────────────────────────────────────────────
 var _tvRef=null, _tvSaving=false, _activeStateRef=null;
-var _TV_CFG={apiKey:'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU',databaseURL:'https://gastos-casa-7f431-default-rtdb.firebaseio.com'};
+var _TV_CFG={apiKey:'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU',authDomain:'gastos-casa-7f431.firebaseapp.com',databaseURL:'https://gastos-casa-7f431-default-rtdb.firebaseio.com'};
 var _TV_SEC='lk62-gastos-9f3a7b2e';
 
 function _tvTrips(){
@@ -2384,6 +2385,70 @@ function syncActiveStateToFirebase(){
     _activeStateRef.set(state).catch(function(){});
   }catch(e){}
 }
+function _fbShowErr(msg){
+  var el=document.getElementById('rt-history-list'),wrap=document.getElementById('rt-history-wrap');
+  if(el&&wrap&&!_rtData&&!_destData){wrap.style.display='block';el.innerHTML='<div style="text-align:center;padding:12px;color:#dc2626;font-size:12px">'+msg+'</div>';}
+}
+function _fbDoSync(syncRestored){
+  // Always push current active state to Firebase as soon as we have auth
+  if(_rtData||_destData) syncActiveStateToFirebase();
+
+  // ── ACTIVE STATE (fast path) — parallel with trips ───────────────────────
+  _activeStateRef.once('value').then(function(stSnap){
+    if(syncRestored[0]||_rtData||_destData) return;
+    var fbS=stSnap.val();
+    if(!fbS||(!fbS.rtData&&!fbS.destData)) return;
+    syncRestored[0]=true;
+    try{_applyFields(fbS.fields);}catch(e){}
+    try{onPurposeChange();}catch(e){}
+    if(fbS.rtData){
+      _rtData=fbS.rtData; _rtView='results';
+      try{document.getElementById('rt-results-content').innerHTML=buildRTHTML(_rtData);}catch(e){}
+    }
+    if(fbS.destData&&fbS.fields){ try{replayLocalTrip(fbS.fields,fbS.destData);}catch(e){} }
+    saveState(); updateOverviewTab();
+    switchTab((_rtData&&_rtView==='results')?'rt':(fbS.activeTab||'rt'));
+    showToast('☁️ Viagem restaurada da nuvem',3500);
+  }).catch(function(e){ console.warn('activeState:',e&&e.code); });
+
+  // ── TRIPS HISTORY ────────────────────────────────────────────────────────
+  _tvRef.once('value').then(function(snap){
+    var fb=snap.val();
+    if(fb&&typeof fb==='object'){
+      var fbArr=Object.values(fb);
+      var local=_tvTrips(), changed=false;
+      fbArr.forEach(function(ft){
+        if(ft&&ft.id&&!local.some(function(lt){return lt.id===ft.id;})){ local.push(ft); changed=true; }
+      });
+      if(changed){ local.sort(function(a,b){return (b.id||0)-(a.id||0);}); _tvSave(local); }
+      renderHistorySection();
+      if(!syncRestored[0]&&!_rtData&&!_destData&&fbArr.length){
+        syncRestored[0]=true;
+        var newest=fbArr.sort(function(a,b){return (b.id||0)-(a.id||0);})[0];
+        if(newest&&newest.id){ loadHistoryEntry(newest.id); showToast('☁️ Viagem restaurada da nuvem',3500); }
+      }
+    } else {
+      if(_tvTrips().length) syncTripsToFirebase();
+      renderHistorySection();
+    }
+    // real-time listener for cross-device sync
+    _tvRef.on('value',function(snap){
+      if(_tvSaving)return;
+      var fb=snap.val(); if(!fb||typeof fb!=='object')return;
+      var fbArr=Object.values(fb), local=_tvTrips(), changed=false;
+      fbArr.forEach(function(ft){
+        if(ft&&ft.id&&!local.some(function(lt){return lt.id===ft.id;})){ local.push(ft); changed=true; }
+      });
+      var fbIds=fbArr.map(function(t){return t&&t.id;});
+      var before=local.length;
+      local=local.filter(function(lt){return fbIds.indexOf(lt.id)!==-1;});
+      if(local.length!==before) changed=true;
+      if(changed){ local.sort(function(a,b){return (b.id||0)-(a.id||0);}); _tvSave(local); renderHistorySection(); }
+    });
+  }).catch(function(e){
+    _fbShowErr('⚠️ Firebase: '+(e&&e.code||'erro')+'.<br>Verifique conexão e tente o Update.');
+  });
+}
 function initTripSync(){
   try{
     var app;
@@ -2392,10 +2457,6 @@ function initTripSync(){
     _tvRef=firebase.database(app).ref('gastos/'+_TV_SEC+'/trips');
     _activeStateRef=firebase.database(app).ref('gastos/'+_TV_SEC+'/activeState');
 
-    // Always push current active state to Firebase the moment we connect —
-    // this keeps the backup fresh even when the user only browses (never recalculates)
-    if(_rtData||_destData) syncActiveStateToFirebase();
-
     // Show loading indicator whenever there is no active trip yet
     if(!_rtData&&!_destData){
       var _ldEl=document.getElementById('rt-history-list');
@@ -2403,82 +2464,20 @@ function initTripSync(){
       if(_ldEl&&_ldWrap){_ldWrap.style.display='block';_ldEl.innerHTML='<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px">☁️ Buscando viagens salvas...</div>';}
     }
 
-    // Guard: prevent double-restore if both activeState and trips respond around the same time
-    var _syncRestored=false;
-
-    // ── ACTIVE STATE (fast path) — fetched in parallel with trips ────────────
-    _activeStateRef.once('value').then(function(stSnap){
-      if(_syncRestored||_rtData||_destData) return; // already restored
-      var fbS=stSnap.val();
-      if(!fbS||(!fbS.rtData&&!fbS.destData)) return;
-      _syncRestored=true;
-      try{_applyFields(fbS.fields);}catch(e){}
-      try{onPurposeChange();}catch(e){}
-      if(fbS.rtData){
-        _rtData=fbS.rtData; _rtView='results';
-        try{document.getElementById('rt-results-content').innerHTML=buildRTHTML(_rtData);}catch(e){}
-      }
-      if(fbS.destData&&fbS.fields){ try{replayLocalTrip(fbS.fields,fbS.destData);}catch(e){} }
-      saveState();
-      updateOverviewTab();
-      switchTab((_rtData&&_rtView==='results')?'rt':(fbS.activeTab||'rt'));
-      showToast('☁️ Viagem restaurada da nuvem',3500);
-    }).catch(function(){});
-
-    // ── TRIPS HISTORY ─────────────────────────────────────────────────────────
-    _tvRef.once('value').then(function(snap){
-      var fb=snap.val();
-      if(fb&&typeof fb==='object'){
-        var fbArr=Object.values(fb);
-        var local=_tvTrips();
-        var changed=false;
-        fbArr.forEach(function(ft){
-          if(ft&&ft.id&&!local.some(function(lt){return lt.id===ft.id;})){
-            local.push(ft);changed=true;
-          }
+    var _sr=[false]; // syncRestored flag (array so inner functions share reference)
+    // Sign in anonymously if not already authenticated — required for Firebase DB access
+    var auth=firebase.auth(app);
+    if(auth.currentUser){
+      _fbDoSync(_sr);
+    } else {
+      auth.signInAnonymously()
+        .then(function(){ _fbDoSync(_sr); })
+        .catch(function(e){
+          console.warn('anon auth failed:',e&&e.code);
+          _fbDoSync(_sr); // try anyway (rules might be open)
         });
-        if(changed){ local.sort(function(a,b){return (b.id||0)-(a.id||0);}); _tvSave(local); }
-        renderHistorySection();
-        // Auto-load newest trip only if nothing was restored yet
-        if(!_syncRestored&&!_rtData&&!_destData&&fbArr.length){
-          _syncRestored=true;
-          var newest=fbArr.sort(function(a,b){return (b.id||0)-(a.id||0);})[0];
-          if(newest&&newest.id){
-            loadHistoryEntry(newest.id);
-            showToast('☁️ Viagem restaurada da nuvem',3500);
-          }
-        }
-      } else {
-        // Local trips exist but Firebase is empty — upload them
-        if(_tvTrips().length) syncTripsToFirebase();
-        renderHistorySection();
-      }
-      // real-time listener for cross-device sync
-      _tvRef.on('value',function(snap){
-        if(_tvSaving)return;
-        var fb=snap.val();
-        if(!fb||typeof fb!=='object')return;
-        var fbArr=Object.values(fb);
-        var local=_tvTrips();
-        var changed=false;
-        fbArr.forEach(function(ft){
-          if(ft&&ft.id&&!local.some(function(lt){return lt.id===ft.id;})){
-            local.push(ft);changed=true;
-          }
-        });
-        // also remove locally any trip deleted on another device
-        var fbIds=fbArr.map(function(t){return t&&t.id;});
-        var before=local.length;
-        local=local.filter(function(lt){return fbIds.indexOf(lt.id)!==-1;});
-        if(local.length!==before)changed=true;
-        if(changed){
-          local.sort(function(a,b){return (b.id||0)-(a.id||0);});
-          _tvSave(local);
-          renderHistorySection();
-        }
-      });
-    }).catch(function(){});
-  }catch(e){}
+    }
+  }catch(e){ console.warn('initTripSync:',e); }
 }
 
 async function forceUpdate(){
