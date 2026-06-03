@@ -322,7 +322,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Sego
     <div class="hero-badge">✈️ &nbsp; Trip Planner</div>
     <div class="hero-title">Plan Your Perfect Trip</div>
     <div class="hero-sub">Routes · Hotels · Dining · Events · Budget</div>
-    <div style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v152</div>
+    <div style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v153</div>
   </div>
 </div>
 
@@ -2004,7 +2004,7 @@ function renderHistorySection(){
   });
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='152';
+  var _myV='153';
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
     .then(function(r){return r.json();})
     .then(function(d){
@@ -2315,6 +2315,11 @@ function initTripSync(){
           local.sort(function(a,b){return (b.id||0)-(a.id||0);});
           _tvSave(local);
           renderHistorySection();
+        }
+        // Auto-load the most recent trip if this device has no active trip data
+        if(!_rtData&&!_destData&&fbArr.length){
+          var newest=fbArr.sort(function(a,b){return (b.id||0)-(a.id||0);})[0];
+          if(newest&&newest.id) loadHistoryEntry(newest.id);
         }
       } else {
         syncTripsToFirebase();
