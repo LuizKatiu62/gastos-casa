@@ -322,7 +322,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Sego
     <div class="hero-badge">✈️ &nbsp; Trip Planner</div>
     <div class="hero-title">Plan Your Perfect Trip</div>
     <div class="hero-sub">Routes · Hotels · Dining · Events · Budget</div>
-    <div style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v151</div>
+    <div style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v152</div>
   </div>
 </div>
 
@@ -1991,10 +1991,10 @@ function renderHistorySection(){
   document.getElementById('f-checkout').value=tomorrow;
   calcDays();
   var restored=restoreState();
-  updateOverviewTab();
   // If RT results exist always open on Road Trip so user sees their route immediately
   var startTab=(_rtData&&_rtView==='results')?'rt':(restored?_activeTab:'rt');
   switchTab(startTab);
+  updateOverviewTab();
   renderHistorySection();
   initTripSync();
   window.addEventListener('pagehide',saveState);
@@ -2004,7 +2004,7 @@ function renderHistorySection(){
   });
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='151';
+  var _myV='152';
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
     .then(function(r){return r.json();})
     .then(function(d){
@@ -2348,6 +2348,7 @@ function initTripSync(){
 }
 
 async function forceUpdate(){
+  saveState(); // persist current state BEFORE any cache/SW operation
   try{
     if(navigator.serviceWorker){
       const regs=await navigator.serviceWorker.getRegistrations();
@@ -2358,7 +2359,7 @@ async function forceUpdate(){
       await Promise.all(keys.map(k=>caches.delete(k)));
     }
   }catch(e){}
-  window.location.replace('./travel.html?_nc='+Date.now()+'&_v=147');
+  window.location.replace('./travel.html?_nc='+Date.now());
 }
 </script>
 </body>
