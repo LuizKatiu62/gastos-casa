@@ -322,7 +322,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Sego
     <div class="hero-badge">✈️ &nbsp; Trip Planner</div>
     <div class="hero-title">Plan Your Perfect Trip</div>
     <div class="hero-sub">Routes · Hotels · Dining · Events · Budget</div>
-    <div style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v162</div>
+    <div style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v163</div>
   </div>
 </div>
 
@@ -2074,7 +2074,7 @@ function renderHistorySection(){
   });
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='162';
+  var _myV='163';
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
     .then(function(r){return r.json();})
     .then(function(d){
@@ -2379,6 +2379,12 @@ function initTripSync(){
     if(!app)app=firebase.initializeApp(_TV_CFG,'tv');
     _tvRef=firebase.database(app).ref('gastos/'+_TV_SEC+'/trips');
     _activeStateRef=firebase.database(app).ref('gastos/'+_TV_SEC+'/activeState');
+    // Show loading indicator while Firebase connects (only if local history is empty)
+    if(!_tvTrips().length){
+      var el=document.getElementById('rt-history-list');
+      var wrap=document.getElementById('rt-history-wrap');
+      if(el&&wrap){wrap.style.display='block';el.innerHTML='<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px">☁️ Buscando viagens salvas...</div>';}
+    }
     _tvRef.once('value').then(function(snap){
       var fb=snap.val();
       if(fb&&typeof fb==='object'){
@@ -2394,6 +2400,8 @@ function initTripSync(){
           local.sort(function(a,b){return (b.id||0)-(a.id||0);});
           _tvSave(local);
           renderHistorySection();
+        } else {
+          renderHistorySection(); // clear the loading message even if no changes
         }
         // Auto-load the most recent trip if this device has no active trip data
         if(!_rtData&&!_destData&&fbArr.length){
@@ -2402,6 +2410,7 @@ function initTripSync(){
         }
       } else {
         syncTripsToFirebase();
+        renderHistorySection(); // clear loading message
       }
       // If still no active data, try to restore from Firebase activeState backup
       if(!_rtData&&!_destData&&_activeStateRef){
