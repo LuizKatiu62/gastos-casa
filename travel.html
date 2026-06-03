@@ -322,7 +322,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Sego
     <div class="hero-badge">✈️ &nbsp; Trip Planner</div>
     <div class="hero-title">Plan Your Perfect Trip</div>
     <div class="hero-sub">Routes · Hotels · Dining · Events · Budget</div>
-    <div style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v150</div>
+    <div style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v151</div>
   </div>
 </div>
 
@@ -1876,14 +1876,15 @@ function restoreState(){
   if(!s) return false;
   try{_applyFields(s.fields);}catch(e){}
   try{onPurposeChange();}catch(e){}
-  _rtView=s.rtView||'form';
   _destView=s.destView||'form';
   _activeTab=s.activeTab||'rt';
   if(s.rtData){
     _rtData=s.rtData;
-    if(_rtView==='results'){
-      try{document.getElementById('rt-results-content').innerHTML=buildRTHTML(_rtData);}catch(e){_rtView='form';}
-    }
+    // Always try to show results if we have data — ignore saved rtView
+    _rtView='results';
+    try{document.getElementById('rt-results-content').innerHTML=buildRTHTML(_rtData);}catch(e){_rtView='form';}
+  } else {
+    _rtView='form';
   }
   if(_destView==='results'){
     try{var ok=replayLocalTrip(s.fields,s.destData);if(!ok)_destView='form';}catch(e){_destView='form';}
@@ -2003,7 +2004,7 @@ function renderHistorySection(){
   });
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='150';
+  var _myV='151';
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
     .then(function(r){return r.json();})
     .then(function(d){
@@ -2018,7 +2019,7 @@ function renderHistorySection(){
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('./sw.js').catch(function(){});
     navigator.serviceWorker.addEventListener('message',function(e){
-      if(e.data&&e.data.type==='SW_UPDATED') window.location.reload();
+      if(e.data&&e.data.type==='SW_UPDATED'){saveState();window.location.reload();}
     });
   }
 
