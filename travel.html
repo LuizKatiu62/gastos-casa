@@ -342,7 +342,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Sego
     <div class="hero-badge">✈️ &nbsp; Trip Planner</div>
     <div class="hero-title">Plan Your Perfect Trip</div>
     <div class="hero-sub">Routes · Hotels · Dining · Events · Budget</div>
-    <div id="tv-ver" style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v177</div>
+    <div id="tv-ver" style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v178</div>
   </div>
 </div>
 
@@ -1767,11 +1767,11 @@ function buildFoodCards(foods,city,state,locShort,nearAnchor){
     const ico=foodEmojis[food]||'🍽️';
     const cost=foodCosts[food]||'~$15–30/person';
     const mapsQ=qsMaps(food+' restaurants near '+nearAnchor);
-    const yelpQ='find_desc='+qs(food+' restaurants')+'&find_loc='+qs(nearAnchor);
     const taQ=qs(food+' restaurants near '+nearAnchor);
+    const forkQ=qs(food)+'/'+qs(city+(state?'-'+state:''));
     const mapsFoodUrl='https://www.google.com/maps/search/'+mapsQ;
-    const yelpFoodUrl='https://www.yelp.com/search?'+yelpQ;
     const taFoodUrl='https://www.tripadvisor.com/Search?q='+taQ;
+    const forkUrl='https://www.thefork.ca/restaurants/'+forkQ;
     return '<div class="link-card" onclick="window.open(\''+mapsFoodUrl+'\',\'_blank\')">'+
       '<span class="lc-ico">'+ico+'</span>'+
       '<div class="lc-main">'+
@@ -1779,7 +1779,7 @@ function buildFoodCards(foods,city,state,locShort,nearAnchor){
       '<div class="lc-cost">'+cost+'</div>'+
       '<div class="lc-desc" style="margin-top:3px">'+
       '<span onclick="event.stopPropagation();window.open(\''+mapsFoodUrl+'\',\'_blank\')" style="color:var(--teal);font-weight:700;cursor:pointer;margin-right:10px">🗺 Maps</span>'+
-      '<span onclick="event.stopPropagation();window.open(\''+yelpFoodUrl+'\',\'_blank\')" style="color:#d32323;font-weight:700;cursor:pointer;margin-right:10px">⭐ Yelp</span>'+
+      '<span onclick="event.stopPropagation();window.open(\''+forkUrl+'\',\'_blank\')" style="color:#e8732a;font-weight:700;cursor:pointer;margin-right:10px">🍴 TheFork</span>'+
       '<span onclick="event.stopPropagation();window.open(\''+taFoodUrl+'\',\'_blank\')" style="color:#00aa6c;font-weight:700;cursor:pointer">🌿 TripAdvisor</span>'+
       '</div></div>'+
       '<button class="lc-btn" onclick="event.stopPropagation();window.open(\''+mapsFoodUrl+'\',\'_blank\')">Search →</button></div>';
@@ -1825,20 +1825,22 @@ function buildEventCards(city,state,country,locShort,purpose,evtName,checkin){
 // ── PARKING CARDS ─────────────────────────────────────────────────────────────
 function buildParkingCards(city,state,locShort,nearAnchor){
   const mapsQ=qsMaps('parking near '+nearAnchor);
+  const mapsGarageQ=qsMaps('parking garage near '+nearAnchor);
   const nearQ=qs(nearAnchor);
+  const fullLocQ=qs(nearAnchor+(state?', '+state:''));
   const cards=[
-    {ico:'🗺️',name:'Google Maps',tag:'tag-free',tagLbl:'Free',cost:'Free to search',
-     desc:'Find all parking near '+nearAnchor+' with prices & availability',
-     url:'https://www.google.com/maps/search/'+mapsQ},
-    {ico:'🅿️',name:'SpotHero',tag:'tag-cheap',tagLbl:'Discounted',cost:'From ~$5–20/day',
-     desc:'Reserve parking near '+nearAnchor+' — up to 50% off drive-up rates',
-     url:'https://spothero.com/search?q='+nearQ},
-    {ico:'🚗',name:'ParkWhiz',tag:'tag-cheap',tagLbl:'Reserve now',cost:'From ~$8–25/day',
-     desc:'Compare garages & lots near '+nearAnchor+' — book ahead to save',
-     url:'https://www.parkwhiz.com/search/?q='+nearQ},
-    {ico:'📱',name:'ParkMe',tag:'tag-free',tagLbl:'Real-time',cost:'Rates vary by location',
-     desc:'Real-time parking availability near '+nearAnchor,
-     url:'https://en.parkme.com/lot/search?q='+nearQ},
+    {ico:'🗺️',name:'Google Maps — Parking',tag:'tag-free',tagLbl:'Best',cost:'Free to search',
+     desc:'All parking lots & garages near '+nearAnchor+' with prices & real-time availability',
+     url:'https://www.google.com/maps/search/parking+near+'+mapsQ},
+    {ico:'🏢',name:'Google Maps — Garages',tag:'tag-cheap',tagLbl:'Indoor',cost:'Rates vary',
+     desc:'Indoor parking garages near '+nearAnchor,
+     url:'https://www.google.com/maps/search/'+mapsGarageQ},
+    {ico:'🅿️',name:'Parkopedia',tag:'tag-cheap',tagLbl:'Global',cost:'Compare rates',
+     desc:'Global parking directory — find & compare parking near '+nearAnchor,
+     url:'https://en.parkopedia.ca/parking/?q='+fullLocQ},
+    {ico:'🔍',name:'Google Search',tag:'tag-free',tagLbl:'Local info',cost:'Free',
+     desc:'Search parking options & street parking info near '+nearAnchor,
+     url:'https://www.google.com/search?q=parking+near+'+qs(nearAnchor)},
   ];
   return cards.map(function(c){
     return '<div class="link-card" onclick="window.open(\''+c.url+'\',\'_blank\')">'+
@@ -2596,7 +2598,7 @@ async function forceUpdate(){
   });
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='177';
+  var _myV='178';
   var _verEl=document.getElementById('tv-ver');
   if(_verEl) _verEl.textContent='v'+_myV;
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
