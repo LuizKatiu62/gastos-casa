@@ -322,7 +322,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Sego
     <div class="hero-badge">✈️ &nbsp; Trip Planner</div>
     <div class="hero-title">Plan Your Perfect Trip</div>
     <div class="hero-sub">Routes · Hotels · Dining · Events · Budget</div>
-    <div style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v156</div>
+    <div style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v157</div>
   </div>
 </div>
 
@@ -1440,7 +1440,7 @@ function clearRT(){
 }
 
 function newTrip(){
-  // Auto-save current trip before clearing (silent, no confirmation needed)
+  if(!window.confirm('Iniciar nova viagem? A viagem atual será salva automaticamente no histórico.')) return;
   var hasRT=!!_rtData;
   var hasDest=!!_destData&&!!(document.getElementById('f-city')&&document.getElementById('f-city').value.trim());
   if(hasRT||hasDest) saveTripToHistory(null);
@@ -1995,6 +1995,7 @@ function loadHistoryEntry(id){
     document.getElementById('results-section').classList.add('hidden');
     document.getElementById('form-section').classList.remove('hidden');
   }
+  updateOverviewTab();
   saveState();
   switchTab(entry.rtData?'rt':'dest');
   window.scrollTo({top:0,behavior:'smooth'});
@@ -2039,6 +2040,8 @@ function renderHistorySection(){
   updateOverviewTab();
   renderHistorySection();
   initTripSync();
+  // Safety net: re-check Overview visibility after Firebase async init settles
+  setTimeout(updateOverviewTab, 1500);
   window.addEventListener('pagehide',saveState);
   // visibilitychange fires more reliably than pagehide on iOS PWA
   document.addEventListener('visibilitychange',function(){
@@ -2046,7 +2049,7 @@ function renderHistorySection(){
   });
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='156';
+  var _myV='157';
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
     .then(function(r){return r.json();})
     .then(function(d){
