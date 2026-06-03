@@ -83,10 +83,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif}
 
 /* ── SECTION ── */
 .sec{margin-bottom:22px}
-.sec-header{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.sec-header{display:flex;align-items:center;gap:8px;margin-bottom:12px;cursor:pointer;user-select:none}
 .sec-icon{font-size:22px}
 .sec-title{font-size:16px;font-weight:800;color:var(--text)}
 .sec-count{font-size:11px;font-weight:700;color:var(--teal);background:#e0f2fe;border-radius:10px;padding:2px 8px}
+.sec-chevron{margin-left:auto;font-size:13px;color:var(--muted);transition:transform .2s}
+.sec-body{overflow:hidden;transition:max-height .3s ease}
 
 /* ── LINK CARDS ── */
 .link-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -1251,7 +1253,14 @@ function buildRTHTML(d){
 
   // Stops
   if(d.stops.length){
-    h+='<div class="sec"><div class="sec-header"><span class="sec-icon">🛑</span><span class="sec-title">Stops Along the Route</span><span class="sec-count">'+d.stops.length+'</span></div>';
+    h+='<div class="sec">'+
+      '<div class="sec-header" onclick="toggleStopsSection(this)">'+
+        '<span class="sec-icon">🛑</span>'+
+        '<span class="sec-title">Stops Along the Route</span>'+
+        '<span class="sec-count">'+d.stops.length+'</span>'+
+        '<span class="sec-chevron">▼</span>'+
+      '</div>'+
+      '<div class="sec-body" style="max-height:0">';
     d.stops.forEach(function(s){
       const lat5=s.lat.toFixed(5), lng5=s.lng.toFixed(5);
       const gmGas='https://www.google.com/maps/search/gas+stations/@'+lat5+','+lng5+',13z';
@@ -1278,7 +1287,7 @@ function buildRTHTML(d){
         '<div class="sl sl-wide" onclick="window.open(\''+gmRest+'\',\'_blank\')"><span class="sl-ico">🍽️</span><div><div class="sl-name">Restaurants on Google Maps</div><div class="sl-sub">Browse all options nearby</div></div></div>'+
         '</div></div>';
     });
-    h+='</div>';
+    h+='</div></div>';
   }
 
   h+='<div style="background:#e0f2fe;border-radius:12px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--teal2)">'+
@@ -1287,6 +1296,20 @@ function buildRTHTML(d){
   h+='<button onclick="saveTripToHistory()" style="display:block;width:100%;margin:0 0 8px;padding:14px;background:linear-gradient(135deg,#064e3b,#059669);color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(5,150,105,.3)">💾 &nbsp; Salvar Viagem no Histórico</button>';
   h+='<button class="btn-reset" onclick="resetRT()">← Edit Route</button>';
   return h;
+}
+
+function toggleStopsSection(hdr){
+  var body=hdr.nextElementSibling;
+  var chev=hdr.querySelector('.sec-chevron');
+  var open=body.style.maxHeight==='none'||parseInt(body.style.maxHeight)>0;
+  if(open){
+    body.style.maxHeight='0';
+    if(chev) chev.style.transform='';
+  } else {
+    body.style.maxHeight=body.scrollHeight+'px';
+    setTimeout(function(){body.style.maxHeight='none';},300);
+    if(chev) chev.style.transform='rotate(180deg)';
+  }
 }
 
 // ── RESET / CLEAR ─────────────────────────────────────────────────────────────
@@ -1792,7 +1815,7 @@ function renderHistorySection(){
   window.addEventListener('pagehide',saveState);
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='123';
+  var _myV='124';
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
     .then(function(r){return r.json();})
     .then(function(d){
