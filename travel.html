@@ -134,10 +134,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif}
 .tab-top{flex:1;padding:13px 8px;border:none;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;transition:background .15s}
 .tab-top:first-child{border-radius:14px 0 0 0}
 .tab-top:last-child{border-radius:0 14px 0 0}
-.tab-top.tab-green:not(.active){background:rgba(22,163,74,.48);color:#fff;border:1.5px solid rgba(255,255,255,.35)}
+.tab-top.tab-green:not(.active){background:#15803d;color:#fff;border:none;box-shadow:0 2px 8px rgba(0,0,0,.18)}
 .tab-top.tab-green.active{background:#fff;color:#166534}
 .tab-top.active{background:#fff;color:var(--teal2)}
-.tab-top:not(.active){background:rgba(255,255,255,.28);color:#fff;border:1.5px solid rgba(255,255,255,.4)}
+.tab-top:not(.active){background:#0e7490;color:#fff;border:none;box-shadow:0 2px 8px rgba(0,0,0,.18)}
 .rt-form-wrap{max-width:680px;margin:0 auto;padding:0 16px 32px;position:relative;z-index:10}
 .rt-form-card{background:#fff;border-radius:0 20px 20px 20px;box-shadow:0 8px 32px rgba(8,145,178,.18);overflow:hidden}
 .form-card{border-radius:20px 0 20px 20px!important}
@@ -272,7 +272,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif}
 <div class="tab-bar">
   <button class="tab-top active" id="tab-rt" onclick="switchTab('rt')">🚗 Road Trip</button>
   <button class="tab-top" id="tab-dest" onclick="switchTab('dest')">🏙️ Local Trip</button>
-  <button class="tab-top tab-green" id="tab-exp" onclick="switchTab('exp')">💰 Gastos</button>
+  <button class="tab-top tab-green" id="tab-exp" onclick="switchTab('exp')">💰 Expenses</button>
 </div>
 
 <!-- ═══ ROAD TRIP FORM ═══ -->
@@ -527,7 +527,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif}
 <div class="results-wrap hidden" id="results-section">
 
   <div class="trip-summary" id="trip-summary"></div>
-  <button class="btn-edit-dest" onclick="editLocalTrip()">✏️ Editar busca</button>
+  <button class="btn-edit-dest" onclick="editLocalTrip()">✏️ Edit search</button>
 
   <div class="event-box hidden" id="event-box">
     <div class="event-box-title" id="event-box-title">📍 Venue Details</div>
@@ -562,7 +562,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif}
   </div>
 
   <button onclick="saveTripToHistory(this)" style="display:block;width:100%;margin:0 0 8px;padding:14px;background:linear-gradient(135deg,#064e3b,#059669);color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(5,150,105,.3)">💾 &nbsp; Salvar no Histórico</button>
-  <button class="btn-reset" onclick="editLocalTrip()">✏️ Editar / Nova busca</button>
+  <button class="btn-reset" onclick="editLocalTrip()">✏️ Edit / New search</button>
 </div>
 
 <!-- ═══ GASTOS REAIS ═══ -->
@@ -860,7 +860,7 @@ function costBoxContent(d){
     const selectedHotel=d.hotelCost>0
       ? '<div style="font-size:12px;color:rgba(255,255,255,.8);margin-bottom:8px">🏨 '+
         d.selectedTier.charAt(0).toUpperCase()+d.selectedTier.slice(1)+
-        ': '+rmLabel+' × $'+d.hotelCost+'/quarto = <strong>$'+hotelTotal.toFixed(2)+'</strong> — toque para remover</div>'+
+        ': '+rmLabel+' × $'+d.hotelCost+'/room = <strong>$'+hotelTotal.toFixed(2)+'</strong> — tap to remove</div>'+
         '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">'+
         '<div class="sl sl-hotel" onclick="window.open(\''+gmHotel+'\',\'_blank\')" style="border-color:#d8b4fe;background:rgba(255,255,255,.1);padding:8px 6px"><span class="sl-ico">🗺️</span><div><div class="sl-name" style="color:#fff;font-size:11px">Maps</div></div></div>'+
         '<div class="sl sl-hotel" onclick="window.open(\''+bkHotel+'\',\'_blank\')" style="border-color:#d8b4fe;background:rgba(255,255,255,.1);padding:8px 6px"><span class="sl-ico">🌐</span><div><div class="sl-name" style="color:#fff;font-size:11px">Booking</div></div></div>'+
@@ -869,11 +869,11 @@ function costBoxContent(d){
       : '';
     hotelHtml=
       '<div class="cost-hotel-sect">'+
-      '<div class="cost-hotel-title">🏨 Pernoite opcional — '+ppl+' → '+rmLabel+'</div>'+
+      '<div class="cost-hotel-title">🏨 Overnight stay (optional) — '+ppl+' → '+rmLabel+'</div>'+
       '<div class="htier-btns">'+
-      '<button class="htier-btn'+(d.selectedTier==='budget'?' htier-sel':'')+'" onclick="selectHotelTier(\'budget\',95)">🎒 Budget<br><small>~$95/quarto</small></button>'+
-      '<button class="htier-btn'+(d.selectedTier==='moderate'?' htier-sel':'')+'" onclick="selectHotelTier(\'moderate\',155)">🏨 Moderate<br><small>~$155/quarto</small></button>'+
-      '<button class="htier-btn'+(d.selectedTier==='luxury'?' htier-sel':'')+'" onclick="selectHotelTier(\'luxury\',225)">⭐ Luxury<br><small>~$225/quarto</small></button>'+
+      '<button class="htier-btn'+(d.selectedTier==='budget'?' htier-sel':'')+'" onclick="selectHotelTier(\'budget\',95)">🎒 Budget<br><small>~$95/room</small></button>'+
+      '<button class="htier-btn'+(d.selectedTier==='moderate'?' htier-sel':'')+'" onclick="selectHotelTier(\'moderate\',155)">🏨 Moderate<br><small>~$155/room</small></button>'+
+      '<button class="htier-btn'+(d.selectedTier==='luxury'?' htier-sel':'')+'" onclick="selectHotelTier(\'luxury\',225)">⭐ Luxury<br><small>~$225/room</small></button>'+
       '</div>'+
       selectedHotel+
       '</div>';
@@ -881,30 +881,30 @@ function costBoxContent(d){
 
   const editPanel=d.editOpen
     ? '<div class="cost-edit-panel">'+
-      '<div class="cost-edit-title">✏️ Atualizar valores reais</div>'+
-      '<div class="cost-edit-row"><label>⏱ Tempo de direção real (h:mm — ex: 7:00)</label>'+
-      '<input type="text" id="rt-edit-time" value="'+Math.floor(d.durMin/60)+':'+String(Math.round(d.durMin%60)).padStart(2,'0')+'" inputmode="text" placeholder="ex: 7:00"></div>'+
-      '<div class="cost-edit-row"><label>⛽ Combustível ($/L)</label>'+
-      '<input type="text" id="rt-edit-fuel" value="'+d.fuelPrice.toFixed(2)+'" inputmode="decimal" placeholder="ex: 1.75"></div>'+
-      '<div class="cost-edit-row"><label>🍔 Refeição média ($/pessoa/parada)</label>'+
-      '<input type="text" id="rt-edit-meal" value="'+mealRate+'" inputmode="decimal" placeholder="ex: 25"></div>'+
-      '<button class="cost-apply-btn" onclick="applyRTEdits()">✓ Aplicar e recalcular</button>'+
+      '<div class="cost-edit-title">✏️ Update actual values</div>'+
+      '<div class="cost-edit-row"><label>⏱ Actual drive time (h:mm — e.g. 7:00)</label>'+
+      '<input type="text" id="rt-edit-time" value="'+Math.floor(d.durMin/60)+':'+String(Math.round(d.durMin%60)).padStart(2,'0')+'" inputmode="text" placeholder="e.g. 7:00"></div>'+
+      '<div class="cost-edit-row"><label>⛽ Fuel price ($/L)</label>'+
+      '<input type="text" id="rt-edit-fuel" value="'+d.fuelPrice.toFixed(2)+'" inputmode="decimal" placeholder="e.g. 1.75"></div>'+
+      '<div class="cost-edit-row"><label>🍔 Avg meal ($/person/stop)</label>'+
+      '<input type="text" id="rt-edit-meal" value="'+mealRate+'" inputmode="decimal" placeholder="e.g. 25"></div>'+
+      '<button class="cost-apply-btn" onclick="applyRTEdits()">✓ Apply & recalculate</button>'+
       '</div>'
     : '';
 
-  return '<div class="cost-box-title">💰 Custo Estimado — '+ppl+'<button class="cost-edit-btn" onclick="toggleRTEdit()">'+(d.editOpen?'✕ Fechar':'✏️ Editar')+'</button></div>'+
+  return '<div class="cost-box-title">💰 Estimated Cost — '+ppl+'<button class="cost-edit-btn" onclick="toggleRTEdit()">'+(d.editOpen?'✕ Close':'✏️ Edit')+'</button></div>'+
     editPanel+
     '<div class="cost-rows">'+
-    '<div class="cost-row"><span class="cost-row-label">⛽ Combustível ('+d.fuelL.toFixed(1)+' L @ $'+d.fuelPrice.toFixed(2)+'/L)</span><span class="cost-row-val">$'+d.fuelCost.toFixed(2)+'</span></div>'+
-    '<div class="cost-row"><span class="cost-row-label">🍔 Alimentação ('+d.stops.length+' paradas × $'+mealRate+'/pp × '+d.travelers+(d.travelers===1?' pessoa':' pessoas')+')</span><span class="cost-row-val">~$'+foodCost.toFixed(2)+'</span></div>'+
+    '<div class="cost-row"><span class="cost-row-label">⛽ Fuel ('+d.fuelL.toFixed(1)+' L @ $'+d.fuelPrice.toFixed(2)+'/L)</span><span class="cost-row-val">$'+d.fuelCost.toFixed(2)+'</span></div>'+
+    '<div class="cost-row"><span class="cost-row-label">🍔 Meals ('+d.stops.length+' stops × $'+mealRate+'/pp × '+d.travelers+(d.travelers===1?' traveler':' travelers')+')</span><span class="cost-row-val">~$'+foodCost.toFixed(2)+'</span></div>'+
     (hotelTotal>0?'<div class="cost-row"><span class="cost-row-label">🏨 Hotel ('+rmLabel+')</span><span class="cost-row-val">$'+hotelTotal.toFixed(2)+'</span></div>':'')+
     '</div>'+
     hotelHtml+
     '<div class="cost-totals">'+
-    '<div class="cost-total-item"><div class="cti-lbl">Só ida</div><div class="cti-val">$'+totalOW.toFixed(2)+'</div></div>'+
-    '<div class="cost-total-item rt-total"><div class="cti-lbl">🔄 Ida e volta</div><div class="cti-val">$'+totalRT.toFixed(2)+'</div></div>'+
+    '<div class="cost-total-item"><div class="cti-lbl">One way</div><div class="cti-val">$'+totalOW.toFixed(2)+'</div></div>'+
+    '<div class="cost-total-item rt-total"><div class="cti-lbl">🔄 Round trip</div><div class="cti-val">$'+totalRT.toFixed(2)+'</div></div>'+
     '</div>'+
-    '<div class="cost-note">* Estimativas. Alimentação: fast food ~$18/pessoa/parada. Hotel: 1 quarto para 2 pessoas.</div>';
+    '<div class="cost-note">* Estimates. Meals: fast food ~$18/person/stop. Hotel: 1 room per 2 travelers.</div>';
 }
 
 function selectHotelTier(tier, cost){
@@ -989,42 +989,42 @@ function destCostBoxContent(d){
   var rmLabel=rooms===1?'1 room':rooms+' rooms';
   var editPanel=d.editOpen
     ?'<div class="cost-edit-panel">'+
-      '<div class="cost-edit-title">✏️ Atualizar valores reais</div>'+
-      '<div class="cost-edit-row"><label>🌙 Número de noites</label>'+
-      '<input type="text" id="de-nights" value="'+d.nights+'" inputmode="numeric" placeholder="ex: 3"></div>'+
-      '<div class="cost-edit-row"><label>🏨 Hotel ($/quarto/noite)</label>'+
-      '<input type="text" id="de-hotel" value="'+hotelRate+'" inputmode="decimal" placeholder="ex: 155"></div>'+
-      '<div class="cost-edit-row"><label>☕ Café da manhã ($/pessoa — 0 se incluso)</label>'+
+      '<div class="cost-edit-title">✏️ Update actual values</div>'+
+      '<div class="cost-edit-row"><label>🌙 Number of nights</label>'+
+      '<input type="text" id="de-nights" value="'+d.nights+'" inputmode="numeric" placeholder="e.g. 3"></div>'+
+      '<div class="cost-edit-row"><label>🏨 Hotel ($/room/night)</label>'+
+      '<input type="text" id="de-hotel" value="'+hotelRate+'" inputmode="decimal" placeholder="e.g. 155"></div>'+
+      '<div class="cost-edit-row"><label>☕ Breakfast ($/person — 0 if included)</label>'+
       '<input type="text" id="de-bf" value="'+bf+'" inputmode="decimal" placeholder="0"></div>'+
-      '<div class="cost-edit-row"><label>🍱 Almoço ($/pessoa)</label>'+
+      '<div class="cost-edit-row"><label>🍱 Lunch ($/person)</label>'+
       '<input type="text" id="de-lu" value="'+lu+'" inputmode="decimal" placeholder="20"></div>'+
-      '<div class="cost-edit-row"><label>🍽️ Jantar ($/pessoa)</label>'+
+      '<div class="cost-edit-row"><label>🍽️ Dinner ($/person)</label>'+
       '<input type="text" id="de-di" value="'+di+'" inputmode="decimal" placeholder="35"></div>'+
-      '<div class="cost-edit-row"><label>🍿 Lanches ($/pessoa)</label>'+
+      '<div class="cost-edit-row"><label>🍿 Snacks ($/person)</label>'+
       '<input type="text" id="de-sn" value="'+sn+'" inputmode="decimal" placeholder="10"></div>'+
-      '<button class="cost-apply-btn" onclick="applyDestEdits()">✓ Aplicar e recalcular</button>'+
+      '<button class="cost-apply-btn" onclick="applyDestEdits()">✓ Apply & recalculate</button>'+
       '</div>'
     :'';
   return '<div class="cost-box" id="dest-cost-box-inner" style="margin-bottom:16px">'+
-    '<div class="cost-box-title">💰 Custo Estimado — '+ppl+
-    '<button class="cost-edit-btn" onclick="toggleDestEdit()">'+(d.editOpen?'✕ Fechar':'✏️ Editar')+'</button></div>'+
+    '<div class="cost-box-title">💰 Estimated Cost — '+ppl+
+    '<button class="cost-edit-btn" onclick="toggleDestEdit()">'+(d.editOpen?'✕ Close':'✏️ Edit')+'</button></div>'+
     editPanel+
     '<div class="cost-rows">'+
-    '<div class="cost-row"><span class="cost-row-label">🏨 Hotel ('+d.nights+' noites × '+rmLabel+' × $'+hotelRate+'/quarto)</span><span class="cost-row-val">$'+hotelTotal.toFixed(2)+'</span></div>'+
+    '<div class="cost-row"><span class="cost-row-label">🏨 Hotel ('+d.nights+' nights × '+rmLabel+' × $'+hotelRate+'/room)</span><span class="cost-row-val">$'+hotelTotal.toFixed(2)+'</span></div>'+
     '<div class="cost-sep"></div>'+
-    '<div class="cost-row"><span class="cost-row-label">☕ Café da manhã ($'+bf+'/pp × '+d.nights+' dias)</span><span class="cost-row-val">$'+breakfast.toFixed(2)+'</span></div>'+
-    '<div class="cost-row"><span class="cost-row-label">🍱 Almoço ($'+lu+'/pp × '+d.nights+' dias)</span><span class="cost-row-val">$'+lunch.toFixed(2)+'</span></div>'+
-    '<div class="cost-row"><span class="cost-row-label">🍽️ Jantar ($'+di+'/pp × '+d.nights+' dias)</span><span class="cost-row-val">$'+dinner.toFixed(2)+'</span></div>'+
-    '<div class="cost-row"><span class="cost-row-label">🍿 Lanches ($'+sn+'/pp × '+d.nights+' dias)</span><span class="cost-row-val">$'+snacks.toFixed(2)+'</span></div>'+
+    '<div class="cost-row"><span class="cost-row-label">☕ Breakfast ($'+bf+'/pp × '+d.nights+' days)</span><span class="cost-row-val">$'+breakfast.toFixed(2)+'</span></div>'+
+    '<div class="cost-row"><span class="cost-row-label">🍱 Lunch ($'+lu+'/pp × '+d.nights+' days)</span><span class="cost-row-val">$'+lunch.toFixed(2)+'</span></div>'+
+    '<div class="cost-row"><span class="cost-row-label">🍽️ Dinner ($'+di+'/pp × '+d.nights+' days)</span><span class="cost-row-val">$'+dinner.toFixed(2)+'</span></div>'+
+    '<div class="cost-row"><span class="cost-row-label">🍿 Snacks ($'+sn+'/pp × '+d.nights+' days)</span><span class="cost-row-val">$'+snacks.toFixed(2)+'</span></div>'+
     '<div class="cost-sep"></div>'+
-    '<div class="cost-row"><span class="cost-row-label">🍴 Total Alimentação</span><span class="cost-row-val">$'+mealsTotal.toFixed(2)+'</span></div>'+
+    '<div class="cost-row"><span class="cost-row-label">🍴 Total Meals</span><span class="cost-row-val">$'+mealsTotal.toFixed(2)+'</span></div>'+
     '</div>'+
     '<div class="cost-totals">'+
     '<div class="cost-total-item"><div class="cti-lbl">🏨 Hotel</div><div class="cti-val">$'+hotelTotal.toFixed(2)+'</div></div>'+
-    '<div class="cost-total-item"><div class="cti-lbl">🍴 Alimentação</div><div class="cti-val">$'+mealsTotal.toFixed(2)+'</div></div>'+
+    '<div class="cost-total-item"><div class="cti-lbl">🍴 Meals</div><div class="cti-val">$'+mealsTotal.toFixed(2)+'</div></div>'+
     '<div class="cost-total-item rt-total"><div class="cti-lbl">💰 Total</div><div class="cti-val">$'+grandTotal.toFixed(2)+'</div></div>'+
     '</div>'+
-    '<div class="cost-note">* $'+hotelRate+'/quarto/noite · '+rmLabel+'. Alimentação por pessoa/dia.</div>'+
+    '<div class="cost-note">* $'+hotelRate+'/room/night · '+rmLabel+'. Meals per person/day.</div>'+
     '</div>';
 }
 
@@ -1073,7 +1073,7 @@ function buildEstTotalHTML(rd, dd){
   var combined=estRT+estLocal;
   if(!combined&&!rd&&!dd) return '';
   return '<div style="background:linear-gradient(135deg,#1e3a5f,#0891b2);border-radius:16px;padding:16px 18px;margin-bottom:16px;color:#fff">'+
-    '<div style="font-size:14px;font-weight:900;margin-bottom:12px">📊 Total Estimado da Viagem</div>'+
+    '<div style="font-size:14px;font-weight:900;margin-bottom:12px">📊 Trip Estimated Total</div>'+
     '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">'+
     '<div style="background:rgba(255,255,255,.15);border-radius:10px;padding:10px;text-align:center">'+
     '<div style="font-size:9px;color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">🚗 Road Trip</div>'+
@@ -1135,10 +1135,10 @@ function buildExpensesHTML(d){
   const estTotal=estGas+estFood+estHotel;
 
   const CATS={
-    gasolina:{ico:'⛽',label:'Gasolina',est:estGas},
+    gasolina:{ico:'⛽',label:'Gas',est:estGas},
     hotel:{ico:'🏨',label:'Hotel',est:estHotel},
-    alimentacao:{ico:'🍔',label:'Alimentação',est:estFood},
-    outros:{ico:'📦',label:'Outros',est:0}
+    alimentacao:{ico:'🍔',label:'Food',est:estFood},
+    outros:{ico:'📦',label:'Other',est:0}
   };
 
   let catRows='';
@@ -1164,8 +1164,8 @@ function buildExpensesHTML(d){
     const sty=isExcluded?'opacity:.45;':'';
     const txtSty=isExcluded?'style="text-decoration:line-through"':'';
     const btn=isExcluded
-      ?'<button class="exp-del-btn" onclick="includeExpense(\''+e.id+'\')" title="Restaurar na viagem" style="opacity:1;font-size:14px">↩️</button>'
-      :'<button class="exp-del-btn" onclick="excludeExpense(\''+e.id+'\')" title="Remover da viagem">🗑</button>';
+      ?'<button class="exp-del-btn" onclick="includeExpense(\''+e.id+'\')" title="Restore to trip" style="opacity:1;font-size:14px">↩️</button>'
+      :'<button class="exp-del-btn" onclick="excludeExpense(\''+e.id+'\')" title="Remove from trip">🗑</button>';
     return '<div class="exp-entry" style="'+sty+'">'+
       '<span class="exp-entry-ico">'+info.ico+'</span>'+
       '<div class="exp-entry-body">'+
@@ -1183,35 +1183,35 @@ function buildExpensesHTML(d){
 
   const entryList=sortedActive.length===0
     ?'<div style="text-align:center;padding:16px 0;font-size:13px;color:var(--muted)">'+
-      'Nenhum gasto registrado'+(ci&&co?' neste período':'')+'.</div>'
+      'No expenses recorded'+(ci&&co?' for this period':'')+'.</div>'
     :sortedActive.map(function(e){return entryHTML(e,false);}).join('');
 
   const exclSection=sortedExcluded.length===0?'':
     '<div style="padding:8px 16px 4px;border-top:1px dashed #bbf7d0">'+
-    '<div style="font-size:11px;font-weight:700;color:#64748b;margin-bottom:4px">'+sortedExcluded.length+' excluído(s) da viagem</div>'+
+    '<div style="font-size:11px;font-weight:700;color:#64748b;margin-bottom:4px">'+sortedExcluded.length+' excluded from trip</div>'+
     sortedExcluded.map(function(e){return entryHTML(e,true);}).join('')+
     '</div>';
 
-  const dateLabel=ci&&co?ci+' → '+co:'Todos os períodos';
+  const dateLabel=ci&&co?ci+' → '+co:'All periods';
   const diffTotal=grandTotal-estTotal;
 
   return buildEstTotalHTML(d, _destData)+
     '<div class="exp-box">'+
     '<div class="exp-header">'+
-    '<div><div class="exp-title">📋 Gastos Reais da Viagem</div>'+
+    '<div><div class="exp-title">📋 Trip Actual Expenses</div>'+
     '<div class="exp-period">📅 '+dateLabel+'</div></div>'+
     '</div>'+
     '<div style="margin:12px 16px 12px">'+
     '<button onclick="saveState();window.location.href=\'index.html\'" style="display:flex;align-items:center;justify-content:space-between;width:100%;background:linear-gradient(135deg,#064e3b,#059669);color:#fff;border:none;border-radius:12px;padding:13px 16px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(5,150,105,.3)">'+
-    '<span>📝 Registrar gasto em Gastos Casa</span><span style="font-size:18px">›</span>'+
+    '<span>📝 Log expense in Gastos Casa</span><span style="font-size:18px">›</span>'+
     '</button>'+
     '</div>'+
     '<div class="exp-cats">'+catRows+'</div>'+
     '<div class="exp-total-row">'+
-    '<span>💰 Total real</span>'+
+    '<span>💰 Actual total</span>'+
     '<span style="font-size:17px">$'+grandTotal.toFixed(2)+'</span>'+
     (estTotal>0?'<span style="font-size:11px;color:'+(diffTotal>0?'#dc2626':diffTotal<0?'#16a34a':'var(--muted)')+'">'+
-      (diffTotal>0?'▲ $'+diffTotal.toFixed(2)+' acima do est.':(diffTotal<0?'▼ $'+Math.abs(diffTotal).toFixed(2)+' abaixo do est.':'Dentro do estimado'))+
+      (diffTotal>0?'▲ $'+diffTotal.toFixed(2)+' above est.':(diffTotal<0?'▼ $'+Math.abs(diffTotal).toFixed(2)+' below est.':'On budget'))+
       '</span>':'')+
     '</div>'+
     '<div class="exp-entries">'+entryList+'</div>'+
@@ -1238,14 +1238,14 @@ function buildRTHTML(d){
     '<a href="'+mapsUrl+'" target="_blank" style="display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:20px;padding:5px 10px;font-size:11px;font-weight:700;text-decoration:none;white-space:nowrap;flex-shrink:0">🗺️ Google Maps</a>'+
     '</div>'+
     '<div class="rs-metrics">'+
-    '<div class="rm"><div class="rm-val">'+Math.round(d.distKm)+' km</div><div class="rm-lbl">Distância total</div></div>'+
-    '<div class="rm"><div class="rm-val">~'+time+'</div><div class="rm-lbl">Direção pura</div></div>'+
-    '<div class="rm"><div class="rm-val">'+d.fuelL.toFixed(1)+' L</div><div class="rm-lbl">Combustível ('+d.consumption+' L/100km)</div></div>'+
+    '<div class="rm"><div class="rm-val">'+Math.round(d.distKm)+' km</div><div class="rm-lbl">Total distance</div></div>'+
+    '<div class="rm"><div class="rm-val">~'+time+'</div><div class="rm-lbl">Pure drive time</div></div>'+
+    '<div class="rm"><div class="rm-val">'+d.fuelL.toFixed(1)+' L</div><div class="rm-lbl">Fuel ('+d.consumption+' L/100km)</div></div>'+
     '<div class="rm"><div class="rm-val">~$'+d.fuelCost.toFixed(2)+'</div><div class="rm-lbl">Custo @ $'+d.fuelPrice.toFixed(2)+'/L</div></div>'+
     (d.stops.length>0
       ?'<div class="rm" style="grid-column:span 2;background:rgba(255,255,255,.2)">'+
         '<div class="rm-val">~'+totalTime+'</div>'+
-        '<div class="rm-lbl">⏱ Total estimado c/ '+d.stops.length+' parada'+(d.stops.length>1?'s':'')+' (~30 min cada)</div></div>'
+        '<div class="rm-lbl">⏱ Est. total with '+d.stops.length+' stop'+(d.stops.length>1?'s':'')+' (~30 min each)</div></div>'
       :'')+
     '</div></div>';
 
@@ -1292,7 +1292,7 @@ function buildRTHTML(d){
   }
 
   h+='<div style="background:#e0f2fe;border-radius:12px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--teal2)">'+
-    '💡 Para ver estacionamento e detalhes do local, acesse a aba <strong>🏙️ Local Trip</strong></div>';
+    '💡 For parking and local venue details, check the <strong>🏙️ Local Trip</strong> tab</div>';
 
   h+='<button onclick="saveTripToHistory(this)" style="display:block;width:100%;margin:0 0 8px;padding:14px;background:linear-gradient(135deg,#064e3b,#059669);color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(5,150,105,.3)">💾 &nbsp; Salvar Viagem no Histórico</button>';
   h+='<button class="btn-reset" onclick="resetRT()">← Edit Route</button>';
@@ -1893,7 +1893,7 @@ function renderHistorySection(){
   window.addEventListener('pagehide',saveState);
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='128';
+  var _myV='129';
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
     .then(function(r){return r.json();})
     .then(function(d){
@@ -1921,7 +1921,7 @@ function renderHistorySection(){
     hint.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#0c4a6e;color:#fff;padding:14px 16px calc(14px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;gap:10px;font-family:inherit;box-shadow:0 -4px 20px rgba(0,0,0,.3)';
     hint.innerHTML =
       '<span style="font-size:26px;flex-shrink:0">📲</span>'+
-      '<div style="flex:1;font-size:13px;line-height:1.4"><strong>Instalar no iPhone</strong><br>Toque em <strong>Compartilhar</strong> ⬆️ depois <strong>"Adicionar à Tela de Início"</strong></div>'+
+      '<div style="flex:1;font-size:13px;line-height:1.4"><strong>Install on iPhone</strong><br>Tap <strong>Share</strong> ⬆️ then <strong>"Add to Home Screen"</strong></div>'+
       '<button onclick="sessionStorage.setItem(\'iosHintDismissed\',\'1\');this.closest(\'#ios-hint\').remove()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:20px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0">✕</button>';
     document.body.appendChild(hint);
   }
