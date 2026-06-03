@@ -263,11 +263,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif}
 <!-- HERO -->
 <div class="hero">
   <button class="hero-back" onclick="saveState();window.location.href='index.html'">← Gastos Casa</button>
-  <button onclick="window.location.replace('./travel.html?_nc='+Date.now())" style="position:absolute;top:calc(var(--sft) + 14px);right:16px;background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:20px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;z-index:2">🔄 Update</button>
+  <button onclick="forceUpdate()" style="position:absolute;top:calc(var(--sft) + 14px);right:16px;background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:20px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;z-index:2">🔄 Update</button>
   <div class="hero-badge">✈️ &nbsp; Trip Planner</div>
   <div class="hero-title">Plan Your Next Trip</div>
   <div class="hero-sub">Hotels, restaurants, events & parking —<br>all in one place, in seconds.</div>
-  <div style="font-size:10px;color:rgba(255,255,255,.5);margin-top:6px">v140</div>
+  <div style="font-size:10px;color:rgba(255,255,255,.5);margin-top:6px">v141</div>
 </div>
 
 <!-- TABS -->
@@ -1921,7 +1921,7 @@ function renderHistorySection(){
   window.addEventListener('pagehide',saveState);
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='140';
+  var _myV='141';
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
     .then(function(r){return r.json();})
     .then(function(d){
@@ -2060,6 +2060,16 @@ function renderHistorySection(){
     return s.length>12?parseFloat(n.toPrecision(8)).toString():s;
   }
 })();
+
+async function forceUpdate(){
+  try{
+    if(navigator.serviceWorker){
+      const regs=await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r=>r.unregister()));
+    }
+  }catch(e){}
+  window.location.replace('./travel.html?_nc='+Date.now());
+}
 </script>
 </body>
 </html>
