@@ -306,11 +306,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Sego
 .ov-empty-ico{font-size:56px;margin-bottom:16px}
 .ov-empty-title{font-size:20px;font-weight:800;color:var(--text);margin-bottom:8px}
 .ov-empty-sub{font-size:14px;line-height:1.6}
+#tv-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#064e3b;color:#fff;padding:12px 20px;border-radius:12px;font-size:14px;font-weight:700;z-index:9999;transition:transform .35s cubic-bezier(.34,1.56,.64,1),opacity .3s;opacity:0;pointer-events:none;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.25)}
+#tv-toast.show{transform:translateX(-50%) translateY(0);opacity:1}
 </style>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
 <body>
+<div id="tv-toast"></div>
 
 <!-- HERO -->
 <div class="hero">
@@ -322,7 +325,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Sego
     <div class="hero-badge">✈️ &nbsp; Trip Planner</div>
     <div class="hero-title">Plan Your Perfect Trip</div>
     <div class="hero-sub">Routes · Hotels · Dining · Events · Budget</div>
-    <div style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v163</div>
+    <div style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v164</div>
   </div>
 </div>
 
@@ -648,6 +651,15 @@ var _rtData   = null;     // stored after calculateRoute()
 var _destData = null;     // stored after planTrip()
 var _activeTab= 'rt';     // last active tab
 var _pendingReplay=null;  // deferred replayLocalTrip args (set by restoreState)
+
+function showToast(msg,ms){
+  var t=document.getElementById('tv-toast');
+  if(!t)return;
+  t.textContent=msg;
+  t.classList.add('show');
+  clearTimeout(t._tid);
+  t._tid=setTimeout(function(){t.classList.remove('show');},ms||3000);
+}
 
 // ── CITY → PROVINCE LOOKUP ───────────────────────────────────────────────────
 const CITY_PROV = {
@@ -2074,7 +2086,7 @@ function renderHistorySection(){
   });
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='163';
+  var _myV='164';
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
     .then(function(r){return r.json();})
     .then(function(d){
@@ -2406,7 +2418,10 @@ function initTripSync(){
         // Auto-load the most recent trip if this device has no active trip data
         if(!_rtData&&!_destData&&fbArr.length){
           var newest=fbArr.sort(function(a,b){return (b.id||0)-(a.id||0);})[0];
-          if(newest&&newest.id) loadHistoryEntry(newest.id);
+          if(newest&&newest.id){
+            loadHistoryEntry(newest.id);
+            showToast('☁️ Viagem restaurada da nuvem',3500);
+          }
         }
       } else {
         syncTripsToFirebase();
@@ -2430,6 +2445,7 @@ function initTripSync(){
             saveState();
             updateOverviewTab();
             switchTab((_rtData&&_rtView==='results')?'rt':(fbS.activeTab||'rt'));
+            showToast('☁️ Estado restaurado da nuvem',3500);
           }
         }).catch(function(){});
       }
