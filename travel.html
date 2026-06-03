@@ -342,7 +342,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Sego
     <div class="hero-badge">✈️ &nbsp; Trip Planner</div>
     <div class="hero-title">Plan Your Perfect Trip</div>
     <div class="hero-sub">Routes · Hotels · Dining · Events · Budget</div>
-    <div id="tv-ver" style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v174</div>
+    <div id="tv-ver" style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v175</div>
   </div>
 </div>
 
@@ -632,11 +632,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Sego
       <div class="ldc-wrap">
         <div class="ldc-row">
           <label class="ldc-label">From <button class="ldc-swap" onclick="ldcSwap()">⇅ Swap</button></label>
-          <input type="text" id="ldc-from" class="ldc-input" placeholder="e.g. Videotron Centre, Quebec City" autocomplete="off">
+          <input type="text" id="ldc-from" class="ldc-input" placeholder="e.g. Videotron Centre, Quebec City" autocomplete="off" onblur="saveState();syncActiveStateToFirebase()">
         </div>
         <div class="ldc-row">
           <label class="ldc-label">To</label>
-          <input type="text" id="ldc-to" class="ldc-input" placeholder="e.g. Hotel Le Concorde, Quebec City" autocomplete="off">
+          <input type="text" id="ldc-to" class="ldc-input" placeholder="e.g. Hotel Le Concorde, Quebec City" autocomplete="off" onblur="saveState();syncActiveStateToFirebase()">
         </div>
         <button class="ldc-btn" id="ldc-calc-btn" onclick="calcLocalDrive()">🚗 Calculate</button>
         <div id="ldc-result"></div>
@@ -1917,6 +1917,8 @@ async function calcLocalDrive(){
     res.innerHTML='<div style="color:#dc2626;font-size:12px;padding:8px 0">Error calculating route. Check your connection.</div>';
   }
   btn.textContent='🚗 Calculate'; btn.disabled=false;
+  // Persist From/To so they survive restores and sync to other devices
+  saveState(); syncActiveStateToFirebase();
 }
 
 function editLocalTrip(){
@@ -2578,7 +2580,7 @@ async function forceUpdate(){
   });
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='174';
+  var _myV='175';
   var _verEl=document.getElementById('tv-ver');
   if(_verEl) _verEl.textContent='v'+_myV;
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
