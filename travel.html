@@ -712,7 +712,7 @@ function switchTab(tab){
     renderHistorySection();
   } else if(tab==='exp'){
     expS.classList.remove('hidden');
-    document.getElementById('exp-section-content').innerHTML=buildExpensesHTML(_rtData);
+    document.getElementById('exp-section-content').innerHTML=buildExpensesHTML(_rtData,_destData);
     saveState();
   } else {
     // Auto-fill destination from RT if dest city is empty
@@ -974,7 +974,7 @@ function getExpenses(){
 function refreshExpenses(){
   const el=document.getElementById('exp-section-content');
   if(el&&!document.getElementById('exp-section').classList.contains('hidden'))
-    el.innerHTML=buildExpensesHTML(_rtData);
+    el.innerHTML=buildExpensesHTML(_rtData,_destData);
 }
 
 // ── LOCAL TRIP COST BOX ───────────────────────────────────────────────────────
@@ -1112,7 +1112,7 @@ function includeExpense(id){
   refreshExpenses();
 }
 
-function buildExpensesHTML(d){
+function buildExpensesHTML(d,dd){
   const ci=document.getElementById('f-checkin').value;
   const co=document.getElementById('f-checkout').value;
   let all=getExpenses();
@@ -1131,14 +1131,33 @@ function buildExpensesHTML(d){
   });
   const grandTotal=Object.values(totals).reduce(function(a,b){return a+b;},0);
 
+  // RT estimates (with round-trip multiplier)
+  const mult=(d&&d.roundTrip)?2:1;
   const mealRate=(d&&d.mealRate)||18;
   const stops=(d&&d.stops)?d.stops.length:0;
   const travelers=(d&&d.travelers)||1;
-  const rooms=Math.ceil(travelers/2);
+  const rtRooms=Math.ceil(travelers/2);
   const hotelCost=(d&&d.hotelCost)||0;
-  const estGas=(d&&d.fuelCost)||0;
-  const estFood=stops*mealRate*travelers;
-  const estHotel=hotelCost*rooms;
+  const estGas=((d&&d.fuelCost)||0)*mult;
+  const estFood_rt=stops*mealRate*travelers*mult;
+  const estHotel_rt=hotelCost*rtRooms;
+
+  // Local Trip estimates
+  var estHotel_lt=0,estFood_lt=0;
+  if(dd&&dd.nights){
+    var ddRooms=dd.rooms!=null?dd.rooms:Math.ceil((dd.travelers||2)/2);
+    var ddRate=dd.hotelRate!=null?dd.hotelRate:(dd.budget==='luxury'?225:dd.budget==='moderate'?155:95);
+    estHotel_lt=(dd.nights||0)*ddRate*ddRooms;
+    var ddTrv=dd.travelers||2;
+    var bf=dd.breakfastRate!=null?dd.breakfastRate:8;
+    var lu=dd.lunchRate!=null?dd.lunchRate:15;
+    var di=dd.dinnerRate!=null?dd.dinnerRate:30;
+    var sn=dd.snacksRate!=null?dd.snacksRate:5;
+    estFood_lt=(dd.nights||0)*(bf+lu+di+sn)*ddTrv;
+  }
+
+  const estHotel=estHotel_rt+estHotel_lt;
+  const estFood=estFood_rt+estFood_lt;
   const estTotal=estGas+estFood+estHotel;
 
   const CATS={
@@ -1900,7 +1919,7 @@ function renderHistorySection(){
   window.addEventListener('pagehide',saveState);
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='133';
+  var _myV='134';
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
     .then(function(r){return r.json();})
     .then(function(d){
