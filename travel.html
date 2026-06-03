@@ -561,6 +561,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif}
     <div class="sec-body" style="max-height:0"><div class="link-grid" id="parking-links"></div></div>
   </div>
 
+  <button onclick="saveTripToHistory(this)" style="display:block;width:100%;margin:0 0 8px;padding:14px;background:linear-gradient(135deg,#064e3b,#059669);color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(5,150,105,.3)">💾 &nbsp; Salvar no Histórico</button>
   <button class="btn-reset" onclick="editLocalTrip()">✏️ Editar / Nova busca</button>
 </div>
 
@@ -1293,7 +1294,7 @@ function buildRTHTML(d){
   h+='<div style="background:#e0f2fe;border-radius:12px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--teal2)">'+
     '💡 Para ver estacionamento e detalhes do local, acesse a aba <strong>🏙️ Local Trip</strong></div>';
 
-  h+='<button onclick="saveTripToHistory()" style="display:block;width:100%;margin:0 0 8px;padding:14px;background:linear-gradient(135deg,#064e3b,#059669);color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(5,150,105,.3)">💾 &nbsp; Salvar Viagem no Histórico</button>';
+  h+='<button onclick="saveTripToHistory(this)" style="display:block;width:100%;margin:0 0 8px;padding:14px;background:linear-gradient(135deg,#064e3b,#059669);color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(5,150,105,.3)">💾 &nbsp; Salvar Viagem no Histórico</button>';
   h+='<button class="btn-reset" onclick="resetRT()">← Edit Route</button>';
   return h;
 }
@@ -1663,36 +1664,103 @@ function editLocalTrip(){
 const _STATE_KEY='trip_planner_state';
 const _HIST_KEY='trip_history';
 
+function _captureFields(){
+  return {
+    rtOC:document.getElementById('rt-origin-city').value,
+    rtOS:document.getElementById('rt-origin-state').value,
+    rtON:document.getElementById('rt-origin-country').value,
+    rtDC:document.getElementById('rt-dest-city').value,
+    rtDS:document.getElementById('rt-dest-state').value,
+    rtDN:document.getElementById('rt-dest-country').value,
+    rtV: document.getElementById('rt-venue').value,
+    rtT: document.getElementById('rt-travelers').value,
+    rtR: document.getElementById('rt-roundtrip').checked,
+    rtCO:document.getElementById('rt-consumption').value,
+    rtFP:document.getElementById('rt-fuelprice').value,
+    fC: document.getElementById('f-city').value,
+    fS: document.getElementById('f-state').value,
+    fN: document.getElementById('f-country').value,
+    fV: document.getElementById('f-venue').value,
+    fCI:document.getElementById('f-checkin').value,
+    fCO:document.getElementById('f-checkout').value,
+    fP: document.getElementById('f-purpose').value,
+    fE: document.getElementById('f-event-name').value,
+    fT: document.getElementById('f-travelers').value,
+    foods:[...document.querySelectorAll('.food-chip input:checked')].map(function(i){return i.value;}),
+    budget:(document.querySelector('input[name="budget"]:checked')||{}).value||'budget',
+  };
+}
+
+function _applyFields(f){
+  if(!f) return;
+  function sv(id,v){var el=document.getElementById(id);if(el&&v!=null&&v!=='')el.value=v;}
+  sv('rt-origin-city',f.rtOC);sv('rt-origin-state',f.rtOS);sv('rt-origin-country',f.rtON);
+  sv('rt-dest-city',f.rtDC);sv('rt-dest-state',f.rtDS);sv('rt-dest-country',f.rtDN);
+  sv('rt-venue',f.rtV);sv('rt-travelers',f.rtT);sv('rt-consumption',f.rtCO);sv('rt-fuelprice',f.rtFP);
+  var rr=document.getElementById('rt-roundtrip');if(rr&&f.rtR!==undefined)rr.checked=f.rtR;
+  sv('f-city',f.fC);sv('f-state',f.fS);sv('f-country',f.fN);
+  sv('f-venue',f.fV);sv('f-checkin',f.fCI);sv('f-checkout',f.fCO);sv('f-purpose',f.fP);
+  sv('f-event-name',f.fE);sv('f-travelers',f.fT);
+  if(f.foods&&f.foods.length)
+    document.querySelectorAll('.food-chip input').forEach(function(inp){inp.checked=f.foods.indexOf(inp.value)!==-1;});
+  if(f.budget){var bel=document.querySelector('input[name="budget"][value="'+f.budget+'"]');if(bel)bel.checked=true;}
+}
+
+// Re-render Local Trip results synchronously from saved fields + destData
+function replayLocalTrip(f, dd){
+  if(!f||!f.fC||!f.fCI||!f.fCO||!dd) return false;
+  var city=f.fC, state=f.fS||'', country=f.fN||'Other';
+  var venue=f.fV||'', checkin=f.fCI, checkout=f.fCO;
+  var purpose=f.fP||'leisure', evtName=f.fE||'';
+  var budget=f.budget||'budget';
+  var foods=f.foods||[];
+  var loc=city+(state?', '+state:'')+(country!=='Other'?', '+country:'');
+  var locShort=city+(state?', '+state:'');
+  var nights=Math.round((new Date(checkout)-new Date(checkin))/86400000);
+  var nearAnchor=venue?venue+', '+city:locShort;
+  var purposeLabels={leisure:'🌴 Leisure',business:'💼 Business',concert:'🎵 Concert',sports:'🏒 Sports Event',festival:'🎪 Festival',conference:'🎤 Conference',family:'👨‍👩‍👧 Family Visit',medical:'🏥 Medical',other:'✈️ Trip'};
+  document.getElementById('trip-summary').innerHTML=
+    '<div class="ts-left">'+
+    '<div class="ts-dest">📍 '+locShort+'</div>'+
+    (venue?'<div style="font-size:13px;color:rgba(255,255,255,.85);margin-top:2px;font-weight:700">🏟️ '+venue+'</div>':'')+
+    '<div class="ts-dates">'+fmtDate(checkin)+' → '+fmtDate(checkout)+' &nbsp;·&nbsp; '+(purposeLabels[purpose]||'Trip')+'</div>'+
+    '</div>'+
+    '<div class="ts-right"><div class="ts-days">'+nights+'</div>'+
+    '<div class="ts-days-lbl">night'+(nights!==1?'s':'')+'</div></div>';
+  var evtBox=document.getElementById('event-box');
+  if(venue||evtName){
+    evtBox.classList.remove('hidden');
+    var evtNameEl=document.getElementById('event-name-display');
+    if(evtName){evtNameEl.textContent=evtName;evtNameEl.style.display='';}else{evtNameEl.style.display='none';}
+    var venueNameEl=document.getElementById('venue-name-display');
+    venueNameEl.textContent=venue||'';venueNameEl.style.display=venue?'':'none';
+    document.getElementById('event-box-title').textContent=['concert','sports','festival','conference'].includes(purpose)?'🎉 Event & Venue':'📍 Venue Details';
+    document.getElementById('venue-address-display').style.display='none';
+    document.getElementById('event-date-display').textContent=fmtDate(checkin)+(checkin!==checkout?' – '+fmtDate(checkout):'')+' · '+locShort;
+  } else { evtBox.classList.add('hidden'); }
+  document.getElementById('hotel-links').innerHTML=buildHotelCards(loc,locShort,nearAnchor,city,state,country,checkin,checkout,nights,budget);
+  document.getElementById('food-links').innerHTML=buildFoodCards(foods,city,state,locShort,nearAnchor);
+  document.getElementById('dining-sec').style.display=foods.length?'':'none';
+  document.getElementById('event-links').innerHTML=buildEventCards(city,state,country,locShort,purpose,evtName,checkin);
+  document.getElementById('parking-links').innerHTML=buildParkingCards(city,state,locShort,nearAnchor);
+  _destData=dd;
+  document.getElementById('dest-cost-box').innerHTML=destCostBoxContent(dd);
+  _destView='results';
+  document.getElementById('form-section').classList.add('hidden');
+  document.getElementById('results-section').classList.remove('hidden');
+  document.querySelectorAll('#results-section .sec-body').forEach(function(b){
+    b.style.maxHeight='0';
+    var chev=b.previousElementSibling&&b.previousElementSibling.querySelector('.sec-chevron');
+    if(chev) chev.style.transform='';
+  });
+  return true;
+}
+
 function saveState(){
   try{
     localStorage.setItem(_STATE_KEY,JSON.stringify({
-      rtView:_rtView,destView:_destView,rtData:_rtData,destData:_destData,
-      activeTab:_activeTab,
-      destResultsHTML:document.getElementById('results-section').innerHTML,
-      fields:{
-        rtOC:document.getElementById('rt-origin-city').value,
-        rtOS:document.getElementById('rt-origin-state').value,
-        rtON:document.getElementById('rt-origin-country').value,
-        rtDC:document.getElementById('rt-dest-city').value,
-        rtDS:document.getElementById('rt-dest-state').value,
-        rtDN:document.getElementById('rt-dest-country').value,
-        rtV: document.getElementById('rt-venue').value,
-        rtT: document.getElementById('rt-travelers').value,
-        rtR: document.getElementById('rt-roundtrip').checked,
-        rtCO:document.getElementById('rt-consumption').value,
-        rtFP:document.getElementById('rt-fuelprice').value,
-        fC: document.getElementById('f-city').value,
-        fS: document.getElementById('f-state').value,
-        fN: document.getElementById('f-country').value,
-        fV: document.getElementById('f-venue').value,
-        fCI:document.getElementById('f-checkin').value,
-        fCO:document.getElementById('f-checkout').value,
-        fP: document.getElementById('f-purpose').value,
-        fE: document.getElementById('f-event-name').value,
-        fT: document.getElementById('f-travelers').value,
-        foods:[...document.querySelectorAll('.food-chip input:checked')].map(function(i){return i.value;}),
-        budget:(document.querySelector('input[name="budget"]:checked')||{}).value||'budget',
-      }
+      rtView:_rtView, destView:_destView, rtData:_rtData, destData:_destData,
+      activeTab:_activeTab, fields:_captureFields()
     }));
   }catch(e){}
 }
@@ -1701,76 +1769,50 @@ function restoreState(){
   try{
     var s=JSON.parse(localStorage.getItem(_STATE_KEY));
     if(!s) return false;
-    var f=s.fields||{};
-    function sv(id,v){var el=document.getElementById(id);if(el&&v!=null&&v!=='')el.value=v;}
-    sv('rt-origin-city',f.rtOC);sv('rt-origin-state',f.rtOS);sv('rt-origin-country',f.rtON);
-    sv('rt-dest-city',f.rtDC);sv('rt-dest-state',f.rtDS);sv('rt-dest-country',f.rtDN);
-    sv('rt-venue',f.rtV);sv('rt-travelers',f.rtT);sv('rt-consumption',f.rtCO);sv('rt-fuelprice',f.rtFP);
-    var rr=document.getElementById('rt-roundtrip');if(rr&&f.rtR!==undefined)rr.checked=f.rtR;
-    sv('f-city',f.fC);sv('f-state',f.fS);sv('f-country',f.fN);
-    sv('f-venue',f.fV);sv('f-checkin',f.fCI);sv('f-checkout',f.fCO);sv('f-purpose',f.fP);
-    sv('f-event-name',f.fE);sv('f-travelers',f.fT);
-    if(f.foods&&f.foods.length){
-      document.querySelectorAll('.food-chip input').forEach(function(inp){inp.checked=f.foods.indexOf(inp.value)!==-1;});
-    }
-    if(f.budget){
-      var bel=document.querySelector('input[name="budget"][value="'+f.budget+'"]');
-      if(bel)bel.checked=true;
-    }
+    _applyFields(s.fields);
     onPurposeChange();
     _rtView=s.rtView||'form';
     _destView=s.destView||'form';
     _activeTab=s.activeTab||'rt';
-    if(s.destData) _destData=s.destData;
     if(s.rtData){
       _rtData=s.rtData;
       if(_rtView==='results')
         document.getElementById('rt-results-content').innerHTML=buildRTHTML(_rtData);
     }
-    if(_destView==='results'&&s.destResultsHTML){
-      document.getElementById('results-section').innerHTML=s.destResultsHTML;
-      // If old HTML (no sec-body wrappers), fall back to form so user re-plans
-      if(!document.querySelector('#results-section .sec-body')){
-        _destView='form';
-        document.getElementById('results-section').classList.add('hidden');
-        document.getElementById('form-section').classList.remove('hidden');
-      } else {
-        // Reset all collapsible sections to collapsed on restore
-        document.querySelectorAll('#results-section .sec-body').forEach(function(b){
-          b.style.maxHeight='0';
-          var chev=b.previousElementSibling&&b.previousElementSibling.querySelector('.sec-chevron');
-          if(chev) chev.style.transform='';
-        });
-        // Re-render cost box with current code so new features always show
-        if(_destData){
-          var cb=document.getElementById('dest-cost-box');
-          if(cb) cb.innerHTML=destCostBoxContent(_destData);
-        }
-      }
+    if(_destView==='results'){
+      var ok=replayLocalTrip(s.fields, s.destData);
+      if(!ok) _destView='form';
     }
     calcDays();
     return true;
   }catch(e){return false;}
 }
 
-function saveTripToHistory(){
-  if(!_rtData){alert('Calcule uma rota primeiro.');return;}
+function saveTripToHistory(btn){
+  var hasRT=!!_rtData;
+  var hasDest=!!_destData&&!!document.getElementById('f-city').value.trim();
+  if(!hasRT&&!hasDest){alert('Sem dados para salvar. Calcule uma rota ou planeje um Local Trip primeiro.');return;}
+  var f=_captureFields();
+  var name='';
+  if(hasRT&&hasDest) name=(_rtData.origShort||'?')+' → '+(_rtData.destShort||'?')+' + 📍 '+f.fC;
+  else if(hasRT) name=(_rtData.origShort||'?')+' → '+(_rtData.destShort||'?');
+  else name='📍 '+(f.fC||'Local Trip');
   var hist=[];
   try{hist=JSON.parse(localStorage.getItem(_HIST_KEY)||'[]');}catch(e){}
   hist.unshift({
     id:Date.now().toString(36),
     savedAt:new Date().toISOString().slice(0,10),
-    name:(_rtData.origShort||'?')+' → '+(_rtData.destShort||'?'),
-    checkin:document.getElementById('f-checkin').value,
-    checkout:document.getElementById('f-checkout').value,
-    rtData:_rtData
+    name:name,
+    checkin:f.fCI, checkout:f.fCO,
+    rtData:hasRT?_rtData:null,
+    destData:hasDest?_destData:null,
+    fields:f
   });
   if(hist.length>30)hist=hist.slice(0,30);
   localStorage.setItem(_HIST_KEY,JSON.stringify(hist));
   renderHistorySection();
-  // Show confirmation in button area
-  var btn=event&&event.target;
-  if(btn){var t=btn.textContent;btn.textContent='✅ Salvo!';setTimeout(function(){btn.textContent=t;},1800);}
+  var b=btn||(event&&event.target);
+  if(b){var t=b.textContent;b.textContent='✅ Salvo!';setTimeout(function(){b.textContent=t;},1800);}
 }
 
 function deleteHistoryEntry(id){
@@ -1786,10 +1828,25 @@ function loadHistoryEntry(id){
     var hist=JSON.parse(localStorage.getItem(_HIST_KEY)||'[]');
     var entry=hist.find(function(h){return h.id===id;});
     if(!entry)return;
-    _rtData=entry.rtData;
-    _rtView='results';
-    document.getElementById('rt-results-content').innerHTML=buildRTHTML(_rtData);
-    switchTab('rt');
+    _applyFields(entry.fields);
+    onPurposeChange();
+    calcDays();
+    if(entry.rtData){
+      _rtData=entry.rtData;
+      _rtView='results';
+      document.getElementById('rt-results-content').innerHTML=buildRTHTML(_rtData);
+    } else {
+      _rtData=null; _rtView='form';
+      document.getElementById('rt-results-section').classList.add('hidden');
+    }
+    if(entry.destData&&entry.fields){
+      replayLocalTrip(entry.fields, entry.destData);
+    } else {
+      _destData=null; _destView='form';
+      document.getElementById('results-section').classList.add('hidden');
+      document.getElementById('form-section').classList.remove('hidden');
+    }
+    switchTab(entry.rtData?'rt':'dest');
     window.scrollTo({top:0,behavior:'smooth'});
   }catch(e){}
 }
@@ -1804,12 +1861,15 @@ function renderHistorySection(){
   if(!hist.length){el.innerHTML='';return;}
   el.innerHTML=hist.map(function(h){
     var dates=h.checkin&&h.checkout?' · '+h.checkin+' → '+h.checkout:'';
+    var sub='';
+    if(h.destData&&h.fields&&h.fields.fC) sub='<div style="font-size:11px;color:var(--teal);font-weight:600">📍 '+h.fields.fC+(h.fields.fCI?' · '+h.fields.fCI+' → '+h.fields.fCO:'')+'</div>';
     return '<div style="display:flex;align-items:center;gap:8px;background:#fff;border-radius:12px;border:1.5px solid #e0f2fe;padding:10px 12px;margin-bottom:8px">'+
       '<div style="flex:1;min-width:0">'+
       '<div style="font-size:13px;font-weight:700;color:var(--text)">'+h.name+'</div>'+
+      sub+
       '<div style="font-size:11px;color:var(--muted)">'+h.savedAt+dates+'</div>'+
       '</div>'+
-      '<button onclick="loadHistoryEntry(\''+h.id+'\')" style="background:var(--teal);color:#fff;border:none;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">📂 Abrir</button>'+
+      '<button onclick="loadHistoryEntry(\''+h.id+'\')" style="background:var(--teal);color:#fff;border:none;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">↩️ Restaurar</button>'+
       '<button onclick="deleteHistoryEntry(\''+h.id+'\')" style="background:none;border:none;font-size:16px;cursor:pointer;opacity:.4;padding:2px 4px;flex-shrink:0">🗑</button>'+
       '</div>';
   }).join('');
@@ -1828,7 +1888,7 @@ function renderHistorySection(){
   window.addEventListener('pagehide',saveState);
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='126';
+  var _myV='127';
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
     .then(function(r){return r.json();})
     .then(function(d){
