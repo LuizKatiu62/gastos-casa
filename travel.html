@@ -342,7 +342,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Sego
     <div class="hero-badge">✈️ &nbsp; Trip Planner</div>
     <div class="hero-title">Plan Your Perfect Trip</div>
     <div class="hero-sub">Routes · Hotels · Dining · Events · Budget</div>
-    <div id="tv-ver" style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v179</div>
+    <div id="tv-ver" style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v180</div>
   </div>
 </div>
 
@@ -862,12 +862,31 @@ function switchTab(tab){
 }
 
 // ── GEO / ROUTING ────────────────────────────────────────────────────────────
-async function geocodePlace(query){
+async function _nominatimSearch(q){
   try{
-    const r=await fetch('https://nominatim.openstreetmap.org/search?q='+encodeURIComponent(query)+'&format=json&limit=1',{headers:{'Accept-Language':'en'}});
+    const r=await fetch('https://nominatim.openstreetmap.org/search?q='+encodeURIComponent(q)+'&format=json&limit=1',{headers:{'Accept-Language':'en'}});
     const d=await r.json();
-    return d&&d.length?{lat:parseFloat(d[0].lat),lng:parseFloat(d[0].lon)}:null;
+    return(d&&d.length)?{lat:parseFloat(d[0].lat),lng:parseFloat(d[0].lon)}:null;
   }catch(e){return null;}
+}
+async function geocodePlace(query){
+  // Strategy 1: full text
+  var r=await _nominatimSearch(query);
+  if(r) return r;
+  // Strategy 2: if there's a postal/zip code, strip leading business-name segment and retry
+  var canPost=query.match(/\b([A-Z][0-9][A-Z]\s?[0-9][A-Z][0-9])\b/i);
+  var usZip=!canPost&&query.match(/\b(\d{5}(?:-\d{4})?)\b/);
+  if(canPost||usZip){
+    var stripped=query.replace(/^[^,\d]*,\s*/,''); // drop first segment if it has no leading digit (business name)
+    if(stripped&&stripped!==query){
+      r=await _nominatimSearch(stripped);
+      if(r) return r;
+    }
+    var postal=(canPost?canPost[1]:usZip[1]).toUpperCase();
+    r=await _nominatimSearch(postal+(canPost?' Canada':''));
+    if(r) return r;
+  }
+  return null;
 }
 
 async function getOSRMRoute(lng1,lat1,lng2,lat2){
@@ -1897,7 +1916,7 @@ async function calcLocalDrive(){
     var fromC=await geocodePlace(from);
     var toC=await geocodePlace(to);
     if(!fromC||!toC){
-      res.innerHTML='<div style="color:#dc2626;font-size:12px;padding:8px 0">Address not found. Be more specific (include city name).</div>';
+      res.innerHTML='<div style="color:#dc2626;font-size:12px;padding:8px 0">Address not found. Try including the street number, city, or postal code (e.g. G1K 8M1).</div>';
       btn.textContent='🚗 Calculate'; btn.disabled=false; return;
     }
     var r=await fetch('https://router.project-osrm.org/route/v1/driving/'+fromC.lng+','+fromC.lat+';'+toC.lng+','+toC.lat+'?overview=false');
@@ -2607,7 +2626,7 @@ async function forceUpdate(){
   });
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='179';
+  var _myV='180';
   var _verEl=document.getElementById('tv-ver');
   if(_verEl) _verEl.textContent='v'+_myV;
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
