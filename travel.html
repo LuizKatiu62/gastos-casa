@@ -30,13 +30,15 @@ html,body{min-height:100%;background:var(--bg);color:var(--text)}
 body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Segoe UI',sans-serif}
 
 /* ── HERO ── */
-.hero{background:linear-gradient(155deg,var(--navy) 0%,var(--navy2) 52%,var(--teal) 100%);padding:calc(var(--sft)+38px) 24px 56px;text-align:center;position:relative;overflow:hidden}
+.hero{background:linear-gradient(155deg,var(--navy) 0%,var(--navy2) 52%,var(--teal) 100%);padding-top:env(safe-area-inset-top,44px);padding-bottom:56px;position:relative;overflow:hidden}
+.hero-top{display:flex;justify-content:space-between;align-items:center;padding:14px 16px 4px}
+.hero-center{text-align:center;padding:14px 24px 0}
 .hero::before{content:'✈';position:absolute;font-size:210px;opacity:.04;top:-10px;right:-35px;transform:rotate(28deg);pointer-events:none;line-height:1}
 .hero::after{content:'';position:absolute;bottom:0;left:0;right:0;height:32px;background:var(--bg);border-radius:28px 28px 0 0}
-.hero-back{position:absolute;top:calc(var(--sft)+16px);left:16px;background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.2);color:#fff;border-radius:22px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;z-index:2;letter-spacing:.2px;backdrop-filter:blur(4px)}
+.hero-back{background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.2);color:#fff;border-radius:22px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:.2px;backdrop-filter:blur(4px);white-space:nowrap}
 .hero-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.18);border-radius:22px;padding:6px 18px;font-size:10px;font-weight:800;color:rgba(255,255,255,.8);letter-spacing:1.4px;text-transform:uppercase;margin-bottom:18px;backdrop-filter:blur(4px)}
 .hero-title{font-size:32px;font-weight:900;color:#fff;letter-spacing:-.8px;line-height:1.05;margin-bottom:8px}
-.hero-sub{font-size:13px;color:rgba(255,255,255,.55);line-height:1.65;font-weight:400}
+.hero-sub{font-size:13px;color:rgba(255,255,255,.82);line-height:1.65;font-weight:400}
 
 /* ── FORM CARD ── */
 .form-wrap{max-width:680px;margin:0 auto;padding:0 16px 32px;position:relative;z-index:10}
@@ -312,12 +314,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Sego
 
 <!-- HERO -->
 <div class="hero">
-  <button class="hero-back" onclick="saveState();window.location.href='index.html'">← Gastos Casa</button>
-  <button onclick="forceUpdate()" style="position:absolute;top:calc(var(--sft)+16px);right:16px;background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.2);color:#fff;border-radius:22px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;z-index:2;backdrop-filter:blur(4px)">🔄 Update</button>
-  <div class="hero-badge">✈️ &nbsp; Trip Planner</div>
-  <div class="hero-title">Plan Your Perfect Trip</div>
-  <div class="hero-sub">Routes · Hotels · Dining · Events · Budget</div>
-  <div style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v148</div>
+  <div class="hero-top">
+    <button class="hero-back" onclick="saveState();window.location.href='index.html'">← Gastos Casa</button>
+    <button onclick="forceUpdate()" style="background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.2);color:#fff;border-radius:22px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;backdrop-filter:blur(4px);white-space:nowrap">🔄 Update</button>
+  </div>
+  <div class="hero-center">
+    <div class="hero-badge">✈️ &nbsp; Trip Planner</div>
+    <div class="hero-title">Plan Your Perfect Trip</div>
+    <div class="hero-sub">Routes · Hotels · Dining · Events · Budget</div>
+    <div style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v149</div>
+  </div>
 </div>
 
 <!-- TABS -->
@@ -1995,7 +2001,7 @@ function renderHistorySection(){
   });
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='148';
+  var _myV='149';
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
     .then(function(r){return r.json();})
     .then(function(d){
