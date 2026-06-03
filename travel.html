@@ -322,7 +322,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Sego
     <div class="hero-badge">✈️ &nbsp; Trip Planner</div>
     <div class="hero-title">Plan Your Perfect Trip</div>
     <div class="hero-sub">Routes · Hotels · Dining · Events · Budget</div>
-    <div style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v154</div>
+    <div style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v155</div>
   </div>
 </div>
 
@@ -1604,6 +1604,8 @@ async function planTrip(){
   document.getElementById('dest-cost-box').innerHTML=destCostBoxContent(_destData);
 
   _destView='results';
+  updateOverviewTab();
+  saveState();
   document.getElementById('form-section').classList.add('hidden');
   document.getElementById('results-section').classList.remove('hidden');
   document.querySelectorAll('#results-section .sec-body').forEach(function(b){
@@ -2043,7 +2045,7 @@ function renderHistorySection(){
   });
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='154';
+  var _myV='155';
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
     .then(function(r){return r.json();})
     .then(function(d){
