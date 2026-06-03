@@ -322,7 +322,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Sego
     <div class="hero-badge">✈️ &nbsp; Trip Planner</div>
     <div class="hero-title">Plan Your Perfect Trip</div>
     <div class="hero-sub">Routes · Hotels · Dining · Events · Budget</div>
-    <div style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v157</div>
+    <div style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v158</div>
   </div>
 </div>
 
@@ -1904,10 +1904,10 @@ function replayLocalTrip(f, dd){
 
 function saveState(){
   try{
-    localStorage.setItem(_STATE_KEY,JSON.stringify({
-      rtView:_rtView, destView:_destView, rtData:_rtData, destData:_destData,
-      activeTab:_activeTab, fields:_captureFields()
-    }));
+    var state={rtView:_rtView, destView:_destView, rtData:_rtData, destData:_destData,
+      activeTab:_activeTab, fields:_captureFields()};
+    localStorage.setItem(_STATE_KEY,JSON.stringify(state));
+    localStorage.setItem('trip_has_data',JSON.stringify({has:!!(state.rtData||state.destData)}));
   }catch(e){}
 }
 
@@ -2028,6 +2028,14 @@ function renderHistorySection(){
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 (function(){
+  // Immediately restore Overview tab visibility from persisted flag — before any async
+  try{
+    if(JSON.parse(localStorage.getItem('trip_has_data')||'{}').has){
+      var _ovBtn=document.getElementById('tab-ov');
+      if(_ovBtn) _ovBtn.classList.remove('hidden');
+    }
+  }catch(e){}
+
   const today=new Date().toISOString().slice(0,10);
   const tomorrow=new Date(Date.now()+86400000).toISOString().slice(0,10);
   document.getElementById('f-checkin').value=today;
@@ -2049,7 +2057,7 @@ function renderHistorySection(){
   });
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='157';
+  var _myV='158';
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
     .then(function(r){return r.json();})
     .then(function(d){
