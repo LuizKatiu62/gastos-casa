@@ -322,7 +322,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Sego
     <div class="hero-badge">✈️ &nbsp; Trip Planner</div>
     <div class="hero-title">Plan Your Perfect Trip</div>
     <div class="hero-sub">Routes · Hotels · Dining · Events · Budget</div>
-    <div style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v158</div>
+    <div style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v159</div>
   </div>
 </div>
 
@@ -1854,6 +1854,9 @@ function _applyFields(f){
 // Re-render Local Trip results synchronously from saved fields + destData
 function replayLocalTrip(f, dd){
   if(!f||!f.fC||!f.fCI||!f.fCO||!dd) return false;
+  // Set data variables FIRST so updateOverviewTab() works even if DOM ops partially fail
+  _destData=dd;
+  _destView='results';
   var city=f.fC, state=f.fS||'', country=f.fN||'Other';
   var venue=f.fV||'', checkin=f.fCI, checkout=f.fCO;
   var purpose=f.fP||'leisure', evtName=f.fE||'';
@@ -1888,9 +1891,7 @@ function replayLocalTrip(f, dd){
   document.getElementById('dining-sec').style.display=foods.length?'':'none';
   document.getElementById('event-links').innerHTML=buildEventCards(city,state,country,locShort,purpose,evtName,checkin);
   document.getElementById('parking-links').innerHTML=buildParkingCards(city,state,locShort,nearAnchor);
-  _destData=dd;
   document.getElementById('dest-cost-box').innerHTML=destCostBoxContent(dd);
-  _destView='results';
   updateOverviewTab();
   document.getElementById('form-section').classList.add('hidden');
   document.getElementById('results-section').classList.remove('hidden');
@@ -2057,7 +2058,7 @@ function renderHistorySection(){
   });
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='158';
+  var _myV='159';
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
     .then(function(r){return r.json();})
     .then(function(d){
