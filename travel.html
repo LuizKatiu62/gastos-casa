@@ -2160,71 +2160,6 @@ function renderHistorySection(){
   }).join('');
 }
 
-// ── INIT ──────────────────────────────────────────────────────────────────────
-(function(){
-  // Immediately restore Overview tab visibility from persisted flag — before any async
-  try{
-    if(JSON.parse(localStorage.getItem('trip_has_data')||'{}').has){
-      var _ovBtn=document.getElementById('tab-ov');
-      if(_ovBtn) _ovBtn.classList.remove('hidden');
-    }
-  }catch(e){}
-
-  const today=new Date().toISOString().slice(0,10);
-  const tomorrow=new Date(Date.now()+86400000).toISOString().slice(0,10);
-  document.getElementById('f-checkin').value=today;
-  document.getElementById('f-checkout').value=tomorrow;
-  calcDays();
-  var restored=restoreState();
-  // If RT results exist always open on Road Trip so user sees their route immediately
-  var startTab=(_rtData&&_rtView==='results')?'rt':(restored?_activeTab:'rt');
-  switchTab(startTab);
-  updateOverviewTab();
-  renderHistorySection();
-  initTripSync();
-  // Safety net: re-check Overview visibility after Firebase async init settles
-  setTimeout(updateOverviewTab, 1500);
-  window.addEventListener('pagehide',function(){ saveState(); syncActiveStateToFirebase(); });
-  // visibilitychange fires more reliably than pagehide on iOS PWA
-  document.addEventListener('visibilitychange',function(){
-    if(document.visibilityState==='hidden'){ saveState(); syncActiveStateToFirebase(); }
-  });
-
-  // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='169';
-  fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
-    .then(function(r){return r.json();})
-    .then(function(d){
-      // Guard: d.v===0 means network failed (SW fallback) — don't loop
-      if(d.v && d.v>0 && String(d.v)!==_myV){
-        saveState(); // persist before redirect so state survives the version hop
-        window.location.replace('./travel.html?_nc='+Date.now());
-      }
-    }).catch(function(){});
-
-  // Register service worker for offline / PWA
-  if('serviceWorker' in navigator){
-    navigator.serviceWorker.register('./sw.js').catch(function(){});
-    navigator.serviceWorker.addEventListener('message',function(e){
-      if(e.data&&e.data.type==='SW_UPDATED'){saveState();window.location.reload();}
-    });
-  }
-
-  // Show "Add to Home Screen" hint on iOS Safari (not standalone, not dismissed)
-  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-  const isStandalone = ('standalone' in navigator) && navigator.standalone;
-  const dismissed = sessionStorage.getItem('iosHintDismissed');
-  if(isIOS && !isStandalone && !dismissed){
-    const hint = document.createElement('div');
-    hint.id = 'ios-hint';
-    hint.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#0c4a6e;color:#fff;padding:14px 16px calc(14px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;gap:10px;font-family:inherit;box-shadow:0 -4px 20px rgba(0,0,0,.3)';
-    hint.innerHTML =
-      '<span style="font-size:26px;flex-shrink:0">📲</span>'+
-      '<div style="flex:1;font-size:13px;line-height:1.4"><strong>Install on iPhone</strong><br>Tap <strong>Share</strong> ⬆️ then <strong>"Add to Home Screen"</strong></div>'+
-      '<button onclick="sessionStorage.setItem(\'iosHintDismissed\',\'1\');this.closest(\'#ios-hint\').remove()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:20px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0">✕</button>';
-    document.body.appendChild(hint);
-  }
-})();
 </script>
 
 <!-- ═══ CALCULATOR ═══ -->
@@ -2600,6 +2535,72 @@ async function forceUpdate(){
   }catch(e){}
   window.location.replace('./travel.html?_nc='+Date.now());
 }
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+(function(){
+  // Immediately restore Overview tab visibility from persisted flag — before any async
+  try{
+    if(JSON.parse(localStorage.getItem('trip_has_data')||'{}').has){
+      var _ovBtn=document.getElementById('tab-ov');
+      if(_ovBtn) _ovBtn.classList.remove('hidden');
+    }
+  }catch(e){}
+
+  const today=new Date().toISOString().slice(0,10);
+  const tomorrow=new Date(Date.now()+86400000).toISOString().slice(0,10);
+  document.getElementById('f-checkin').value=today;
+  document.getElementById('f-checkout').value=tomorrow;
+  calcDays();
+  var restored=restoreState();
+  // If RT results exist always open on Road Trip so user sees their route immediately
+  var startTab=(_rtData&&_rtView==='results')?'rt':(restored?_activeTab:'rt');
+  switchTab(startTab);
+  updateOverviewTab();
+  renderHistorySection();
+  initTripSync();
+  // Safety net: re-check Overview visibility after Firebase async init settles
+  setTimeout(updateOverviewTab, 1500);
+  window.addEventListener('pagehide',function(){ saveState(); syncActiveStateToFirebase(); });
+  // visibilitychange fires more reliably than pagehide on iOS PWA
+  document.addEventListener('visibilitychange',function(){
+    if(document.visibilityState==='hidden'){ saveState(); syncActiveStateToFirebase(); }
+  });
+
+  // Version check — fetch version.json (always network) and hard-navigate if behind
+  var _myV='170';
+  fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      // Guard: d.v===0 means network failed (SW fallback) — don't loop
+      if(d.v && d.v>0 && String(d.v)!==_myV){
+        saveState(); // persist before redirect so state survives the version hop
+        window.location.replace('./travel.html?_nc='+Date.now());
+      }
+    }).catch(function(){});
+
+  // Register service worker for offline / PWA
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('./sw.js').catch(function(){});
+    navigator.serviceWorker.addEventListener('message',function(e){
+      if(e.data&&e.data.type==='SW_UPDATED'){saveState();window.location.reload();}
+    });
+  }
+
+  // Show "Add to Home Screen" hint on iOS Safari (not standalone, not dismissed)
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isStandalone = ('standalone' in navigator) && navigator.standalone;
+  const dismissed = sessionStorage.getItem('iosHintDismissed');
+  if(isIOS && !isStandalone && !dismissed){
+    const hint = document.createElement('div');
+    hint.id = 'ios-hint';
+    hint.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#0c4a6e;color:#fff;padding:14px 16px calc(14px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;gap:10px;font-family:inherit;box-shadow:0 -4px 20px rgba(0,0,0,.3)';
+    hint.innerHTML =
+      '<span style="font-size:26px;flex-shrink:0">📲</span>'+
+      '<div style="flex:1;font-size:13px;line-height:1.4"><strong>Install on iPhone</strong><br>Tap <strong>Share</strong> ⬆️ then <strong>"Add to Home Screen"</strong></div>'+
+      '<button onclick="sessionStorage.setItem(\'iosHintDismissed\',\'1\');this.closest(\'#ios-hint\').remove()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:20px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0">✕</button>';
+    document.body.appendChild(hint);
+  }
+})();
 </script>
 </body>
 </html>
