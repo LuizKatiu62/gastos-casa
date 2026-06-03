@@ -326,7 +326,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Sego
     <div class="hero-badge">✈️ &nbsp; Trip Planner</div>
     <div class="hero-title">Plan Your Perfect Trip</div>
     <div class="hero-sub">Routes · Hotels · Dining · Events · Budget</div>
-    <div style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v166</div>
+    <div style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v167</div>
   </div>
 </div>
 
@@ -2038,8 +2038,12 @@ function renderHistorySection(){
   try{hist=JSON.parse(localStorage.getItem(_HIST_KEY)||'[]');}catch(e){}
   var wrap=document.getElementById('rt-history-wrap');
   var onRT=document.getElementById('tab-rt')&&document.getElementById('tab-rt').classList.contains('active');
-  if(wrap)wrap.style.display=(hist.length&&onRT)?'block':'none';
-  if(!hist.length){el.innerHTML='';return;}
+  // Always show the wrap on the RT tab — never hide it based on hist.length
+  if(wrap)wrap.style.display=onRT?'block':'none';
+  if(!hist.length){
+    // Don't overwrite loading/error messages set by initTripSync
+    return;
+  }
   el.innerHTML=hist.map(function(h){
     var dates=h.checkin&&h.checkout?' · '+h.checkin+' → '+h.checkout:'';
     var sub='';
@@ -2087,7 +2091,7 @@ function renderHistorySection(){
   });
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='166';
+  var _myV='167';
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
     .then(function(r){return r.json();})
     .then(function(d){
