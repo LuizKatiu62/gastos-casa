@@ -2191,7 +2191,7 @@ function renderHistorySection(){
   });
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='168';
+  var _myV='169';
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
     .then(function(r){return r.json();})
     .then(function(d){
@@ -2350,7 +2350,41 @@ function buildDashboardHTML(rd, dd){
       '</div>';
   }
 
+  // ── Compute costs first (used in Grand Total at top) ──
+  var mult=(rd&&rd.roundTrip)?2:1;
+  var gasAmt=(rd?(rd.fuelCost||0)*mult:0);
+  var rtStops=(rd?(rd.stops||[]).length:0);
+  var rtMealRate=(rd?(rd.mealRate||18):18);
+  var stopsFood=(rd?rtStops*rtMealRate*(rd.travelers||1)*mult:0);
+  var rtRooms=rd?Math.ceil((rd.travelers||2)/2):0;
+  var hotelAmt=(rd?(rd.hotelCost||0)*rtRooms:0);
+  var ltHotel=0,ltFood=0;
+  if(dd&&dd.nights){
+    var ddR=dd.rooms!=null?dd.rooms:Math.ceil((dd.travelers||2)/2);
+    var ddRate=dd.hotelRate!=null?dd.hotelRate:(dd.budget==='luxury'?225:dd.budget==='moderate'?155:95);
+    ltHotel=dd.nights*ddRate*ddR;
+    var bf=(dd.breakfastRate==null?15:dd.breakfastRate),lu=(dd.lunchRate==null?20:dd.lunchRate);
+    var di=(dd.dinnerRate==null?35:dd.dinnerRate),sn=(dd.snacksRate==null?10:dd.snacksRate);
+    ltFood=dd.nights*(bf+lu+di+sn)*(dd.travelers||2);
+  }
+  var totalGas=gasAmt;
+  var totalHotel=hotelAmt+ltHotel;
+  var totalFood=stopsFood+ltFood;
+  var grandTotal=totalGas+totalHotel+totalFood;
+  var travelers=rd&&rd.travelers?rd.travelers:dd&&dd.travelers?dd.travelers:1;
+
   var html='';
+
+  // ── Grand Total — TOP ──
+  if(grandTotal>0){
+    html+='<div class="ov-total-card" style="margin-bottom:14px">'+
+      '<div class="ov-total-label">📊 Estimated Grand Total</div>'+
+      '<div class="ov-total-grid">'+
+        '<div class="ov-total-item"><div class="ov-total-val">$'+grandTotal.toFixed(0)+'</div><div class="ov-total-sub">'+(rd&&rd.roundTrip?'Round Trip':'Total')+'</div></div>'+
+        '<div class="ov-total-item ov-total-main"><div class="ov-total-val">$'+(grandTotal/travelers).toFixed(0)+'</div><div class="ov-total-sub">Per Person</div></div>'+
+      '</div>'+
+    '</div>';
+  }
 
   // ── Route Hero Card ──
   if(rd){
@@ -2387,54 +2421,22 @@ function buildDashboardHTML(rd, dd){
     '</div>';
   }
 
-  // ── Cost Breakdown Card ──
-  var mult=(rd&&rd.roundTrip)?2:1;
-  var gasAmt=(rd?(rd.fuelCost||0)*mult:0);
-  var stopsFood=(rd?(rd.stops||[]).length*(rd.mealRate||18)*(rd.travelers||1)*mult:0);
-  var rtRooms=rd?Math.ceil((rd.travelers||2)/2):0;
-  var hotelAmt=(rd?(rd.hotelCost||0)*rtRooms:0);
-  var ltHotel=0,ltFood=0;
-  if(dd&&dd.nights){
-    var ddR=dd.rooms!=null?dd.rooms:Math.ceil((dd.travelers||2)/2);
-    var ddRate=dd.hotelRate!=null?dd.hotelRate:(dd.budget==='luxury'?225:dd.budget==='moderate'?155:95);
-    ltHotel=dd.nights*ddRate*ddR;
-    var bf=(dd.breakfastRate==null?15:dd.breakfastRate),lu=(dd.lunchRate==null?20:dd.lunchRate);
-    var di=(dd.dinnerRate==null?35:dd.dinnerRate),sn=(dd.snacksRate==null?10:dd.snacksRate);
-    ltFood=dd.nights*(bf+lu+di+sn)*(dd.travelers||2);
-  }
-  var totalGas=gasAmt;
-  var totalHotel=hotelAmt+ltHotel;
-  var totalFood=stopsFood+ltFood;
-  var grandTotal=totalGas+totalHotel+totalFood;
-  var maxCost=Math.max(totalGas,totalHotel,totalFood,1);
-
-  function costRow(ico,name,val,color){
-    var pct=Math.round((val/maxCost)*100);
-    return '<div class="ov-cost-row">'+
-      '<div class="ov-cost-label">'+
-        '<span class="ov-cost-name">'+ico+' '+name+'</span>'+
-        '<span class="ov-cost-val">$'+val.toFixed(2)+'</span>'+
+  // ── Road Trip Estimated Cost Card ──
+  if(rd){
+    var rtOW=(rd.fuelCost||0)+stopsFood/mult+hotelAmt;
+    var rtRT=rtOW*2;
+    var rtPpl=rd.travelers===1?'1 person':rd.travelers+' people';
+    var rtRmLabel=rtRooms===1?'1 room':rtRooms+' rooms';
+    html+='<div class="ov-card" style="background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);border:none">'+
+      '<div class="ov-card-title" style="color:rgba(255,255,255,.55)">🚗 Road Trip — Estimated Cost ('+rtPpl+')</div>'+
+      '<div class="cost-rows" style="margin:0 -4px">'+
+        '<div class="cost-row" style="color:#e2e8f0"><span class="cost-row-label">⛽ Fuel ('+rd.fuelL.toFixed(1)+' L @ $'+(rd.fuelPrice||0).toFixed(2)+'/L)</span><span class="cost-row-val">$'+(rd.fuelCost||0).toFixed(2)+'</span></div>'+
+        (rtStops>0?'<div class="cost-row" style="color:#e2e8f0"><span class="cost-row-label">🍔 Meals ('+rtStops+' stop'+(rtStops!==1?'s':'')+' × $'+rtMealRate+'/pp × '+rd.travelers+(rd.travelers===1?' traveler':' travelers')+')</span><span class="cost-row-val">~$'+(stopsFood/mult).toFixed(2)+'</span></div>':'')+
+        (hotelAmt>0?'<div class="cost-row" style="color:#e2e8f0"><span class="cost-row-label">🏨 Hotel ('+rtRmLabel+')</span><span class="cost-row-val">$'+hotelAmt.toFixed(2)+'</span></div>':'')+
       '</div>'+
-      '<div class="ov-bar"><div class="ov-bar-fill" style="width:'+pct+'%;background:'+color+'"></div></div>'+
-    '</div>';
-  }
-
-  if(grandTotal>0){
-    html+='<div class="ov-card">'+
-      '<div class="ov-card-title">💰 Cost Breakdown</div>'+
-      (totalGas>0?costRow('⛽','Gas',totalGas,'#0891b2'):'')+
-      (totalHotel>0?costRow('🏨','Hotel',totalHotel,'#7c3aed'):'')+
-      (totalFood>0?costRow('🍔','Food',totalFood,'#f59e0b'):'')+
-    '</div>';
-
-    // Total Card
-    var owTotal=totalGas+(totalHotel/mult)+stopsFood/mult+ltHotel+ltFood;
-    var rtTotal=grandTotal;
-    html+='<div class="ov-total-card">'+
-      '<div class="ov-total-label">📊 Estimated Total</div>'+
-      '<div class="ov-total-grid">'+
-        '<div class="ov-total-item"><div class="ov-total-val">$'+rtTotal.toFixed(0)+'</div><div class="ov-total-sub">'+(rd&&rd.roundTrip?'Round Trip':'Total')+'</div></div>'+
-        '<div class="ov-total-item ov-total-main"><div class="ov-total-val">$'+(grandTotal/(rd&&rd.travelers?rd.travelers:dd&&dd.travelers?dd.travelers:1)).toFixed(0)+'</div><div class="ov-total-sub">Per Person</div></div>'+
+      '<div class="cost-totals" style="margin-top:12px">'+
+        '<div class="cost-total-item"><div class="cti-lbl" style="color:rgba(255,255,255,.55)">One way</div><div class="cti-val" style="color:#fff">$'+rtOW.toFixed(2)+'</div></div>'+
+        (rd.roundTrip?'<div class="cost-total-item rt-total"><div class="cti-lbl" style="color:rgba(255,255,255,.55)">🔄 Round trip</div><div class="cti-val" style="color:#fff">$'+rtRT.toFixed(2)+'</div></div>':'')+
       '</div>'+
     '</div>';
   }
