@@ -257,6 +257,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif}
 .exp-del-btn{background:none;border:none;font-size:16px;cursor:pointer;opacity:.45;padding:4px;flex-shrink:0}
 .exp-del-btn:hover{opacity:1}
 </style>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
 <body>
 
@@ -267,7 +269,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif}
   <div class="hero-badge">✈️ &nbsp; Trip Planner</div>
   <div class="hero-title">Plan Your Next Trip</div>
   <div class="hero-sub">Hotels, restaurants, events & parking —<br>all in one place, in seconds.</div>
-  <div style="font-size:10px;color:rgba(255,255,255,.5);margin-top:6px">v143</div>
+  <div style="font-size:10px;color:rgba(255,255,255,.5);margin-top:6px">v144</div>
 </div>
 
 <!-- TABS -->
@@ -1842,6 +1844,7 @@ function saveTripToHistory(btn){
   if(hist.length>30)hist=hist.slice(0,30);
   localStorage.setItem(_HIST_KEY,JSON.stringify(hist));
   renderHistorySection();
+  syncTripsToFirebase();
   var b=btn||(event&&event.target);
   if(b){var t=b.textContent;b.textContent='✅ Salvo!';setTimeout(function(){b.textContent=t;},1800);}
 }
@@ -1851,6 +1854,7 @@ function deleteHistoryEntry(id){
     var hist=JSON.parse(localStorage.getItem(_HIST_KEY)||'[]');
     localStorage.setItem(_HIST_KEY,JSON.stringify(hist.filter(function(h){return h.id!==id;})));
     renderHistorySection();
+    syncTripsToFirebase();
   }catch(e){}
 }
 
@@ -1917,10 +1921,11 @@ function renderHistorySection(){
   var restored=restoreState();
   switchTab(restored?_activeTab:'rt');
   renderHistorySection();
+  initTripSync();
   window.addEventListener('pagehide',saveState);
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='143';
+  var _myV='144';
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
     .then(function(r){return r.json();})
     .then(function(d){
@@ -2059,6 +2064,76 @@ function renderHistorySection(){
     return s.length>12?parseFloat(n.toPrecision(8)).toString():s;
   }
 })();
+
+// ── FIREBASE TRIP SYNC ───────────────────────────────────────────────────────
+var _tvRef=null, _tvSaving=false;
+var _TV_CFG={apiKey:'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU',databaseURL:'https://gastos-casa-7f431-default-rtdb.firebaseio.com'};
+var _TV_SEC='lk62-gastos-9f3a7b2e';
+
+function _tvTrips(){
+  try{return JSON.parse(localStorage.getItem(_HIST_KEY)||'[]');}catch(e){return[];}
+}
+function _tvSave(trips){
+  localStorage.setItem(_HIST_KEY,JSON.stringify(trips));
+}
+function syncTripsToFirebase(){
+  if(!_tvRef)return;
+  _tvSaving=true;
+  var obj={};_tvTrips().forEach(function(t){obj[t.id]=t;});
+  _tvRef.set(obj).then(function(){_tvSaving=false;}).catch(function(){_tvSaving=false;});
+}
+function initTripSync(){
+  try{
+    var app;
+    try{app=firebase.app('tv');}catch(e){}
+    if(!app)app=firebase.initializeApp(_TV_CFG,'tv');
+    _tvRef=firebase.database(app).ref('gastos/'+_TV_SEC+'/trips');
+    _tvRef.once('value').then(function(snap){
+      var fb=snap.val();
+      if(fb&&typeof fb==='object'){
+        var fbArr=Object.values(fb);
+        var local=_tvTrips();
+        var changed=false;
+        fbArr.forEach(function(ft){
+          if(ft&&ft.id&&!local.some(function(lt){return lt.id===ft.id;})){
+            local.push(ft);changed=true;
+          }
+        });
+        if(changed){
+          local.sort(function(a,b){return (b.id||0)-(a.id||0);});
+          _tvSave(local);
+          renderHistorySection();
+        }
+      } else {
+        syncTripsToFirebase();
+      }
+      // real-time listener
+      _tvRef.on('value',function(snap){
+        if(_tvSaving)return;
+        var fb=snap.val();
+        if(!fb||typeof fb!=='object')return;
+        var fbArr=Object.values(fb);
+        var local=_tvTrips();
+        var changed=false;
+        fbArr.forEach(function(ft){
+          if(ft&&ft.id&&!local.some(function(lt){return lt.id===ft.id;})){
+            local.push(ft);changed=true;
+          }
+        });
+        // also remove locally any trip deleted on another device
+        var fbIds=fbArr.map(function(t){return t&&t.id;});
+        var before=local.length;
+        local=local.filter(function(lt){return fbIds.indexOf(lt.id)!==-1;});
+        if(local.length!==before)changed=true;
+        if(changed){
+          local.sort(function(a,b){return (b.id||0)-(a.id||0);});
+          _tvSave(local);
+          renderHistorySection();
+        }
+      });
+    }).catch(function(){});
+  }catch(e){}
+}
 
 async function forceUpdate(){
   try{
