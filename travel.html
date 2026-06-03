@@ -322,7 +322,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Sego
     <div class="hero-badge">✈️ &nbsp; Trip Planner</div>
     <div class="hero-title">Plan Your Perfect Trip</div>
     <div class="hero-sub">Routes · Hotels · Dining · Events · Budget</div>
-    <div style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v153</div>
+    <div style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v154</div>
   </div>
 </div>
 
@@ -338,6 +338,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Sego
 <div class="form-wrap" id="rt-history-wrap" style="padding-top:0">
   <div style="padding:0 20px 4px;display:flex;align-items:center;justify-content:space-between">
     <span style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">📚 Saved Trips</span>
+    <button onclick="newTrip()" style="background:linear-gradient(135deg,var(--navy2),var(--navy3));color:#fff;border:none;border-radius:20px;padding:6px 14px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit">✈️ Nova Viagem</button>
   </div>
   <div style="padding:0 20px 16px" id="rt-history-list"></div>
 </div>
@@ -448,7 +449,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Sego
     </div>
 
     <button class="btn-plan" onclick="calculateRoute()">🚗 &nbsp; Calculate Route & Costs</button>
-    <button class="btn-clear" onclick="clearRT()">🗑️ &nbsp; Clear & Start Over</button>
+    <button class="btn-clear" onclick="clearRT()">🗑️ &nbsp; Limpar Campos</button>
   </div>
 </div>
 
@@ -1392,6 +1393,7 @@ function buildRTHTML(d){
     '💡 For parking and local venue details, check the <strong>🏙️ Local Trip</strong> tab</div>';
 
   h+='<button onclick="saveTripToHistory(this)" style="display:block;width:100%;margin:0 0 8px;padding:14px;background:linear-gradient(135deg,#064e3b,#059669);color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(5,150,105,.3)">💾 &nbsp; Salvar Viagem no Histórico</button>';
+  h+='<button onclick="newTrip()" style="display:block;width:100%;margin:0 0 8px;padding:13px;background:linear-gradient(135deg,var(--navy2),var(--navy3));color:#fff;border:none;border-radius:14px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(29,78,216,.25)">✈️ &nbsp; Nova Viagem</button>';
   h+='<button class="btn-reset" onclick="resetRT()">← Edit Route</button>';
   return h;
 }
@@ -1434,6 +1436,43 @@ function clearRT(){
   document.getElementById('rt-results-content').innerHTML='';
   document.getElementById('rt-form-section').classList.remove('hidden');
   renderHistorySection();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function newTrip(){
+  // Auto-save current trip before clearing (silent, no confirmation needed)
+  var hasRT=!!_rtData;
+  var hasDest=!!_destData&&!!(document.getElementById('f-city')&&document.getElementById('f-city').value.trim());
+  if(hasRT||hasDest) saveTripToHistory(null);
+  // Clear Road Trip
+  ['rt-origin-city','rt-origin-state','rt-dest-city','rt-dest-state','rt-venue'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.value='';
+  });
+  document.getElementById('rt-origin-country').value='Canada';
+  document.getElementById('rt-dest-country').value='Canada';
+  document.getElementById('rt-consumption').value='10.0';
+  document.getElementById('rt-fuelprice').value='1.65';
+  document.getElementById('rt-travelers').value='2';
+  document.getElementById('rt-roundtrip').checked=false;
+  _rtData=null; _rtView='form';
+  document.getElementById('rt-results-section').classList.add('hidden');
+  document.getElementById('rt-results-content').innerHTML='';
+  document.getElementById('rt-form-section').classList.remove('hidden');
+  // Clear Local Trip
+  ['f-city','f-state','f-country','f-venue','f-event-name'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.value='';
+  });
+  var ci=document.getElementById('f-checkin'); if(ci) ci.value=new Date().toISOString().slice(0,10);
+  var co=document.getElementById('f-checkout'); if(co) co.value=new Date(Date.now()+86400000).toISOString().slice(0,10);
+  document.getElementById('f-travelers').value='2';
+  document.getElementById('f-purpose').value='leisure';
+  _destData=null; _destView='form';
+  document.getElementById('results-section').classList.add('hidden');
+  document.getElementById('form-section').classList.remove('hidden');
+  updateOverviewTab();
+  saveState();
+  renderHistorySection();
+  switchTab('rt');
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
@@ -2004,7 +2043,7 @@ function renderHistorySection(){
   });
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='153';
+  var _myV='154';
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
     .then(function(r){return r.json();})
     .then(function(d){
