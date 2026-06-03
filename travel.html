@@ -95,6 +95,22 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Sego
 .sec-chevron{margin-left:auto;font-size:13px;color:var(--muted);transition:transform .2s}
 .sec-body{overflow:hidden;transition:max-height .3s ease}
 
+/* ── DRIVE COST CALCULATOR ── */
+.ldc-wrap{padding:4px 0 8px}
+.ldc-row{margin-bottom:10px}
+.ldc-label{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.ldc-input{width:100%;box-sizing:border-box;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;outline:none;background:#f8fafc;color:var(--text)}
+.ldc-input:focus{border-color:var(--teal);background:#fff}
+.ldc-btn{width:100%;padding:12px;background:var(--teal);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;margin-top:2px}
+.ldc-btn:disabled{opacity:.6}
+.ldc-result-box{background:#f0f9ff;border-radius:12px;padding:14px;margin-top:12px;border:1.5px solid #bae6fd}
+.ldc-stat-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.ldc-stat{background:#fff;border-radius:10px;padding:10px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.ldc-val{display:block;font-size:18px;font-weight:900;color:var(--navy)}
+.ldc-lbl{display:block;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+.ldc-maps-btn{display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,#1a73e8,#0d47a1);color:#fff;border-radius:12px;padding:13px;font-size:14px;font-weight:800;text-decoration:none;font-family:inherit}
+.ldc-swap{background:none;border:1.5px solid var(--border);border-radius:8px;padding:4px 10px;font-size:12px;cursor:pointer;font-family:inherit;color:var(--muted);float:right;margin-top:-2px}
+
 /* ── LINK CARDS ── */
 .link-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .link-card{background:#fff;border-radius:14px;padding:14px 16px;box-shadow:var(--shadow);border:1px solid var(--border);text-decoration:none;display:flex;flex-direction:column;gap:6px;transition:all .18s;cursor:pointer}
@@ -326,7 +342,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Sego
     <div class="hero-badge">✈️ &nbsp; Trip Planner</div>
     <div class="hero-title">Plan Your Perfect Trip</div>
     <div class="hero-sub">Routes · Hotels · Dining · Events · Budget</div>
-    <div style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v167</div>
+    <div style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v168</div>
   </div>
 </div>
 
@@ -604,6 +620,29 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Sego
   </div>
 
   <div id="dest-cost-box"></div>
+
+  <!-- ── DRIVE COST CALCULATOR ── -->
+  <div class="sec" id="local-drive-sec">
+    <div class="sec-header" onclick="toggleStopsSection(this)">
+      <span class="sec-icon">🚗</span>
+      <span class="sec-title">Drive Cost</span>
+      <span class="sec-chevron">▼</span>
+    </div>
+    <div class="sec-body" style="max-height:0">
+      <div class="ldc-wrap">
+        <div class="ldc-row">
+          <label class="ldc-label">From <button class="ldc-swap" onclick="ldcSwap()">⇅ Swap</button></label>
+          <input type="text" id="ldc-from" class="ldc-input" placeholder="e.g. Videotron Centre, Quebec City" autocomplete="off">
+        </div>
+        <div class="ldc-row">
+          <label class="ldc-label">To</label>
+          <input type="text" id="ldc-to" class="ldc-input" placeholder="e.g. Hotel Le Concorde, Quebec City" autocomplete="off">
+        </div>
+        <button class="ldc-btn" id="ldc-calc-btn" onclick="calcLocalDrive()">🚗 Calculate</button>
+        <div id="ldc-result"></div>
+      </div>
+    </div>
+  </div>
 
   <div class="sec">
     <div class="sec-header" onclick="toggleStopsSection(this)"><span class="sec-icon">🏨</span><span class="sec-title">Where to Stay</span><span class="sec-chevron">▼</span></div>
@@ -1623,6 +1662,7 @@ async function planTrip(){
   };
   document.getElementById('dest-cost-box').innerHTML=destCostBoxContent(_destData);
 
+  initLocalDriveCalc(nearAnchor);
   _destView='results';
   updateOverviewTab();
   saveState();
@@ -1818,6 +1858,65 @@ function resetForm(){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
+// ── DRIVE COST CALCULATOR ─────────────────────────────────────────────────────
+function initLocalDriveCalc(nearAnchor){
+  var el=document.getElementById('ldc-from');
+  if(el) el.value=nearAnchor||'';
+  document.getElementById('ldc-to').value='';
+  document.getElementById('ldc-result').innerHTML='';
+}
+function ldcSwap(){
+  var f=document.getElementById('ldc-from'), t=document.getElementById('ldc-to');
+  var tmp=f.value; f.value=t.value; t.value=tmp;
+  document.getElementById('ldc-result').innerHTML='';
+}
+async function calcLocalDrive(){
+  var btn=document.getElementById('ldc-calc-btn');
+  var res=document.getElementById('ldc-result');
+  var from=(document.getElementById('ldc-from').value||'').trim();
+  var to=(document.getElementById('ldc-to').value||'').trim();
+  if(!from||!to){
+    res.innerHTML='<div style="color:#dc2626;font-size:12px;padding:8px 0">Enter both From and To.</div>';
+    return;
+  }
+  btn.textContent='⏳ Calculating...'; btn.disabled=true; res.innerHTML='';
+  try{
+    var fromC=await geocodePlace(from);
+    var toC=await geocodePlace(to);
+    if(!fromC||!toC){
+      res.innerHTML='<div style="color:#dc2626;font-size:12px;padding:8px 0">Address not found. Be more specific (include city name).</div>';
+      btn.textContent='🚗 Calculate'; btn.disabled=false; return;
+    }
+    var r=await fetch('https://router.project-osrm.org/route/v1/driving/'+fromC.lng+','+fromC.lat+';'+toC.lng+','+toC.lat+'?overview=false');
+    var d=await r.json();
+    if(!d.routes||!d.routes.length){
+      res.innerHTML='<div style="color:#dc2626;font-size:12px;padding:8px 0">No route found between these locations.</div>';
+      btn.textContent='🚗 Calculate'; btn.disabled=false; return;
+    }
+    var distKm=d.routes[0].distance/1000;
+    var durMin=Math.round(d.routes[0].duration/60);
+    var consumption=(_rtData&&_rtData.consumption)||11.5;
+    var fuelPrice=(_rtData&&_rtData.fuelPrice)||1.87;
+    var liters=distKm*consumption/100;
+    var cost=liters*fuelPrice;
+    var durStr=durMin>=60?Math.floor(durMin/60)+'h '+(durMin%60>0?String(durMin%60).padStart(2,'0')+'min':''):(durMin+' min');
+    var mapsUrl='https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(from)+'&destination='+encodeURIComponent(to)+'&travelmode=driving';
+    res.innerHTML=
+      '<div class="ldc-result-box">'+
+      '<div class="ldc-stat-row">'+
+      '<div class="ldc-stat"><span class="ldc-val">'+distKm.toFixed(1)+' km</span><span class="ldc-lbl">Distance</span></div>'+
+      '<div class="ldc-stat"><span class="ldc-val">'+durStr+'</span><span class="ldc-lbl">Drive time</span></div>'+
+      '<div class="ldc-stat"><span class="ldc-val">'+liters.toFixed(2)+' L</span><span class="ldc-lbl">Fuel ('+consumption+' L/100km)</span></div>'+
+      '<div class="ldc-stat"><span class="ldc-val">~$'+cost.toFixed(2)+'</span><span class="ldc-lbl">Cost @ $'+fuelPrice.toFixed(2)+'/L</span></div>'+
+      '</div>'+
+      '<a href="'+mapsUrl+'" target="_blank" class="ldc-maps-btn">🗺️ Navigate — Google Maps / CarPlay</a>'+
+      '</div>';
+  }catch(e){
+    res.innerHTML='<div style="color:#dc2626;font-size:12px;padding:8px 0">Error calculating route. Check your connection.</div>';
+  }
+  btn.textContent='🚗 Calculate'; btn.disabled=false;
+}
+
 function editLocalTrip(){
   // Go back to form keeping all field values intact
   _destView='form';
@@ -1916,6 +2015,7 @@ function replayLocalTrip(f, dd){
   try{document.getElementById('event-links').innerHTML=buildEventCards(city,state,country,locShort,purpose,evtName,checkin);}catch(e){}
   try{document.getElementById('parking-links').innerHTML=buildParkingCards(city,state,locShort,nearAnchor);}catch(e){}
   try{document.getElementById('dest-cost-box').innerHTML=destCostBoxContent(dd);}catch(e){}
+  try{initLocalDriveCalc(nearAnchor);}catch(e){}
   updateOverviewTab();
   // Always show results section — this is the critical part
   try{document.getElementById('form-section').classList.add('hidden');}catch(e){}
@@ -2091,7 +2191,7 @@ function renderHistorySection(){
   });
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='167';
+  var _myV='168';
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
     .then(function(r){return r.json();})
     .then(function(d){
