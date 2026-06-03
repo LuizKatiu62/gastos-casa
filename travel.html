@@ -342,7 +342,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Sego
     <div class="hero-badge">✈️ &nbsp; Trip Planner</div>
     <div class="hero-title">Plan Your Perfect Trip</div>
     <div class="hero-sub">Routes · Hotels · Dining · Events · Budget</div>
-    <div id="tv-ver" style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v175</div>
+    <div id="tv-ver" style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v176</div>
   </div>
 </div>
 
@@ -2458,6 +2458,20 @@ function _fbDoSync(syncRestored){
     showToast('☁️ Viagem restaurada da nuvem',3500);
   }).catch(function(e){ console.warn('activeState:',e&&e.code); });
 
+  // Real-time listener for Drive Cost fields only — updates ldc-from/ldc-to
+  // when another device saves them, without overwriting the whole state
+  _activeStateRef.on('value', function(stSnap){
+    var fbS=stSnap.val();
+    if(!fbS||!fbS.fields) return;
+    var fromEl=document.getElementById('ldc-from');
+    var toEl=document.getElementById('ldc-to');
+    // Only update if field is not currently focused (user isn't typing)
+    if(fromEl&&document.activeElement!==fromEl&&fbS.fields.ldcFrom)
+      fromEl.value=fbS.fields.ldcFrom;
+    if(toEl&&document.activeElement!==toEl&&fbS.fields.ldcTo)
+      toEl.value=fbS.fields.ldcTo;
+  });
+
   // ── TRIPS HISTORY ────────────────────────────────────────────────────────
   _tvRef.once('value').then(function(snap){
     var fb=snap.val();
@@ -2580,7 +2594,7 @@ async function forceUpdate(){
   });
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='175';
+  var _myV='176';
   var _verEl=document.getElementById('tv-ver');
   if(_verEl) _verEl.textContent='v'+_myV;
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
