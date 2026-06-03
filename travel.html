@@ -342,7 +342,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Sego
     <div class="hero-badge">✈️ &nbsp; Trip Planner</div>
     <div class="hero-title">Plan Your Perfect Trip</div>
     <div class="hero-sub">Routes · Hotels · Dining · Events · Budget</div>
-    <div id="tv-ver" style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v178</div>
+    <div id="tv-ver" style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v179</div>
   </div>
 </div>
 
@@ -1868,6 +1868,15 @@ function initLocalDriveCalc(nearAnchor, savedFrom, savedTo, savedResultHtml){
   if(toEl) toEl.value=savedTo||'';
   var resEl=document.getElementById('ldc-result');
   if(resEl) resEl.innerHTML=savedResultHtml||'';
+  if(savedTo||savedResultHtml){
+    var sec=document.getElementById('local-drive-sec');
+    if(sec){
+      var body=sec.querySelector('.sec-body');
+      var chev=sec.querySelector('.sec-chevron');
+      if(body) body.style.maxHeight='600px';
+      if(chev) chev.style.transform='rotate(180deg)';
+    }
+  }
 }
 function ldcSwap(){
   var f=document.getElementById('ldc-from'), t=document.getElementById('ldc-to');
@@ -2598,7 +2607,7 @@ async function forceUpdate(){
   });
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='178';
+  var _myV='179';
   var _verEl=document.getElementById('tv-ver');
   if(_verEl) _verEl.textContent='v'+_myV;
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
