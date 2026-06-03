@@ -322,7 +322,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Sego
     <div class="hero-badge">✈️ &nbsp; Trip Planner</div>
     <div class="hero-title">Plan Your Perfect Trip</div>
     <div class="hero-sub">Routes · Hotels · Dining · Events · Budget</div>
-    <div style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v160</div>
+    <div style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v161</div>
   </div>
 </div>
 
@@ -1856,7 +1856,7 @@ function _applyFields(f){
 // Re-render Local Trip results synchronously from saved fields + destData
 function replayLocalTrip(f, dd){
   if(!f||!f.fC||!f.fCI||!f.fCO||!dd) return false;
-  // Set data variables FIRST so updateOverviewTab() works even if DOM ops partially fail
+  // Set data FIRST — must survive any DOM exception below
   _destData=dd;
   _destView='results';
   var city=f.fC, state=f.fS||'', country=f.fN||'Other';
@@ -1869,39 +1869,43 @@ function replayLocalTrip(f, dd){
   var nights=Math.round((new Date(checkout)-new Date(checkin))/86400000);
   var nearAnchor=venue?venue+', '+city:locShort;
   var purposeLabels={leisure:'🌴 Leisure',business:'💼 Business',concert:'🎵 Concert',sports:'🏒 Sports Event',festival:'🎪 Festival',conference:'🎤 Conference',family:'👨‍👩‍👧 Family Visit',medical:'🏥 Medical',other:'✈️ Trip'};
-  document.getElementById('trip-summary').innerHTML=
+  // DOM rendering — each block isolated so one failure doesn't stop the rest
+  try{document.getElementById('trip-summary').innerHTML=
     '<div class="ts-left">'+
     '<div class="ts-dest">📍 '+locShort+'</div>'+
     (venue?'<div style="font-size:13px;color:rgba(255,255,255,.85);margin-top:2px;font-weight:700">🏟️ '+venue+'</div>':'')+
     '<div class="ts-dates">'+fmtDate(checkin)+' → '+fmtDate(checkout)+' &nbsp;·&nbsp; '+(purposeLabels[purpose]||'Trip')+'</div>'+
     '</div>'+
     '<div class="ts-right"><div class="ts-days">'+nights+'</div>'+
-    '<div class="ts-days-lbl">night'+(nights!==1?'s':'')+'</div></div>';
-  var evtBox=document.getElementById('event-box');
-  if(venue||evtName){
-    evtBox.classList.remove('hidden');
-    var evtNameEl=document.getElementById('event-name-display');
-    if(evtName){evtNameEl.textContent=evtName;evtNameEl.style.display='';}else{evtNameEl.style.display='none';}
-    var venueNameEl=document.getElementById('venue-name-display');
-    venueNameEl.textContent=venue||'';venueNameEl.style.display=venue?'':'none';
-    document.getElementById('event-box-title').textContent=['concert','sports','festival','conference'].includes(purpose)?'🎉 Event & Venue':'📍 Venue Details';
-    document.getElementById('venue-address-display').style.display='none';
-    document.getElementById('event-date-display').textContent=fmtDate(checkin)+(checkin!==checkout?' – '+fmtDate(checkout):'')+' · '+locShort;
-  } else { evtBox.classList.add('hidden'); }
-  document.getElementById('hotel-links').innerHTML=buildHotelCards(loc,locShort,nearAnchor,city,state,country,checkin,checkout,nights,budget);
-  document.getElementById('food-links').innerHTML=buildFoodCards(foods,city,state,locShort,nearAnchor);
-  document.getElementById('dining-sec').style.display=foods.length?'':'none';
-  document.getElementById('event-links').innerHTML=buildEventCards(city,state,country,locShort,purpose,evtName,checkin);
-  document.getElementById('parking-links').innerHTML=buildParkingCards(city,state,locShort,nearAnchor);
-  document.getElementById('dest-cost-box').innerHTML=destCostBoxContent(dd);
+    '<div class="ts-days-lbl">night'+(nights!==1?'s':'')+'</div></div>';}catch(e){}
+  try{
+    var evtBox=document.getElementById('event-box');
+    if(venue||evtName){
+      evtBox.classList.remove('hidden');
+      var evtNameEl=document.getElementById('event-name-display');
+      if(evtName){evtNameEl.textContent=evtName;evtNameEl.style.display='';}else{evtNameEl.style.display='none';}
+      var venueNameEl=document.getElementById('venue-name-display');
+      venueNameEl.textContent=venue||'';venueNameEl.style.display=venue?'':'none';
+      document.getElementById('event-box-title').textContent=['concert','sports','festival','conference'].includes(purpose)?'🎉 Event & Venue':'📍 Venue Details';
+      document.getElementById('venue-address-display').style.display='none';
+      document.getElementById('event-date-display').textContent=fmtDate(checkin)+(checkin!==checkout?' – '+fmtDate(checkout):'')+' · '+locShort;
+    } else { evtBox.classList.add('hidden'); }
+  }catch(e){}
+  try{document.getElementById('hotel-links').innerHTML=buildHotelCards(loc,locShort,nearAnchor,city,state,country,checkin,checkout,nights,budget);}catch(e){}
+  try{document.getElementById('food-links').innerHTML=buildFoodCards(foods,city,state,locShort,nearAnchor);}catch(e){}
+  try{document.getElementById('dining-sec').style.display=foods.length?'':'none';}catch(e){}
+  try{document.getElementById('event-links').innerHTML=buildEventCards(city,state,country,locShort,purpose,evtName,checkin);}catch(e){}
+  try{document.getElementById('parking-links').innerHTML=buildParkingCards(city,state,locShort,nearAnchor);}catch(e){}
+  try{document.getElementById('dest-cost-box').innerHTML=destCostBoxContent(dd);}catch(e){}
   updateOverviewTab();
-  document.getElementById('form-section').classList.add('hidden');
-  document.getElementById('results-section').classList.remove('hidden');
-  document.querySelectorAll('#results-section .sec-body').forEach(function(b){
+  // Always show results section — this is the critical part
+  try{document.getElementById('form-section').classList.add('hidden');}catch(e){}
+  try{document.getElementById('results-section').classList.remove('hidden');}catch(e){}
+  try{document.querySelectorAll('#results-section .sec-body').forEach(function(b){
     b.style.maxHeight='0';
     var chev=b.previousElementSibling&&b.previousElementSibling.querySelector('.sec-chevron');
     if(chev) chev.style.transform='';
-  });
+  });}catch(e){}
   return true;
 }
 
@@ -1931,7 +1935,12 @@ function restoreState(){
     _rtView='form';
   }
   if(_destView==='results'){
-    try{var ok=replayLocalTrip(s.fields,s.destData);if(!ok)_destView='form';}catch(e){_destView='form';}
+    try{var ok=replayLocalTrip(s.fields,s.destData);if(!ok)_destView='form';}catch(e){if(!_destData)_destView='form';}
+    // If data is set, always force results section visible regardless of DOM errors
+    if(_destData&&_destView==='results'){
+      try{document.getElementById('form-section').classList.add('hidden');}catch(e){}
+      try{document.getElementById('results-section').classList.remove('hidden');}catch(e){}
+    }
   }
   try{calcDays();}catch(e){}
   try{updateOverviewTab();}catch(e){}
@@ -2061,7 +2070,7 @@ function renderHistorySection(){
   });
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='160';
+  var _myV='161';
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
     .then(function(r){return r.json();})
     .then(function(d){
