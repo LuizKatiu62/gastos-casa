@@ -322,7 +322,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Sego
     <div class="hero-badge">✈️ &nbsp; Trip Planner</div>
     <div class="hero-title">Plan Your Perfect Trip</div>
     <div class="hero-sub">Routes · Hotels · Dining · Events · Budget</div>
-    <div style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v149</div>
+    <div style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v150</div>
   </div>
 </div>
 
@@ -1991,7 +1991,9 @@ function renderHistorySection(){
   calcDays();
   var restored=restoreState();
   updateOverviewTab();
-  switchTab(restored?_activeTab:'rt');
+  // If RT results exist always open on Road Trip so user sees their route immediately
+  var startTab=(_rtData&&_rtView==='results')?'rt':(restored?_activeTab:'rt');
+  switchTab(startTab);
   renderHistorySection();
   initTripSync();
   window.addEventListener('pagehide',saveState);
@@ -2001,7 +2003,7 @@ function renderHistorySection(){
   });
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='149';
+  var _myV='150';
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
     .then(function(r){return r.json();})
     .then(function(d){
