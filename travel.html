@@ -14,30 +14,33 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{
+  --navy:#0f1629;--navy2:#1e3a8a;--navy3:#1d4ed8;
   --teal:#0891b2;--teal2:#0e7490;--teal3:#22d3ee;
-  --amber:#d97706;--amber2:#f59e0b;
-  --green:#059669;--red:#dc2626;
-  --bg:#f0f9ff;--card:#fff;--text:#0f172a;--muted:#64748b;--light:#94a3b8;
-  --border:#e0f2fe;--sep:rgba(8,145,178,.1);
-  --shadow:0 2px 8px rgba(8,145,178,.12);
-  --r:16px;
+  --amber:#f59e0b;--amber2:#fbbf24;
+  --green:#059669;--green2:#10b981;--red:#ef4444;
+  --bg:#f1f5f9;--card:#fff;--text:#0f172a;--muted:#64748b;--light:#94a3b8;
+  --border:#e2e8f0;--sep:rgba(15,22,41,.06);
+  --shadow:0 4px 16px rgba(0,0,0,.08),0 1px 3px rgba(0,0,0,.04);
+  --shadow-lg:0 12px 32px rgba(0,0,0,.13),0 4px 8px rgba(0,0,0,.06);
+  --r:18px;--r-sm:12px;
   --sft:env(safe-area-inset-top,0px);
   --sfb:env(safe-area-inset-bottom,0px);
 }
 html,body{min-height:100%;background:var(--bg);color:var(--text)}
-body{font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif}
+body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Segoe UI',sans-serif}
 
 /* ── HERO ── */
-.hero{background:linear-gradient(150deg,#0c4a6e 0%,#0891b2 60%,#06b6d4 100%);padding:calc(var(--sft) + 28px) 24px 36px;text-align:center;position:relative;overflow:hidden}
-.hero-back{position:absolute;top:calc(var(--sft) + 14px);left:16px;background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:20px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;z-index:2}
-.hero::before{content:'✈️';position:absolute;font-size:180px;opacity:.06;top:-20px;right:-30px;transform:rotate(25deg)}
-.hero-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.15);border-radius:20px;padding:4px 14px;font-size:11px;font-weight:700;color:rgba(255,255,255,.9);letter-spacing:.8px;text-transform:uppercase;margin-bottom:14px}
-.hero-title{font-size:28px;font-weight:900;color:#fff;letter-spacing:-.5px;line-height:1.1}
-.hero-sub{font-size:14px;color:rgba(255,255,255,.65);margin-top:8px;line-height:1.5}
+.hero{background:linear-gradient(155deg,var(--navy) 0%,var(--navy2) 52%,var(--teal) 100%);padding:calc(var(--sft)+38px) 24px 56px;text-align:center;position:relative;overflow:hidden}
+.hero::before{content:'✈';position:absolute;font-size:210px;opacity:.04;top:-10px;right:-35px;transform:rotate(28deg);pointer-events:none;line-height:1}
+.hero::after{content:'';position:absolute;bottom:0;left:0;right:0;height:32px;background:var(--bg);border-radius:28px 28px 0 0}
+.hero-back{position:absolute;top:calc(var(--sft)+16px);left:16px;background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.2);color:#fff;border-radius:22px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;z-index:2;letter-spacing:.2px;backdrop-filter:blur(4px)}
+.hero-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.18);border-radius:22px;padding:6px 18px;font-size:10px;font-weight:800;color:rgba(255,255,255,.8);letter-spacing:1.4px;text-transform:uppercase;margin-bottom:18px;backdrop-filter:blur(4px)}
+.hero-title{font-size:32px;font-weight:900;color:#fff;letter-spacing:-.8px;line-height:1.05;margin-bottom:8px}
+.hero-sub{font-size:13px;color:rgba(255,255,255,.55);line-height:1.65;font-weight:400}
 
 /* ── FORM CARD ── */
 .form-wrap{max-width:680px;margin:0 auto;padding:0 16px 32px;position:relative;z-index:10}
-.form-card{background:#fff;border-radius:20px;box-shadow:0 8px 32px rgba(8,145,178,.18);overflow:hidden}
+.form-card{background:#fff;border-radius:20px;box-shadow:var(--shadow-lg);overflow:hidden}
 .form-section{padding:20px 20px 0}
 .form-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--teal);margin-bottom:12px}
 .field{margin-bottom:14px}
@@ -66,8 +69,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif}
 .budget-sub{font-size:10px;color:var(--muted);margin-top:2px}
 
 /* ── SUBMIT / CLEAR BTNS ── */
-.btn-plan{display:block;width:calc(100% - 40px);margin:20px 20px 8px;padding:16px;background:linear-gradient(135deg,var(--teal2),var(--teal));color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:.3px;transition:all .18s;box-shadow:0 4px 16px rgba(8,145,178,.35)}
-.btn-plan:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(8,145,178,.45)}
+.btn-plan{display:block;width:calc(100% - 40px);margin:20px 20px 8px;padding:17px;background:linear-gradient(135deg,var(--navy2),var(--teal2));color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:.3px;transition:all .18s;box-shadow:0 6px 20px rgba(30,58,138,.35)}
+.btn-plan:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(30,58,138,.45)}
 .btn-plan:active{transform:none}
 .btn-clear{display:block;width:calc(100% - 40px);margin:0 20px 20px;padding:13px;background:#fff;color:var(--red);border:2px solid #fecaca;border-radius:14px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;text-align:center;transition:all .15s}
 .btn-clear:hover{background:#fef2f2;border-color:var(--red)}
@@ -130,16 +133,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif}
 .divider{height:1px;background:var(--border);margin:20px 0}
 
 /* ── TABS ── */
-.tab-bar{max-width:680px;margin:-20px auto 0;padding:0 16px;position:relative;z-index:11;display:flex}
-.tab-top{flex:1;padding:13px 8px;border:none;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;transition:background .15s}
-.tab-top:first-child{border-radius:14px 0 0 0}
-.tab-top:last-child{border-radius:0 14px 0 0}
-.tab-top.tab-green:not(.active){background:#15803d;color:#fff;border:none;box-shadow:0 2px 8px rgba(0,0,0,.18)}
-.tab-top.tab-green.active{background:#fff;color:#166534}
-.tab-top.active{background:#fff;color:var(--teal2)}
-.tab-top:not(.active){background:#0e7490;color:#fff;border:none;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+.tab-bar{max-width:680px;margin:0 auto;padding:8px 16px 0;position:relative;z-index:11;display:flex;gap:3px}
+.tab-top{flex:1;padding:11px 4px;border:none;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .18s;border-radius:10px 10px 0 0;letter-spacing:.2px;white-space:nowrap}
+.tab-top.tab-green:not(.active){background:rgba(5,150,105,.8);color:#fff}
+.tab-top.tab-green.active{background:#fff;color:#059669;box-shadow:0 -3px 10px rgba(0,0,0,.07)}
+.tab-top.tab-amber:not(.active){background:rgba(180,83,9,.8);color:#fff}
+.tab-top.tab-amber.active{background:#fff;color:#b45309;box-shadow:0 -3px 10px rgba(0,0,0,.07)}
+.tab-top.active{background:#fff;color:var(--navy2);box-shadow:0 -3px 10px rgba(0,0,0,.07)}
+.tab-top:not(.active){background:rgba(15,22,41,.55);color:rgba(255,255,255,.82);box-shadow:none}
 .rt-form-wrap{max-width:680px;margin:0 auto;padding:0 16px 32px;position:relative;z-index:10}
-.rt-form-card{background:#fff;border-radius:0 20px 20px 20px;box-shadow:0 8px 32px rgba(8,145,178,.18);overflow:hidden}
+.rt-form-card{background:#fff;border-radius:0 20px 20px 20px;box-shadow:var(--shadow-lg);overflow:hidden}
 .form-card{border-radius:20px 0 20px 20px!important}
 
 /* ── ROUND TRIP TOGGLE ── */
@@ -256,6 +259,51 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif}
 .exp-entry-amt{font-size:14px;font-weight:900;color:var(--text);flex-shrink:0}
 .exp-del-btn{background:none;border:none;font-size:16px;cursor:pointer;opacity:.45;padding:4px;flex-shrink:0}
 .exp-del-btn:hover{opacity:1}
+
+/* ── OVERVIEW DASHBOARD ── */
+.ov-wrap{max-width:680px;margin:0 auto;padding:0 16px 80px}
+.ov-hero{background:linear-gradient(150deg,var(--navy) 0%,var(--navy2) 55%,var(--teal2) 100%);border-radius:var(--r);padding:24px 22px;margin-bottom:14px;color:#fff;position:relative;overflow:hidden}
+.ov-hero::before{content:'✈';position:absolute;font-size:130px;opacity:.06;top:-10px;right:-14px;transform:rotate(20deg);line-height:1}
+.ov-route-line{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:900;letter-spacing:-.3px;margin-bottom:6px;position:relative}
+.ov-route-dot{width:8px;height:8px;border-radius:50%;background:#fff;flex-shrink:0}
+.ov-route-dash{flex:1;border-top:2px dashed rgba(255,255,255,.35);margin:0 4px}
+.ov-route-sub{font-size:12px;color:rgba(255,255,255,.6);margin-top:4px}
+.ov-badges{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}
+.ov-badge{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:20px;padding:5px 12px;font-size:11px;font-weight:700;color:rgba(255,255,255,.9)}
+.ov-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.ov-stat{background:#fff;border-radius:14px;padding:16px 14px;box-shadow:var(--shadow);display:flex;align-items:center;gap:12px}
+.ov-stat-ico{font-size:26px;flex-shrink:0}
+.ov-stat-body{}
+.ov-stat-val{font-size:20px;font-weight:900;color:var(--text);line-height:1}
+.ov-stat-lbl{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:3px}
+.ov-card{background:#fff;border-radius:var(--r);padding:20px;margin-bottom:14px;box-shadow:var(--shadow)}
+.ov-card-title{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:16px}
+.ov-cost-row{margin-bottom:14px}
+.ov-cost-row:last-child{margin-bottom:0}
+.ov-cost-label{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px}
+.ov-cost-name{font-size:14px;font-weight:700;color:var(--text)}
+.ov-cost-val{font-size:14px;font-weight:900;color:var(--text)}
+.ov-bar{height:7px;background:#f1f5f9;border-radius:4px;overflow:hidden}
+.ov-bar-fill{height:100%;border-radius:4px}
+.ov-total-card{background:linear-gradient(135deg,#064e3b,var(--green));border-radius:var(--r);padding:22px;margin-bottom:14px;color:#fff}
+.ov-total-label{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:rgba(255,255,255,.65);margin-bottom:14px}
+.ov-total-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ov-total-item{background:rgba(255,255,255,.18);border-radius:12px;padding:14px;text-align:center}
+.ov-total-item.ov-total-main{background:rgba(255,255,255,.28)}
+.ov-total-val{font-size:26px;font-weight:900;line-height:1}
+.ov-total-sub{font-size:10px;color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:.5px;margin-top:4px}
+.ov-dest-card{background:linear-gradient(135deg,#1e1b4b,#4c1d95);border-radius:var(--r);padding:20px;margin-bottom:14px;color:#fff}
+.ov-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:0}
+.ov-action-btn{padding:15px 10px;border:none;border-radius:14px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;text-align:center;transition:all .18s;letter-spacing:.2px}
+.ov-action-btn:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+.ov-action-btn.ov-btn-rt{background:linear-gradient(135deg,var(--navy),var(--navy2));color:#fff}
+.ov-action-btn.ov-btn-lt{background:linear-gradient(135deg,#4c1d95,#7c3aed);color:#fff}
+.ov-action-btn.ov-btn-exp{background:linear-gradient(135deg,#064e3b,var(--green));color:#fff}
+.ov-action-btn.ov-btn-save{background:linear-gradient(135deg,var(--teal2),var(--teal));color:#fff}
+.ov-empty{text-align:center;padding:60px 20px;color:var(--muted)}
+.ov-empty-ico{font-size:56px;margin-bottom:16px}
+.ov-empty-title{font-size:20px;font-weight:800;color:var(--text);margin-bottom:8px}
+.ov-empty-sub{font-size:14px;line-height:1.6}
 </style>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -265,17 +313,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif}
 <!-- HERO -->
 <div class="hero">
   <button class="hero-back" onclick="saveState();window.location.href='index.html'">← Gastos Casa</button>
-  <button onclick="forceUpdate()" style="position:absolute;top:calc(var(--sft) + 14px);right:16px;background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:20px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;z-index:2">🔄 Update</button>
+  <button onclick="forceUpdate()" style="position:absolute;top:calc(var(--sft)+16px);right:16px;background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.2);color:#fff;border-radius:22px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;z-index:2;backdrop-filter:blur(4px)">🔄 Update</button>
   <div class="hero-badge">✈️ &nbsp; Trip Planner</div>
-  <div class="hero-title">Plan Your Next Trip</div>
-  <div class="hero-sub">Hotels, restaurants, events & parking —<br>all in one place, in seconds.</div>
-  <div style="font-size:10px;color:rgba(255,255,255,.5);margin-top:6px">v145</div>
+  <div class="hero-title">Plan Your Perfect Trip</div>
+  <div class="hero-sub">Routes · Hotels · Dining · Events · Budget</div>
+  <div style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v146</div>
 </div>
 
 <!-- TABS -->
 <div class="tab-bar">
   <button class="tab-top active" id="tab-rt" onclick="switchTab('rt')">🚗 Road Trip</button>
   <button class="tab-top" id="tab-dest" onclick="switchTab('dest')">🏙️ Local Trip</button>
+  <button class="tab-top tab-amber hidden" id="tab-ov" onclick="switchTab('ov')">📊 Overview</button>
   <button class="tab-top tab-green" id="tab-exp" onclick="switchTab('exp')">💰 Expenses</button>
 </div>
 
@@ -574,6 +623,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif}
   <div id="exp-section-content"></div>
 </div>
 
+<!-- ═══ OVERVIEW DASHBOARD ═══ -->
+<div class="ov-wrap hidden" id="overview-section">
+  <div id="overview-content"></div>
+</div>
+
 <!-- ═══ ROAD TRIP RESULTS ═══ -->
 <div class="results-wrap hidden" id="rt-results-section">
   <div id="rt-results-content"></div>
@@ -702,12 +756,20 @@ function switchTab(tab){
   document.getElementById('tab-rt').classList.toggle('active', tab==='rt');
   document.getElementById('tab-dest').classList.toggle('active', tab==='dest');
   document.getElementById('tab-exp').classList.toggle('active', tab==='exp');
+  var tabOv=document.getElementById('tab-ov');
+  if(tabOv) tabOv.classList.toggle('active', tab==='ov');
   const rtF=document.getElementById('rt-form-section'), rtR=document.getElementById('rt-results-section');
   const dtF=document.getElementById('form-section'),    dtR=document.getElementById('results-section');
   const expS=document.getElementById('exp-section');
+  const ovS=document.getElementById('overview-section');
   rtF.classList.add('hidden'); rtR.classList.add('hidden');
   dtF.classList.add('hidden'); dtR.classList.add('hidden');
   expS.classList.add('hidden');
+  if(ovS) ovS.classList.add('hidden');
+  if(tab==='ov'){
+    if(ovS){ovS.classList.remove('hidden');document.getElementById('overview-content').innerHTML=buildDashboardHTML(_rtData,_destData);}
+    saveState(); return;
+  }
   if(tab==='rt'){
     if(_rtView==='results') rtR.classList.remove('hidden');
     else rtF.classList.remove('hidden');
@@ -835,6 +897,7 @@ async function calculateRoute(){
   };
 
   document.getElementById('rt-results-content').innerHTML=buildRTHTML(_rtData);
+  updateOverviewTab();
   saveState();
 
   for(const s of stops){
@@ -1781,6 +1844,7 @@ function replayLocalTrip(f, dd){
   _destData=dd;
   document.getElementById('dest-cost-box').innerHTML=destCostBoxContent(dd);
   _destView='results';
+  updateOverviewTab();
   document.getElementById('form-section').classList.add('hidden');
   document.getElementById('results-section').classList.remove('hidden');
   document.querySelectorAll('#results-section .sec-body').forEach(function(b){
@@ -1921,13 +1985,14 @@ function renderHistorySection(){
   document.getElementById('f-checkout').value=tomorrow;
   calcDays();
   var restored=restoreState();
+  updateOverviewTab();
   switchTab(restored?_activeTab:'rt');
   renderHistorySection();
   initTripSync();
   window.addEventListener('pagehide',saveState);
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='145';
+  var _myV='146';
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
     .then(function(r){return r.json();})
     .then(function(d){
@@ -2066,6 +2131,138 @@ function renderHistorySection(){
     return s.length>12?parseFloat(n.toPrecision(8)).toString():s;
   }
 })();
+
+// ── OVERVIEW DASHBOARD ───────────────────────────────────────────────────────
+function updateOverviewTab(){
+  var has=!!(_rtData||_destData);
+  var btn=document.getElementById('tab-ov');
+  if(!btn)return;
+  if(has)btn.classList.remove('hidden');
+  else{btn.classList.add('hidden');if(_activeTab==='ov')switchTab('rt');}
+}
+
+function buildDashboardHTML(rd, dd){
+  if(!rd&&!dd){
+    return '<div class="ov-empty">'+
+      '<div class="ov-empty-ico">🗺️</div>'+
+      '<div class="ov-empty-title">No Trip Planned Yet</div>'+
+      '<div class="ov-empty-sub">Calculate a Road Trip or plan a Local Trip<br>and your overview will appear here.</div>'+
+      '</div>';
+  }
+
+  var html='';
+
+  // ── Route Hero Card ──
+  if(rd){
+    var distText=rd.distKm>=1?rd.distKm.toFixed(0)+' km':'—';
+    var durH=Math.floor(rd.durMin/60), durM=Math.round(rd.durMin%60);
+    var durText=durH+'h '+(durM<10?'0':'')+durM+'min';
+    var rtLabel=rd.roundTrip?'<span class="ov-badge">🔄 Round Trip</span>':'<span class="ov-badge">➡️ One Way</span>';
+    var travLabel='<span class="ov-badge">👥 '+rd.travelers+(rd.travelers===1?' traveler':' travelers')+'</span>';
+    html+='<div class="ov-hero">'+
+      '<div class="ov-route-line">'+
+        '<span class="ov-route-dot"></span>'+
+        '<span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+rd.origShort+'</span>'+
+        '<span class="ov-route-dash"></span>'+
+        '<span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right">'+rd.destShort+'</span>'+
+        '<span class="ov-route-dot"></span>'+
+      '</div>'+
+      '<div class="ov-route-sub">'+distText+' &nbsp;·&nbsp; '+durText+'</div>'+
+      '<div class="ov-badges">'+rtLabel+travLabel+'</div>'+
+    '</div>';
+
+    // Stats grid
+    html+='<div class="ov-stats">'+
+      '<div class="ov-stat"><span class="ov-stat-ico">📏</span><div class="ov-stat-body"><div class="ov-stat-val">'+distText+'</div><div class="ov-stat-lbl">Distance</div></div></div>'+
+      '<div class="ov-stat"><span class="ov-stat-ico">⏱</span><div class="ov-stat-body"><div class="ov-stat-val">'+durText+'</div><div class="ov-stat-lbl">Drive Time</div></div></div>'+
+      '<div class="ov-stat"><span class="ov-stat-ico">⛽</span><div class="ov-stat-body"><div class="ov-stat-val">'+rd.fuelL.toFixed(1)+'L</div><div class="ov-stat-lbl">Fuel</div></div></div>'+
+      '<div class="ov-stat"><span class="ov-stat-ico">👥</span><div class="ov-stat-body"><div class="ov-stat-val">'+rd.travelers+'</div><div class="ov-stat-lbl">Travelers</div></div></div>'+
+    '</div>';
+  } else if(dd){
+    html+='<div class="ov-hero">'+
+      '<div class="ov-route-line"><span class="ov-route-dot"></span><span>'+dd.locShort+'</span></div>'+
+      '<div class="ov-route-sub">Local Trip</div>'+
+      '<div class="ov-badges"><span class="ov-badge">🌙 '+(dd.nights||1)+' night'+(dd.nights!==1?'s':'')+'</span>'+
+      '<span class="ov-badge">👥 '+(dd.travelers||2)+' travelers</span></div>'+
+    '</div>';
+  }
+
+  // ── Cost Breakdown Card ──
+  var mult=(rd&&rd.roundTrip)?2:1;
+  var gasAmt=(rd?(rd.fuelCost||0)*mult:0);
+  var stopsFood=(rd?(rd.stops||[]).length*(rd.mealRate||18)*(rd.travelers||1)*mult:0);
+  var rtRooms=rd?Math.ceil((rd.travelers||2)/2):0;
+  var hotelAmt=(rd?(rd.hotelCost||0)*rtRooms:0);
+  var ltHotel=0,ltFood=0;
+  if(dd&&dd.nights){
+    var ddR=dd.rooms!=null?dd.rooms:Math.ceil((dd.travelers||2)/2);
+    var ddRate=dd.hotelRate!=null?dd.hotelRate:(dd.budget==='luxury'?225:dd.budget==='moderate'?155:95);
+    ltHotel=dd.nights*ddRate*ddR;
+    var bf=(dd.breakfastRate==null?15:dd.breakfastRate),lu=(dd.lunchRate==null?20:dd.lunchRate);
+    var di=(dd.dinnerRate==null?35:dd.dinnerRate),sn=(dd.snacksRate==null?10:dd.snacksRate);
+    ltFood=dd.nights*(bf+lu+di+sn)*(dd.travelers||2);
+  }
+  var totalGas=gasAmt;
+  var totalHotel=hotelAmt+ltHotel;
+  var totalFood=stopsFood+ltFood;
+  var grandTotal=totalGas+totalHotel+totalFood;
+  var maxCost=Math.max(totalGas,totalHotel,totalFood,1);
+
+  function costRow(ico,name,val,color){
+    var pct=Math.round((val/maxCost)*100);
+    return '<div class="ov-cost-row">'+
+      '<div class="ov-cost-label">'+
+        '<span class="ov-cost-name">'+ico+' '+name+'</span>'+
+        '<span class="ov-cost-val">$'+val.toFixed(2)+'</span>'+
+      '</div>'+
+      '<div class="ov-bar"><div class="ov-bar-fill" style="width:'+pct+'%;background:'+color+'"></div></div>'+
+    '</div>';
+  }
+
+  if(grandTotal>0){
+    html+='<div class="ov-card">'+
+      '<div class="ov-card-title">💰 Cost Breakdown</div>'+
+      (totalGas>0?costRow('⛽','Gas',totalGas,'#0891b2'):'')+
+      (totalHotel>0?costRow('🏨','Hotel',totalHotel,'#7c3aed'):'')+
+      (totalFood>0?costRow('🍔','Food',totalFood,'#f59e0b'):'')+
+    '</div>';
+
+    // Total Card
+    var owTotal=totalGas+(totalHotel/mult)+stopsFood/mult+ltHotel+ltFood;
+    var rtTotal=grandTotal;
+    html+='<div class="ov-total-card">'+
+      '<div class="ov-total-label">📊 Estimated Total</div>'+
+      '<div class="ov-total-grid">'+
+        '<div class="ov-total-item"><div class="ov-total-val">$'+rtTotal.toFixed(0)+'</div><div class="ov-total-sub">'+(rd&&rd.roundTrip?'Round Trip':'Total')+'</div></div>'+
+        '<div class="ov-total-item ov-total-main"><div class="ov-total-val">$'+(grandTotal/(rd&&rd.travelers?rd.travelers:dd&&dd.travelers?dd.travelers:1)).toFixed(0)+'</div><div class="ov-total-sub">Per Person</div></div>'+
+      '</div>'+
+    '</div>';
+  }
+
+  // ── Local Trip Card ──
+  if(dd&&dd.nights){
+    html+='<div class="ov-dest-card">'+
+      '<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:rgba(255,255,255,.6);margin-bottom:12px">📍 Local Trip</div>'+
+      '<div style="font-size:20px;font-weight:900;color:#fff;margin-bottom:6px">'+dd.locShort+'</div>'+
+      (dd.checkin&&dd.checkout?'<div style="font-size:12px;color:rgba(255,255,255,.65);margin-bottom:12px">'+dd.checkin+' → '+dd.checkout+'</div>':'')+
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:4px">'+
+        '<div style="background:rgba(255,255,255,.15);border-radius:10px;padding:10px;text-align:center"><div style="font-size:18px;font-weight:900;color:#fff">'+dd.nights+'</div><div style="font-size:10px;color:rgba(255,255,255,.65);text-transform:uppercase;letter-spacing:.4px;margin-top:2px">Nights</div></div>'+
+        (ltHotel>0?'<div style="background:rgba(255,255,255,.15);border-radius:10px;padding:10px;text-align:center"><div style="font-size:18px;font-weight:900;color:#fff">$'+ltHotel.toFixed(0)+'</div><div style="font-size:10px;color:rgba(255,255,255,.65);text-transform:uppercase;letter-spacing:.4px;margin-top:2px">Hotel</div></div>':'')+
+        (ltFood>0?'<div style="background:rgba(255,255,255,.15);border-radius:10px;padding:10px;text-align:center"><div style="font-size:18px;font-weight:900;color:#fff">$'+ltFood.toFixed(0)+'</div><div style="font-size:10px;color:rgba(255,255,255,.65);text-transform:uppercase;letter-spacing:.4px;margin-top:2px">Meals</div></div>':'')+
+      '</div>'+
+    '</div>';
+  }
+
+  // ── Quick Actions ──
+  html+='<div class="ov-actions">'+
+    (rd?'<button class="ov-action-btn ov-btn-rt" onclick="switchTab(\'rt\')">🚗 Road Trip</button>':'<div></div>')+
+    (dd?'<button class="ov-action-btn ov-btn-lt" onclick="switchTab(\'dest\')">🏙️ Local Trip</button>':'<div></div>')+
+    '<button class="ov-action-btn ov-btn-exp" onclick="switchTab(\'exp\')">💰 Expenses</button>'+
+    '<button class="ov-action-btn ov-btn-save" onclick="saveTripToHistory(this)">💾 Save Trip</button>'+
+  '</div>';
+
+  return html;
+}
 
 // ── FIREBASE TRIP SYNC ───────────────────────────────────────────────────────
 var _tvRef=null, _tvSaving=false;
