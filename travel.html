@@ -325,7 +325,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Sego
     <div class="hero-badge">✈️ &nbsp; Trip Planner</div>
     <div class="hero-title">Plan Your Perfect Trip</div>
     <div class="hero-sub">Routes · Hotels · Dining · Events · Budget</div>
-    <div style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v164</div>
+    <div style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v165</div>
   </div>
 </div>
 
@@ -2086,7 +2086,7 @@ function renderHistorySection(){
   });
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='164';
+  var _myV='165';
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
     .then(function(r){return r.json();})
     .then(function(d){
@@ -2391,12 +2391,41 @@ function initTripSync(){
     if(!app)app=firebase.initializeApp(_TV_CFG,'tv');
     _tvRef=firebase.database(app).ref('gastos/'+_TV_SEC+'/trips');
     _activeStateRef=firebase.database(app).ref('gastos/'+_TV_SEC+'/activeState');
-    // Show loading indicator while Firebase connects (only if local history is empty)
-    if(!_tvTrips().length){
-      var el=document.getElementById('rt-history-list');
-      var wrap=document.getElementById('rt-history-wrap');
-      if(el&&wrap){wrap.style.display='block';el.innerHTML='<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px">☁️ Buscando viagens salvas...</div>';}
+
+    // Always push current active state to Firebase the moment we connect —
+    // this keeps the backup fresh even when the user only browses (never recalculates)
+    if(_rtData||_destData) syncActiveStateToFirebase();
+
+    // Show loading indicator whenever there is no active trip yet
+    if(!_rtData&&!_destData){
+      var _ldEl=document.getElementById('rt-history-list');
+      var _ldWrap=document.getElementById('rt-history-wrap');
+      if(_ldEl&&_ldWrap){_ldWrap.style.display='block';_ldEl.innerHTML='<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px">☁️ Buscando viagens salvas...</div>';}
     }
+
+    // Guard: prevent double-restore if both activeState and trips respond around the same time
+    var _syncRestored=false;
+
+    // ── ACTIVE STATE (fast path) — fetched in parallel with trips ────────────
+    _activeStateRef.once('value').then(function(stSnap){
+      if(_syncRestored||_rtData||_destData) return; // already restored
+      var fbS=stSnap.val();
+      if(!fbS||(!fbS.rtData&&!fbS.destData)) return;
+      _syncRestored=true;
+      try{_applyFields(fbS.fields);}catch(e){}
+      try{onPurposeChange();}catch(e){}
+      if(fbS.rtData){
+        _rtData=fbS.rtData; _rtView='results';
+        try{document.getElementById('rt-results-content').innerHTML=buildRTHTML(_rtData);}catch(e){}
+      }
+      if(fbS.destData&&fbS.fields){ try{replayLocalTrip(fbS.fields,fbS.destData);}catch(e){} }
+      saveState();
+      updateOverviewTab();
+      switchTab((_rtData&&_rtView==='results')?'rt':(fbS.activeTab||'rt'));
+      showToast('☁️ Viagem restaurada da nuvem',3500);
+    }).catch(function(){});
+
+    // ── TRIPS HISTORY ─────────────────────────────────────────────────────────
     _tvRef.once('value').then(function(snap){
       var fb=snap.val();
       if(fb&&typeof fb==='object'){
@@ -2408,15 +2437,11 @@ function initTripSync(){
             local.push(ft);changed=true;
           }
         });
-        if(changed){
-          local.sort(function(a,b){return (b.id||0)-(a.id||0);});
-          _tvSave(local);
-          renderHistorySection();
-        } else {
-          renderHistorySection(); // clear the loading message even if no changes
-        }
-        // Auto-load the most recent trip if this device has no active trip data
-        if(!_rtData&&!_destData&&fbArr.length){
+        if(changed){ local.sort(function(a,b){return (b.id||0)-(a.id||0);}); _tvSave(local); }
+        renderHistorySection();
+        // Auto-load newest trip only if nothing was restored yet
+        if(!_syncRestored&&!_rtData&&!_destData&&fbArr.length){
+          _syncRestored=true;
           var newest=fbArr.sort(function(a,b){return (b.id||0)-(a.id||0);})[0];
           if(newest&&newest.id){
             loadHistoryEntry(newest.id);
@@ -2424,32 +2449,11 @@ function initTripSync(){
           }
         }
       } else {
-        syncTripsToFirebase();
-        renderHistorySection(); // clear loading message
+        // Local trips exist but Firebase is empty — upload them
+        if(_tvTrips().length) syncTripsToFirebase();
+        renderHistorySection();
       }
-      // If still no active data, try to restore from Firebase activeState backup
-      if(!_rtData&&!_destData&&_activeStateRef){
-        _activeStateRef.once('value').then(function(stSnap){
-          var fbS=stSnap.val();
-          if(!fbS||(fbS.rtData===null&&fbS.destData===null)) return;
-          if(fbS.rtData||fbS.destData){
-            try{_applyFields(fbS.fields);}catch(e){}
-            try{onPurposeChange();}catch(e){}
-            if(fbS.rtData){
-              _rtData=fbS.rtData; _rtView='results';
-              try{document.getElementById('rt-results-content').innerHTML=buildRTHTML(_rtData);}catch(e){}
-            }
-            if(fbS.destData&&fbS.fields){
-              try{replayLocalTrip(fbS.fields,fbS.destData);}catch(e){}
-            }
-            saveState();
-            updateOverviewTab();
-            switchTab((_rtData&&_rtView==='results')?'rt':(fbS.activeTab||'rt'));
-            showToast('☁️ Estado restaurado da nuvem',3500);
-          }
-        }).catch(function(){});
-      }
-      // real-time listener
+      // real-time listener for cross-device sync
       _tvRef.on('value',function(snap){
         if(_tvSaving)return;
         var fb=snap.val();
