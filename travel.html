@@ -388,7 +388,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif}
 <!-- ═══ TRIP HISTORY ═══ -->
 <div class="form-wrap" id="rt-history-wrap" style="padding-top:0">
   <div style="padding:0 20px 4px;display:flex;align-items:center;justify-content:space-between">
-    <span style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">📚 Viagens Salvas</span>
+    <span style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">📚 Saved Trips</span>
   </div>
   <div style="padding:0 20px 16px" id="rt-history-list"></div>
 </div>
@@ -1897,7 +1897,7 @@ function renderHistorySection(){
   window.addEventListener('pagehide',saveState);
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='130';
+  var _myV='131';
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
     .then(function(r){return r.json();})
     .then(function(d){
