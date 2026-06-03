@@ -322,7 +322,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Sego
     <div class="hero-badge">✈️ &nbsp; Trip Planner</div>
     <div class="hero-title">Plan Your Perfect Trip</div>
     <div class="hero-sub">Routes · Hotels · Dining · Events · Budget</div>
-    <div style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v161</div>
+    <div style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v162</div>
   </div>
 </div>
 
@@ -647,6 +647,7 @@ var _destView = 'form';   // 'form' | 'results'
 var _rtData   = null;     // stored after calculateRoute()
 var _destData = null;     // stored after planTrip()
 var _activeTab= 'rt';     // last active tab
+var _pendingReplay=null;  // deferred replayLocalTrip args (set by restoreState)
 
 // ── CITY → PROVINCE LOOKUP ───────────────────────────────────────────────────
 const CITY_PROV = {
@@ -796,6 +797,11 @@ function switchTab(tab){
       if(rtVenue && !document.getElementById('f-venue').value.trim()){
         document.getElementById('f-venue').value = rtVenue;
       }
+    }
+    // Flush deferred Local Trip render (queued by restoreState)
+    if(_pendingReplay){
+      var pr=_pendingReplay; _pendingReplay=null;
+      try{replayLocalTrip(pr.fields,pr.destData);}catch(e){}
     }
     if(_destView==='results') dtR.classList.remove('hidden');
     else dtF.classList.remove('hidden');
@@ -1934,13 +1940,11 @@ function restoreState(){
   } else {
     _rtView='form';
   }
-  if(_destView==='results'){
-    try{var ok=replayLocalTrip(s.fields,s.destData);if(!ok)_destView='form';}catch(e){if(!_destData)_destView='form';}
-    // If data is set, always force results section visible regardless of DOM errors
-    if(_destData&&_destView==='results'){
-      try{document.getElementById('form-section').classList.add('hidden');}catch(e){}
-      try{document.getElementById('results-section').classList.remove('hidden');}catch(e){}
-    }
+  if(_destView==='results'&&s.destData){
+    // Set data immediately so updateOverviewTab() and switchTab() work
+    _destData=s.destData;
+    // Defer DOM rendering to switchTab('dest') — avoids init-time DOM state issues
+    _pendingReplay={fields:s.fields,destData:s.destData};
   }
   try{calcDays();}catch(e){}
   try{updateOverviewTab();}catch(e){}
@@ -2070,7 +2074,7 @@ function renderHistorySection(){
   });
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='161';
+  var _myV='162';
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
     .then(function(r){return r.json();})
     .then(function(d){
