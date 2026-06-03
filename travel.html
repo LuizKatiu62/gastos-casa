@@ -263,6 +263,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif}
 <!-- HERO -->
 <div class="hero">
   <button class="hero-back" onclick="saveState();window.location.href='index.html'">← Gastos Casa</button>
+  <button onclick="window.location.replace('./travel.html?_nc='+Date.now())" style="position:absolute;top:calc(var(--sft) + 14px);right:16px;background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:20px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;z-index:2">🔄 Update</button>
   <div class="hero-badge">✈️ &nbsp; Trip Planner</div>
   <div class="hero-title">Plan Your Next Trip</div>
   <div class="hero-sub">Hotels, restaurants, events & parking —<br>all in one place, in seconds.</div>
@@ -1919,7 +1920,7 @@ function renderHistorySection(){
   window.addEventListener('pagehide',saveState);
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='136';
+  var _myV='137';
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
     .then(function(r){return r.json();})
     .then(function(d){
