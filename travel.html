@@ -1150,10 +1150,10 @@ function buildExpensesHTML(d,dd){
     var ddRate=dd.hotelRate!=null?dd.hotelRate:(dd.budget==='luxury'?225:dd.budget==='moderate'?155:95);
     estHotel_lt=(dd.nights||0)*ddRate*ddRooms;
     var ddTrv=dd.travelers||2;
-    var bf=dd.breakfastRate!=null?dd.breakfastRate:8;
-    var lu=dd.lunchRate!=null?dd.lunchRate:15;
-    var di=dd.dinnerRate!=null?dd.dinnerRate:30;
-    var sn=dd.snacksRate!=null?dd.snacksRate:5;
+    var bf=(dd.breakfastRate==null?15:dd.breakfastRate);
+    var lu=(dd.lunchRate==null?20:dd.lunchRate);
+    var di=(dd.dinnerRate==null?35:dd.dinnerRate);
+    var sn=(dd.snacksRate==null?10:dd.snacksRate);
     estFood_lt=(dd.nights||0)*(bf+lu+di+sn)*ddTrv;
   }
 
@@ -1920,7 +1920,7 @@ function renderHistorySection(){
   window.addEventListener('pagehide',saveState);
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='138';
+  var _myV='139';
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
     .then(function(r){return r.json();})
     .then(function(d){
