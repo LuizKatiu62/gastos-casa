@@ -275,6 +275,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif}
   <button class="tab-top tab-green" id="tab-exp" onclick="switchTab('exp')">💰 Expenses</button>
 </div>
 
+<!-- ═══ TRIP HISTORY ═══ -->
+<div class="form-wrap" id="rt-history-wrap" style="padding-top:0">
+  <div style="padding:0 20px 4px;display:flex;align-items:center;justify-content:space-between">
+    <span style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">📚 Saved Trips</span>
+  </div>
+  <div style="padding:0 20px 16px" id="rt-history-list"></div>
+</div>
+
 <!-- ═══ ROAD TRIP FORM ═══ -->
 <div class="rt-form-wrap" id="rt-form-section">
   <div class="rt-form-card">
@@ -383,14 +391,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif}
     <button class="btn-plan" onclick="calculateRoute()">🚗 &nbsp; Calculate Route & Costs</button>
     <button class="btn-clear" onclick="clearRT()">🗑️ &nbsp; Clear & Start Over</button>
   </div>
-</div>
-
-<!-- ═══ TRIP HISTORY ═══ -->
-<div class="form-wrap" id="rt-history-wrap" style="padding-top:0">
-  <div style="padding:0 20px 4px;display:flex;align-items:center;justify-content:space-between">
-    <span style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">📚 Saved Trips</span>
-  </div>
-  <div style="padding:0 20px 16px" id="rt-history-list"></div>
 </div>
 
 <!-- ═══ DESTINATION FORM ═══ -->
@@ -701,12 +701,15 @@ function switchTab(tab){
   const rtF=document.getElementById('rt-form-section'), rtR=document.getElementById('rt-results-section');
   const dtF=document.getElementById('form-section'),    dtR=document.getElementById('results-section');
   const expS=document.getElementById('exp-section');
+  const histW=document.getElementById('rt-history-wrap');
   rtF.classList.add('hidden'); rtR.classList.add('hidden');
   dtF.classList.add('hidden'); dtR.classList.add('hidden');
   expS.classList.add('hidden');
+  if(histW) histW.style.display='none';
   if(tab==='rt'){
     if(_rtView==='results') rtR.classList.remove('hidden');
     else rtF.classList.remove('hidden');
+    renderHistorySection();
   } else if(tab==='exp'){
     expS.classList.remove('hidden');
     document.getElementById('exp-section-content').innerHTML=buildExpensesHTML(_rtData);
@@ -1897,7 +1900,7 @@ function renderHistorySection(){
   window.addEventListener('pagehide',saveState);
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='131';
+  var _myV='132';
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
     .then(function(r){return r.json();})
     .then(function(d){
