@@ -317,7 +317,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Sego
   <div class="hero-badge">✈️ &nbsp; Trip Planner</div>
   <div class="hero-title">Plan Your Perfect Trip</div>
   <div class="hero-sub">Routes · Hotels · Dining · Events · Budget</div>
-  <div style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v147</div>
+  <div style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v148</div>
 </div>
 
 <!-- TABS -->
@@ -1865,26 +1865,25 @@ function saveState(){
 }
 
 function restoreState(){
-  try{
-    var s=JSON.parse(localStorage.getItem(_STATE_KEY));
-    if(!s) return false;
-    _applyFields(s.fields);
-    onPurposeChange();
-    _rtView=s.rtView||'form';
-    _destView=s.destView||'form';
-    _activeTab=s.activeTab||'rt';
-    if(s.rtData){
-      _rtData=s.rtData;
-      if(_rtView==='results')
-        document.getElementById('rt-results-content').innerHTML=buildRTHTML(_rtData);
+  var s;
+  try{s=JSON.parse(localStorage.getItem(_STATE_KEY));}catch(e){}
+  if(!s) return false;
+  try{_applyFields(s.fields);}catch(e){}
+  try{onPurposeChange();}catch(e){}
+  _rtView=s.rtView||'form';
+  _destView=s.destView||'form';
+  _activeTab=s.activeTab||'rt';
+  if(s.rtData){
+    _rtData=s.rtData;
+    if(_rtView==='results'){
+      try{document.getElementById('rt-results-content').innerHTML=buildRTHTML(_rtData);}catch(e){_rtView='form';}
     }
-    if(_destView==='results'){
-      var ok=replayLocalTrip(s.fields, s.destData);
-      if(!ok) _destView='form';
-    }
-    calcDays();
-    return true;
-  }catch(e){return false;}
+  }
+  if(_destView==='results'){
+    try{var ok=replayLocalTrip(s.fields,s.destData);if(!ok)_destView='form';}catch(e){_destView='form';}
+  }
+  try{calcDays();}catch(e){}
+  return true;
 }
 
 function saveTripToHistory(btn){
@@ -1990,14 +1989,19 @@ function renderHistorySection(){
   renderHistorySection();
   initTripSync();
   window.addEventListener('pagehide',saveState);
+  // visibilitychange fires more reliably than pagehide on iOS PWA
+  document.addEventListener('visibilitychange',function(){
+    if(document.visibilityState==='hidden') saveState();
+  });
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='147';
+  var _myV='148';
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
     .then(function(r){return r.json();})
     .then(function(d){
       // Guard: d.v===0 means network failed (SW fallback) — don't loop
       if(d.v && d.v>0 && String(d.v)!==_myV){
+        saveState(); // persist before redirect so state survives the version hop
         window.location.replace('./travel.html?_nc='+Date.now());
       }
     }).catch(function(){});
