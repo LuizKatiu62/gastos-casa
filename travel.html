@@ -317,7 +317,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Sego
   <div class="hero-badge">✈️ &nbsp; Trip Planner</div>
   <div class="hero-title">Plan Your Perfect Trip</div>
   <div class="hero-sub">Routes · Hotels · Dining · Events · Budget</div>
-  <div style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v146</div>
+  <div style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v147</div>
 </div>
 
 <!-- TABS -->
@@ -1992,12 +1992,12 @@ function renderHistorySection(){
   window.addEventListener('pagehide',saveState);
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='146';
+  var _myV='147';
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
     .then(function(r){return r.json();})
     .then(function(d){
-      if(String(d.v)!==_myV){
-        // Navigate with timestamp — busts SW cache and CDN cache, no loop risk
+      // Guard: d.v===0 means network failed (SW fallback) — don't loop
+      if(d.v && d.v>0 && String(d.v)!==_myV){
         window.location.replace('./travel.html?_nc='+Date.now());
       }
     }).catch(function(){});
@@ -2340,8 +2340,12 @@ async function forceUpdate(){
       const regs=await navigator.serviceWorker.getRegistrations();
       await Promise.all(regs.map(r=>r.unregister()));
     }
+    if('caches' in window){
+      const keys=await caches.keys();
+      await Promise.all(keys.map(k=>caches.delete(k)));
+    }
   }catch(e){}
-  window.location.replace('./travel.html?_nc='+Date.now());
+  window.location.replace('./travel.html?_nc='+Date.now()+'&_v=147');
 }
 </script>
 </body>
