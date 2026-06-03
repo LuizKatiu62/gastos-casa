@@ -1137,7 +1137,8 @@ function buildExpensesHTML(d,dd){
   const travelers=(d&&d.travelers)||1;
   const rtRooms=Math.ceil(travelers/2);
   const hotelCost=(d&&d.hotelCost)||0;
-  const estGas=(d&&d.fuelCost)||0;
+  const mult=(d&&d.roundTrip)?2:1;
+  const estGas=((d&&d.fuelCost)||0)*mult;
   const estFood_rt=stops*mealRate*travelers;
   const estHotel_rt=hotelCost*rtRooms;
 
@@ -1918,7 +1919,7 @@ function renderHistorySection(){
   window.addEventListener('pagehide',saveState);
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='135';
+  var _myV='136';
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
     .then(function(r){return r.json();})
     .then(function(d){
