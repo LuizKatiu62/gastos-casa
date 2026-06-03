@@ -342,7 +342,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Sego
     <div class="hero-badge">✈️ &nbsp; Trip Planner</div>
     <div class="hero-title">Plan Your Perfect Trip</div>
     <div class="hero-sub">Routes · Hotels · Dining · Events · Budget</div>
-    <div id="tv-ver" style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v173</div>
+    <div id="tv-ver" style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v174</div>
   </div>
 </div>
 
@@ -1859,10 +1859,12 @@ function resetForm(){
 }
 
 // ── DRIVE COST CALCULATOR ─────────────────────────────────────────────────────
-function initLocalDriveCalc(nearAnchor){
+function initLocalDriveCalc(nearAnchor, savedFrom, savedTo){
   var el=document.getElementById('ldc-from');
-  if(el) el.value=nearAnchor||'';
-  document.getElementById('ldc-to').value='';
+  // Restore saved values if they exist; fall back to nearAnchor for From
+  if(el) el.value=savedFrom||nearAnchor||'';
+  var toEl=document.getElementById('ldc-to');
+  if(toEl) toEl.value=savedTo||'';
   document.getElementById('ldc-result').innerHTML='';
 }
 function ldcSwap(){
@@ -1953,6 +1955,8 @@ function _captureFields(){
     fT: document.getElementById('f-travelers').value,
     foods:[...document.querySelectorAll('.food-chip input:checked')].map(function(i){return i.value;}),
     budget:(document.querySelector('input[name="budget"]:checked')||{}).value||'budget',
+    ldcFrom:(document.getElementById('ldc-from')||{}).value||'',
+    ldcTo:(document.getElementById('ldc-to')||{}).value||'',
   };
 }
 
@@ -2015,7 +2019,7 @@ function replayLocalTrip(f, dd){
   try{document.getElementById('event-links').innerHTML=buildEventCards(city,state,country,locShort,purpose,evtName,checkin);}catch(e){}
   try{document.getElementById('parking-links').innerHTML=buildParkingCards(city,state,locShort,nearAnchor);}catch(e){}
   try{document.getElementById('dest-cost-box').innerHTML=destCostBoxContent(dd);}catch(e){}
-  try{initLocalDriveCalc(nearAnchor);}catch(e){}
+  try{initLocalDriveCalc(nearAnchor, f.ldcFrom, f.ldcTo);}catch(e){}
   updateOverviewTab();
   // Always show results section — this is the critical part
   try{document.getElementById('form-section').classList.add('hidden');}catch(e){}
@@ -2574,7 +2578,7 @@ async function forceUpdate(){
   });
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='173';
+  var _myV='174';
   var _verEl=document.getElementById('tv-ver');
   if(_verEl) _verEl.textContent='v'+_myV;
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
