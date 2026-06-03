@@ -1131,15 +1131,14 @@ function buildExpensesHTML(d,dd){
   });
   const grandTotal=Object.values(totals).reduce(function(a,b){return a+b;},0);
 
-  // RT estimates (with round-trip multiplier)
-  const mult=(d&&d.roundTrip)?2:1;
+  // RT estimates (one-way base; cost box already shows round-trip row separately)
   const mealRate=(d&&d.mealRate)||18;
   const stops=(d&&d.stops)?d.stops.length:0;
   const travelers=(d&&d.travelers)||1;
   const rtRooms=Math.ceil(travelers/2);
   const hotelCost=(d&&d.hotelCost)||0;
-  const estGas=((d&&d.fuelCost)||0)*mult;
-  const estFood_rt=stops*mealRate*travelers*mult;
+  const estGas=(d&&d.fuelCost)||0;
+  const estFood_rt=stops*mealRate*travelers;
   const estHotel_rt=hotelCost*rtRooms;
 
   // Local Trip estimates
@@ -1919,7 +1918,7 @@ function renderHistorySection(){
   window.addEventListener('pagehide',saveState);
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='134';
+  var _myV='135';
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
     .then(function(r){return r.json();})
     .then(function(d){
