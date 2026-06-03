@@ -269,7 +269,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif}
   <div class="hero-badge">✈️ &nbsp; Trip Planner</div>
   <div class="hero-title">Plan Your Next Trip</div>
   <div class="hero-sub">Hotels, restaurants, events & parking —<br>all in one place, in seconds.</div>
-  <div style="font-size:10px;color:rgba(255,255,255,.5);margin-top:6px">v144</div>
+  <div style="font-size:10px;color:rgba(255,255,255,.5);margin-top:6px">v145</div>
 </div>
 
 <!-- TABS -->
@@ -1346,6 +1346,7 @@ function resetRT(){
   _rtView='form';
   document.getElementById('rt-results-section').classList.add('hidden');
   document.getElementById('rt-form-section').classList.remove('hidden');
+  renderHistorySection();
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
@@ -1363,6 +1364,7 @@ function clearRT(){
   document.getElementById('rt-results-section').classList.add('hidden');
   document.getElementById('rt-results-content').innerHTML='';
   document.getElementById('rt-form-section').classList.remove('hidden');
+  renderHistorySection();
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
@@ -1925,7 +1927,7 @@ function renderHistorySection(){
   window.addEventListener('pagehide',saveState);
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='144';
+  var _myV='145';
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
     .then(function(r){return r.json();})
     .then(function(d){
