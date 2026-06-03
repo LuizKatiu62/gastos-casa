@@ -342,7 +342,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Sego
     <div class="hero-badge">✈️ &nbsp; Trip Planner</div>
     <div class="hero-title">Plan Your Perfect Trip</div>
     <div class="hero-sub">Routes · Hotels · Dining · Events · Budget</div>
-    <div id="tv-ver" style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v172</div>
+    <div id="tv-ver" style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v173</div>
   </div>
 </div>
 
@@ -2565,6 +2565,8 @@ async function forceUpdate(){
   initTripSync();
   // Safety net: re-check Overview visibility after Firebase async init settles
   setTimeout(updateOverviewTab, 1500);
+  // Proactive sync: push current state to Firebase 4s after load (Firebase auth needs time to init)
+  if(_rtData||_destData) setTimeout(function(){ saveState(); syncActiveStateToFirebase(); }, 4000);
   window.addEventListener('pagehide',function(){ saveState(); syncActiveStateToFirebase(); });
   // visibilitychange fires more reliably than pagehide on iOS PWA
   document.addEventListener('visibilitychange',function(){
@@ -2572,7 +2574,7 @@ async function forceUpdate(){
   });
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='172';
+  var _myV='173';
   var _verEl=document.getElementById('tv-ver');
   if(_verEl) _verEl.textContent='v'+_myV;
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
@@ -2580,8 +2582,9 @@ async function forceUpdate(){
     .then(function(d){
       // Guard: d.v===0 means network failed (SW fallback) — don't loop
       if(d.v && d.v>0 && String(d.v)!==_myV){
-        saveState(); // persist before redirect so state survives the version hop
-        window.location.replace('./travel.html?_nc='+Date.now());
+        saveState();
+        syncActiveStateToFirebase(); // push state to Firebase before redirect
+        setTimeout(function(){ window.location.replace('./travel.html?_nc='+Date.now()); }, 600);
       }
     }).catch(function(){});
 
