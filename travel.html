@@ -267,7 +267,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif}
   <div class="hero-badge">✈️ &nbsp; Trip Planner</div>
   <div class="hero-title">Plan Your Next Trip</div>
   <div class="hero-sub">Hotels, restaurants, events & parking —<br>all in one place, in seconds.</div>
-  <div style="font-size:10px;color:rgba(255,255,255,.5);margin-top:6px">v142</div>
+  <div style="font-size:10px;color:rgba(255,255,255,.5);margin-top:6px">v143</div>
 </div>
 
 <!-- TABS -->
@@ -703,11 +703,9 @@ function switchTab(tab){
   const rtF=document.getElementById('rt-form-section'), rtR=document.getElementById('rt-results-section');
   const dtF=document.getElementById('form-section'),    dtR=document.getElementById('results-section');
   const expS=document.getElementById('exp-section');
-  const histW=document.getElementById('rt-history-wrap');
   rtF.classList.add('hidden'); rtR.classList.add('hidden');
   dtF.classList.add('hidden'); dtR.classList.add('hidden');
   expS.classList.add('hidden');
-  if(histW) histW.style.display='none';
   if(tab==='rt'){
     if(_rtView==='results') rtR.classList.remove('hidden');
     else rtF.classList.remove('hidden');
@@ -1141,7 +1139,7 @@ function buildExpensesHTML(d,dd){
   const hotelCost=(d&&d.hotelCost)||0;
   const mult=(d&&d.roundTrip)?2:1;
   const estGas=((d&&d.fuelCost)||0)*mult;
-  const estFood_rt=stops*mealRate*travelers;
+  const estFood_rt=stops*mealRate*travelers*mult;
   const estHotel_rt=hotelCost*rtRooms;
 
   // Local Trip estimates — use same logic as destCostBoxContent
@@ -1857,31 +1855,31 @@ function deleteHistoryEntry(id){
 }
 
 function loadHistoryEntry(id){
-  try{
-    var hist=JSON.parse(localStorage.getItem(_HIST_KEY)||'[]');
-    var entry=hist.find(function(h){return h.id===id;});
-    if(!entry)return;
-    _applyFields(entry.fields);
-    onPurposeChange();
-    calcDays();
-    if(entry.rtData){
-      _rtData=entry.rtData;
-      _rtView='results';
-      document.getElementById('rt-results-content').innerHTML=buildRTHTML(_rtData);
-    } else {
-      _rtData=null; _rtView='form';
-      document.getElementById('rt-results-section').classList.add('hidden');
-    }
-    if(entry.destData&&entry.fields){
-      replayLocalTrip(entry.fields, entry.destData);
-    } else {
-      _destData=null; _destView='form';
-      document.getElementById('results-section').classList.add('hidden');
-      document.getElementById('form-section').classList.remove('hidden');
-    }
-    switchTab(entry.rtData?'rt':'dest');
-    window.scrollTo({top:0,behavior:'smooth'});
-  }catch(e){}
+  var hist=[];
+  try{hist=JSON.parse(localStorage.getItem(_HIST_KEY)||'[]');}catch(e){}
+  var entry=hist.find(function(h){return h.id===id;});
+  if(!entry){alert('Trip not found. It may have been deleted.');return;}
+  try{_applyFields(entry.fields);}catch(e){}
+  try{onPurposeChange();}catch(e){}
+  try{calcDays();}catch(e){}
+  if(entry.rtData){
+    _rtData=entry.rtData;
+    _rtView='results';
+    try{document.getElementById('rt-results-content').innerHTML=buildRTHTML(_rtData);}catch(e){}
+  } else {
+    _rtData=null; _rtView='form';
+    document.getElementById('rt-results-section').classList.add('hidden');
+  }
+  if(entry.destData&&entry.fields){
+    try{replayLocalTrip(entry.fields, entry.destData);}catch(e){}
+  } else {
+    _destData=null; _destView='form';
+    document.getElementById('results-section').classList.add('hidden');
+    document.getElementById('form-section').classList.remove('hidden');
+  }
+  saveState();
+  switchTab(entry.rtData?'rt':'dest');
+  window.scrollTo({top:0,behavior:'smooth'});
 }
 
 function renderHistorySection(){
@@ -1890,7 +1888,8 @@ function renderHistorySection(){
   var hist=[];
   try{hist=JSON.parse(localStorage.getItem(_HIST_KEY)||'[]');}catch(e){}
   var wrap=document.getElementById('rt-history-wrap');
-  if(wrap)wrap.style.display=hist.length?'block':'none';
+  var onRT=document.getElementById('tab-rt')&&document.getElementById('tab-rt').classList.contains('active');
+  if(wrap)wrap.style.display=(hist.length&&onRT)?'block':'none';
   if(!hist.length){el.innerHTML='';return;}
   el.innerHTML=hist.map(function(h){
     var dates=h.checkin&&h.checkout?' · '+h.checkin+' → '+h.checkout:'';
@@ -1921,7 +1920,7 @@ function renderHistorySection(){
   window.addEventListener('pagehide',saveState);
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='142';
+  var _myV='143';
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
     .then(function(r){return r.json();})
     .then(function(d){
