@@ -542,23 +542,23 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif}
   <div id="dest-cost-box"></div>
 
   <div class="sec">
-    <div class="sec-header"><span class="sec-icon">🏨</span><span class="sec-title">Where to Stay</span></div>
-    <div class="link-grid" id="hotel-links"></div>
+    <div class="sec-header" onclick="toggleStopsSection(this)"><span class="sec-icon">🏨</span><span class="sec-title">Where to Stay</span><span class="sec-chevron">▼</span></div>
+    <div class="sec-body" style="max-height:0"><div class="link-grid" id="hotel-links"></div></div>
   </div>
 
   <div class="sec" id="dining-sec">
-    <div class="sec-header"><span class="sec-icon">🍽️</span><span class="sec-title">Where to Eat</span></div>
-    <div class="link-grid food" id="food-links"></div>
+    <div class="sec-header" onclick="toggleStopsSection(this)"><span class="sec-icon">🍽️</span><span class="sec-title">Where to Eat</span><span class="sec-chevron">▼</span></div>
+    <div class="sec-body" style="max-height:0"><div class="link-grid food" id="food-links"></div></div>
   </div>
 
   <div class="sec">
-    <div class="sec-header"><span class="sec-icon">🎉</span><span class="sec-title">Events & Entertainment</span></div>
-    <div class="link-grid" id="event-links"></div>
+    <div class="sec-header" onclick="toggleStopsSection(this)"><span class="sec-icon">🎉</span><span class="sec-title">Events & Entertainment</span><span class="sec-chevron">▼</span></div>
+    <div class="sec-body" style="max-height:0"><div class="link-grid" id="event-links"></div></div>
   </div>
 
   <div class="sec">
-    <div class="sec-header"><span class="sec-icon">🅿️</span><span class="sec-title">Parking</span></div>
-    <div class="link-grid" id="parking-links"></div>
+    <div class="sec-header" onclick="toggleStopsSection(this)"><span class="sec-icon">🅿️</span><span class="sec-title">Parking</span><span class="sec-chevron">▼</span></div>
+    <div class="sec-body" style="max-height:0"><div class="link-grid" id="parking-links"></div></div>
   </div>
 
   <button class="btn-reset" onclick="editLocalTrip()">✏️ Editar / Nova busca</button>
@@ -1815,7 +1815,7 @@ function renderHistorySection(){
   window.addEventListener('pagehide',saveState);
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='124';
+  var _myV='125';
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
     .then(function(r){return r.json();})
     .then(function(d){
