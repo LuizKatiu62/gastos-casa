@@ -1468,6 +1468,11 @@ async function planTrip(){
   _destView='results';
   document.getElementById('form-section').classList.add('hidden');
   document.getElementById('results-section').classList.remove('hidden');
+  document.querySelectorAll('#results-section .sec-body').forEach(function(b){
+    b.style.maxHeight='0';
+    var chev=b.previousElementSibling&&b.previousElementSibling.querySelector('.sec-chevron');
+    if(chev) chev.style.transform='';
+  });
   window.scrollTo({top:0,behavior:'smooth'});
 
   if(venue){
@@ -1888,7 +1893,7 @@ function renderHistorySection(){
   window.addEventListener('pagehide',saveState);
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='127';
+  var _myV='128';
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
     .then(function(r){return r.json();})
     .then(function(d){
