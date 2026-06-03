@@ -1900,7 +1900,7 @@ function renderHistorySection(){
   window.addEventListener('pagehide',saveState);
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='132';
+  var _myV='133';
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
     .then(function(r){return r.json();})
     .then(function(d){
@@ -1931,6 +1931,112 @@ function renderHistorySection(){
       '<div style="flex:1;font-size:13px;line-height:1.4"><strong>Install on iPhone</strong><br>Tap <strong>Share</strong> ⬆️ then <strong>"Add to Home Screen"</strong></div>'+
       '<button onclick="sessionStorage.setItem(\'iosHintDismissed\',\'1\');this.closest(\'#ios-hint\').remove()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:20px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0">✕</button>';
     document.body.appendChild(hint);
+  }
+})();
+</script>
+
+<!-- ═══ CALCULATOR ═══ -->
+<style>
+#calc-fab{position:fixed;bottom:22px;right:18px;width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#0891b2,#0e7490);color:#fff;font-size:22px;border:none;cursor:pointer;box-shadow:0 4px 16px rgba(8,145,178,.45);z-index:999;display:flex;align-items:center;justify-content:center;transition:transform .15s}
+#calc-fab:active{transform:scale(.92)}
+#calc-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:1000;align-items:flex-end}
+#calc-overlay.open{display:flex}
+#calc-sheet{background:#1e293b;border-radius:24px 24px 0 0;width:100%;max-width:400px;margin:0 auto;padding:16px 16px 32px;box-shadow:0 -8px 40px rgba(0,0,0,.4)}
+#calc-display{background:#0f172a;border-radius:14px;padding:14px 16px;margin-bottom:14px;min-height:72px;display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-end}
+#calc-expr{font-size:13px;color:#64748b;min-height:18px;word-break:break-all;text-align:right}
+#calc-val{font-size:36px;font-weight:700;color:#f1f5f9;word-break:break-all;line-height:1.1}
+.calc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.cb{border:none;border-radius:14px;font-size:20px;font-weight:700;padding:18px 0;cursor:pointer;font-family:inherit;transition:filter .1s;-webkit-tap-highlight-color:transparent}
+.cb:active{filter:brightness(.8)}
+.cb-num{background:#334155;color:#f1f5f9}
+.cb-op{background:#0891b2;color:#fff}
+.cb-eq{background:#059669;color:#fff}
+.cb-fn{background:#475569;color:#f1f5f9}
+.cb-clr{background:#dc2626;color:#fff}
+#calc-close{display:block;width:100%;background:none;border:none;color:#64748b;font-size:13px;font-weight:700;padding:10px 0 0;cursor:pointer;font-family:inherit}
+</style>
+
+<button id="calc-fab" onclick="calcToggle()">🧮</button>
+<div id="calc-overlay" onclick="if(event.target===this)calcToggle()">
+  <div id="calc-sheet">
+    <div id="calc-display">
+      <div id="calc-expr"></div>
+      <div id="calc-val">0</div>
+    </div>
+    <div class="calc-grid">
+      <button class="cb cb-clr" onclick="calcClear()">C</button>
+      <button class="cb cb-fn"  onclick="calcToggleSign()">+/−</button>
+      <button class="cb cb-fn"  onclick="calcPercent()">%</button>
+      <button class="cb cb-op"  onclick="calcOp('÷')">÷</button>
+      <button class="cb cb-num" onclick="calcDigit('7')">7</button>
+      <button class="cb cb-num" onclick="calcDigit('8')">8</button>
+      <button class="cb cb-num" onclick="calcDigit('9')">9</button>
+      <button class="cb cb-op"  onclick="calcOp('×')">×</button>
+      <button class="cb cb-num" onclick="calcDigit('4')">4</button>
+      <button class="cb cb-num" onclick="calcDigit('5')">5</button>
+      <button class="cb cb-num" onclick="calcDigit('6')">6</button>
+      <button class="cb cb-op"  onclick="calcOp('−')">−</button>
+      <button class="cb cb-num" onclick="calcDigit('1')">1</button>
+      <button class="cb cb-num" onclick="calcDigit('2')">2</button>
+      <button class="cb cb-num" onclick="calcDigit('3')">3</button>
+      <button class="cb cb-op"  onclick="calcOp('+')">+</button>
+      <button class="cb cb-num" onclick="calcDigit('0')" style="grid-column:span 2">0</button>
+      <button class="cb cb-num" onclick="calcDot()">.</button>
+      <button class="cb cb-eq"  onclick="calcEqual()">=</button>
+    </div>
+    <button id="calc-close" onclick="calcToggle()">✕ Close</button>
+  </div>
+</div>
+<script>
+(function(){
+  var _cVal='0', _cPrev=null, _cOp=null, _cFresh=false;
+  function updDisp(){
+    document.getElementById('calc-val').textContent=_cVal;
+    document.getElementById('calc-expr').textContent=_cPrev&&_cOp?_cPrev+' '+_cOp:'';
+  }
+  window.calcToggle=function(){
+    var o=document.getElementById('calc-overlay');
+    o.classList.toggle('open');
+  };
+  window.calcDigit=function(d){
+    if(_cFresh){_cVal='0';_cFresh=false;}
+    _cVal=_cVal==='0'?d:(_cVal.length<12?_cVal+d:_cVal);
+    updDisp();
+  };
+  window.calcDot=function(){
+    if(_cFresh){_cVal='0';_cFresh=false;}
+    if(!_cVal.includes('.'))_cVal+='.';
+    updDisp();
+  };
+  window.calcOp=function(op){
+    var n=parseFloat(_cVal);
+    if(_cPrev!==null&&_cOp&&!_cFresh){
+      n=_doCalc(parseFloat(_cPrev),_cOp,n);
+      _cVal=_fmt(n);
+    }
+    _cPrev=_cVal; _cOp=op; _cFresh=true;
+    updDisp();
+  };
+  window.calcEqual=function(){
+    if(_cPrev===null||!_cOp) return;
+    var r=_doCalc(parseFloat(_cPrev),_cOp,parseFloat(_cVal));
+    _cVal=_fmt(r); _cPrev=null; _cOp=null; _cFresh=true;
+    updDisp();
+  };
+  window.calcClear=function(){_cVal='0';_cPrev=null;_cOp=null;_cFresh=false;updDisp();};
+  window.calcToggleSign=function(){_cVal=_fmt(parseFloat(_cVal)*-1);updDisp();};
+  window.calcPercent=function(){_cVal=_fmt(parseFloat(_cVal)/100);updDisp();};
+  function _doCalc(a,op,b){
+    if(op==='+'){ return a+b; }
+    if(op==='−'){ return a-b; }
+    if(op==='×'){ return a*b; }
+    if(op==='÷'){ return b!==0?a/b:0; }
+    return b;
+  }
+  function _fmt(n){
+    if(!isFinite(n)) return '0';
+    var s=parseFloat(n.toFixed(10)).toString();
+    return s.length>12?parseFloat(n.toPrecision(8)).toString():s;
   }
 })();
 </script>
