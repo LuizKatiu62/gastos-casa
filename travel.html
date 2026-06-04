@@ -342,7 +342,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Sego
     <div class="hero-badge">✈️ &nbsp; Trip Planner</div>
     <div class="hero-title">Plan Your Perfect Trip</div>
     <div class="hero-sub">Routes · Hotels · Dining · Events · Budget</div>
-    <div id="tv-ver" style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v180</div>
+    <div id="tv-ver" style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v181</div>
   </div>
 </div>
 
@@ -1521,7 +1521,7 @@ function newTrip(){
   if(!window.confirm('Iniciar nova viagem? A viagem atual será salva automaticamente no histórico.')) return;
   var hasRT=!!_rtData;
   var hasDest=!!_destData&&!!(document.getElementById('f-city')&&document.getElementById('f-city').value.trim());
-  if(hasRT||hasDest) saveTripToHistory(null);
+  if(hasRT||hasDest) saveTripToHistory(null, true);
   // Clear Road Trip
   ['rt-origin-city','rt-origin-state','rt-dest-city','rt-dest-state','rt-venue'].forEach(function(id){
     var el=document.getElementById(id); if(el) el.value='';
@@ -2101,20 +2101,48 @@ function restoreState(){
   return true;
 }
 
-function saveTripToHistory(btn){
+function saveTripToHistory(btn, skipPrompt){
   var hasRT=!!_rtData;
   var hasDest=!!_destData&&!!document.getElementById('f-city').value.trim();
   if(!hasRT&&!hasDest){alert('Sem dados para salvar. Calcule uma rota ou planeje um Local Trip primeiro.');return;}
   var f=_captureFields();
-  var name='';
-  if(hasRT&&hasDest) name=(_rtData.origShort||'?')+' → '+(_rtData.destShort||'?')+' + 📍 '+f.fC;
-  else if(hasRT) name=(_rtData.origShort||'?')+' → '+(_rtData.destShort||'?');
-  else name='📍 '+(f.fC||'Local Trip');
+  var autoName='';
+  if(hasRT&&hasDest) autoName=(_rtData.origShort||'?')+' → '+(_rtData.destShort||'?')+' + 📍 '+f.fC;
+  else if(hasRT) autoName=(_rtData.origShort||'?')+' → '+(_rtData.destShort||'?');
+  else autoName='📍 '+(f.fC||'Local Trip');
+  if(skipPrompt){
+    _doSaveTripToHistory(autoName, btn);
+    return;
+  }
+  // Show modal for user to name the trip
+  var now=new Date();
+  var pad=function(n){return String(n).padStart(2,'0');};
+  var tsDisplay=pad(now.getDate())+'/'+pad(now.getMonth()+1)+'/'+now.getFullYear()+' '+pad(now.getHours())+':'+pad(now.getMinutes());
+  document.getElementById('save-trip-ts').textContent='Salvo em: '+tsDisplay;
+  var inp=document.getElementById('save-trip-name');
+  inp.value=autoName;
+  var modal=document.getElementById('save-trip-modal');
+  modal.style.display='flex';
+  setTimeout(function(){inp.focus();inp.select();},80);
+  var confirmBtn=document.getElementById('save-trip-confirm-btn');
+  confirmBtn.onclick=function(){
+    var name=(inp.value||'').trim()||autoName;
+    modal.style.display='none';
+    _doSaveTripToHistory(name, btn);
+  };
+  inp.onkeydown=function(e){if(e.key==='Enter'){confirmBtn.onclick();}if(e.key==='Escape'){modal.style.display='none';}};
+}
+
+function _doSaveTripToHistory(name, btn){
+  var hasRT=!!_rtData;
+  var hasDest=!!_destData&&!!document.getElementById('f-city').value.trim();
+  var f=_captureFields();
+  var now=new Date();
   var hist=[];
   try{hist=JSON.parse(localStorage.getItem(_HIST_KEY)||'[]');}catch(e){}
   hist.unshift({
     id:Date.now().toString(36),
-    savedAt:new Date().toISOString().slice(0,10),
+    savedAt:now.toISOString(),
     name:name,
     checkin:f.fCI, checkout:f.fCO,
     rtData:hasRT?_rtData:null,
@@ -2126,7 +2154,7 @@ function saveTripToHistory(btn){
   renderHistorySection();
   syncTripsToFirebase();
   var b=btn||(event&&event.target);
-  if(b){var t=b.textContent;b.textContent='✅ Salvo!';setTimeout(function(){b.textContent=t;},1800);}
+  if(b&&b.textContent){var t=b.textContent;b.textContent='✅ Salvo!';setTimeout(function(){b.textContent=t;},1800);}
 }
 
 function deleteHistoryEntry(id){
@@ -2182,14 +2210,21 @@ function renderHistorySection(){
     return;
   }
   el.innerHTML=hist.map(function(h){
-    var dates=h.checkin&&h.checkout?' · '+h.checkin+' → '+h.checkout:'';
     var sub='';
     if(h.destData&&h.fields&&h.fields.fC) sub='<div style="font-size:11px;color:var(--teal);font-weight:600">📍 '+h.fields.fC+(h.fields.fCI?' · '+h.fields.fCI+' → '+h.fields.fCO:'')+'</div>';
+    var savedLabel='';
+    try{
+      var d=new Date(h.savedAt);
+      var pad=function(n){return String(n).padStart(2,'0');};
+      if(!isNaN(d.getTime())){
+        savedLabel=pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+d.getFullYear()+' '+pad(d.getHours())+':'+pad(d.getMinutes());
+      } else { savedLabel=h.savedAt; }
+    }catch(e){savedLabel=h.savedAt||'';}
     return '<div style="display:flex;align-items:center;gap:8px;background:#fff;border-radius:12px;border:1.5px solid #e0f2fe;padding:10px 12px;margin-bottom:8px">'+
       '<div style="flex:1;min-width:0">'+
       '<div style="font-size:13px;font-weight:700;color:var(--text)">'+h.name+'</div>'+
       sub+
-      '<div style="font-size:11px;color:var(--muted)">'+h.savedAt+dates+'</div>'+
+      '<div style="font-size:11px;color:var(--muted)">🕐 '+savedLabel+'</div>'+
       '</div>'+
       '<button onclick="loadHistoryEntry(\''+h.id+'\')" style="background:var(--teal);color:#fff;border:none;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">↩️ Restaurar</button>'+
       '<button onclick="deleteHistoryEntry(\''+h.id+'\')" style="background:none;border:none;font-size:16px;cursor:pointer;opacity:.4;padding:2px 4px;flex-shrink:0">🗑</button>'+
@@ -2626,7 +2661,7 @@ async function forceUpdate(){
   });
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='180';
+  var _myV='181';
   var _verEl=document.getElementById('tv-ver');
   if(_verEl) _verEl.textContent='v'+_myV;
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
@@ -2664,5 +2699,19 @@ async function forceUpdate(){
   }
 })();
 </script>
+
+<!-- ═══ SAVE TRIP MODAL ═══ -->
+<div id="save-trip-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:3000;align-items:flex-end;justify-content:center">
+  <div style="background:#fff;border-radius:24px 24px 0 0;width:100%;max-width:480px;padding:24px 20px 36px;box-shadow:0 -8px 40px rgba(0,0,0,.2)">
+    <div style="font-size:17px;font-weight:800;color:#1e293b;margin-bottom:6px">💾 Salvar Viagem</div>
+    <div style="font-size:12px;color:#64748b;margin-bottom:16px" id="save-trip-ts"></div>
+    <label style="font-size:12px;font-weight:700;color:#475569;display:block;margin-bottom:6px">Nome da viagem</label>
+    <input id="save-trip-name" type="text" style="width:100%;box-sizing:border-box;border:1.5px solid #cbd5e1;border-radius:12px;padding:12px 14px;font-size:15px;font-family:inherit;outline:none;color:#1e293b" placeholder="Ex: Quebec City – junho 2026" maxlength="60">
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button onclick="document.getElementById('save-trip-modal').style.display='none'" style="flex:1;padding:13px;background:#f1f5f9;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;color:#64748b">Cancelar</button>
+      <button id="save-trip-confirm-btn" style="flex:2;padding:13px;background:linear-gradient(135deg,#064e3b,#059669);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit">💾 Confirmar</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
