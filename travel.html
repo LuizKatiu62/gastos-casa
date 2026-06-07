@@ -1354,8 +1354,9 @@ function buildExpensesHTML(d,dd){
       '</div>';
   }
 
-  const sortedActive=active.slice().sort(function(a,b){return b.date.localeCompare(a.date);});
-  const sortedExcluded=excluded.slice().sort(function(a,b){return b.date.localeCompare(a.date);});
+  function byNewest(a,b){var dc=b.date.localeCompare(a.date);return dc!==0?dc:(b.id||0)-(a.id||0);}
+  const sortedActive=active.slice().sort(byNewest);
+  const sortedExcluded=excluded.slice().sort(byNewest);
 
   const entryList=sortedActive.length===0
     ?'<div style="text-align:center;padding:16px 0;font-size:13px;color:var(--muted)">'+
@@ -2661,7 +2662,7 @@ async function forceUpdate(){
   });
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='185';
+  var _myV='186';
   var _verEl=document.getElementById('tv-ver');
   if(_verEl) _verEl.textContent='v'+_myV;
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
