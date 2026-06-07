@@ -346,6 +346,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Sego
   </div>
 </div>
 
+<!-- UPDATE BANNER -->
+<div id="update-banner" style="display:none;position:sticky;top:0;z-index:900;background:linear-gradient(135deg,#b45309,#d97706);color:#fff;padding:12px 16px;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,.25)">
+  <span style="font-size:13px;font-weight:700">🔄 Nova versão disponível</span>
+  <button onclick="forceUpdate()" style="margin-left:12px;background:#fff;color:#92400e;border:none;border-radius:20px;padding:6px 16px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">Atualizar agora</button>
+</div>
+
 <!-- TABS -->
 <div class="tab-bar">
   <button class="tab-top active" id="tab-rt" onclick="switchTab('rt')">🚗 Road Trip</button>
@@ -2676,18 +2682,19 @@ function initTripSync(){
 }
 
 async function forceUpdate(){
-  saveState(); // persist current state BEFORE any cache/SW operation
+  saveState();
   try{
-    if(navigator.serviceWorker){
-      const regs=await navigator.serviceWorker.getRegistrations();
-      await Promise.all(regs.map(r=>r.unregister()));
-    }
     if('caches' in window){
       const keys=await caches.keys();
       await Promise.all(keys.map(k=>caches.delete(k)));
     }
+    if(navigator.serviceWorker){
+      const regs=await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r=>r.unregister()));
+    }
   }catch(e){}
-  window.location.replace('./travel.html?_nc='+Date.now());
+  // Hard reload — bypasses any SW or browser cache
+  window.location.href='./travel.html?_force='+Date.now();
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
@@ -2722,18 +2729,16 @@ async function forceUpdate(){
     if(document.visibilityState==='hidden'){ saveState(); syncActiveStateToFirebase(); }
   });
 
-  // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='190';
+  // Version check — show banner when newer version is available
+  var _myV='191';
   var _verEl=document.getElementById('tv-ver');
   if(_verEl) _verEl.textContent='v'+_myV;
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
     .then(function(r){return r.json();})
     .then(function(d){
-      // Guard: d.v===0 means network failed (SW fallback) — don't loop
       if(d.v && d.v>0 && String(d.v)!==_myV){
-        saveState();
-        syncActiveStateToFirebase(); // push state to Firebase before redirect
-        setTimeout(function(){ window.location.replace('./travel.html?_nc='+Date.now()); }, 600);
+        var banner=document.getElementById('update-banner');
+        if(banner) banner.style.display='block';
       }
     }).catch(function(){});
 

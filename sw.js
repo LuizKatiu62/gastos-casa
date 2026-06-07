@@ -1,7 +1,8 @@
-const CACHE = 'gastos-v190';
+const CACHE = 'gastos-v191';
 
 const CORE_ASSETS = [
   './index.html',
+  './travel.html',
   './manifest.json',
 ];
 
@@ -22,9 +23,8 @@ self.addEventListener('install', e => {
             .catch(() => {})
         )
       );
-    })
+    }).then(() => self.skipWaiting())
   );
-  self.skipWaiting();
 });
 
 self.addEventListener('activate', e => {
@@ -47,9 +47,9 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // travel.html — sempre da rede; se vier com ?_nc= passa o query para bustar CDN
+  // travel.html — sempre da rede; fallback para cache se offline
   if (url.includes('travel.html')) {
-    const fetchUrl = url.includes('_nc=') ? url : url.split('?')[0] + '?_sw=' + CACHE;
+    const fetchUrl = url.split('?')[0] + '?_sw=' + CACHE;
     e.respondWith(
       fetch(new Request(fetchUrl, { cache: 'no-store' }))
         .then(res => {
@@ -61,22 +61,22 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // Firebase / auth APIs — sempre rede
-  if (url.includes('firebaseio.com') || url.includes('googleapis.com') || url.includes('firebaseapp.com')) {
-    e.respondWith(fetch(e.request).catch(() => new Response('', { status: 503 })));
+  // index.html — sempre da rede; fallback para cache se offline
+  if (url.endsWith('/') || url.includes('index.html')) {
+    e.respondWith(
+      fetch(e.request, { cache: 'no-store' })
+        .then(res => {
+          if (res.ok) caches.open(CACHE).then(c => c.put(e.request, res.clone()));
+          return res;
+        })
+        .catch(() => caches.match(e.request))
+    );
     return;
   }
 
-  // HTML — network-first para sempre pegar versão mais nova
-  if (e.request.headers.get('accept') && e.request.headers.get('accept').includes('text/html')) {
-    e.respondWith(
-      fetch(e.request, { cache: 'no-cache' }).then(res => {
-        if (res.ok) {
-          caches.open(CACHE).then(c => c.put(e.request, res.clone()));
-        }
-        return res;
-      }).catch(() => caches.match(e.request))
-    );
+  // Firebase / auth APIs — sempre rede
+  if (url.includes('firebaseio.com') || url.includes('googleapis.com') || url.includes('firebaseapp.com')) {
+    e.respondWith(fetch(e.request).catch(() => new Response('', { status: 503 })));
     return;
   }
 
