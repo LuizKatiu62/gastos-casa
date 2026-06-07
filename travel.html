@@ -1432,6 +1432,27 @@ function buildRTHTML(d){
       :'')+
     '</div></div>';
 
+  // Return trip block (shown only when round trip)
+  if(d.roundTrip){
+    const retMapsUrl='https://www.google.com/maps/dir/'+encodeURIComponent(d.destShort)+'/'+encodeURIComponent(d.origShort);
+    h+='<div class="route-sum" style="margin-top:10px">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">'+
+      '<div class="rs-title" style="margin-bottom:0">🔄 '+d.destShort+' → '+d.origShort+'</div>'+
+      '<a href="'+retMapsUrl+'" target="_blank" style="display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:20px;padding:5px 10px;font-size:11px;font-weight:700;text-decoration:none;white-space:nowrap;flex-shrink:0">🗺️ Google Maps</a>'+
+      '</div>'+
+      '<div class="rs-metrics">'+
+      '<div class="rm"><div class="rm-val">'+Math.round(d.distKm)+' km</div><div class="rm-lbl">Total distance</div></div>'+
+      '<div class="rm"><div class="rm-val">~'+time+'</div><div class="rm-lbl">Pure drive time</div></div>'+
+      '<div class="rm"><div class="rm-val">'+d.fuelL.toFixed(1)+' L</div><div class="rm-lbl">Fuel ('+d.consumption+' L/100km)</div></div>'+
+      '<div class="rm"><div class="rm-val">~$'+d.fuelCost.toFixed(2)+'</div><div class="rm-lbl">Custo @ $'+d.fuelPrice.toFixed(2)+'/L</div></div>'+
+      (d.stops.length>0
+        ?'<div class="rm" style="grid-column:span 2;background:rgba(255,255,255,.2)">'+
+          '<div class="rm-val">~'+totalTime+'</div>'+
+          '<div class="rm-lbl">⏱ Est. total with '+d.stops.length+' stop'+(d.stops.length>1?'s':'')+' (~30 min each)</div></div>'
+        :'')+
+      '</div></div>';
+  }
+
   // Cost box
   h+='<div class="cost-box" id="rt-cost-box">'+costBoxContent(d)+'</div>';
 
@@ -2679,7 +2700,7 @@ async function forceUpdate(){
   });
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='188';
+  var _myV='189';
   var _verEl=document.getElementById('tv-ver');
   if(_verEl) _verEl.textContent='v'+_myV;
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
