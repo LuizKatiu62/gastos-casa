@@ -342,7 +342,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Sego
     <div class="hero-badge">✈️ &nbsp; Trip Planner</div>
     <div class="hero-title">Plan Your Perfect Trip</div>
     <div class="hero-sub">Routes · Hotels · Dining · Events · Budget</div>
-    <div id="tv-ver" style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v183</div>
+    <div id="tv-ver" style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v184</div>
   </div>
 </div>
 
@@ -1099,7 +1099,7 @@ function applyRTEdits(){
 // ── REAL EXPENSES ────────────────────────────────────────────────────────────
 // Reads from gastos-casa's own storage key ('gastos') and maps to trip format.
 // Only viagens category is shown in Trip Expenses.
-// Sub-category mapping: Food→alimentacao, Hotel→hotel, Gasolina→gasolina, rest→outros
+// Sub-category mapping: Food→alimentacao, Hotel→hotel, Gasolina→gasolina, Roupas→roupas, rest→outros
 function getExpenses(){
   var result=[];
   try{
@@ -1112,6 +1112,7 @@ function getExpenses(){
       if(sv.includes('Food')||sv.includes('🍽')) cat='alimentacao';
       else if(sv.includes('Hotel')||sv.includes('🏨')) cat='hotel';
       else if(sv.includes('Gasolina')||sv.includes('⛽')) cat='gasolina';
+      else if(sv.includes('Roupas')||sv.includes('👕')) cat='roupas';
       else cat='outros';
       result.push({id:l.id,date:l.data,cat:cat,amount:parseFloat(l.valor)||0,
         desc:l.desc||sv||''});
@@ -1273,9 +1274,9 @@ function buildExpensesHTML(d,dd){
   const active=filtered.filter(function(e){return excl.indexOf(e.id)===-1;});
   const excluded=filtered.filter(function(e){return excl.indexOf(e.id)!==-1;});
 
-  const totals={gasolina:0,hotel:0,alimentacao:0,outros:0};
+  const totals={gasolina:0,hotel:0,alimentacao:0,roupas:0,outros:0};
   active.forEach(function(e){
-    const mapped=['gasolina','hotel','alimentacao'].includes(e.cat)?e.cat:'outros';
+    const mapped=['gasolina','hotel','alimentacao','roupas'].includes(e.cat)?e.cat:'outros';
     totals[mapped]+=e.amount;
   });
   const grandTotal=Object.values(totals).reduce(function(a,b){return a+b;},0);
@@ -1313,6 +1314,7 @@ function buildExpensesHTML(d,dd){
     gasolina:{ico:'⛽',label:'Gas',est:estGas},
     hotel:{ico:'🏨',label:'Hotel',est:estHotel},
     alimentacao:{ico:'🍔',label:'Food',est:estFood},
+    roupas:{ico:'👕',label:'Roupas',est:0},
     outros:{ico:'🛍️',label:'Diversos',est:0}
   };
 
@@ -1334,7 +1336,7 @@ function buildExpensesHTML(d,dd){
   });
 
   function entryHTML(e, isExcluded){
-    const mapped=['gasolina','hotel','alimentacao'].includes(e.cat)?e.cat:'outros';
+    const mapped=['gasolina','hotel','alimentacao','roupas'].includes(e.cat)?e.cat:'outros';
     const info=CATS[mapped];
     const sty=isExcluded?'opacity:.45;':'';
     const txtSty=isExcluded?'style="text-decoration:line-through"':'';
@@ -2660,7 +2662,7 @@ async function forceUpdate(){
   });
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='183';
+  var _myV='184';
   var _verEl=document.getElementById('tv-ver');
   if(_verEl) _verEl.textContent='v'+_myV;
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
