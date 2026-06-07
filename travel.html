@@ -342,7 +342,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Sego
     <div class="hero-badge">✈️ &nbsp; Trip Planner</div>
     <div class="hero-title">Plan Your Perfect Trip</div>
     <div class="hero-sub">Routes · Hotels · Dining · Events · Budget</div>
-    <div id="tv-ver" style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v181</div>
+    <div id="tv-ver" style="font-size:9px;color:rgba(255,255,255,.28);margin-top:10px;letter-spacing:.5px">v182</div>
   </div>
 </div>
 
@@ -1100,6 +1100,7 @@ function applyRTEdits(){
 // Reads from gastos-casa's own storage key ('gastos') and maps to trip format.
 // Category mapping: carro→gasolina, mercado→alimentacao,
 //   diversos(restaurantes/mcdonalds)→alimentacao, rest→outros, parcelados→outros
+//   viagens: Food→alimentacao, Hotel→hotel, Gasolina→gasolina, rest→outros
 function getExpenses(){
   var result=[];
   try{
@@ -1112,6 +1113,13 @@ function getExpenses(){
       else if(l.cat==='diversos'){
         var s=l.divsub||'';
         cat=(s==='restaurantes'||s==='mcdonalds')?'alimentacao':'outros';
+      }
+      else if(l.cat==='viagens'){
+        var sv=l.divsub||'';
+        if(sv.includes('Food')||sv.includes('🍽')) cat='alimentacao';
+        else if(sv.includes('Hotel')||sv.includes('🏨')) cat='hotel';
+        else if(sv.includes('Gasolina')||sv.includes('⛽')) cat='gasolina';
+        else cat='outros';
       }
       else cat='outros';
       result.push({id:l.id,date:l.data,cat:cat,amount:parseFloat(l.valor)||0,
@@ -1314,7 +1322,7 @@ function buildExpensesHTML(d,dd){
     gasolina:{ico:'⛽',label:'Gas',est:estGas},
     hotel:{ico:'🏨',label:'Hotel',est:estHotel},
     alimentacao:{ico:'🍔',label:'Food',est:estFood},
-    outros:{ico:'📦',label:'Other',est:0}
+    outros:{ico:'🛍️',label:'Diversos',est:0}
   };
 
   let catRows='';
@@ -2661,7 +2669,7 @@ async function forceUpdate(){
   });
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='181';
+  var _myV='182';
   var _verEl=document.getElementById('tv-ver');
   if(_verEl) _verEl.textContent='v'+_myV;
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
