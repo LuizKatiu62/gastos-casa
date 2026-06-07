@@ -1263,10 +1263,10 @@ function includeExpense(id){
 }
 
 function buildExpensesHTML(d,dd){
-  const ci=document.getElementById('f-checkin').value;
-  const co=document.getElementById('f-checkout').value;
+  const ci=(dd&&dd.checkin)||document.getElementById('f-checkin').value;
+  const co=(dd&&dd.checkout)||document.getElementById('f-checkout').value;
   let all=getExpenses();
-  const filtered=ci&&co?all.filter(function(e){return e.date>=ci&&e.date<=co;}):all;
+  const filtered=ci&&co?all.filter(function(e){return e.date>=ci&&e.date<=co;}):[];
 
   var excl=[];
   try{excl=JSON.parse(localStorage.getItem(_EXCL_KEY)||'[]');}catch(e){}
@@ -2662,7 +2662,7 @@ async function forceUpdate(){
   });
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='186';
+  var _myV='187';
   var _verEl=document.getElementById('tv-ver');
   if(_verEl) _verEl.textContent='v'+_myV;
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
