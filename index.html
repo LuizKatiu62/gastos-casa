@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="app-version" content="20260603-178">
+<meta name="app-version" content="20260607-179">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Gastos">
@@ -264,6 +264,7 @@ body {
 .card-cat.diversos .cat-icon { background: #ffedd5; }
 .card-cat.mercado  .cat-icon { background: #dcfce7; }
 .card-cat.parcelados .cat-icon { background: #ede9fe; }
+.card-cat.viagens    .cat-icon { background: #e0f2fe; }
 .cat-nome { font-size: 11px; font-weight: 800; color: #374151; text-transform: uppercase; letter-spacing: .5px; flex: 1; }
 .cat-qtd { font-size: 10px; color: #64748b; background: #f3f4f6; border-radius: 20px; padding: 2px 8px; font-weight: 700; }
 .cat-linha-vals { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px; }
@@ -366,6 +367,7 @@ body {
 .relcat-tab.ativo-diversos   { border-color:#fb8c00; background:#fff7ed; color:#c05900; }
 .relcat-tab.ativo-parcelados { border-color:#7c3aed; background:#f5f3ff; color:#5b21b6; }
 .relcat-tab.ativo-parcelas   { border-color:#7c3aed; background:#f5f3ff; color:#5b21b6; }
+.relcat-tab.ativo-viagens    { border-color:#0284c7; background:#f0f9ff; color:#0369a1; }
 /* ── PARCELAS REPORT ── */
 .parc-grupo-card { background:#fff; border-radius:16px; padding:16px; margin-bottom:14px; box-shadow:0 2px 8px rgba(0,0,0,.06); }
 .parc-grupo-hdr  { display:flex; justify-content:space-between; align-items:flex-start; padding-left:10px; margin-bottom:12px; }
@@ -450,6 +452,8 @@ body {
 .opt-cat.sel-mercado .nm { color: #16a34a; }
 .opt-cat.sel-parcelados  { border-color: #7c3aed; background: #f5f3ff; }
 .opt-cat.sel-parcelados .nm { color: #6d28d9; }
+.opt-cat.sel-viagens     { border-color: #0284c7; background: #f0f9ff; }
+.opt-cat.sel-viagens .nm { color: #0369a1; }
 
 /* ── BOTÕES ── */
 .btn-salvar {
@@ -472,6 +476,7 @@ body {
 .add-header.cat-mercado   { background: linear-gradient(150deg, #14532d, #16a34a); }
 .add-header.cat-diversos  { background: linear-gradient(150deg, #7c2d12, #ea580c); }
 .add-header.cat-parcelados{ background: linear-gradient(150deg, #3b0764, #7c3aed); }
+.add-header.cat-viagens   { background: linear-gradient(150deg, #0c4a6e, #0284c7); }
 .add-hdr-left { display: flex; align-items: center; gap: 12px; }
 .add-hdr-icon { font-size: 28px; line-height: 1; }
 .add-hdr-title { font-size: 18px; font-weight: 800; letter-spacing: -.3px; }
@@ -499,6 +504,8 @@ body {
 .cat-tile.sel-mercado .cat-tile-nm  { color: #16a34a; }
 .cat-tile.sel-parcelados { border-color: #7c3aed; background: #f5f3ff; box-shadow: 0 0 0 3px #ede9fe; }
 .cat-tile.sel-parcelados .cat-tile-nm { color: #6d28d9; }
+.cat-tile.sel-viagens    { border-color: #0284c7; background: #f0f9ff; box-shadow: 0 0 0 3px #e0f2fe; }
+.cat-tile.sel-viagens .cat-tile-nm    { color: #0369a1; }
 
 .valor-big-wrap { position: relative; }
 .valor-big-pre { position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
@@ -548,6 +555,7 @@ body {
 .btn-salvar-pro.cat-mercado   { background: linear-gradient(135deg, #16a34a, #22c55e); box-shadow: 0 4px 14px rgba(22,163,74,.35); }
 .btn-salvar-pro.cat-diversos  { background: linear-gradient(135deg, #ea580c, #f97316); box-shadow: 0 4px 14px rgba(234,88,12,.35); }
 .btn-salvar-pro.cat-parcelados{ background: linear-gradient(135deg, #7c3aed, #8b5cf6); box-shadow: 0 4px 14px rgba(124,58,237,.35); }
+.btn-salvar-pro.cat-viagens   { background: linear-gradient(135deg, #0284c7, #38bdf8); box-shadow: 0 4px 14px rgba(2,132,199,.35); }
 .btn-foto-label {
   display: flex; align-items: center; justify-content: center;
   width: 100%; padding: 17px;
@@ -602,6 +610,7 @@ body {
 .rel-cat-bloco.diversos    { border-color: #f97316; }
 .rel-cat-bloco.mercado     { border-color: #22c55e; }
 .rel-cat-bloco.parcelados  { border-color: #7c3aed; }
+.rel-cat-bloco.viagens     { border-color: #0284c7; }
 .rel-cat-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
 .rel-cat-nome { font-size: 14px; font-weight: 800; color: #111827; }
 .rel-cat-pct-total { font-size: 11px; color: #9ca3af; font-weight: 700; }
@@ -876,6 +885,10 @@ body {
           <label>📦 Parcelados</label>
           <input type="number" id="orc-parcelados" placeholder="600" inputmode="decimal" onblur="salvarOrcamentos()" onchange="salvarOrcamentos()">
         </div>
+        <div class="campo-orc">
+          <label>✈️ Viagens</label>
+          <input type="number" id="orc-viagens" placeholder="0" inputmode="decimal" onblur="salvarOrcamentos()" onchange="salvarOrcamentos()">
+        </div>
       </div>
       <div class="cfg-actions">
         <button class="cfg-action-btn" onclick="fazerBackup()">☁️ Backup</button>
@@ -980,6 +993,22 @@ body {
         <div class="cat-barra-fundo" id="bfundo-parcelados" style="display:none"><div class="cat-barra-fill" id="bfill-parcelados" style="width:0%;background:#7c3aed"></div></div>
         <div class="cat-orc" id="corc-parcelados"></div>
       </div>
+      <div class="card-cat viagens" onclick="irParaCategoria('viagens')">
+        <div class="cat-header"><span class="cat-icon">✈️</span><span class="cat-nome">Viagens</span><span class="cat-qtd" id="qtd-viagens">0</span></div>
+        <div class="cat-linha-vals">
+          <div>
+            <div class="cat-rotulo">Gasto</div>
+            <div class="cat-valor" id="val-viagens" style="color:#0284c7">CA$ 0,00</div>
+            <div class="cat-sub-orc" id="orc-val-viagens"></div>
+          </div>
+          <div style="text-align:right">
+            <div class="cat-rotulo">Disponível</div>
+            <div class="cat-valor" id="disp-viagens">—</div>
+          </div>
+        </div>
+        <div class="cat-barra-fundo" id="bfundo-viagens" style="display:none"><div class="cat-barra-fill" id="bfill-viagens" style="width:0%;background:#0284c7"></div></div>
+        <div class="cat-orc" id="corc-viagens"></div>
+      </div>
     </div>
 
     <div class="card">
@@ -1040,6 +1069,10 @@ body {
         <div class="cat-tile" id="sel-parcelados" onclick="selecionarCat('parcelados')">
           <div class="cat-tile-ic">📦</div>
           <div class="cat-tile-nm">Parcelados</div>
+        </div>
+        <div class="cat-tile" id="sel-viagens" onclick="selecionarCat('viagens')">
+          <div class="cat-tile-ic">✈️</div>
+          <div class="cat-tile-nm">Viagens</div>
         </div>
       </div>
     </div>
@@ -1102,6 +1135,21 @@ body {
         <option value="outros">🔖 Outros</option>
       </select>
       <input type="text" id="inp-div-outros" class="add-input-text" placeholder="Qual categoria?" style="display:none" oninput="atualizarDivOutros(this.value)">
+    </div>
+
+    <!-- Subcategoria Viagens -->
+    <div class="add-card" id="grupo-viagem" style="display:none">
+      <div class="add-card-title">
+        <span class="add-step-n" style="background:#0284c7">↳</span>Subcategoria — Viagens
+      </div>
+      <select id="sel-viag-sub" class="add-select" onchange="selecionarViagSub(this.value)">
+        <option value="">— Selecione —</option>
+        <option value="food">🍽️ Food</option>
+        <option value="hotel">🏨 Hotel</option>
+        <option value="gasolina">⛽ Gasolina</option>
+        <option value="roupas">👕 Roupas</option>
+        <option value="diversos">🛍️ Diversos</option>
+      </select>
     </div>
 
     <!-- 2. Valor -->
@@ -1264,6 +1312,7 @@ body {
         <div class="opt-cat" id="fsel-carro" onclick="fotoSelecionarCat('carro')"><div class="ic">🚗</div><div class="nm">Carro</div></div>
         <div class="opt-cat" id="fsel-diversos" onclick="fotoSelecionarCat('diversos')"><div class="ic">🛍️</div><div class="nm">Diversos</div></div>
         <div class="opt-cat" id="fsel-mercado" onclick="fotoSelecionarCat('mercado')"><div class="ic">🛒</div><div class="nm">Mercado</div></div>
+        <div class="opt-cat" id="fsel-viagens" onclick="fotoSelecionarCat('viagens')"><div class="ic">✈️</div><div class="nm">Viagens</div></div>
       </div>
       <!-- Subcategoria Carro -->
       <div id="fgrupo-sub" style="display:none;margin-top:12px">
@@ -1315,6 +1364,18 @@ body {
           <option value="outros">🔖 Outros</option>
         </select>
         <input type="text" id="finp-div-outros" placeholder="Especifique..." style="display:none;margin-top:8px;font-size:16px;width:100%" oninput="fotoAtualizarDivOutros(this.value)">
+      </div>
+      <!-- Subcategoria — Viagens -->
+      <div id="fgrupo-viagem" style="display:none;margin-top:12px">
+        <label style="display:block;font-size:12px;font-weight:700;color:#888;margin-bottom:7px;text-transform:uppercase">Subcategoria — Viagens</label>
+        <select id="fsel-viag" onchange="fotoSelecionarViagSub(this.value)" style="font-size:16px;width:100%">
+          <option value="">— Selecione —</option>
+          <option value="food">🍽️ Food</option>
+          <option value="hotel">🏨 Hotel</option>
+          <option value="gasolina">⛽ Gasolina</option>
+          <option value="roupas">👕 Roupas</option>
+          <option value="diversos">🛍️ Diversos</option>
+        </select>
       </div>
     </div>
 
@@ -1387,6 +1448,7 @@ body {
         <option value="carro">🚗 Carro</option>
         <option value="mercado">🛒 Supermercado</option>
         <option value="diversos">🛍️ Diversos</option>
+        <option value="viagens">✈️ Viagens</option>
       </select>
     </div>
     <!-- Carro -->
@@ -1439,6 +1501,18 @@ body {
         <option value="outros">Outros</option>
       </select>
       <input type="text" id="edit-div-outros" placeholder="Especifique..." style="display:none;margin-top:6px">
+    </div>
+    <!-- Viagens -->
+    <div id="edit-sub-viagens" class="edit-group" style="display:none">
+      <label>Subcategoria Viagens</label>
+      <select id="edit-viag-sub">
+        <option value="">— Selecionar —</option>
+        <option value="food">🍽️ Food</option>
+        <option value="hotel">🏨 Hotel</option>
+        <option value="gasolina">⛽ Gasolina</option>
+        <option value="roupas">👕 Roupas</option>
+        <option value="diversos">🛍️ Diversos</option>
+      </select>
     </div>
     <div class="edit-group">
       <label>Descrição (opcional)</label>
@@ -1512,6 +1586,7 @@ body {
       <button class="relcat-tab" id="rct-diversos"   onclick="setRelCat('diversos')">🛍️<br>Diversos</button>
       <button class="relcat-tab" id="rct-parcelados" onclick="setRelCat('parcelados')">📦<br>Parcelados</button>
       <button class="relcat-tab" id="rct-parcelas"   onclick="setRelCat('parcelas')">📊<br>Planos</button>
+      <button class="relcat-tab" id="rct-viagens"    onclick="setRelCat('viagens')">✈️<br>Viagens</button>
     </div>
     <!-- Período -->
     <div class="card rel-periodo-card">
@@ -1683,8 +1758,8 @@ setTimeout(function() {
 // DADOS
 // ─────────────────────────────
 var WA = '14379718925';
-var NOMES = { carro:'Carro', diversos:'Diversos', mercado:'Supermercado', parcelados:'Parcelados' };
-var CORES = { carro:'#e53935', diversos:'#fb8c00', mercado:'#43a047', parcelados:'#7c3aed' };
+var NOMES = { carro:'Carro', diversos:'Diversos', mercado:'Supermercado', parcelados:'Parcelados', viagens:'Viagens' };
+var CORES = { carro:'#e53935', diversos:'#fb8c00', mercado:'#43a047', parcelados:'#7c3aed', viagens:'#0284c7' };
 var SUBS  = { gas:'⛽ Gasolina', oleo:'🛢️ Óleo', div:'🔧 Diversos', 'gas-rr':'⛽ Gasolina (Range Rover)', 'gas-pilot':'⛽ Gasolina (Pilot)', pneu:'🔧 Pneu', pecas:'🔩 Peças', outros:'🔖 Outros' };
 var LOJAS = { walmart:'Walmart', superstore:'Superstore', shoppers:'Shoppers', nofrills:'No Frills', costco:'Costco', dollarama:'Dollarama', vine:'On the Vine', outros:'Outros' };
 
@@ -2211,8 +2286,8 @@ function renderizar() {
   }
 
   // Cards categoria
-  var cores = { carro:'#e53935', diversos:'#fb8c00', mercado:'#43a047', parcelados:'#7c3aed' };
-  ['carro','diversos','mercado','parcelados'].forEach(function(c) {
+  var cores = { carro:'#e53935', diversos:'#fb8c00', mercado:'#43a047', parcelados:'#7c3aed', viagens:'#0284c7' };
+  ['carro','diversos','mercado','parcelados','viagens'].forEach(function(c) {
     var gasto = tots[c]||0;
     var orc   = d.orcamentos[c]||0;
     var qtd   = qtds[c]||0;
@@ -2642,7 +2717,7 @@ function renderizarGraficoProjecao(d, p, dispDiario, hj) {
 
 function renderizarPizza(tots, total, orcs) {
   var el = document.getElementById('pizza-wrap');
-  var cats = ['carro','diversos','mercado','parcelados'];
+  var cats = ['carro','diversos','mercado','parcelados','viagens'];
   var html = '<div class="pizza-legenda">';
   cats.forEach(function(c) {
     var v   = tots[c]||0;
@@ -2665,7 +2740,7 @@ function renderizarBarras(lista, p) {
   // Agrupar por dia e categoria
   var porDia = {};
   lista.forEach(function(l) {
-    if (!porDia[l.data]) porDia[l.data] = { carro:0, diversos:0, mercado:0, parcelados:0, total:0 };
+    if (!porDia[l.data]) porDia[l.data] = { carro:0, diversos:0, mercado:0, parcelados:0, viagens:0, total:0 };
     var v = parseFloat(l.valor||0);
     porDia[l.data][l.cat] = (porDia[l.data][l.cat]||0) + v;
     porDia[l.data].total  += v;
@@ -2854,9 +2929,9 @@ function irParaCategoria(cat) {
     ? calcularMensalParcelados(d.lancamentos)
     : lista.reduce(function(s,l){ return s+parseFloat(l.valor||0); }, 0);
 
-  var cores = { carro:'#1565c0', diversos:'#e65100', mercado:'#2e7d32', parcelados:'#5b21b6' };
+  var cores = { carro:'#1565c0', diversos:'#e65100', mercado:'#2e7d32', parcelados:'#5b21b6', viagens:'#0c4a6e' };
   document.getElementById('topo-categoria').style.background = 'linear-gradient(160deg,'+cores[cat]+','+CORES[cat]+')';
-  document.getElementById('titulo-categoria').textContent = {carro:'🚗 Carro', diversos:'🛍️ Diversos', mercado:'🛒 Supermercado', parcelados:'📦 Parcelados'}[cat];
+  document.getElementById('titulo-categoria').textContent = {carro:'🚗 Carro', diversos:'🛍️ Diversos', mercado:'🛒 Supermercado', parcelados:'📦 Parcelados', viagens:'✈️ Viagens'}[cat];
 
   document.getElementById('resumo-categoria').innerHTML =
     '<div style="text-align:center;padding:8px 0 12px">' +
@@ -3033,11 +3108,11 @@ function exportarPDF() {
   }).join('');
 
   // resumo por categoria
-  var totCat = { mercado:0, carro:0, diversos:0, parcelados:0 };
+  var totCat = { mercado:0, carro:0, diversos:0, parcelados:0, viagens:0 };
   lista.forEach(function(l){ totCat[l.cat] = (totCat[l.cat]||0) + parseFloat(l.valor||0); });
-  var catBgs  = { mercado:'#f0fdf4', carro:'#fef2f2', diversos:'#fff7ed', parcelados:'#f5f3ff' };
-  var catIcos = { mercado:'🛒', carro:'🚗', diversos:'🛍️', parcelados:'📦' };
-  var resumoCats = ['mercado','carro','diversos','parcelados'].map(function(cat) {
+  var catBgs  = { mercado:'#f0fdf4', carro:'#fef2f2', diversos:'#fff7ed', parcelados:'#f5f3ff', viagens:'#f0f9ff' };
+  var catIcos = { mercado:'🛒', carro:'🚗', diversos:'🛍️', parcelados:'📦', viagens:'✈️' };
+  var resumoCats = ['mercado','carro','diversos','parcelados','viagens'].map(function(cat) {
     if (!totCat[cat]) return '';
     return '<div style="display:inline-block;margin:0 10px 8px 0;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:700;background:' +
       catBgs[cat] + ';color:' + (cores[cat]||'#111') + ';border:1.5px solid ' + (cores[cat]||'#ccc') + '">' +
@@ -3227,7 +3302,8 @@ function renderizarRelatorio() {
     catBloco('carro',      'carro',      '🚗', '#e53935', true) +
     catBloco('diversos',   'diversos',   '🛍️', '#fb8c00', false) +
     catBloco('mercado',    'mercado',    '🛒', '#43a047', false) +
-    catBloco('parcelados', 'parcelados', '📦', '#7c3aed', false);
+    catBloco('parcelados', 'parcelados', '📦', '#7c3aed', false) +
+    catBloco('viagens',    'viagens',    '✈️', '#0284c7', false);
 
   // ── Top 5 gastos ──
   var top5 = lista.filter(function(l){ return l.cat !== 'parcelados'; }).sort(function(a,b){ return parseFloat(b.valor)-parseFloat(a.valor); }).slice(0,5);
@@ -3319,7 +3395,8 @@ function renderizarRelatorio() {
   var catsDias = [
     { cat:'carro',    ico:'🚗', cor:'#e53935' },
     { cat:'mercado',  ico:'🛒', cor:'#43a047' },
-    { cat:'diversos', ico:'🛍️', cor:'#fb8c00' }
+    { cat:'diversos', ico:'🛍️', cor:'#fb8c00' },
+    { cat:'viagens',  ico:'✈️', cor:'#0284c7' }
   ];
   var temCatComOrc = catsDias.some(function(c){ return (orc[c.cat]||0) > 0; });
   if (temCatComOrc) {
@@ -3378,7 +3455,7 @@ var _rcTipo = 'periodo';
 
 function setRelCat(cat) {
   _rcCat = cat;
-  ['mercado','carro','diversos','parcelados','parcelas'].forEach(function(c) {
+  ['mercado','carro','diversos','parcelados','parcelas','viagens'].forEach(function(c) {
     document.getElementById('rct-'+c).className = 'relcat-tab' + (c===cat ? ' ativo-'+c : '');
   });
   // Esconde seletor de período no modo parcelas (overview)
@@ -4004,27 +4081,28 @@ function compartilharRelcat() {
 // ─────────────────────────────
 // ADICIONAR
 // ─────────────────────────────
-var _loja = '', _lojaOutros = '', _divSub = '', _divOutros = '', _carroSub = '', _carroOutros = '';
+var _loja = '', _lojaOutros = '', _divSub = '', _divOutros = '', _carroSub = '', _carroOutros = '', _viagSub = '';
 function selecionarCat(c) {
   _cat = c;
-  ['carro','diversos','mercado','parcelados'].forEach(function(k) {
+  ['carro','diversos','mercado','parcelados','viagens'].forEach(function(k) {
     document.getElementById('sel-'+k).className = 'cat-tile' + (k===c ? ' sel-'+k : '');
   });
   // Atualiza header dinâmico
   var hdr = document.getElementById('add-header');
   if (hdr) {
     hdr.className = 'add-header cat-'+c;
-    var icons = {carro:'🚗', diversos:'🛍️', mercado:'🛒', parcelados:'📦'};
-    var subs  = {carro:'Carro · subcategoria e valor', diversos:'Diversos · subcategoria e valor', mercado:'Supermercado · local e valor', parcelados:'Parcelados · valor e parcelas'};
+    var icons = {carro:'🚗', diversos:'🛍️', mercado:'🛒', parcelados:'📦', viagens:'✈️'};
+    var subs  = {carro:'Carro · subcategoria e valor', diversos:'Diversos · subcategoria e valor', mercado:'Supermercado · local e valor', parcelados:'Parcelados · valor e parcelas', viagens:'Viagens · subcategoria e valor'};
     document.getElementById('add-hdr-icon').textContent = icons[c];
     document.getElementById('add-hdr-sub').textContent  = subs[c];
   }
   // Atualiza cor do botão salvar
   var btn = document.getElementById('btn-salvar-pro');
   if (btn) btn.className = 'btn-salvar-pro cat-'+c;
-  document.getElementById('grupo-sub').style.display  = c==='carro'   ? 'block' : 'none';
-  document.getElementById('grupo-loja').style.display = c==='mercado' ? 'block' : 'none';
-  document.getElementById('grupo-div').style.display  = c==='diversos'? 'block' : 'none';
+  document.getElementById('grupo-sub').style.display    = c==='carro'   ? 'block' : 'none';
+  document.getElementById('grupo-loja').style.display   = c==='mercado' ? 'block' : 'none';
+  document.getElementById('grupo-div').style.display    = c==='diversos'? 'block' : 'none';
+  document.getElementById('grupo-viagem').style.display = c==='viagens' ? 'block' : 'none';
   if (c==='carro') {
     document.getElementById('sel-carro-sub').value = '';
     document.getElementById('inp-carro-outros').style.display = 'none';
@@ -4040,7 +4118,12 @@ function selecionarCat(c) {
     document.getElementById('inp-div-outros').style.display = 'none';
     _divSub = ''; _divOutros = '';
   }
+  if (c==='viagens') {
+    document.getElementById('sel-viag-sub').value = '';
+    _viagSub = '';
+  }
 }
+function selecionarViagSub(v) { _viagSub = v; }
 function selecionarCarroSub(v) {
   _carroSub = v;
   document.getElementById('inp-carro-outros').style.display = v==='outros' ? 'block' : 'none';
@@ -4101,7 +4184,8 @@ function _executarSalvar(lancs) {
   document.getElementById('inp-carro-outros').style.display = 'none';
   document.getElementById('sel-div').value = '';
   document.getElementById('inp-div-outros').style.display = 'none';
-  _loja = ''; _lojaOutros = ''; _divSub = ''; _divOutros = ''; _carroSub = ''; _carroOutros = '';
+  document.getElementById('sel-viag-sub').value = '';
+  _loja = ''; _lojaOutros = ''; _divSub = ''; _divOutros = ''; _carroSub = ''; _carroOutros = ''; _viagSub = '';
   // Reset parcelamento
   _numParcelas = 1;
   _parcelaInicial = 1;
@@ -4130,9 +4214,11 @@ function salvarLancamento() {
   if (!data) { mostrarToast('⚠️', 'Selecione a data'); return; }
   var CARRO_LABELS = { 'gas-rr':'⛽ Gasolina (Range Rover)', 'gas-pilot':'⛽ Gasolina (Pilot)', oleo:'🛢️ Óleo', pneu:'🔧 Pneu', pecas:'🔩 Peças', outros:'Outros' };
   var DIV_LABELS = { roupas:'👕 Roupas', amazon:'📦 Amazon', restaurantes:'🍽️ Restaurantes', mcdonalds:"🍔 McDonald's", dollarama:'🏪 Dollarama', staples:'🖨️ Staples', academia:'💪 Academia', esportes:'🏃 Esportes', veterinario:'🐾 Veterinário', remedio:'💊 Remédio', subscription:'📱 Subscription', lazer:'🎉 Lazer', outros:'Outros' };
+  var VIAG_LABELS = { food:'🍽️ Food', hotel:'🏨 Hotel', gasolina:'⛽ Gasolina', roupas:'👕 Roupas', diversos:'🛍️ Diversos' };
   var carroFinal = _cat==='carro'   ? (_carroSub==='outros' ? (_carroOutros||'Outros') : (_carroSub ? CARRO_LABELS[_carroSub] : '')) : null;
   var lojaFinal  = _cat==='mercado'  ? (_loja==='outros'   ? (_lojaOutros||'Outros')  : (_loja   ? LOJAS[_loja]        : '')) : null;
   var divFinal   = _cat==='diversos' ? (_divSub==='outros' ? (_divOutros||'Outros')   : (_divSub ? DIV_LABELS[_divSub] : '')) : null;
+  var viagFinal  = _cat==='viagens'  ? (_viagSub ? VIAG_LABELS[_viagSub] : '') : null;
   var desc = document.getElementById('inp-desc').value.trim();
 
   if (_numParcelas > 1) {
@@ -4189,7 +4275,7 @@ function salvarLancamento() {
     cat:    _cat,
     sub:    carroFinal || null,
     loja:   lojaFinal  || null,
-    divsub: divFinal   || null,
+    divsub: divFinal || viagFinal || null,
     valor:  valor,
     data:   data,
     desc:   desc
@@ -4199,7 +4285,7 @@ function salvarLancamento() {
   var dups = verificarDuplicataMain(valor, data, _cat);
   if (dups.length > 0) {
     var dup = dups[0];
-    var catNome = { mercado:'🛒 Mercado', carro:'🚗 Carro', diversos:'🔖 Diversos', parcelados:'📦 Parcelados' }[dup.cat] || dup.cat;
+    var catNome = { mercado:'🛒 Mercado', carro:'🚗 Carro', diversos:'🔖 Diversos', parcelados:'📦 Parcelados', viagens:'✈️ Viagens' }[dup.cat] || dup.cat;
     var subStr = dup.loja || dup.divsub || dup.sub || '';
     var p = (dup.data||'').split('-');
     var dataFmt = p.length===3 ? p[2]+'/'+p[1]+'/'+p[0] : dup.data;
@@ -4304,6 +4390,10 @@ function editarLancamento(id) {
     document.getElementById('edit-div-sub').value = divKey;
     editDivSubChange(divKey);
     if (divKey === 'outros') document.getElementById('edit-div-outros').value = l.divsub || '';
+  } else if (l.cat === 'viagens') {
+    var VIAG_INV_E = { '🍽️ Food':'food', '🏨 Hotel':'hotel', '⛽ Gasolina':'gasolina', '👕 Roupas':'roupas', '🛍️ Diversos':'diversos' };
+    var viagKey = l.divsub ? (VIAG_INV_E[l.divsub] || '') : '';
+    document.getElementById('edit-viag-sub').value = viagKey;
   }
   // Parcelamento
   var temParcela = !!(l.parcela && l.parcela.total);
@@ -4495,6 +4585,7 @@ function editCatChange() {
   document.getElementById('edit-sub-carro').style.display    = cat === 'carro'    ? '' : 'none';
   document.getElementById('edit-sub-mercado').style.display  = cat === 'mercado'  ? '' : 'none';
   document.getElementById('edit-sub-diversos').style.display = cat === 'diversos' ? '' : 'none';
+  document.getElementById('edit-sub-viagens').style.display  = cat === 'viagens'  ? '' : 'none';
 }
 
 function editCarroSubChange(v) {
@@ -4526,6 +4617,9 @@ function salvarEdicao() {
   var divFinal   = cat === 'diversos'
     ? (divSubKey === 'outros' ? (document.getElementById('edit-div-outros').value.trim() || 'Outros') : (divSubKey ? DIV_LABELS_E[divSubKey] : null))
     : null;
+  var VIAG_LABELS_E = { food:'🍽️ Food', hotel:'🏨 Hotel', gasolina:'⛽ Gasolina', roupas:'👕 Roupas', diversos:'🛍️ Diversos' };
+  var viagSubKey = document.getElementById('edit-viag-sub').value;
+  var viagFinal  = cat === 'viagens' ? (viagSubKey ? VIAG_LABELS_E[viagSubKey] : null) : null;
   var d = getDados();
   var idx = d.lancamentos.findIndex(function(x){ return x.id === _editId; });
   if (idx === -1) { mostrarToast('⚠️', 'Lançamento não encontrado'); return; }
@@ -4544,7 +4638,7 @@ function salvarEdicao() {
     cat:     cat,
     sub:     carroFinal || null,
     loja:    lojaFinal  || null,
-    divsub:  divFinal   || null,
+    divsub:  divFinal || viagFinal || null,
     desc:    novaDesc,
     parcela: parcelaObj
   });
@@ -4651,8 +4745,9 @@ function salvarOrcamentos() {
   var diversos   = parseFloat(document.getElementById('orc-diversos').value)   || 0;
   var mercado    = parseFloat(document.getElementById('orc-mercado').value)    || 0;
   var parcelados = parseFloat(document.getElementById('orc-parcelados').value) || 0;
+  var viagens    = parseFloat(document.getElementById('orc-viagens').value)    || 0;
   var d = getDados();
-  d.orcamentos = { carro: carro, diversos: diversos, mercado: mercado, parcelados: parcelados };
+  d.orcamentos = { carro: carro, diversos: diversos, mercado: mercado, parcelados: parcelados, viagens: viagens };
   salvarDados(d);
   renderizar();
 }
@@ -4950,17 +5045,18 @@ function processarCompartilhamentoCIBC() {
 // FOTO RECIBO
 // ─────────────────────────────
 var _fotoCat = 'mercado', _fotoSub = null, _fotoCarroOutros = '';
-var _fotoLoja = '', _fotoLojaOutros = '', _fotoDivSub = '', _fotoDivOutros = '';
+var _fotoLoja = '', _fotoLojaOutros = '', _fotoDivSub = '', _fotoDivOutros = '', _fotoViagSub = '';
 var _tesseractCarregado = false;
 
 function fotoSelecionarCat(c) {
   _fotoCat = c;
-  ['carro','diversos','mercado'].forEach(function(k) {
+  ['carro','diversos','mercado','viagens'].forEach(function(k) {
     document.getElementById('fsel-'+k).className = 'opt-cat' + (k===c ? ' sel-'+k : '');
   });
-  document.getElementById('fgrupo-sub').style.display  = c==='carro'   ? 'block' : 'none';
-  document.getElementById('fgrupo-loja').style.display = c==='mercado' ? 'block' : 'none';
-  document.getElementById('fgrupo-div').style.display  = c==='diversos'? 'block' : 'none';
+  document.getElementById('fgrupo-sub').style.display    = c==='carro'   ? 'block' : 'none';
+  document.getElementById('fgrupo-loja').style.display   = c==='mercado' ? 'block' : 'none';
+  document.getElementById('fgrupo-div').style.display    = c==='diversos'? 'block' : 'none';
+  document.getElementById('fgrupo-viagem').style.display = c==='viagens' ? 'block' : 'none';
   if (c==='carro') {
     document.getElementById('fsel-carro-sub').value = '';
     document.getElementById('finp-carro-outros').style.display = 'none';
@@ -4976,6 +5072,14 @@ function fotoSelecionarCat(c) {
     document.getElementById('finp-div-outros').style.display = 'none';
     _fotoDivSub = ''; _fotoDivOutros = '';
   }
+  if (c==='viagens') {
+    document.getElementById('fsel-viag').value = '';
+    _fotoViagSub = '';
+  }
+}
+function fotoSelecionarViagSub(v) {
+  var VIAG_LABELS = { food:'🍽️ Food', hotel:'🏨 Hotel', gasolina:'⛽ Gasolina', roupas:'👕 Roupas', diversos:'🛍️ Diversos' };
+  _fotoViagSub = v ? (VIAG_LABELS[v] || '') : '';
 }
 function fotoSelecionarCarroSub(v) {
   var CARRO_LABELS = { 'gas-rr':'⛽ Gasolina (Range Rover)', 'gas-pilot':'⛽ Gasolina (Pilot)', oleo:'🛢️ Óleo', pneu:'🔧 Pneu', pecas:'🔩 Peças', outros:'Outros' };
@@ -5085,7 +5189,7 @@ function salvarLancamentoFoto() {
   var lojaFinal  = _fotoCat==='mercado'  ? (_fotoLoja==='outros'   ? (_fotoLojaOutros||'Outros') : (_fotoLoja   ? LOJAS[_fotoLoja]        : '')) : null;
   var divFinal   = _fotoCat==='diversos' ? (_fotoDivSub==='outros' ? (_fotoDivOutros||'Outros')  : (_fotoDivSub ? DIV_LABELS[_fotoDivSub] : '')) : null;
   var d = getDados();
-  d.lancamentos.push({ id: Date.now()+'', cat: _fotoCat, sub: _fotoSub||null, loja: lojaFinal||null, divsub: divFinal||null, valor: valor, data: data, desc: desc });
+  d.lancamentos.push({ id: Date.now()+'', cat: _fotoCat, sub: _fotoSub||null, loja: lojaFinal||null, divsub: divFinal||_fotoViagSub||null, valor: valor, data: data, desc: desc });
   salvarDados(d);
   // Limpar form
   document.getElementById('inp-foto').value = '';
@@ -5097,10 +5201,11 @@ function salvarLancamentoFoto() {
   document.getElementById('fsel-carro-sub').value = '';
   document.getElementById('fsel-loja').value = '';
   document.getElementById('fsel-div').value = '';
+  document.getElementById('fsel-viag').value = '';
   document.getElementById('finp-carro-outros').style.display = 'none';
   document.getElementById('finp-loja-outros').style.display = 'none';
   document.getElementById('finp-div-outros').style.display = 'none';
-  _fotoSub = null; _fotoCarroOutros = ''; _fotoLoja = ''; _fotoLojaOutros = ''; _fotoDivSub = ''; _fotoDivOutros = '';
+  _fotoSub = null; _fotoCarroOutros = ''; _fotoLoja = ''; _fotoLojaOutros = ''; _fotoDivSub = ''; _fotoDivOutros = ''; _fotoViagSub = '';
   verificarAlerta();
   mostrarToast('✅', 'Lançamento salvo!');
   resetZoom();
@@ -5165,6 +5270,7 @@ window.onload = function() {
   if (d.orcamentos.diversos)   document.getElementById('orc-diversos').value   = d.orcamentos.diversos;
   if (d.orcamentos.mercado)    document.getElementById('orc-mercado').value    = d.orcamentos.mercado;
   if (d.orcamentos.parcelados) document.getElementById('orc-parcelados').value = d.orcamentos.parcelados;
+  if (d.orcamentos.viagens)    document.getElementById('orc-viagens').value    = d.orcamentos.viagens;
 
   // Migração: todos os lançamentos com parcela passam para cat='parcelados'
   var migrados = 0;
