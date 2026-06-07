@@ -631,7 +631,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Sego
     <div class="sec-body" style="max-height:0">
       <div class="ldc-wrap">
         <div class="ldc-row">
-          <label class="ldc-label">From <button class="ldc-swap" onclick="ldcSwap()">⇅ Swap</button></label>
+          <label class="ldc-label">From <button class="ldc-swap" onclick="ldcMyLocation()" id="ldc-loc-btn">📍 My location</button> <button class="ldc-swap" onclick="ldcSwap()">⇅ Swap</button></label>
           <input type="text" id="ldc-from" class="ldc-input" placeholder="e.g. Videotron Centre, Quebec City" autocomplete="off" onblur="saveState();syncActiveStateToFirebase()">
         </div>
         <div class="ldc-row">
@@ -1710,7 +1710,8 @@ async function planTrip(){
   };
   document.getElementById('dest-cost-box').innerHTML=destCostBoxContent(_destData);
 
-  initLocalDriveCalc(nearAnchor);
+  var _curLdcFrom=(document.getElementById('ldc-from')||{}).value||'';
+  initLocalDriveCalc(nearAnchor, _curLdcFrom||null);
   _destView='results';
   updateOverviewTab();
   saveState();
@@ -1930,6 +1931,28 @@ function ldcSwap(){
   var f=document.getElementById('ldc-from'), t=document.getElementById('ldc-to');
   var tmp=f.value; f.value=t.value; t.value=tmp;
   document.getElementById('ldc-result').innerHTML='';
+}
+function ldcMyLocation(){
+  var btn=document.getElementById('ldc-loc-btn');
+  if(!navigator.geolocation){alert('Geolocation not supported by this browser.');return;}
+  btn.textContent='⏳…'; btn.disabled=true;
+  navigator.geolocation.getCurrentPosition(function(pos){
+    var lat=pos.coords.latitude, lng=pos.coords.longitude;
+    fetch('https://nominatim.openstreetmap.org/reverse?lat='+lat+'&lon='+lng+'&format=json',{headers:{'Accept-Language':'en'}})
+      .then(function(r){return r.json();})
+      .then(function(d){
+        var city=d.address&&(d.address.city||d.address.town||d.address.village||d.address.county)||'';
+        var state=d.address&&(d.address.state_code||d.address.state)||'';
+        var label=city&&state?city+', '+state:(d.display_name||'').split(',').slice(0,2).join(',').trim();
+        var el=document.getElementById('ldc-from');
+        if(el){el.value=label;saveState();syncActiveStateToFirebase();}
+        btn.textContent='📍 My location'; btn.disabled=false;
+      })
+      .catch(function(){btn.textContent='📍 My location'; btn.disabled=false;});
+  },function(){
+    btn.textContent='📍 My location'; btn.disabled=false;
+    alert('Could not get your location. Make sure location access is allowed.');
+  },{timeout:8000});
 }
 async function calcLocalDrive(){
   var btn=document.getElementById('ldc-calc-btn');
@@ -2700,7 +2723,7 @@ async function forceUpdate(){
   });
 
   // Version check — fetch version.json (always network) and hard-navigate if behind
-  var _myV='189';
+  var _myV='190';
   var _verEl=document.getElementById('tv-ver');
   if(_verEl) _verEl.textContent='v'+_myV;
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
