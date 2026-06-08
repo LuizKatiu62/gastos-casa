@@ -249,34 +249,52 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Sego
 
 /* ── REAL EXPENSES ── */
 .exp-box{background:#fff;border-radius:16px;box-shadow:var(--shadow);border:1px solid var(--border);margin-bottom:16px;overflow:hidden}
-.exp-header{background:linear-gradient(90deg,#f0fdf4,#dcfce7);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #bbf7d0}
-.exp-title{font-size:15px;font-weight:900;color:#166534}
-.exp-period{font-size:11px;color:#16a34a;margin-top:2px}
+/* Header — full green gradient with hero total */
+.exp-header{background:linear-gradient(135deg,#064e3b 0%,#059669 100%);padding:18px 16px 20px;position:relative}
+.exp-header-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px}
+.exp-title{font-size:11px;font-weight:700;color:rgba(255,255,255,.7);letter-spacing:.8px;text-transform:uppercase;margin-bottom:2px}
+.exp-period{font-size:13px;font-weight:700;color:#fff}
+.exp-snap-badge{background:rgba(251,191,36,.18);border:1px solid rgba(251,191,36,.45);color:#fde68a;border-radius:20px;padding:4px 10px;font-size:10px;font-weight:700;white-space:nowrap;flex-shrink:0}
+.exp-hero{text-align:center;padding:4px 0 6px}
+.exp-hero-amt{font-size:40px;font-weight:900;color:#fff;line-height:1;letter-spacing:-1px}
+.exp-hero-sub{font-size:12px;font-weight:600;margin-top:7px;padding:4px 12px;border-radius:20px;display:inline-block}
+.exp-hero-sub.over{background:rgba(239,68,68,.2);color:#fca5a5}
+.exp-hero-sub.under{background:rgba(134,239,172,.2);color:#86efac}
+.exp-hero-sub.ok{color:rgba(255,255,255,.6)}
+/* Category rows */
 .exp-add-btn{background:#16a34a;color:#fff;border:none;border-radius:20px;padding:7px 14px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;transition:background .15s;white-space:nowrap}
 .exp-add-btn:hover{background:#15803d}
 .exp-form{padding:14px 16px;background:#f0fdf4;border-bottom:1px solid #bbf7d0}
-.exp-cats{padding:12px 16px;display:flex;flex-direction:column;gap:6px}
-.exp-cat-row{display:grid;grid-template-columns:22px 1fr auto auto auto;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid var(--border)}
+.exp-cats{padding:6px 0;display:flex;flex-direction:column}
+.exp-cat-row{display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid #f1f5f9;transition:background .1s}
 .exp-cat-row:last-child{border-bottom:none}
-.exp-cat-ico{font-size:18px}
+.exp-cat-bubble{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.exp-cat-info{flex:1;min-width:0}
 .exp-cat-lbl{font-size:13px;font-weight:700;color:var(--text)}
-.exp-cat-est{font-size:10px;color:var(--muted)}
-.exp-cat-real{font-size:14px;font-weight:900;color:var(--text);text-align:right}
-.exp-cat-diff{font-size:10px;font-weight:700;text-align:right}
-.exp-total-row{display:flex;align-items:center;gap:8px;padding:12px 16px;background:#f8fafc;border-top:2px solid var(--border);font-size:13px;font-weight:700;color:var(--text)}
-.exp-total-row>span:first-child{flex:1}
+.exp-cat-budget{font-size:11px;color:var(--muted);margin-top:1px}
+.exp-cat-right{text-align:right;flex-shrink:0}
+.exp-cat-real{font-size:18px;font-weight:900;color:var(--text)}
+.exp-cat-pill{display:inline-block;margin-top:4px;font-size:10px;font-weight:700;border-radius:20px;padding:2px 8px}
+.exp-cat-pill.over{background:#fee2e2;color:#dc2626}
+.exp-cat-pill.under{background:#dcfce7;color:#16a34a}
+.exp-cat-pill.zero{background:#f1f5f9;color:#64748b}
+/* Divider between cats and entries */
+.exp-section-lbl{font-size:10px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--muted);padding:12px 16px 6px;border-top:1px solid #f1f5f9}
+/* Entry list */
 .exp-entries{padding:0 16px 12px}
-.exp-entry{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--border)}
+.exp-entry{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f1f5f9}
 .exp-entry:last-child{border-bottom:none}
-.exp-entry-ico{font-size:20px;flex-shrink:0}
+.exp-entry-badge{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
 .exp-entry-body{flex:1;min-width:0}
 .exp-entry-top{display:flex;align-items:center;gap:6px}
 .exp-entry-cat{font-size:12px;font-weight:700;color:var(--text)}
-.exp-entry-date{font-size:10px;color:var(--muted)}
-.exp-entry-desc{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.exp-entry-date{font-size:10px;color:var(--muted);margin-left:auto}
+.exp-entry-desc{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
 .exp-entry-amt{font-size:14px;font-weight:900;color:var(--text);flex-shrink:0}
-.exp-del-btn{background:none;border:none;font-size:16px;cursor:pointer;opacity:.45;padding:4px;flex-shrink:0}
+.exp-del-btn{background:none;border:none;font-size:15px;cursor:pointer;opacity:.35;padding:4px;flex-shrink:0}
 .exp-del-btn:hover{opacity:1}
+/* Total footer */
+.exp-total-row{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;background:#f8fafc;border-top:1px solid #e2e8f0;font-size:13px;font-weight:700;color:var(--text)}
 
 /* ── OVERVIEW DASHBOARD ── */
 .ov-wrap{max-width:680px;margin:0 auto;padding:0 16px 80px}
@@ -1325,42 +1343,49 @@ function buildExpensesHTML(d,dd){
   const estTotal=estGas+estFood+estHotel;
 
   const CATS={
-    gasolina:{ico:'⛽',label:'Gas',est:estGas},
-    hotel:{ico:'🏨',label:'Hotel',est:estHotel},
-    alimentacao:{ico:'🍔',label:'Food',est:estFood},
-    outros:{ico:'🛍️',label:'Diversos',est:0}
+    gasolina:{ico:'⛽',label:'Gas',est:estGas,bubble:'#fff7ed'},
+    hotel:{ico:'🏨',label:'Hotel',est:estHotel,bubble:'#eff6ff'},
+    alimentacao:{ico:'🍔',label:'Food',est:estFood,bubble:'#fff1f2'},
+    outros:{ico:'🛍️',label:'Diversos',est:0,bubble:'#f5f3ff'}
   };
 
   let catRows='';
   Object.keys(CATS).forEach(function(cat){
     const info=CATS[cat];
     const real=totals[cat];
+    if(real===0&&info.est===0) return;
     const diff=real-info.est;
-    const hasDiff=info.est>0||real>0;
+    var pillCls=diff>0?'over':diff<0?'under':'zero';
+    var pillTxt=diff>0?'▲ $'+diff.toFixed(2)+' over':(diff<0?'▼ $'+Math.abs(diff).toFixed(2)+' under':(info.est>0?'✓ On budget':''));
     catRows+=
       '<div class="exp-cat-row">'+
-      '<span class="exp-cat-ico">'+info.ico+'</span>'+
-      '<span class="exp-cat-lbl">'+info.label+'</span>'+
-      '<span class="exp-cat-est">'+(info.est>0?'est $'+info.est.toFixed(2):'')+'</span>'+
-      '<span class="exp-cat-real">$'+real.toFixed(2)+'</span>'+
-      (hasDiff&&diff!==0?'<span class="exp-cat-diff" style="color:'+(diff>0?'#dc2626':'#16a34a')+'">'+
-        (diff>0?'▲':'▼')+' $'+Math.abs(diff).toFixed(2)+'</span>':'<span></span>')+
+      '<div class="exp-cat-bubble" style="background:'+info.bubble+'">'+info.ico+'</div>'+
+      '<div class="exp-cat-info">'+
+      '<div class="exp-cat-lbl">'+info.label+'</div>'+
+      (info.est>0?'<div class="exp-cat-budget">Budget $'+info.est.toFixed(2)+'</div>':'')+
+      '</div>'+
+      '<div class="exp-cat-right">'+
+      '<div class="exp-cat-real">$'+real.toFixed(2)+'</div>'+
+      (pillTxt?'<span class="exp-cat-pill '+pillCls+'">'+pillTxt+'</span>':'')+
+      '</div>'+
       '</div>';
   });
 
   function entryHTML(e, isExcluded){
     const mapped=['gasolina','hotel','alimentacao'].includes(e.cat)?e.cat:'outros';
     const info=CATS[mapped];
-    const sty=isExcluded?'opacity:.45;':'';
+    const sty=isExcluded?'opacity:.4;':'';
     const txtSty=isExcluded?'style="text-decoration:line-through"':'';
     const btn=isSnap?'':isExcluded
       ?'<button class="exp-del-btn" onclick="includeExpense(\''+e.id+'\')" title="Restore to trip" style="opacity:1;font-size:14px">↩️</button>'
       :'<button class="exp-del-btn" onclick="excludeExpense(\''+e.id+'\')" title="Remove from trip">🗑</button>';
     return '<div class="exp-entry" style="'+sty+'">'+
-      '<span class="exp-entry-ico">'+info.ico+'</span>'+
+      '<div class="exp-entry-badge" style="background:'+info.bubble+'">'+info.ico+'</div>'+
       '<div class="exp-entry-body">'+
-      '<div class="exp-entry-top"><span class="exp-entry-cat" '+txtSty+'>'+info.label+'</span>'+
-      '<span class="exp-entry-date">'+e.date+'</span></div>'+
+      '<div class="exp-entry-top">'+
+      '<span class="exp-entry-cat" '+txtSty+'>'+info.label+'</span>'+
+      '<span class="exp-entry-date">'+e.date+'</span>'+
+      '</div>'+
       (e.desc?'<div class="exp-entry-desc" '+txtSty+'>'+e.desc+'</div>':'')+
       '</div>'+
       '<span class="exp-entry-amt" '+txtSty+'>$'+e.amount.toFixed(2)+'</span>'+
@@ -1373,38 +1398,51 @@ function buildExpensesHTML(d,dd){
   const sortedExcluded=excluded.slice().sort(byNewest);
 
   const entryList=sortedActive.length===0
-    ?'<div style="text-align:center;padding:16px 0;font-size:13px;color:var(--muted)">'+
+    ?'<div style="text-align:center;padding:20px 0;font-size:13px;color:var(--muted)">'+
       'No expenses recorded'+(ci&&co?' for this period':'')+'.</div>'
     :sortedActive.map(function(e){return entryHTML(e,false);}).join('');
 
   const exclSection=sortedExcluded.length===0?'':
-    '<div style="padding:8px 16px 4px;border-top:1px dashed #bbf7d0">'+
-    '<div style="font-size:11px;font-weight:700;color:#64748b;margin-bottom:4px">'+sortedExcluded.length+' excluded from trip</div>'+
+    '<div style="padding:8px 16px 4px;border-top:1px dashed #e2e8f0">'+
+    '<div style="font-size:10px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--muted);margin-bottom:6px">'+sortedExcluded.length+' excluded from trip</div>'+
     sortedExcluded.map(function(e){return entryHTML(e,true);}).join('')+
     '</div>';
 
-  const dateLabel=ci&&co?ci+' → '+co:'All periods';
+  // Format date for display: "2026-06-04" → "Jun 04"
+  function fmtD(s){
+    if(!s) return '';
+    var mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var p=s.split('-'); return mo[parseInt(p[1],10)-1]+' '+p[2]+', '+p[0];
+  }
+  const dateLabel=ci&&co?(fmtD(ci)+' → '+fmtD(co)):'All periods';
   const diffTotal=grandTotal-estTotal;
+  var heroSubCls=diffTotal>0?'over':diffTotal<0?'under':'ok';
+  var heroSubTxt=estTotal>0?(diffTotal>0?'▲ $'+diffTotal.toFixed(2)+' above estimate':
+    (diffTotal<0?'▼ $'+Math.abs(diffTotal).toFixed(2)+' below estimate':'✓ Right on budget')):'';
 
   return buildEstTotalHTML(d, _destData)+
     '<div class="exp-box">'+
+    // ── Header ──
     '<div class="exp-header">'+
-    '<div><div class="exp-title">📋 Trip Actual Expenses</div>'+
-    '<div class="exp-period">📅 '+dateLabel+'</div></div>'+
+    '<div class="exp-header-top">'+
+    '<div><div class="exp-title">Trip Actual Expenses</div>'+
+    '<div class="exp-period">'+dateLabel+'</div></div>'+
+    (isSnap?'<span class="exp-snap-badge">📸 Saved snapshot</span>':'')+
     '</div>'+
-    (!isSnap?'<div style="margin:12px 16px 12px">'+
-    '<button onclick="saveState();window.location.href=\'index.html\'" style="display:flex;align-items:center;justify-content:space-between;width:100%;background:linear-gradient(135deg,#064e3b,#059669);color:#fff;border:none;border-radius:12px;padding:13px 16px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(5,150,105,.3)">'+
+    '<div class="exp-hero">'+
+    '<div class="exp-hero-amt">$'+grandTotal.toFixed(2)+'</div>'+
+    (heroSubTxt?'<div class="exp-hero-sub '+heroSubCls+'">'+heroSubTxt+'</div>':'')+
+    '</div>'+
+    '</div>'+
+    // ── Log expense button (live mode only) ──
+    (!isSnap?'<div style="padding:12px 16px 4px">'+
+    '<button onclick="saveState();window.location.href=\'index.html\'" style="display:flex;align-items:center;justify-content:space-between;width:100%;background:linear-gradient(135deg,#064e3b,#059669);color:#fff;border:none;border-radius:12px;padding:13px 16px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(5,150,105,.25)">'+
     '<span>📝 Log expense in Gastos Casa</span><span style="font-size:18px">›</span>'+
     '</button></div>':'')+
-    (isSnap?'<div style="background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:7px 12px;margin:8px 16px;font-size:12px;color:#92400e;font-weight:600">📸 Gastos salvos com esta viagem</div>':'')+
+    // ── Category summary ──
     '<div class="exp-cats">'+catRows+'</div>'+
-    '<div class="exp-total-row">'+
-    '<span>💰 Actual total</span>'+
-    '<span style="font-size:17px">$'+grandTotal.toFixed(2)+'</span>'+
-    (estTotal>0?'<span style="font-size:11px;color:'+(diffTotal>0?'#dc2626':diffTotal<0?'#16a34a':'var(--muted)')+'">'+
-      (diffTotal>0?'▲ $'+diffTotal.toFixed(2)+' above est.':(diffTotal<0?'▼ $'+Math.abs(diffTotal).toFixed(2)+' below est.':'On budget'))+
-      '</span>':'')+
-    '</div>'+
+    // ── Individual entries ──
+    (sortedActive.length>0?'<div class="exp-section-lbl">'+sortedActive.length+' transaction'+(sortedActive.length!==1?'s':'')+'</div>':'')+
     '<div class="exp-entries">'+entryList+'</div>'+
     exclSection+
     '</div>';
@@ -2734,7 +2772,7 @@ function forceUpdate(){
   });
 
   // Version check — show banner when newer version is available
-  var _myV='193';
+  var _myV='194';
   var _verEl=document.getElementById('tv-ver');
   if(_verEl) _verEl.textContent='v'+_myV;
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
