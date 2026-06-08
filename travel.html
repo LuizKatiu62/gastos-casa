@@ -639,11 +639,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Sego
       <div class="ldc-wrap">
         <div class="ldc-row">
           <label class="ldc-label">From <button class="ldc-swap" onclick="ldcMyLocation()" id="ldc-loc-btn">📍 My location</button> <button class="ldc-swap" onclick="ldcSwap()">⇅ Swap</button></label>
-          <input type="text" id="ldc-from" class="ldc-input" placeholder="e.g. Videotron Centre, Quebec City" autocomplete="off" onblur="saveState();syncActiveStateToFirebase()">
+          <input type="text" id="ldc-from" class="ldc-input" placeholder="e.g. Videotron Centre, Quebec City" autocomplete="off" onblur="saveState();syncActiveStateToFirebase();syncDriveCostToFirebase()">
         </div>
         <div class="ldc-row">
           <label class="ldc-label">To</label>
-          <input type="text" id="ldc-to" class="ldc-input" placeholder="e.g. Hotel Le Concorde, Quebec City" autocomplete="off" onblur="saveState();syncActiveStateToFirebase()">
+          <input type="text" id="ldc-to" class="ldc-input" placeholder="e.g. Hotel Le Concorde, Quebec City" autocomplete="off" onblur="saveState();syncActiveStateToFirebase();syncDriveCostToFirebase()">
         </div>
         <button class="ldc-btn" id="ldc-calc-btn" onclick="calcLocalDrive()">🚗 Calculate</button>
         <div id="ldc-result"></div>
@@ -699,6 +699,7 @@ var _destData = null;     // stored after planTrip()
 var _activeTab= 'rt';     // last active tab
 var _pendingReplay=null;  // deferred replayLocalTrip args (set by restoreState)
 var _expSnapshot=null;    // expense snapshot from a loaded history entry (null = live data)
+var _driveCostRef=null;   // Firebase ref for Drive Cost from/to — persisted independently
 
 function showToast(msg,ms){
   var t=document.getElementById('tv-toast');
@@ -2006,8 +2007,7 @@ async function calcLocalDrive(){
     res.innerHTML='<div style="color:#dc2626;font-size:12px;padding:8px 0">Error calculating route. Check your connection.</div>';
   }
   btn.textContent='🚗 Calculate'; btn.disabled=false;
-  // Persist From/To so they survive restores and sync to other devices
-  saveState(); syncActiveStateToFirebase();
+  saveState(); syncActiveStateToFirebase(); syncDriveCostToFirebase();
 }
 
 function editLocalTrip(){
@@ -2559,6 +2559,13 @@ function syncTripsToFirebase(){
   var obj={};_tvTrips().forEach(function(t){obj[t.id]=t;});
   _tvRef.set(obj).then(function(){_tvSaving=false;}).catch(function(){_tvSaving=false;});
 }
+function syncDriveCostToFirebase(){
+  if(!_driveCostRef) return;
+  var from=(document.getElementById('ldc-from')||{}).value||'';
+  var to=(document.getElementById('ldc-to')||{}).value||'';
+  _driveCostRef.set({from:from,to:to,savedAt:new Date().toISOString()}).catch(function(){});
+}
+
 function syncActiveStateToFirebase(){
   if(!_activeStateRef) return;
   try{
@@ -2593,19 +2600,23 @@ function _fbDoSync(syncRestored){
     showToast('☁️ Viagem restaurada da nuvem',3500);
   }).catch(function(e){ console.warn('activeState:',e&&e.code); });
 
-  // Real-time listener for Drive Cost fields — syncs From/To/result from other devices
-  _activeStateRef.on('value', function(stSnap){
-    var fbS=stSnap.val();
-    if(!fbS||!fbS.fields) return;
+  // Drive Cost fields — separate Firebase path so iPhone trip state never overwrites them
+  _driveCostRef.once('value').then(function(dcSnap){
+    var dc=dcSnap.val();
+    if(!dc) return;
     var fromEl=document.getElementById('ldc-from');
     var toEl=document.getElementById('ldc-to');
-    var resEl=document.getElementById('ldc-result');
-    if(fromEl&&document.activeElement!==fromEl&&fbS.fields.ldcFrom)
-      fromEl.value=fbS.fields.ldcFrom;
-    if(toEl&&document.activeElement!==toEl&&fbS.fields.ldcTo)
-      toEl.value=fbS.fields.ldcTo;
-    if(resEl&&document.activeElement!==fromEl&&document.activeElement!==toEl&&fbS.fields.ldcResultHtml)
-      resEl.innerHTML=fbS.fields.ldcResultHtml;
+    if(fromEl&&!fromEl.value&&dc.from) fromEl.value=dc.from;
+    if(toEl&&!toEl.value&&dc.to) toEl.value=dc.to;
+  }).catch(function(){});
+
+  _driveCostRef.on('value',function(dcSnap){
+    var dc=dcSnap.val();
+    if(!dc) return;
+    var fromEl=document.getElementById('ldc-from');
+    var toEl=document.getElementById('ldc-to');
+    if(fromEl&&document.activeElement!==fromEl&&dc.from) fromEl.value=dc.from;
+    if(toEl&&document.activeElement!==toEl&&dc.to) toEl.value=dc.to;
   });
 
   // ── TRIPS HISTORY ────────────────────────────────────────────────────────
@@ -2658,6 +2669,7 @@ function initTripSync(){
     if(!app)app=firebase.initializeApp(_TV_CFG,'tv');
     _tvRef=firebase.database(app).ref('gastos/'+_TV_SEC+'/trips');
     _activeStateRef=firebase.database(app).ref('gastos/'+_TV_SEC+'/activeState');
+    _driveCostRef=firebase.database(app).ref('gastos/'+_TV_SEC+'/driveCost');
 
     // Show loading indicator whenever there is no active trip yet
     if(!_rtData&&!_destData){
@@ -2722,7 +2734,7 @@ function forceUpdate(){
   });
 
   // Version check — show banner when newer version is available
-  var _myV='192';
+  var _myV='193';
   var _verEl=document.getElementById('tv-ver');
   if(_verEl) _verEl.textContent='v'+_myV;
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
