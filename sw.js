@@ -1,4 +1,4 @@
-const CACHE = 'gastos-v194';
+const CACHE = 'gastos-v195';
 
 const CORE_ASSETS = [
   './index.html',
@@ -37,6 +37,11 @@ self.addEventListener('activate', e => {
   );
 });
 
+// Allow page to trigger skipWaiting explicitly (used by forceUpdate)
+self.addEventListener('message', e => {
+  if (e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting();
+});
+
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   const url = e.request.url;
@@ -47,11 +52,11 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // travel.html — sempre da rede; fallback para cache se offline
+  // travel.html — sempre da rede com timestamp único; fallback para cache se offline
   if (url.includes('travel.html')) {
-    const fetchUrl = url.split('?')[0] + '?_sw=' + CACHE;
+    const freshUrl = url.split('?')[0] + '?_r=' + Date.now();
     e.respondWith(
-      fetch(new Request(fetchUrl, { cache: 'no-store' }))
+      fetch(new Request(freshUrl, { cache: 'no-store' }))
         .then(res => {
           if (res.ok) caches.open(CACHE).then(c => c.put('./travel.html', res.clone()));
           return res;

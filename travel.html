@@ -2733,10 +2733,24 @@ function initTripSync(){
 }
 
 function forceUpdate(){
-  saveState();
-  // Seus dados (viagens, gastos) ficam no localStorage e nunca são apagados.
-  // O SW sempre busca travel.html da rede — basta navegar com cache-bust.
-  window.location.href='./travel.html?_v='+Date.now();
+  saveState(); // Dados no localStorage — sempre seguros
+  var nav=function(){ window.location.href='./travel.html?_nc='+Date.now(); };
+  if(!('serviceWorker' in navigator)){ nav(); return; }
+  // 1. Cancela todos os SWs registrados
+  // 2. Apaga caches de arquivos (NÃO localStorage — dados sempre seguros)
+  // 3. Navega: sem SW o browser busca direto da rede → v mais recente garantida
+  navigator.serviceWorker.getRegistrations()
+    .then(function(regs){
+      return Promise.all(regs.map(function(r){ return r.unregister(); }));
+    })
+    .then(function(){
+      if(!('caches' in window)) return;
+      return caches.keys().then(function(keys){
+        return Promise.all(keys.map(function(k){ return caches.delete(k); }));
+      });
+    })
+    .then(nav)
+    .catch(nav);
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
@@ -2772,7 +2786,7 @@ function forceUpdate(){
   });
 
   // Version check — show banner when newer version is available
-  var _myV='194';
+  var _myV='195';
   var _verEl=document.getElementById('tv-ver');
   if(_verEl) _verEl.textContent='v'+_myV;
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
@@ -2786,10 +2800,19 @@ function forceUpdate(){
 
   // Register service worker for offline / PWA
   if('serviceWorker' in navigator){
-    navigator.serviceWorker.register('./sw.js').catch(function(){});
+    // Listener antes do register() para nunca perder o SW_UPDATED
     navigator.serviceWorker.addEventListener('message',function(e){
-      if(e.data&&e.data.type==='SW_UPDATED'){saveState();window.location.reload();}
+      if(e.data&&e.data.type==='SW_UPDATED'){
+        var banner=document.getElementById('update-banner');
+        if(banner) banner.style.display='block';
+      }
     });
+    // controllerchange = novo SW assumiu controle → mostra banner
+    navigator.serviceWorker.addEventListener('controllerchange',function(){
+      var banner=document.getElementById('update-banner');
+      if(banner) banner.style.display='block';
+    });
+    navigator.serviceWorker.register('./sw.js').catch(function(){});
   }
 
   // Show "Add to Home Screen" hint on iOS Safari (not standalone, not dismissed)
