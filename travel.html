@@ -2737,21 +2737,10 @@ function forceUpdate(){
   saveState();
   var btn=document.getElementById('update-btn');
   if(btn){ btn.textContent='⏳ Atualizando…'; btn.disabled=true; }
-  var nav=function(){ window.location.replace('./travel.html?_r='+Date.now()); };
-  if(!('serviceWorker' in navigator)){ nav(); return; }
-  // Cancela SWs e apaga caches de arquivos — localStorage (dados) nunca é tocado
-  navigator.serviceWorker.getRegistrations()
-    .then(function(regs){
-      return Promise.all(regs.map(function(r){ return r.unregister(); }));
-    })
-    .then(function(){
-      if(!('caches' in window)) return;
-      return caches.keys().then(function(keys){
-        return Promise.all(keys.map(function(k){ return caches.delete(k); }));
-      });
-    })
-    .then(nav)
-    .catch(nav);
+  // Navega para reset.html — arquivo que o SW antigo não tem em cache,
+  // então busca direto da rede. reset.html desregistra o SW e limpa caches
+  // antes de navegar ao travel.html, garantindo carregamento 100% fresco.
+  window.location.replace('./reset.html?_t='+Date.now());
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
@@ -2787,7 +2776,7 @@ function forceUpdate(){
   });
 
   // Version check — show banner when newer version is available
-  var _myV='196';
+  var _myV='197';
   var _verEl=document.getElementById('tv-ver');
   if(_verEl) _verEl.textContent='v'+_myV;
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
