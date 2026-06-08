@@ -367,8 +367,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Sego
 <!-- UPDATE BANNER -->
 <div id="update-banner" style="display:none;position:sticky;top:0;z-index:900;background:linear-gradient(135deg,#b45309,#d97706);color:#fff;padding:12px 16px;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,.25)">
   <div style="font-size:13px;font-weight:700">🔄 Nova versão disponível</div>
-  <div style="font-size:11px;opacity:.85;margin:3px 0 8px">Seus dados e viagens estão seguros — só os arquivos do app serão atualizados</div>
-  <button onclick="forceUpdate()" style="background:#fff;color:#92400e;border:none;border-radius:20px;padding:7px 20px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">Atualizar agora</button>
+  <div id="update-banner-ver" style="font-size:11px;opacity:.75;margin:2px 0 6px"></div>
+  <div style="font-size:11px;opacity:.85;margin:0 0 8px">Seus dados estão seguros — só os arquivos do app serão atualizados</div>
+  <button id="update-btn" onclick="forceUpdate()" style="background:#fff;color:#92400e;border:none;border-radius:20px;padding:7px 20px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">Atualizar agora</button>
 </div>
 
 <!-- TABS -->
@@ -2733,12 +2734,12 @@ function initTripSync(){
 }
 
 function forceUpdate(){
-  saveState(); // Dados no localStorage — sempre seguros
-  var nav=function(){ window.location.href='./travel.html?_nc='+Date.now(); };
+  saveState();
+  var btn=document.getElementById('update-btn');
+  if(btn){ btn.textContent='⏳ Atualizando…'; btn.disabled=true; }
+  var nav=function(){ window.location.replace('./travel.html?_r='+Date.now()); };
   if(!('serviceWorker' in navigator)){ nav(); return; }
-  // 1. Cancela todos os SWs registrados
-  // 2. Apaga caches de arquivos (NÃO localStorage — dados sempre seguros)
-  // 3. Navega: sem SW o browser busca direto da rede → v mais recente garantida
+  // Cancela SWs e apaga caches de arquivos — localStorage (dados) nunca é tocado
   navigator.serviceWorker.getRegistrations()
     .then(function(regs){
       return Promise.all(regs.map(function(r){ return r.unregister(); }));
@@ -2786,7 +2787,7 @@ function forceUpdate(){
   });
 
   // Version check — show banner when newer version is available
-  var _myV='195';
+  var _myV='196';
   var _verEl=document.getElementById('tv-ver');
   if(_verEl) _verEl.textContent='v'+_myV;
   fetch('./version.json?_t='+Date.now(),{cache:'no-store'})
@@ -2794,9 +2795,16 @@ function forceUpdate(){
     .then(function(d){
       if(d.v && d.v>0 && String(d.v)!==_myV){
         var banner=document.getElementById('update-banner');
+        var verLbl=document.getElementById('update-banner-ver');
+        if(verLbl) verLbl.textContent='Você está na v'+_myV+' — disponível v'+d.v;
         if(banner) banner.style.display='block';
       }
     }).catch(function(){});
+
+  // iOS bfcache fix: força recarga completa quando app é restaurado do bfcache
+  window.addEventListener('pageshow',function(e){
+    if(e.persisted){ window.location.reload(); }
+  });
 
   // Register service worker for offline / PWA
   if('serviceWorker' in navigator){

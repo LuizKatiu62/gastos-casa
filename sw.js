@@ -1,4 +1,4 @@
-const CACHE = 'gastos-v195';
+const CACHE = 'gastos-v196';
 
 const CORE_ASSETS = [
   './index.html',
@@ -33,11 +33,16 @@ self.addEventListener('activate', e => {
       .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
       .then(() => self.clients.matchAll({ includeUncontrolled: true, type: 'window' }))
-      .then(clients => clients.forEach(client => client.postMessage({ type: 'SW_UPDATED' })))
+      .then(clients => Promise.all(clients.map(client => {
+        // Navigate the client directly to fresh content — bypasses stale JS and bfcache
+        const freshUrl = new URL('./travel.html?_r=' + Date.now(), self.location.href).href;
+        return client.navigate(freshUrl)
+          .catch(() => client.postMessage({ type: 'SW_UPDATED' }));
+      })))
   );
 });
 
-// Allow page to trigger skipWaiting explicitly (used by forceUpdate)
+// Allow page to trigger skipWaiting explicitly
 self.addEventListener('message', e => {
   if (e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
