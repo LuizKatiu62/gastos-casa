@@ -3201,10 +3201,10 @@ function renderizarRelatorio() {
   if (!per) { el.innerHTML = '<div class="vazio">Selecione as datas do período</div>'; return; }
 
   var lista = lancamentosPeriodo(d.lancamentos, per);
-  var tots  = { carro:0, diversos:0, mercado:0, parcelados:0 };
+  var tots  = { carro:0, diversos:0, mercado:0, parcelados:0, viagens:0 };
   var stots = {};
   var porDia = {};
-  var porDiaCat = { carro:{}, diversos:{}, mercado:{} };
+  var porDiaCat = { carro:{}, diversos:{}, mercado:{}, viagens:{} };
   lista.forEach(function(l) {
     var v = parseFloat(l.valor||0);
     if (l.parcela || l.cat === 'parcelados') return; // parcelados calculado separadamente abaixo
@@ -3216,8 +3216,8 @@ function renderizarRelatorio() {
   // Parcelados: usa total mensal real dos planos ativos (igual ao Categoria e hero)
   tots.parcelados = calcularMensalParcelados(d.lancamentos);
 
-  // Total gasto = apenas categorias comuns (sem parcelados)
-  var grand = (tots.carro||0) + (tots.diversos||0) + (tots.mercado||0);
+  // Total gasto = categorias comuns (sem parcelados)
+  var grand = (tots.carro||0) + (tots.diversos||0) + (tots.mercado||0) + (tots.viagens||0);
 
   // Limite disponível para gastos comuns = limite (parcelados excluídos do cálculo)
   var orc = d.orcamentos;
