@@ -259,6 +259,15 @@ const FB_KEY  = 'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU';
 const FB_PATH = 'treinos/luiz';
 let charts = {}, curTab = 'coach', DATA = null, curEsporte = 'todos';
 
+function getEsporte(a){
+  if(a.esporte) return a.esporte;
+  const t=a.tipo||'';
+  if(t.startsWith('bike')) return 'bike';
+  if(t==='natacao'||t==='natacao_ar') return 'natacao';
+  if(t==='musculacao') return 'academia';
+  return 'corrida';
+}
+
 function semanaISO(dateStr){
   const d=new Date(dateStr+'T12:00:00');
   const dow=(d.getDay()+6)%7;
@@ -467,10 +476,10 @@ function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
 
   // Sport breakdown (últimos 30 dias)
   const trintaDias30=(new Date(Date.now()-30*864e5)).toISOString().slice(0,10);
-  const km30c=ativ.filter(a=>a.esporte==='corrida'&&a.data>=trintaDias30).reduce((s,a)=>s+a.distancia,0).toFixed(1);
-  const km30b=ativ.filter(a=>a.esporte==='bike'&&a.data>=trintaDias30).reduce((s,a)=>s+a.distancia,0).toFixed(1);
-  const km30n=ativ.filter(a=>a.esporte==='natacao'&&a.data>=trintaDias30).reduce((s,a)=>s+a.distancia,0).toFixed(1);
-  const sess30a=ativ.filter(a=>a.esporte==='academia'&&a.data>=trintaDias30).length;
+  const km30c=ativ.filter(a=>getEsporte(a)==='corrida'&&a.data>=trintaDias30).reduce((s,a)=>s+a.distancia,0).toFixed(1);
+  const km30b=ativ.filter(a=>getEsporte(a)==='bike'&&a.data>=trintaDias30).reduce((s,a)=>s+a.distancia,0).toFixed(1);
+  const km30n=ativ.filter(a=>getEsporte(a)==='natacao'&&a.data>=trintaDias30).reduce((s,a)=>s+a.distancia,0).toFixed(1);
+  const sess30a=ativ.filter(a=>getEsporte(a)==='academia'&&a.data>=trintaDias30).length;
   document.getElementById('coach-sport-stats').innerHTML=`
     <div class="div-label">30 dias — por esporte</div>
     <div class="sgrid" style="grid-template-columns:repeat(4,1fr);gap:.45rem">
@@ -483,7 +492,7 @@ function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
 
 // ════════════════ TREINOS ════════════════
 function renderTreinos(ativ,meta,sem){
-  const filtrado=curEsporte==='todos'?ativ:ativ.filter(a=>a.esporte===curEsporte);
+  const filtrado=curEsporte==='todos'?ativ:ativ.filter(a=>getEsporte(a)===curEsporte);
 
   // Recalcular semanal a partir dos dados filtrados
   const semData={};
@@ -525,16 +534,13 @@ function renderTreinos(ativ,meta,sem){
   }
 
   // Ícone por esporte
-  const icoStyle=e=>e==='bike'?'background:linear-gradient(135deg,#f97316,#d97706)':
-    e==='natacao'?'background:linear-gradient(135deg,#3b82f6,#06b6d4)':
-    e==='academia'?'background:linear-gradient(135deg,#7c3aed,#a855f7)':
-    'background:linear-gradient(135deg,var(--blue),var(--green))';
+  const icoStyle=e=>{const es=e||'corrida';return es==='bike'?'background:linear-gradient(135deg,#f97316,#d97706)':es==='natacao'?'background:linear-gradient(135deg,#3b82f6,#06b6d4)':es==='academia'?'background:linear-gradient(135deg,#7c3aed,#a855f7)':'background:linear-gradient(135deg,var(--blue),var(--green))';};
 
   // Lista de atividades
   document.getElementById('run-list').innerHTML=
     filtrado.slice(0,20).map(a=>`
       <div class="run">
-        <div class="run-ico" style="${icoStyle(a.esporte||'corrida')}">${TIPO_ICO[a.tipo]||'🏃'}</div>
+        <div class="run-ico" style="${icoStyle(getEsporte(a))}">${TIPO_ICO[a.tipo]||'🏃'}</div>
         <div class="run-info">
           <div class="run-name">${dow(a.data)}, ${fd(a.data)}<span class="badge b-${a.tipo||'facil'}">${TIPO_LBL[a.tipo]||'Corrida'}</span></div>
           <div class="run-meta">${a.duracao||''}${a.fcMed?' · ❤️ '+a.fcMed+' bpm':''}${a.calorias?' · 🔥 '+a.calorias+' kcal':''}${a.elevGain>0?' · ↑'+a.elevGain+'m':''}</div>
