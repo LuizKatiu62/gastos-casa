@@ -12,7 +12,7 @@ GARMIN_EMAIL     = "lcdsilva@hotmail.com"
 FIREBASE_DB      = "https://gastos-casa-7f431-default-rtdb.firebaseio.com"
 FIREBASE_PATH    = "treinos/luiz"
 FIREBASE_KEY     = "AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU"
-DIAS_ATIVIDADES  = 120
+DIAS_ATIVIDADES  = 365
 DIAS_SAUDE       = 21
 # ─────────────────────────────────────────────────────────────
 
