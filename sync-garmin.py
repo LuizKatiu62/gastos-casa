@@ -44,10 +44,25 @@ TIPO_MAP = {
     "hiking": "trilha", "indoor_running": "esteira",
     "virtual_run": "virtual", "track_running": "intervalado",
     "obstacle_run": "intervalado",
+    "cycling": "bike", "indoor_cycling": "bike_indoor",
+    "mountain_biking": "bike_trilha", "virtual_ride": "bike_virtual",
+    "swimming": "natacao", "open_water_swimming": "natacao_ar",
+    "strength_training": "musculacao", "weight_training": "musculacao",
+    "fitness_equipment": "musculacao", "cardio_training": "musculacao",
+}
+ESPORTE_MAP = {
+    "running": "corrida", "trail_running": "corrida", "ultra_run": "corrida",
+    "treadmill_running": "corrida", "walking": "corrida", "hiking": "corrida",
+    "indoor_running": "corrida", "virtual_run": "corrida", "track_running": "corrida",
+    "obstacle_run": "corrida",
+    "cycling": "bike", "indoor_cycling": "bike", "mountain_biking": "bike",
+    "virtual_ride": "bike",
+    "swimming": "natacao", "open_water_swimming": "natacao",
+    "strength_training": "academia", "weight_training": "academia",
+    "fitness_equipment": "academia", "cardio_training": "academia",
 }
 IGNORAR = {
-    "cycling", "indoor_cycling", "swimming", "strength_training", "yoga",
-    "elliptical", "rowing", "mountain_biking", "virtual_ride"
+    "yoga", "elliptical", "rowing",
 }
 
 
@@ -60,6 +75,7 @@ def garmin_to_treino(act):
     start    = (act.get("startTimeLocal") or act.get("startTimeGMT") or "")[:10]
     return {
         "id":           "gm-" + str(act.get("activityId", "")),
+        "esporte":      ESPORTE_MAP.get(tipo_g, "outro"),
         "tipo":         TIPO_MAP.get(tipo_g, "facil"),
         "data":         start,
         "distancia":    round(dist_m / 1000, 2),

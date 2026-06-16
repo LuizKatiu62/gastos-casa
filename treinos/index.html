@@ -86,6 +86,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .b-facil{background:#ecfdf5;color:#065f46}.b-trilha{background:#fff7ed;color:#9a3412}
 .b-intervalado{background:#eff6ff;color:#1e40af}.b-esteira{background:#f5f3ff;color:#4c1d95}
 .b-caminhada{background:#fefce8;color:#713f12}.b-virtual{background:#f1f5f9;color:#334155}
+.b-bike,.b-bike_indoor,.b-bike_trilha,.b-bike_virtual{background:#fff1ec;color:#7c2d12}
+.b-natacao,.b-natacao_ar{background:#e0f2fe;color:#0c4a6e}
+.b-musculacao{background:#f3e8ff;color:#4c1d95}
+
+/* ── SPORT FILTER ── */
+.sf-wrap{display:flex;gap:.4rem;margin-bottom:.75rem;flex-wrap:wrap}
+.sf-btn{border:1.5px solid var(--border);background:#fff;border-radius:20px;padding:.28rem .7rem;font-size:.72rem;font-weight:700;color:var(--muted);cursor:pointer;font-family:inherit;transition:all .15s}
+.sf-btn.sf-on{background:var(--blue);border-color:var(--blue);color:#fff}
 
 /* ── CHARTS ── */
 .ch{position:relative;height:175px}
@@ -151,10 +159,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div id="coach-sugestao"></div>
       <div id="coach-insights" class="insight-grid"></div>
       <div id="coach-stats-hero"></div>
+      <div id="coach-sport-stats"></div>
     </div>
 
     <!-- ══ TREINOS ══ -->
     <div class="sec" id="sec-treinos">
+      <div class="sf-wrap">
+        <button class="sf-btn sf-on" onclick="setEsporte('todos',this)">Todos</button>
+        <button class="sf-btn" onclick="setEsporte('corrida',this)">🏃 Corrida</button>
+        <button class="sf-btn" onclick="setEsporte('bike',this)">🚴 Bike</button>
+        <button class="sf-btn" onclick="setEsporte('natacao',this)">🏊 Natação</button>
+        <button class="sf-btn" onclick="setEsporte('academia',this)">💪 Academia</button>
+      </div>
       <div id="t-stats" class="sgrid sg3" style="margin-bottom:.75rem"></div>
       <div class="card"><div class="card-title">📊 Volume por Semana (km)</div><div class="ch"><canvas id="cVol"></canvas></div></div>
       <div class="card"><div class="card-title">📅 Frequência Semanal (treinos)</div><div class="ch-sm"><canvas id="cFreq"></canvas></div></div>
@@ -241,7 +257,24 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 const FB_DB   = 'https://gastos-casa-7f431-default-rtdb.firebaseio.com';
 const FB_KEY  = 'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU';
 const FB_PATH = 'treinos/luiz';
-let charts = {}, curTab = 'coach', DATA = null;
+let charts = {}, curTab = 'coach', DATA = null, curEsporte = 'todos';
+
+function semanaISO(dateStr){
+  const d=new Date(dateStr+'T12:00:00');
+  const dow=(d.getDay()+6)%7;
+  const thu=new Date(d.getTime()+(3-dow)*864e5);
+  const y=thu.getFullYear();
+  const yr1=new Date(y,0,1);
+  const w=Math.ceil(((thu-yr1)/864e5+yr1.getDay())/7);
+  return `${y}-W${String(w).padStart(2,'0')}`;
+}
+
+function setEsporte(e,btn){
+  curEsporte=e;
+  document.querySelectorAll('.sf-btn').forEach(b=>b.classList.remove('sf-on'));
+  btn.classList.add('sf-on');
+  if(DATA){const a=(DATA.atividades||[]).sort((a,b)=>b.data.localeCompare(a.data));renderTreinos(a,DATA.meta||{},DATA.semanal||{});}
+}
 
 async function fbToken(){
   const r = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${FB_KEY}`,
@@ -277,8 +310,8 @@ function showEmpty(err){
 // ── helpers ──
 const MESES=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 const DIAS=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
-const TIPO_ICO={facil:'🏃',trilha:'⛰️',intervalado:'⚡',esteira:'🏃',caminhada:'🚶',virtual:'💻'};
-const TIPO_LBL={facil:'Fácil',trilha:'Trilha',intervalado:'Intervalo',esteira:'Esteira',caminhada:'Caminhada',virtual:'Virtual'};
+const TIPO_ICO={facil:'🏃',trilha:'⛰️',intervalado:'⚡',esteira:'🏃',caminhada:'🚶',virtual:'💻',bike:'🚴',bike_indoor:'🚴',bike_trilha:'🚵',bike_virtual:'🚴',natacao:'🏊',natacao_ar:'🏊',musculacao:'💪'};
+const TIPO_LBL={facil:'Fácil',trilha:'Trilha',intervalado:'Intervalo',esteira:'Esteira',caminhada:'Caminhada',virtual:'Virtual',bike:'Bike',bike_indoor:'Bike Indoor',bike_trilha:'MTB',bike_virtual:'Bike Virtual',natacao:'Natação',natacao_ar:'Natação AR',musculacao:'Academia'};
 
 function fd(d){if(!d)return'';const[y,m,dia]=d.split('-');return`${+dia} ${MESES[+m-1]}`;}
 function dow(d){if(!d)return'';return DIAS[new Date(d+'T12:00:00').getDay()];}
@@ -431,54 +464,95 @@ function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
       <div class="stat"><div class="sv" style="color:var(--green)">${meta.treinos30dias??'—'}</div><div class="sl">treinos / mês</div></div>
       <div class="stat"><div class="sv" style="color:var(--muted);font-size:1rem">${meta.totalKm??'—'}</div><div class="sl">km total</div></div>
     </div>`;
+
+  // Sport breakdown (últimos 30 dias)
+  const trintaDias30=(new Date(Date.now()-30*864e5)).toISOString().slice(0,10);
+  const km30c=ativ.filter(a=>a.esporte==='corrida'&&a.data>=trintaDias30).reduce((s,a)=>s+a.distancia,0).toFixed(1);
+  const km30b=ativ.filter(a=>a.esporte==='bike'&&a.data>=trintaDias30).reduce((s,a)=>s+a.distancia,0).toFixed(1);
+  const km30n=ativ.filter(a=>a.esporte==='natacao'&&a.data>=trintaDias30).reduce((s,a)=>s+a.distancia,0).toFixed(1);
+  const sess30a=ativ.filter(a=>a.esporte==='academia'&&a.data>=trintaDias30).length;
+  document.getElementById('coach-sport-stats').innerHTML=`
+    <div class="div-label">30 dias — por esporte</div>
+    <div class="sgrid" style="grid-template-columns:repeat(4,1fr);gap:.45rem">
+      <div class="stat"><div class="sv" style="color:var(--blue);font-size:1.1rem">${km30c}</div><div class="sl">🏃 corrida</div></div>
+      <div class="stat"><div class="sv" style="color:var(--orange);font-size:1.1rem">${km30b}</div><div class="sl">🚴 bike</div></div>
+      <div class="stat"><div class="sv" style="color:#0ea5e9;font-size:1.1rem">${km30n}</div><div class="sl">🏊 natação</div></div>
+      <div class="stat"><div class="sv" style="color:var(--purple);font-size:1.1rem">${sess30a}</div><div class="sl">💪 academia</div></div>
+    </div>`;
 }
 
 // ════════════════ TREINOS ════════════════
 function renderTreinos(ativ,meta,sem){
-  // Stats
-  const comPace=ativ.filter(a=>a.pace&&a.distancia>=1);
+  const filtrado=curEsporte==='todos'?ativ:ativ.filter(a=>a.esporte===curEsporte);
+
+  // Recalcular semanal a partir dos dados filtrados
+  const semData={};
+  filtrado.forEach(a=>{
+    const s=semanaISO(a.data);
+    if(!semData[s])semData[s]={km:0,treinos:0};
+    semData[s].km=+(semData[s].km+a.distancia).toFixed(2);
+    semData[s].treinos++;
+  });
+  const semKeys=Object.keys(semData).sort().slice(-10);
+
+  // Stats esta semana
+  const d7s=(new Date(Date.now()-7*864e5)).toISOString().slice(0,10);
+  const f7=filtrado.filter(a=>a.data>=d7s);
+  const km7f=f7.reduce((s,a)=>s+a.distancia,0).toFixed(1);
+  const t7f=f7.length;
+  const comPace=filtrado.filter(a=>a.pace&&a.distancia>=1);
   const melhor=comPace.length?s2p(Math.min(...comPace.map(a=>p2s(a.pace)))):'—';
+
   document.getElementById('t-stats').innerHTML=`
-    <div class="stat"><div class="sv" style="color:var(--blue)">${meta.km7dias??'—'}</div><div class="sl">km esta sem.</div></div>
-    <div class="stat"><div class="sv" style="color:var(--green)">${meta.treinos7dias??'—'}</div><div class="sl">treinos / sem.</div></div>
+    <div class="stat"><div class="sv" style="color:var(--blue)">${km7f}</div><div class="sl">km esta sem.</div></div>
+    <div class="stat"><div class="sv" style="color:var(--green)">${t7f}</div><div class="sl">treinos / sem.</div></div>
     <div class="stat"><div class="sv" style="color:var(--orange)">${melhor}</div><div class="sl">melhor pace</div></div>`;
 
-  // Charts
-  const semKeys=Object.keys(sem).sort().slice(-10);
+  // Charts — destruir antes de recriar
+  if(charts.vol){charts.vol.destroy();charts.vol=null;}
+  if(charts.freq){charts.freq.destroy();charts.freq=null;}
+
   if(semKeys.length){
     charts.vol=new Chart(document.getElementById('cVol'),{type:'bar',
-      data:{labels:semKeys.map(semLbl),datasets:[{data:semKeys.map(k=>sem[k].km),
+      data:{labels:semKeys.map(semLbl),datasets:[{data:semKeys.map(k=>semData[k].km),
         backgroundColor:semKeys.map((_,i)=>i===semKeys.length-1?'#1a56db':'rgba(26,86,219,.28)'),borderRadius:5}]},
       options:{...BASE,plugins:{...BASE.plugins,tooltip:{callbacks:{label:c=>c.raw+' km'}}}}});
     charts.freq=new Chart(document.getElementById('cFreq'),{type:'bar',
-      data:{labels:semKeys.map(semLbl),datasets:[{data:semKeys.map(k=>sem[k].treinos),
+      data:{labels:semKeys.map(semLbl),datasets:[{data:semKeys.map(k=>semData[k].treinos),
         backgroundColor:'rgba(14,159,110,.35)',borderColor:'#0e9f6e',borderWidth:1,borderRadius:5}]},
       options:{...BASE,plugins:{...BASE.plugins,tooltip:{callbacks:{label:c=>c.raw+' treinos'}}},
         scales:{...BASE.scales,y:{...BASE.scales.y,ticks:{...BASE.scales.y.ticks,stepSize:1}}}}});
   }
 
-  // Run list
+  // Ícone por esporte
+  const icoStyle=e=>e==='bike'?'background:linear-gradient(135deg,#f97316,#d97706)':
+    e==='natacao'?'background:linear-gradient(135deg,#3b82f6,#06b6d4)':
+    e==='academia'?'background:linear-gradient(135deg,#7c3aed,#a855f7)':
+    'background:linear-gradient(135deg,var(--blue),var(--green))';
+
+  // Lista de atividades
   document.getElementById('run-list').innerHTML=
-    ativ.slice(0,20).map(a=>`
+    filtrado.slice(0,20).map(a=>`
       <div class="run">
-        <div class="run-ico">${TIPO_ICO[a.tipo]||'🏃'}</div>
+        <div class="run-ico" style="${icoStyle(a.esporte||'corrida')}">${TIPO_ICO[a.tipo]||'🏃'}</div>
         <div class="run-info">
           <div class="run-name">${dow(a.data)}, ${fd(a.data)}<span class="badge b-${a.tipo||'facil'}">${TIPO_LBL[a.tipo]||'Corrida'}</span></div>
           <div class="run-meta">${a.duracao||''}${a.fcMed?' · ❤️ '+a.fcMed+' bpm':''}${a.calorias?' · 🔥 '+a.calorias+' kcal':''}${a.elevGain>0?' · ↑'+a.elevGain+'m':''}</div>
         </div>
         <div class="run-right">
-          <div class="run-km">${a.distancia} km</div>
-          <div class="run-pace">${a.pace?a.pace+' /km':''}</div>
+          <div class="run-km">${a.distancia>0?a.distancia+' km':a.duracao}</div>
+          <div class="run-pace">${a.pace&&a.esporte!=='academia'?a.pace+' /km':''}</div>
         </div>
       </div>`).join('');
 }
 
 // ════════════════ EVOLUÇÃO ════════════════
 function renderEvolucao(ativ){
-  const comPace=ativ.filter(a=>a.pace&&a.distancia>=1).slice(0,25).reverse();
+  const corrida=ativ.filter(a=>!a.esporte||a.esporte==='corrida');
+  const comPace=corrida.filter(a=>a.pace&&a.distancia>=1).slice(0,25).reverse();
   const comFC=ativ.filter(a=>a.fcMed>0).slice(0,25).reverse();
   const comVO2=ativ.filter(a=>a.vo2max>0).slice(0,20).reverse();
-  const comCad=ativ.filter(a=>a.cadencia>0).slice(0,20).reverse();
+  const comCad=corrida.filter(a=>a.cadencia>0).slice(0,20).reverse();
 
   if(comPace.length>=2){
     charts.pace=new Chart(document.getElementById('cPace'),{type:'line',
