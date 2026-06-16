@@ -203,11 +203,12 @@ def main():
     bodyBattery = {}
     for i in range(DIAS_SAUDE):
         d = (hoje - timedelta(days=i)).strftime("%Y-%m-%d")
-        bb = safe_get(api, api.get_body_battery, d)
-        if bb:
-            vals = [v[1] for v in bb if isinstance(v, list) and len(v) > 1 and v[1] is not None]
-            if vals:
-                bodyBattery[d] = {"max": max(vals), "min": min(vals)}
+        stats = safe_get(api, api.get_stats, d)
+        if stats:
+            high = stats.get("bodyBatteryHighestValue") or stats.get("maxBodyBattery") or 0
+            low  = stats.get("bodyBatteryLowestValue")  or stats.get("minBodyBattery") or 0
+            if high:
+                bodyBattery[d] = {"max": int(high), "min": int(low)}
     print(f"  🔋 {len(bodyBattery)} dias com Body Battery")
 
     # ── Sono ──
