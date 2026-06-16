@@ -187,24 +187,31 @@ def main():
         semanal[s]["km"]      = round(semanal[s]["km"] + t["distancia"], 2)
         semanal[s]["treinos"] += 1
 
-    log(f"Buscando Body Battery ({DIAS_SAUDE} dias)...")
+    log(f"Buscando dados de saúde ({DIAS_SAUDE} dias)...")
     bodyBattery = {}
+    stress      = {}
+    sono        = {}
+    hrv         = {}
+
     for i in range(DIAS_SAUDE):
         d = (hoje - timedelta(days=i)).strftime("%Y-%m-%d")
-        stats = safe_get(api, api.get_stats, d)
-        if stats:
-            high = stats.get("bodyBatteryHighestValue") or stats.get("maxBodyBattery") or 0
-            low  = stats.get("bodyBatteryLowestValue")  or stats.get("minBodyBattery") or 0
+
+        # Body Battery + Stress — uma chamada só
+        st = safe_get(api, api.get_stats, d, delay=0.5)
+        if st:
+            high = st.get("bodyBatteryHighestValue") or st.get("maxBodyBattery") or 0
+            low  = st.get("bodyBatteryLowestValue")  or st.get("minBodyBattery") or 0
             if high:
                 bodyBattery[d] = {"max": int(high), "min": int(low)}
+            avg_s = st.get("averageStressLevel") or -1
+            max_s = st.get("maxStressLevel") or 0
+            if avg_s is not None and avg_s >= 0:
+                stress[d] = {"avg": int(avg_s), "max": int(max_s)}
 
-    log(f"Buscando sono...")
-    sono = {}
-    for i in range(DIAS_SAUDE):
-        d = (hoje - timedelta(days=i)).strftime("%Y-%m-%d")
-        s = safe_get(api, api.get_sleep_data, d)
-        if s and s.get("dailySleepDTO"):
-            dto     = s["dailySleepDTO"]
+        # Sono
+        sl = safe_get(api, api.get_sleep_data, d, delay=0.5)
+        if sl and sl.get("dailySleepDTO"):
+            dto     = sl["dailySleepDTO"]
             scores  = (dto.get("sleepScores") or {})
             overall = (scores.get("overall") or {})
             sono[d] = {
@@ -215,28 +222,14 @@ def main():
                 "score":    overall.get("value", 0) if isinstance(overall, dict) else 0,
             }
 
-    log(f"Buscando stress...")
-    stress = {}
-    for i in range(DIAS_SAUDE):
-        d = (hoje - timedelta(days=i)).strftime("%Y-%m-%d")
-        s = safe_get(api, api.get_stress_data, d)
-        if s and s.get("stressValuesArray"):
-            vals = [v[1] for v in s["stressValuesArray"]
-                    if isinstance(v, list) and len(v) > 1 and v[1] is not None and v[1] >= 0]
-            if vals:
-                stress[d] = {"avg": round(sum(vals) / len(vals)), "max": max(vals)}
-
-    log(f"Buscando HRV...")
-    hrv = {}
-    for i in range(DIAS_SAUDE):
-        d = (hoje - timedelta(days=i)).strftime("%Y-%m-%d")
-        h = safe_get(api, api.get_hrv_data, d)
-        if h and h.get("hrvSummary"):
-            s = h["hrvSummary"]
+        # HRV
+        hv = safe_get(api, api.get_hrv_data, d, delay=0.5)
+        if hv and hv.get("hrvSummary"):
+            hs = hv["hrvSummary"]
             hrv[d] = {
-                "semanal": s.get("weeklyAvg", 0),
-                "ontem":   s.get("lastNight", 0),
-                "status":  s.get("status", ""),
+                "semanal": hs.get("weeklyAvg", 0),
+                "ontem":   hs.get("lastNight", 0),
+                "status":  hs.get("status", ""),
             }
 
     log("Enviando para Firebase...")

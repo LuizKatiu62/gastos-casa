@@ -198,27 +198,32 @@ def main():
         semanal[s]["km"]      = round(semanal[s]["km"] + t["distancia"], 2)
         semanal[s]["treinos"] += 1
 
-    # ── Body Battery ──
-    print(f"\n  Buscando Body Battery ({DIAS_SAUDE} dias)...")
+    # ── Saúde (loop único: BB + stress via get_stats, sono e HRV separados) ──
+    print(f"\n  Buscando dados de saúde ({DIAS_SAUDE} dias)...")
     bodyBattery = {}
+    stress      = {}
+    sono        = {}
+    hrv         = {}
+
     for i in range(DIAS_SAUDE):
         d = (hoje - timedelta(days=i)).strftime("%Y-%m-%d")
-        stats = safe_get(api, api.get_stats, d)
-        if stats:
-            high = stats.get("bodyBatteryHighestValue") or stats.get("maxBodyBattery") or 0
-            low  = stats.get("bodyBatteryLowestValue")  or stats.get("minBodyBattery") or 0
+
+        # Body Battery + Stress — uma chamada só
+        st = safe_get(api, api.get_stats, d, delay=0.5)
+        if st:
+            high = st.get("bodyBatteryHighestValue") or st.get("maxBodyBattery") or 0
+            low  = st.get("bodyBatteryLowestValue")  or st.get("minBodyBattery") or 0
             if high:
                 bodyBattery[d] = {"max": int(high), "min": int(low)}
-    print(f"  🔋 {len(bodyBattery)} dias com Body Battery")
+            avg_s = st.get("averageStressLevel") or -1
+            max_s = st.get("maxStressLevel") or 0
+            if avg_s is not None and avg_s >= 0:
+                stress[d] = {"avg": int(avg_s), "max": int(max_s)}
 
-    # ── Sono ──
-    print(f"  Buscando dados de sono ({DIAS_SAUDE} dias)...")
-    sono = {}
-    for i in range(DIAS_SAUDE):
-        d = (hoje - timedelta(days=i)).strftime("%Y-%m-%d")
-        s = safe_get(api, api.get_sleep_data, d)
-        if s and s.get("dailySleepDTO"):
-            dto     = s["dailySleepDTO"]
+        # Sono — chamada separada
+        sl = safe_get(api, api.get_sleep_data, d, delay=0.5)
+        if sl and sl.get("dailySleepDTO"):
+            dto     = sl["dailySleepDTO"]
             scores  = (dto.get("sleepScores") or {})
             overall = (scores.get("overall") or {})
             sono[d] = {
@@ -228,34 +233,20 @@ def main():
                 "rem":      round((dto.get("remSleepSeconds",   0) or 0) / 3600, 1),
                 "score":    overall.get("value", 0) if isinstance(overall, dict) else 0,
             }
-    print(f"  😴 {len(sono)} dias com dados de sono")
 
-    # ── Stress ──
-    print(f"  Buscando dados de stress ({DIAS_SAUDE} dias)...")
-    stress = {}
-    for i in range(DIAS_SAUDE):
-        d = (hoje - timedelta(days=i)).strftime("%Y-%m-%d")
-        s = safe_get(api, api.get_stress_data, d)
-        if s and s.get("stressValuesArray"):
-            vals = [v[1] for v in s["stressValuesArray"]
-                    if isinstance(v, list) and len(v) > 1 and v[1] is not None and v[1] >= 0]
-            if vals:
-                stress[d] = {"avg": round(sum(vals) / len(vals)), "max": max(vals)}
-    print(f"  😰 {len(stress)} dias com dados de stress")
-
-    # ── HRV ──
-    print(f"  Buscando HRV ({DIAS_SAUDE} dias)...")
-    hrv = {}
-    for i in range(DIAS_SAUDE):
-        d = (hoje - timedelta(days=i)).strftime("%Y-%m-%d")
-        h = safe_get(api, api.get_hrv_data, d)
-        if h and h.get("hrvSummary"):
-            s = h["hrvSummary"]
+        # HRV — chamada separada
+        hv = safe_get(api, api.get_hrv_data, d, delay=0.5)
+        if hv and hv.get("hrvSummary"):
+            hs = hv["hrvSummary"]
             hrv[d] = {
-                "semanal":    s.get("weeklyAvg", 0),
-                "ontem":      s.get("lastNight", 0),
-                "status":     s.get("status", ""),
+                "semanal": hs.get("weeklyAvg", 0),
+                "ontem":   hs.get("lastNight", 0),
+                "status":  hs.get("status", ""),
             }
+
+    print(f"  🔋 {len(bodyBattery)} dias com Body Battery")
+    print(f"  😴 {len(sono)} dias com sono")
+    print(f"  😰 {len(stress)} dias com stress")
     print(f"  💚 {len(hrv)} dias com HRV")
 
     # ── Firebase ──
