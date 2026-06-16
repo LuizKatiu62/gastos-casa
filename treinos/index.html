@@ -140,6 +140,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .qr{background:#f8fafc;border:1px solid var(--border);border-left:3px solid var(--blue);border-radius:0 10px 10px 0;padding:.55rem .8rem;font-size:.82rem;color:#334155;cursor:pointer;text-align:left;font-family:inherit;width:100%;line-height:1.4}
 .qr:hover{background:#eff6ff}
 
+/* ── RUNNING DYNAMICS ── */
+.rd-item{background:#f8fafc;border:1px solid var(--border);border-radius:12px;padding:.85rem;margin-bottom:.5rem}
+.rd-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.35rem}
+.rd-nome{font-size:.73rem;font-weight:800;color:var(--text)}
+.rd-badge{font-size:.6rem;font-weight:800;padding:2px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.3px}
+.rd-bom{background:#ecfdf5;color:#065f46}.rd-ok{background:#fffbeb;color:#78350f}.rd-ruim{background:#fef2f2;color:#991b1b}
+.rd-vals{display:flex;align-items:baseline;gap:.4rem;margin-bottom:.45rem}
+.rd-real{font-size:1.35rem;font-weight:900;line-height:1}
+.rd-unit{font-size:.72rem;color:var(--muted);font-weight:600}
+.rd-ideal-txt{font-size:.68rem;color:var(--muted);margin-left:auto}
+.rd-gauge{position:relative;height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden}
+.rd-gauge-ideal{position:absolute;height:100%;background:#86efac;border-radius:4px}
+.rd-gauge-ptr{position:absolute;width:3px;height:100%;background:#1e293b;border-radius:2px;transition:left .4s ease}
+
 /* ── EMPTY ── */
 .empty{text-align:center;padding:2.5rem 1rem;background:var(--card);border-radius:var(--r);border:1px solid var(--border)}
 .empty h3{margin-bottom:.5rem}
@@ -205,6 +219,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div class="chart-row">
         <div class="card"><div class="card-title">🔬 VO2 Max</div><div class="ch-sm"><canvas id="cVO2"></canvas></div></div>
         <div class="card"><div class="card-title">🦵 Cadência (pass/min)</div><div class="ch-sm"><canvas id="cCad"></canvas></div></div>
+      </div>
+      <div class="card" id="rd-card" style="display:none">
+        <div class="card-title">🦾 Running Dynamics — sua média vs ideal</div>
+        <div id="rd-list"></div>
+        <div style="font-size:.65rem;color:var(--muted);margin-top:.6rem;line-height:1.5">Baseado nas últimas corridas com dados de dinâmica. Requer HRM-Run, HRM-Pro ou Running Dynamics Pod.</div>
       </div>
       <div class="card" id="ef-card" style="display:none">
         <div class="card-title">⚡ Efeito de Treino (últimos 10 treinos)</div>
@@ -610,6 +629,8 @@ function renderEvolucao(ativ){
       options:{...BASE,plugins:{...BASE.plugins,tooltip:{callbacks:{label:c=>c.raw+' pass/min'}}}}});
   }
 
+  renderRunningDynamics(corrida);
+
   // Efeito de treino
   const comEf=ativ.filter(a=>a.efAerobico>0).slice(0,10);
   if(comEf.length){
@@ -625,6 +646,78 @@ function renderEvolucao(ativ){
       </div>`;
     }).join('');
   }
+}
+
+// ════════════════ RUNNING DYNAMICS ════════════════
+function renderRunningDynamics(corrida){
+  const acts = corrida.filter(a => a.oscilacao > 0 || a.contatoSolo > 0 || a.razaoVertical > 0).slice(0, 15);
+  const card = document.getElementById('rd-card');
+  if(acts.length < 1){ card.style.display='none'; return; }
+  card.style.display='block';
+
+  function avg(arr, key){ const v=arr.filter(a=>a[key]>0); return v.length?+(v.reduce((s,a)=>s+a[key],0)/v.length).toFixed(1):0; }
+
+  const mCad  = Math.round(avg(acts,'cadencia'));
+  const mOsc  = avg(acts,'oscilacao');
+  const mGCT  = Math.round(avg(acts,'contatoSolo'));
+  const mVR   = avg(acts,'razaoVertical');
+  const mBal  = avg(acts,'balanco');
+  const mPass = avg(acts,'passada');
+
+  // metric(nome, valor, unidade, min_escala, max_escala, ideal_ini, ideal_fim, lowerIsBetter, dica)
+  function metric(nome, val, unit, scMin, scMax, idLow, idHigh, lowerIsBetter, dica){
+    if(!val) return '';
+    let badge, badgeClass;
+    if(lowerIsBetter){
+      if(val <= idHigh*0.9){ badge='✅ Ótimo'; badgeClass='rd-bom'; }
+      else if(val <= idHigh){ badge='✅ Bom'; badgeClass='rd-bom'; }
+      else if(val <= idHigh*1.12){ badge='⚠️ Atenção'; badgeClass='rd-ok'; }
+      else{ badge='❌ Alto'; badgeClass='rd-ruim'; }
+    } else {
+      if(val >= idLow && val <= idHigh){ badge='✅ Ótimo'; badgeClass='rd-bom'; }
+      else if(val >= idLow*0.96 && val <= idHigh*1.04){ badge='⚠️ Próximo'; badgeClass='rd-ok'; }
+      else{ badge='❌ Fora'; badgeClass='rd-ruim'; }
+    }
+    const range = scMax - scMin;
+    const idLowPct  = Math.max(0, Math.min(100, (idLow  - scMin) / range * 100));
+    const idHighPct = Math.max(0, Math.min(100, (idHigh - scMin) / range * 100));
+    const valPct    = Math.max(2, Math.min(98,  (val    - scMin) / range * 100));
+    const cor = badgeClass==='rd-bom'?'#0e9f6e':badgeClass==='rd-ok'?'#f97316':'#ef4444';
+    return `<div class="rd-item">
+      <div class="rd-header">
+        <span class="rd-nome">${nome}</span>
+        <span class="rd-badge ${badgeClass}">${badge}</span>
+      </div>
+      <div class="rd-vals">
+        <span class="rd-real" style="color:${cor}">${val}</span>
+        <span class="rd-unit">${unit}</span>
+        <span class="rd-ideal-txt">Ideal: ${lowerIsBetter?'<'+idHigh:idLow+'–'+idHigh} ${unit}</span>
+      </div>
+      <div class="rd-gauge">
+        <div class="rd-gauge-ideal" style="left:${idLowPct}%;width:${idHighPct-idLowPct}%"></div>
+        <div class="rd-gauge-ptr"  style="left:${valPct}%"></div>
+      </div>
+      <div style="font-size:.65rem;color:var(--muted);margin-top:.3rem">${dica}</div>
+    </div>`;
+  }
+
+  const balLeft = mBal > 50 ? (100-mBal).toFixed(1) : mBal.toFixed(1);
+
+  document.getElementById('rd-list').innerHTML = [
+    metric('Cadência', mCad, 'spm', 140, 210, 170, 180, false,
+      'Mais passos por minuto = menos impacto. Meta: 170-180 spm.'),
+    metric('Oscilação Vertical', mOsc, 'cm', 4, 16, 0, 8, true,
+      'Quanto menor, mais eficiente. Acima de 10 cm desperdiça energia.'),
+    metric('Contato com o Solo', mGCT, 'ms', 150, 400, 0, 240, true,
+      'Menos tempo no solo = passada mais elástica e rápida.'),
+    metric('Razão Vertical', mVR, '%', 3, 16, 0, 8, true,
+      'Relação entre oscilação e passada. Abaixo de 8% é eficiente.'),
+    mBal ? metric('Equilíbrio de Contato', +balLeft, '%', 45, 55, 49, 51, false,
+      `Lado menor: ${balLeft}% · Assimetria acima de 2% pode indicar compensação.`) : '',
+    mPass ? `<div class="rd-item"><div class="rd-header"><span class="rd-nome">Comprimento da Passada</span></div>
+      <div class="rd-vals"><span class="rd-real" style="color:var(--blue)">${mPass}</span><span class="rd-unit">m</span></div>
+      <div style="font-size:.65rem;color:var(--muted);margin-top:.2rem">Varia com o pace. Aumenta naturalmente com o treino.</div></div>` : '',
+  ].join('');
 }
 
 // ════════════════ SAÚDE ════════════════
