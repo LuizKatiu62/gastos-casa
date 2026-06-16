@@ -164,6 +164,40 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .div-label{font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin:.25rem 0 .6rem;padding-top:.5rem;border-top:1px solid var(--border)}
 
 @media(max-width:380px){.insight-grid{grid-template-columns:1fr}.chart-row{grid-template-columns:1fr}.sg3{grid-template-columns:repeat(3,1fr)}.sv{font-size:1.15rem}}
+
+/* ── PROVAS ── */
+.provas-filter{display:flex;gap:.4rem;margin-bottom:.75rem;flex-wrap:wrap}
+.pf-btn{border:1.5px solid var(--border);background:#fff;border-radius:20px;padding:.28rem .7rem;font-size:.72rem;font-weight:700;color:var(--muted);cursor:pointer;font-family:inherit;transition:all .15s}
+.pf-btn.pf-on{background:var(--blue);border-color:var(--blue);color:#fff}
+.prova-card{border:1px solid var(--border);border-radius:12px;padding:.85rem;margin-bottom:.5rem;background:var(--card);border-left:4px solid var(--blue)}
+.prova-usa{border-left-color:#dc2626;background:#fff9f9}
+.prova-passada{opacity:.45}
+.prova-nome{font-size:.88rem;font-weight:800;color:var(--text);display:flex;align-items:center;gap:.4rem;flex-wrap:wrap}
+.prova-local{font-size:.72rem;color:var(--muted);margin:.2rem 0}
+.prova-footer{display:flex;align-items:center;justify-content:space-between;margin-top:.5rem;gap:.5rem;flex-wrap:wrap}
+.prova-data{font-size:.75rem;font-weight:700;color:var(--blue)}
+.prova-usa .prova-data{color:#dc2626}
+.prova-dists{display:flex;gap:.3rem;flex-wrap:wrap}
+.prova-dist{font-size:.62rem;font-weight:700;background:#eff6ff;color:var(--blue);border-radius:10px;padding:2px 7px;cursor:pointer}
+.prova-usa .prova-dist{background:#fef2f2;color:#dc2626}
+.prova-usa-tag{font-size:.6rem;font-weight:800;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;border-radius:10px;padding:1px 6px;text-transform:uppercase}
+.prova-reg-sep{font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin:1rem 0 .4rem;padding-top:.8rem;border-top:1px solid var(--border)}
+/* Pace calc */
+.calc-grid{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:.65rem}
+.calc-field label{display:block;font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:.3rem}
+.calc-sel,.calc-inp{width:100%;border:1.5px solid var(--border);border-radius:8px;padding:.5rem .6rem;font-size:.88rem;font-family:inherit;outline:none;text-align:center;background:#fff}
+.calc-sel:focus,.calc-inp:focus{border-color:var(--blue)}
+.calc-btn-row{display:flex;gap:.5rem;margin-bottom:.65rem}
+.calc-btn-go{flex:1;background:var(--blue);color:#fff;border:none;border-radius:8px;padding:.55rem;font-weight:800;font-size:.85rem;cursor:pointer;font-family:inherit}
+.calc-btn-clr{background:#f1f5f9;color:var(--muted);border:none;border-radius:8px;padding:.55rem .9rem;font-weight:700;font-size:.82rem;cursor:pointer;font-family:inherit}
+.pace-hero{background:linear-gradient(135deg,#f0fdf4,#ecfdf5);border:1px solid #86efac;border-radius:12px;padding:1rem;text-align:center;margin-bottom:.75rem}
+.pace-hero-val{font-size:2.2rem;font-weight:900;color:#15803d;line-height:1}
+.pace-hero-sub{font-size:.75rem;color:#166534;margin-top:.3rem}
+.split-table{width:100%;border-collapse:collapse;font-size:.8rem}
+.split-table th{text-align:left;font-size:.63rem;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);padding:.4rem .5rem;border-bottom:2px solid var(--border);font-weight:800}
+.split-table td{padding:.42rem .5rem;border-bottom:1px solid #f1f5f9;font-weight:600}
+.split-5k td{background:#f8faff;font-weight:800}
+.split-final td{font-weight:900;color:var(--blue);font-size:.85rem;border-top:2px solid var(--border);border-bottom:none}
 </style>
 </head>
 <body>
@@ -182,6 +216,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <button class="tab"    onclick="go('evolucao',this)">📈 Evolução</button>
   <button class="tab"    onclick="go('saude',this)">❤️ Saúde</button>
   <button class="tab"    onclick="go('perguntas',this)">💬 Perguntas</button>
+  <button class="tab"    onclick="go('provas',this)">🏁 Provas</button>
 </div>
 
 <div class="wrap">
@@ -287,6 +322,40 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         </div>
       </div>
 
+    </div>
+
+    <!-- ══ PROVAS ══ -->
+    <div class="sec" id="sec-provas">
+      <div class="card">
+        <div class="card-title">⏱️ Calculadora de Pace & Splits</div>
+        <div class="calc-grid">
+          <div class="calc-field">
+            <label>Distância</label>
+            <select class="calc-sel" id="calc-dist">
+              <option value="10">10 km</option>
+              <option value="21.1">21,1 km — Meia</option>
+              <option value="42.2">42,2 km — Maratona</option>
+            </select>
+          </div>
+          <div class="calc-field">
+            <label>Tempo alvo</label>
+            <input class="calc-inp" id="calc-time" type="text" placeholder="h:mm:ss" oninput="calcPace()">
+          </div>
+        </div>
+        <div class="calc-btn-row">
+          <button class="calc-btn-go" onclick="calcPace()">Calcular Splits</button>
+          <button class="calc-btn-clr" onclick="document.getElementById('calc-result').innerHTML='';document.getElementById('calc-time').value=''">Limpar</button>
+        </div>
+        <div id="calc-result"></div>
+      </div>
+
+      <div class="provas-filter">
+        <button class="pf-btn pf-on" onclick="filterProvas('todas',this)">Todas</button>
+        <button class="pf-btn" onclick="filterProvas('10',this)">10 km</button>
+        <button class="pf-btn" onclick="filterProvas('21.1',this)">Meia</button>
+        <button class="pf-btn" onclick="filterProvas('42.2',this)">Maratona</button>
+      </div>
+      <div id="provas-list"></div>
     </div>
 
   </div><!-- /content -->
@@ -916,6 +985,118 @@ function addMsg(role, text, isTyping=false){
   return div;
 }
 
+// ════════════════ PROVAS ════════════════
+const PROVAS_DATA = [
+  // Atlantic Canada
+  {nome:"Fredericton Marathon",local:"Fredericton, NB",data:"2026-05-10",dists:[10,21.1,42.2],regiao:"atlantic"},
+  {nome:"Scotiabank Blue Nose Marathon",local:"Halifax, NS",data:"2026-05-17",dists:[5,10,21.1,42.2],regiao:"atlantic"},
+  {nome:"Maratona do Atlântico / Moncton",local:"Moncton, NB",data:"2026-09-20",dists:[10,21.1,42.2],regiao:"atlantic"},
+  {nome:"PEI Marathon",local:"Charlottetown, PEI",data:"2026-10-04",dists:[10,21.1,42.2],regiao:"atlantic"},
+  // Québec
+  {nome:"Québec City Marathon",local:"Québec, QC",data:"2026-08-23",dists:[10,21.1,42.2],regiao:"quebec"},
+  {nome:"Beneva Montréal Marathon",local:"Montréal, QC",data:"2026-09-27",dists:[5,10,21.1,42.2],regiao:"quebec"},
+  // Ontario
+  {nome:"Ottawa Race Weekend",local:"Ottawa, ON",data:"2026-05-24",dists:[5,10,21.1,42.2],regiao:"ontario"},
+  {nome:"Scotiabank Toronto Waterfront",local:"Toronto, ON",data:"2026-10-18",dists:[5,10,21.1,42.2],regiao:"ontario"},
+  // USA
+  {nome:"Boston Marathon",local:"Boston, MA",data:"2026-04-20",dists:[42.2],regiao:"usa"},
+  {nome:"Chicago Marathon",local:"Chicago, IL",data:"2026-10-11",dists:[42.2],regiao:"usa"},
+  {nome:"New York City Marathon",local:"New York, NY",data:"2026-11-01",dists:[42.2],regiao:"usa"},
+];
+const REGIAO_LBL={atlantic:"🌊 Atlantic Canada",quebec:"⚜️ Québec",ontario:"🍁 Ontario",usa:"🇺🇸 Estados Unidos"};
+let curProvaDist='todas';
+
+function filterProvas(dist,btn){
+  curProvaDist=dist;
+  document.querySelectorAll('.pf-btn').forEach(b=>b.classList.remove('pf-on'));
+  btn.classList.add('pf-on');
+  renderProvas();
+}
+
+function renderProvas(){
+  const hoje=new Date().toISOString().slice(0,10);
+  let lista=curProvaDist==='todas'?PROVAS_DATA:PROVAS_DATA.filter(p=>p.dists.includes(+curProvaDist));
+  const regioes=['atlantic','quebec','ontario','usa'];
+  let html='';
+  regioes.forEach(reg=>{
+    const ps=lista.filter(p=>p.regiao===reg).sort((a,b)=>a.data.localeCompare(b.data));
+    if(!ps.length)return;
+    html+=`<div class="prova-reg-sep">${REGIAO_LBL[reg]}</div>`;
+    ps.forEach(p=>{
+      const isUSA=p.regiao==='usa';
+      const passada=p.data<hoje;
+      const dias=Math.round((new Date(p.data+'T12:00:00')-new Date())/864e5);
+      const diasTxt=passada?'realizada':dias===0?'hoje!':dias+' dias';
+      html+=`<div class="prova-card${isUSA?' prova-usa':''}${passada?' prova-passada':''}">
+        <div class="prova-nome">${p.nome}${isUSA?'<span class="prova-usa-tag">USA</span>':''}</div>
+        <div class="prova-local">${p.local}</div>
+        <div class="prova-footer">
+          <span class="prova-data">${fmtProvaData(p.data)} · ${diasTxt}</span>
+          <div class="prova-dists">${p.dists.map(d=>`<span class="prova-dist" onclick="usarDistCalc(${d})">${d}km</span>`).join('')}</div>
+        </div>
+      </div>`;
+    });
+  });
+  document.getElementById('provas-list').innerHTML=html;
+}
+
+function fmtProvaData(d){
+  const dt=new Date(d+'T12:00:00');
+  return`${DIAS[dt.getDay()]}, ${dt.getDate()} ${MESES[dt.getMonth()]} ${dt.getFullYear()}`;
+}
+
+function usarDistCalc(dist){
+  const sel=document.getElementById('calc-dist');
+  if(dist===10)sel.value='10';
+  else if(dist===21.1)sel.value='21.1';
+  else if(dist===42.2)sel.value='42.2';
+  document.getElementById('calc-time').focus();
+  document.querySelector('#sec-provas .card').scrollIntoView({behavior:'smooth'});
+}
+
+function calcPace(){
+  const dist=parseFloat(document.getElementById('calc-dist').value);
+  const ts=document.getElementById('calc-time').value.trim();
+  if(!ts||!ts.includes(':'))return;
+  const pts=ts.split(':').map(Number);
+  let tot=0;
+  if(pts.length===3)tot=pts[0]*3600+pts[1]*60+(pts[2]||0);
+  else if(pts.length===2)tot=pts[0]*60+(pts[1]||0);
+  if(!tot||isNaN(tot)||tot<30){document.getElementById('calc-result').innerHTML='';return;}
+  const ps=tot/dist;
+  const pStr=`${Math.floor(ps/60)}:${pad(Math.round(ps%60))}`;
+  const th=Math.floor(tot/3600),tm=Math.floor((tot%3600)/60),ts2=Math.round(tot%60);
+  const totFmt=th>0?`${th}:${pad(tm)}:${pad(ts2)}`:`${tm}:${pad(ts2)}`;
+  const step=dist>=42?5:5;
+  let rows='';
+  for(let km=step;km<=dist+0.01;km+=step){
+    const kr=Math.min(km,dist);
+    const t=ps*kr;
+    const h=Math.floor(t/3600),m=Math.floor((t%3600)/60),s=Math.round(t%60);
+    const tf=h>0?`${h}:${pad(m)}:${pad(s)}`:`${m}:${pad(s)}`;
+    const isFinal=kr>=dist-0.05;
+    const is10=!isFinal&&kr%10===0;
+    rows+=`<tr class="${isFinal?'split-final':is10?'split-5k':''}">
+      <td>${isFinal?'🏁 Chegada':'km '+kr.toFixed(kr%1?1:0)}</td>
+      <td>${isFinal?'—':pStr+' /km'}</td>
+      <td>${tf}</td>
+    </tr>`;
+  }
+  const hSecs=ps*(dist/2);
+  const hh=Math.floor(hSecs/3600),hm=Math.floor((hSecs%3600)/60),hs=Math.round(hSecs%60);
+  const halfFmt=hh>0?`${hh}:${pad(hm)}:${pad(hs)}`:`${hm}:${pad(hs)}`;
+  document.getElementById('calc-result').innerHTML=`
+    <div class="pace-hero">
+      <div class="pace-hero-val">${pStr} <span style="font-size:1rem;font-weight:600">/km</span></div>
+      <div class="pace-hero-sub">Tempo total: <strong>${totFmt}</strong>${dist>10?' · Meia: '+halfFmt:''}</div>
+    </div>
+    <table class="split-table">
+      <thead><tr><th>Marco</th><th>Pace</th><th>Tempo</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+renderProvas();
 loadData();
 </script>
 </body>
