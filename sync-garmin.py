@@ -39,27 +39,44 @@ def calc_pace(dist_m, dur_secs):
 
 
 TIPO_MAP = {
+    # Corrida
     "running": "facil", "trail_running": "trilha", "ultra_run": "trilha",
     "treadmill_running": "esteira", "walking": "caminhada",
     "hiking": "trilha", "indoor_running": "esteira",
     "virtual_run": "virtual", "track_running": "intervalado",
     "obstacle_run": "intervalado",
-    "cycling": "bike", "indoor_cycling": "bike_indoor",
-    "mountain_biking": "bike_trilha", "virtual_ride": "bike_virtual",
+    # Bike — todos os tipos conhecidos do Garmin
+    "cycling": "bike", "road_biking": "bike", "gravel_cycling": "bike",
+    "indoor_cycling": "bike_indoor", "track_cycling": "bike",
+    "mountain_biking": "bike_trilha", "cyclocross": "bike_trilha",
+    "virtual_ride": "bike_virtual", "e_bike_mountain": "bike_trilha",
+    "e_bike_road": "bike", "e_bike_fitness": "bike",
+    "recumbent_cycling": "bike", "hand_cycling": "bike",
+    "commuting": "bike", "bmx": "bike_trilha",
+    # Natação
     "swimming": "natacao", "open_water_swimming": "natacao_ar",
+    "lap_swimming": "natacao",
+    # Academia
     "strength_training": "musculacao", "weight_training": "musculacao",
     "fitness_equipment": "musculacao", "cardio_training": "musculacao",
+    "barre": "musculacao", "pilates": "musculacao",
 }
 ESPORTE_MAP = {
     "running": "corrida", "trail_running": "corrida", "ultra_run": "corrida",
     "treadmill_running": "corrida", "walking": "corrida", "hiking": "corrida",
     "indoor_running": "corrida", "virtual_run": "corrida", "track_running": "corrida",
     "obstacle_run": "corrida",
-    "cycling": "bike", "indoor_cycling": "bike", "mountain_biking": "bike",
-    "virtual_ride": "bike",
-    "swimming": "natacao", "open_water_swimming": "natacao",
+    "cycling": "bike", "road_biking": "bike", "gravel_cycling": "bike",
+    "indoor_cycling": "bike", "track_cycling": "bike",
+    "mountain_biking": "bike", "cyclocross": "bike",
+    "virtual_ride": "bike", "e_bike_mountain": "bike",
+    "e_bike_road": "bike", "e_bike_fitness": "bike",
+    "recumbent_cycling": "bike", "hand_cycling": "bike",
+    "commuting": "bike", "bmx": "bike",
+    "swimming": "natacao", "open_water_swimming": "natacao", "lap_swimming": "natacao",
     "strength_training": "academia", "weight_training": "academia",
     "fitness_equipment": "academia", "cardio_training": "academia",
+    "barre": "academia", "pilates": "academia",
 }
 IGNORAR = {
     "yoga", "elliptical", "rowing",
@@ -175,6 +192,13 @@ def main():
     treinos   = [t for a in raw if (t := garmin_to_treino(a))]
     ignorados = len(raw) - len(treinos)
     print(f"  🏃 {len(treinos)} treinos | ⏭ {ignorados} ignorados")
+
+    # Diagnóstico: tipos encontrados
+    tipos_raw = {}
+    for a in raw:
+        tg = (a.get("activityType") or {}).get("typeKey", "?").lower()
+        tipos_raw[tg] = tipos_raw.get(tg, 0) + 1
+    print("  📋 Tipos encontrados:", ", ".join(f"{k}({v})" for k, v in sorted(tipos_raw.items())))
 
     if not treinos:
         print("\n  Nenhum treino para sincronizar.")
