@@ -154,6 +154,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .rd-gauge-ideal{position:absolute;height:100%;background:#86efac;border-radius:4px}
 .rd-gauge-ptr{position:absolute;width:3px;height:100%;background:#1e293b;border-radius:2px;transition:left .4s ease}
 
+/* ── COACH ESPORTE FILTER ── */
+.cef-wrap{display:flex;gap:.4rem;margin-bottom:.75rem;flex-wrap:wrap}
+.cef-btn{border:1.5px solid var(--border);background:#fff;border-radius:20px;padding:.3rem .8rem;font-size:.72rem;font-weight:700;color:var(--muted);cursor:pointer;font-family:inherit;transition:all .15s}
+.cef-btn.cef-on{background:var(--blue);border-color:var(--blue);color:#fff}
+
 /* ── EMPTY ── */
 .empty{text-align:center;padding:2.5rem 1rem;background:var(--card);border-radius:var(--r);border:1px solid var(--border)}
 .empty h3{margin-bottom:.5rem}
@@ -225,6 +230,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
     <!-- ══ COACH ══ -->
     <div class="sec on" id="sec-coach">
+      <div class="cef-wrap">
+        <button class="cef-btn cef-on" onclick="setCoachEsporte('corrida',this)">🏃 Corrida</button>
+        <button class="cef-btn" onclick="setCoachEsporte('bike',this)">🚴 Bike</button>
+        <button class="cef-btn" onclick="setCoachEsporte('natacao',this)">🏊 Natação</button>
+        <button class="cef-btn" onclick="setCoachEsporte('academia',this)">💪 Academia</button>
+        <button class="cef-btn" onclick="setCoachEsporte('todos',this)">📊 Todos</button>
+      </div>
       <div id="coach-status"></div>
       <div id="coach-sugestao"></div>
       <div id="coach-insights" class="insight-grid"></div>
@@ -475,129 +487,169 @@ function render(d){
 }
 
 // ════════════════ COACH ════════════════
+let curCoachEsporte='corrida';
+
+function setCoachEsporte(e,btn){
+  curCoachEsporte=e;
+  document.querySelectorAll('.cef-btn').forEach(b=>b.classList.remove('cef-on'));
+  btn.classList.add('cef-on');
+  if(DATA){const a=(DATA.atividades||[]).sort((a,b)=>b.data.localeCompare(a.data));renderCoach(a,DATA.meta||{},DATA.bodyBattery||{},DATA.sono||{},DATA.stress||{},DATA.hrv||{},DATA.semanal||{});}
+}
+
 function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
   const hoje=new Date().toISOString().slice(0,10);
-  const bbHoje=bb[hoje]?.max||bb[Object.keys(bb).sort().slice(-1)[0]]?.max||0;
-
-  // Volume trend
-  const semKeys=Object.keys(sem).sort();
-  const kmEsta=semKeys.length?sem[semKeys[semKeys.length-1]]?.km||0:0;
-  const kmAnt=semKeys.length>1?sem[semKeys[semKeys.length-2]]?.km||0:0;
-  const volTrend=kmAnt>0?((kmEsta-kmAnt)/kmAnt*100):0;
-
-  // Pace trend (last 7 vs 7-14 days ago)
   const d7=(new Date(Date.now()-7*864e5)).toISOString().slice(0,10);
   const d14=(new Date(Date.now()-14*864e5)).toISOString().slice(0,10);
-  const rec7=ativ.filter(a=>a.data>=d7&&a.pace&&a.distancia>=1);
-  const rec14=ativ.filter(a=>a.data>=d14&&a.data<d7&&a.pace&&a.distancia>=1);
-  const pace7=rec7.length?rec7.reduce((s,a)=>s+p2s(a.pace),0)/rec7.length:0;
-  const pace14=rec14.length?rec14.reduce((s,a)=>s+p2s(a.pace),0)/rec14.length:0;
-  const paceTrend=pace7&&pace14?pace14-pace7:0; // positivo = melhorou (menor = mais rápido)
+  const d30=(new Date(Date.now()-30*864e5)).toISOString().slice(0,10);
 
-  // Sono média
+  // Saúde (sempre global)
+  const bbHoje=bb[hoje]?.max||bb[Object.keys(bb).sort().slice(-1)[0]]?.max||0;
   const sonoKeys=Object.keys(sono).sort().slice(-7);
   const mediaSOno=sonoKeys.length?sonoKeys.reduce((s,k)=>s+sono[k].duracao,0)/sonoKeys.length:0;
 
-  // Status geral
-  let status,statusClass,recomendacao;
-  const diasSemTreino=ativ.length?Math.round((Date.now()-new Date(ativ[0].data+'T12:00:00').getTime())/864e5):99;
+  // Atividades filtradas por esporte
+  const filtrado=curCoachEsporte==='todos'?ativ:ativ.filter(a=>getEsporte(a)===curCoachEsporte);
+  const f7=filtrado.filter(a=>a.data>=d7);
+  const f30=filtrado.filter(a=>a.data>=d30);
+  const km30f=f30.reduce((s,a)=>s+a.distancia,0);
 
-  if(bbHoje<25){
-    status='😴 Descanse hoje'; statusClass='status-descanso';
-    recomendacao='Sua Body Battery está muito baixa ('+bbHoje+'%). Seu corpo precisa de recuperação. Evite treinos intensos hoje — caminhada leve ou descanso completo é o ideal.';
-  } else if(bbHoje<45||mediaSOno<6){
-    status='⚠️ Treino Leve'; statusClass='status-atencao';
-    recomendacao='Body Battery moderada ('+bbHoje+'%)'+( mediaSOno<6?' e sono abaixo do ideal ('+mediaSOno.toFixed(1)+'h)'  :'')+'. Opte por um treino fácil, curto e em zona 2 hoje.';
-  } else if(volTrend>20){
-    status='📈 Cuidado com a carga'; statusClass='status-atencao';
-    recomendacao='Volume desta semana é '+(volTrend>0?'+':'')+volTrend.toFixed(0)+'% vs semana passada. Aumento acima de 10% por semana aumenta risco de lesão. Considere um treino moderado hoje.';
-  } else if(bbHoje>=75&&diasSemTreino>=1){
-    status='🚀 Ótimo dia pra treinar!'; statusClass='status-otimo';
-    recomendacao='Body Battery alta ('+bbHoje+'%), sono OK'+( mediaSOno>=7?' ('+mediaSOno.toFixed(1)+'h)':'')+' e volume controlado. Você está em ótimas condições para um treino forte hoje!';
-  } else {
-    status='✅ Dia bom pra treinar'; statusClass='status-bom';
-    recomendacao='Condições favoráveis para treino. Body Battery em '+bbHoje+'%. Um treino moderado ou conforme seu plano será ótimo hoje.';
-  }
+  // Volume semanal calculado das atividades filtradas
+  const semData={};
+  filtrado.forEach(a=>{const s=semanaISO(a.data);if(!semData[s])semData[s]={km:0};semData[s].km=+(semData[s].km+a.distancia).toFixed(2);});
+  const sks=Object.keys(semData).sort();
+  const kmEsta=sks.length?semData[sks[sks.length-1]].km:0;
+  const kmAnt=sks.length>1?semData[sks[sks.length-2]].km:0;
+  const volTrend=kmAnt>0?((kmEsta-kmAnt)/kmAnt*100):0;
+
+  // Status (baseado em BB + sono — sempre global)
+  const diasSemTreino=ativ.length?Math.round((Date.now()-new Date(ativ[0].data+'T12:00:00').getTime())/864e5):99;
+  let status,statusClass,recomendacao;
+  if(bbHoje<25){status='😴 Descanse hoje';statusClass='status-descanso';recomendacao='Sua Body Battery está muito baixa ('+bbHoje+'%). Recuperação total hoje — sem treinos intensos.';}
+  else if(bbHoje<45||mediaSOno<6){status='⚠️ Treino Leve';statusClass='status-atencao';recomendacao='Body Battery moderada ('+bbHoje+'%)'+(mediaSOno<6?' e sono abaixo do ideal ('+mediaSOno.toFixed(1)+'h)':'')+'. Opte por treino fácil em zona 2.';}
+  else if(volTrend>20){status='📈 Cuidado com a carga';statusClass='status-atencao';recomendacao='Volume desta semana é +'+volTrend.toFixed(0)+'% vs semana passada. Aumento acima de 10%/semana aumenta risco de lesão.';}
+  else if(bbHoje>=75&&diasSemTreino>=1){status='🚀 Ótimo dia pra treinar!';statusClass='status-otimo';recomendacao='Body Battery alta ('+bbHoje+'%), sono OK'+(mediaSOno>=7?' ('+mediaSOno.toFixed(1)+'h)':'')+'. Condições ótimas para um treino forte!';}
+  else{status='✅ Dia bom pra treinar';statusClass='status-bom';recomendacao='Condições favoráveis. Body Battery em '+bbHoje+'%. Treino moderado ou conforme seu plano.';}
 
   document.getElementById('coach-status').innerHTML=`
     <div class="status-badge ${statusClass}">
       <div class="status-ico">${bbHoje>=75?'🚀':bbHoje>=45?'✅':bbHoje>=25?'⚠️':'😴'}</div>
       <div><div class="status-title">${status}</div><div class="status-sub">Hoje, ${fd(hoje)}</div></div>
     </div>`;
-
   document.getElementById('coach-sugestao').innerHTML=`
-    <div class="sugestao">
-      <div class="sugestao-title">💬 Recomendação do Coach</div>
-      <div class="sugestao-texto">${recomendacao}</div>
-    </div>`;
+    <div class="sugestao"><div class="sugestao-title">💬 Recomendação do Coach</div><div class="sugestao-texto">${recomendacao}</div></div>`;
 
-  // Insights
-  const fc7=ativ.filter(a=>a.data>=d7&&a.fcMed);
-  const mediaFC=fc7.length?Math.round(fc7.reduce((s,a)=>s+a.fcMed,0)/fc7.length):0;
-  const vo2acts=ativ.filter(a=>a.vo2max>0).slice(0,3);
-  const lastVO2=vo2acts.length?vo2acts[0].vo2max:0;
+  // ── Insights por esporte ──
+  let ins='';
 
-  document.getElementById('coach-insights').innerHTML=`
-    <div class="insight i-blue">
-      <div class="insight-ico">📊</div>
-      <div class="insight-titulo">Volume / semana</div>
-      <div class="insight-val" style="color:var(--blue)">${kmEsta.toFixed(1)} km</div>
-      <div class="insight-sub">${volTrend>=0?'▲':'▼'} ${Math.abs(volTrend).toFixed(0)}% vs sem. ant.</div>
-    </div>
-    <div class="insight i-green">
-      <div class="insight-ico">⏱️</div>
-      <div class="insight-titulo">Pace (7 dias)</div>
-      <div class="insight-val" style="color:var(--green)">${pace7?s2p(pace7):'—'}</div>
-      <div class="insight-sub">${paceTrend>5?'▲ Melhorou '+s2p(paceTrend):paceTrend<-5?'▼ Caiu '+s2p(-paceTrend):'Estável'}</div>
-    </div>
-    <div class="insight i-orange">
-      <div class="insight-ico">🔋</div>
-      <div class="insight-titulo">Body Battery</div>
-      <div class="insight-val" style="color:var(--orange)">${bbHoje||'—'}%</div>
-      <div class="insight-sub">${bbHoje>=75?'Excelente':bbHoje>=50?'Boa':bbHoje>=25?'Moderada':'Baixa'}</div>
-    </div>
-    <div class="insight i-purple">
-      <div class="insight-ico">😴</div>
-      <div class="insight-titulo">Sono médio</div>
-      <div class="insight-val" style="color:var(--purple)">${mediaSOno?mediaSOno.toFixed(1)+'h':'—'}</div>
-      <div class="insight-sub">${mediaSOno>=7?'✅ Adequado':mediaSOno>=6?'⚠️ Abaixo do ideal':'⚠️ Insuficiente'}</div>
-    </div>
-    <div class="insight i-red">
-      <div class="insight-ico">❤️</div>
-      <div class="insight-titulo">FC média (7d)</div>
-      <div class="insight-val" style="color:var(--red)">${mediaFC||'—'} bpm</div>
-      <div class="insight-sub">${fc7.length} treinos esta semana</div>
-    </div>
-    <div class="insight i-gold">
-      <div class="insight-ico">🔬</div>
-      <div class="insight-titulo">VO2 Max</div>
-      <div class="insight-val" style="color:var(--gold)">${lastVO2||'—'}</div>
-      <div class="insight-sub">${lastVO2>=55?'Excelente':lastVO2>=50?'Muito bom':lastVO2>=45?'Bom':lastVO2>0?'Regular':'Sem dados'}</div>
-    </div>`;
+  if(curCoachEsporte==='corrida'){
+    const cor=ativ.filter(a=>getEsporte(a)==='corrida');
+    const comP=cor.filter(a=>a.pace&&a.distancia>=1);
+    const p7=comP.filter(a=>a.data>=d7), p14=comP.filter(a=>a.data>=d14&&a.data<d7);
+    const pace7=p7.length?p7.reduce((s,a)=>s+p2s(a.pace),0)/p7.length:0;
+    const pace14=p14.length?p14.reduce((s,a)=>s+p2s(a.pace),0)/p14.length:0;
+    const pTrend=pace7&&pace14?pace14-pace7:0;
+    const melhor=comP.filter(a=>a.data>=d30).length?s2p(Math.min(...comP.filter(a=>a.data>=d30).map(a=>p2s(a.pace)))):'—';
+    const vo2=cor.filter(a=>a.vo2max>0)[0]?.vo2max||0;
+    const fc30=cor.filter(a=>a.fcMed>0&&a.data>=d30);
+    const fcM=fc30.length?Math.round(fc30.reduce((s,a)=>s+a.fcMed,0)/fc30.length):0;
+    const cad30=cor.filter(a=>a.cadencia>0&&a.data>=d30);
+    const cadM=cad30.length?Math.round(cad30.reduce((s,a)=>s+a.cadencia,0)/cad30.length):0;
+    ins=`
+      <div class="insight i-blue"><div class="insight-ico">🏃</div><div class="insight-titulo">km corrida / sem.</div><div class="insight-val" style="color:var(--blue)">${kmEsta.toFixed(1)}</div><div class="insight-sub">${volTrend>=0?'▲':'▼'} ${Math.abs(volTrend).toFixed(0)}% vs sem. ant.</div></div>
+      <div class="insight i-green"><div class="insight-ico">⏱️</div><div class="insight-titulo">Pace corrida (7d)</div><div class="insight-val" style="color:var(--green)">${pace7?s2p(pace7):'—'}</div><div class="insight-sub">${pTrend>5?'▲ Melhorou '+s2p(pTrend):pTrend<-5?'▼ Caiu '+s2p(-pTrend):'Estável'}</div></div>
+      <div class="insight i-orange"><div class="insight-ico">⚡</div><div class="insight-titulo">Melhor pace (30d)</div><div class="insight-val" style="color:var(--orange)">${melhor}</div><div class="insight-sub">${km30f.toFixed(1)} km corrida / 30d</div></div>
+      <div class="insight i-red"><div class="insight-ico">❤️</div><div class="insight-titulo">FC corrida (30d)</div><div class="insight-val" style="color:var(--red)">${fcM||'—'} bpm</div><div class="insight-sub">${fc30.length} corridas com dados</div></div>
+      <div class="insight i-gold"><div class="insight-ico">🔬</div><div class="insight-titulo">VO2 Max</div><div class="insight-val" style="color:var(--gold)">${vo2||'—'}</div><div class="insight-sub">${vo2>=55?'Excelente':vo2>=50?'Muito bom':vo2>=45?'Bom':vo2>0?'Regular':'Sem dados'}</div></div>
+      <div class="insight i-purple"><div class="insight-ico">🦵</div><div class="insight-titulo">Cadência corrida (30d)</div><div class="insight-val" style="color:var(--purple)">${cadM||'—'} spm</div><div class="insight-sub">${cadM>=170?'✅ Ótima':cadM>=160?'⚠️ Boa':cadM>0?'⚠️ Melhorar':'—'}</div></div>`;
 
-  // Stats sumário
+  } else if(curCoachEsporte==='bike'){
+    const fc30=filtrado.filter(a=>a.fcMed>0&&a.data>=d30);
+    const fcM=fc30.length?Math.round(fc30.reduce((s,a)=>s+a.fcMed,0)/fc30.length):0;
+    const comP=filtrado.filter(a=>a.pace&&a.distancia>=1&&a.data>=d30);
+    const paceM=comP.length?comP.reduce((s,a)=>s+p2s(a.pace),0)/comP.length:0;
+    const cal30=f30.reduce((s,a)=>s+(a.calorias||0),0);
+    ins=`
+      <div class="insight i-blue"><div class="insight-ico">🚴</div><div class="insight-titulo">km bike / sem.</div><div class="insight-val" style="color:var(--blue)">${kmEsta.toFixed(1)}</div><div class="insight-sub">${volTrend>=0?'▲':'▼'} ${Math.abs(volTrend).toFixed(0)}% vs sem. ant.</div></div>
+      <div class="insight i-green"><div class="insight-ico">⏱️</div><div class="insight-titulo">Pace bike (30d)</div><div class="insight-val" style="color:var(--green)">${paceM?s2p(paceM):'—'}</div><div class="insight-sub">${comP.length} pedaladas</div></div>
+      <div class="insight i-orange"><div class="insight-ico">📏</div><div class="insight-titulo">km bike / 30d</div><div class="insight-val" style="color:var(--orange)">${km30f.toFixed(1)}</div><div class="insight-sub">${f7.length} pedaladas esta sem.</div></div>
+      <div class="insight i-red"><div class="insight-ico">❤️</div><div class="insight-titulo">FC bike (30d)</div><div class="insight-val" style="color:var(--red)">${fcM||'—'} bpm</div><div class="insight-sub">${fc30.length} pedaladas c/ FC</div></div>
+      <div class="insight i-gold"><div class="insight-ico">🔥</div><div class="insight-titulo">Calorias bike (30d)</div><div class="insight-val" style="color:var(--gold)">${cal30}</div><div class="insight-sub">kcal em ${f30.length} treinos</div></div>
+      <div class="insight i-purple"><div class="insight-ico">📅</div><div class="insight-titulo">Sessões bike / 30d</div><div class="insight-val" style="color:var(--purple)">${f30.length}</div><div class="insight-sub">${km30f.toFixed(1)} km total</div></div>`;
+
+  } else if(curCoachEsporte==='natacao'){
+    const fc30=filtrado.filter(a=>a.fcMed>0&&a.data>=d30);
+    const fcM=fc30.length?Math.round(fc30.reduce((s,a)=>s+a.fcMed,0)/fc30.length):0;
+    const comP=filtrado.filter(a=>a.pace&&a.data>=d30);
+    const paceM=comP.length?comP.reduce((s,a)=>s+p2s(a.pace),0)/comP.length:0;
+    const cal30=f30.reduce((s,a)=>s+(a.calorias||0),0);
+    ins=`
+      <div class="insight i-blue"><div class="insight-ico">🏊</div><div class="insight-titulo">m natação / sem.</div><div class="insight-val" style="color:var(--blue)">${(kmEsta*1000).toFixed(0)}</div><div class="insight-sub">${volTrend>=0?'▲':'▼'} ${Math.abs(volTrend).toFixed(0)}% vs sem. ant.</div></div>
+      <div class="insight i-green"><div class="insight-ico">⏱️</div><div class="insight-titulo">Pace natação (30d)</div><div class="insight-val" style="color:var(--green)">${paceM?s2p(paceM):'—'}</div><div class="insight-sub">${comP.length} sessões</div></div>
+      <div class="insight i-orange"><div class="insight-ico">📏</div><div class="insight-titulo">Total / 30d</div><div class="insight-val" style="color:var(--orange)">${(km30f*1000).toFixed(0)} m</div><div class="insight-sub">${km30f.toFixed(2)} km</div></div>
+      <div class="insight i-red"><div class="insight-ico">❤️</div><div class="insight-titulo">FC natação (30d)</div><div class="insight-val" style="color:var(--red)">${fcM||'—'} bpm</div><div class="insight-sub">${fc30.length} sessões c/ FC</div></div>
+      <div class="insight i-purple"><div class="insight-ico">📅</div><div class="insight-titulo">Sessões / 30d</div><div class="insight-val" style="color:var(--purple)">${f30.length}</div><div class="insight-sub">${f7.length} esta semana</div></div>
+      <div class="insight i-gold"><div class="insight-ico">🔥</div><div class="insight-titulo">Calorias (30d)</div><div class="insight-val" style="color:var(--gold)">${cal30}</div><div class="insight-sub">kcal queimadas</div></div>`;
+
+  } else if(curCoachEsporte==='academia'){
+    const fc30=filtrado.filter(a=>a.fcMed>0&&a.data>=d30);
+    const fcM=fc30.length?Math.round(fc30.reduce((s,a)=>s+a.fcMed,0)/fc30.length):0;
+    const cal30=f30.reduce((s,a)=>s+(a.calorias||0),0);
+    ins=`
+      <div class="insight i-purple"><div class="insight-ico">💪</div><div class="insight-titulo">Sessões / semana</div><div class="insight-val" style="color:var(--purple)">${f7.length}</div><div class="insight-sub">${volTrend>=0?'▲':'▼'} ${Math.abs(volTrend).toFixed(0)}% vs sem. ant.</div></div>
+      <div class="insight i-blue"><div class="insight-ico">📅</div><div class="insight-titulo">Sessões / 30d</div><div class="insight-val" style="color:var(--blue)">${f30.length}</div><div class="insight-sub">${(f30.length/4.3).toFixed(1)}x/semana média</div></div>
+      <div class="insight i-red"><div class="insight-ico">❤️</div><div class="insight-titulo">FC academia (30d)</div><div class="insight-val" style="color:var(--red)">${fcM||'—'} bpm</div><div class="insight-sub">${fc30.length} sessões c/ FC</div></div>
+      <div class="insight i-gold"><div class="insight-ico">🔥</div><div class="insight-titulo">Calorias (30d)</div><div class="insight-val" style="color:var(--gold)">${cal30}</div><div class="insight-sub">kcal em ${f30.length} treinos</div></div>
+      <div class="insight i-orange"><div class="insight-ico">⚡</div><div class="insight-titulo">Cal/sessão</div><div class="insight-val" style="color:var(--orange)">${f30.length?Math.round(cal30/f30.length):'—'}</div><div class="insight-sub">média por treino</div></div>
+      <div class="insight i-green"><div class="insight-ico">📈</div><div class="insight-titulo">Frequência</div><div class="insight-val" style="color:var(--green)">${f7.length>=3?'✅ Boa':f7.length>=2?'⚠️ Ok':'❌ Baixa'}</div><div class="insight-sub">${f7.length}x esta semana</div></div>`;
+
+  } else { // todos
+    const rec7=ativ.filter(a=>a.data>=d7&&a.pace&&a.distancia>=1&&getEsporte(a)==='corrida');
+    const rec14=ativ.filter(a=>a.data>=d14&&a.data<d7&&a.pace&&a.distancia>=1&&getEsporte(a)==='corrida');
+    const pace7=rec7.length?rec7.reduce((s,a)=>s+p2s(a.pace),0)/rec7.length:0;
+    const pace14=rec14.length?rec14.reduce((s,a)=>s+p2s(a.pace),0)/rec14.length:0;
+    const pTrend=pace7&&pace14?pace14-pace7:0;
+    const fc7=ativ.filter(a=>a.data>=d7&&a.fcMed);
+    const mediaFC=fc7.length?Math.round(fc7.reduce((s,a)=>s+a.fcMed,0)/fc7.length):0;
+    const lastVO2=ativ.filter(a=>a.vo2max>0)[0]?.vo2max||0;
+    ins=`
+      <div class="insight i-blue"><div class="insight-ico">📊</div><div class="insight-titulo">Volume total / sem.</div><div class="insight-val" style="color:var(--blue)">${kmEsta.toFixed(1)} km</div><div class="insight-sub">${volTrend>=0?'▲':'▼'} ${Math.abs(volTrend).toFixed(0)}% vs sem. ant.</div></div>
+      <div class="insight i-green"><div class="insight-ico">⏱️</div><div class="insight-titulo">Pace corrida (7d)</div><div class="insight-val" style="color:var(--green)">${pace7?s2p(pace7):'—'}</div><div class="insight-sub">${pTrend>5?'▲ Melhorou '+s2p(pTrend):pTrend<-5?'▼ Caiu '+s2p(-pTrend):'Estável'}</div></div>
+      <div class="insight i-orange"><div class="insight-ico">🔋</div><div class="insight-titulo">Body Battery</div><div class="insight-val" style="color:var(--orange)">${bbHoje||'—'}%</div><div class="insight-sub">${bbHoje>=75?'Excelente':bbHoje>=50?'Boa':bbHoje>=25?'Moderada':'Baixa'}</div></div>
+      <div class="insight i-purple"><div class="insight-ico">😴</div><div class="insight-titulo">Sono médio</div><div class="insight-val" style="color:var(--purple)">${mediaSOno?mediaSOno.toFixed(1)+'h':'—'}</div><div class="insight-sub">${mediaSOno>=7?'✅ Adequado':mediaSOno>=6?'⚠️ Abaixo':'⚠️ Insuficiente'}</div></div>
+      <div class="insight i-red"><div class="insight-ico">❤️</div><div class="insight-titulo">FC geral (7d)</div><div class="insight-val" style="color:var(--red)">${mediaFC||'—'} bpm</div><div class="insight-sub">${fc7.length} treinos esta semana</div></div>
+      <div class="insight i-gold"><div class="insight-ico">🔬</div><div class="insight-titulo">VO2 Max</div><div class="insight-val" style="color:var(--gold)">${lastVO2||'—'}</div><div class="insight-sub">${lastVO2>=55?'Excelente':lastVO2>=50?'Muito bom':lastVO2>=45?'Bom':lastVO2>0?'Regular':'Sem dados'}</div></div>`;
+  }
+
+  document.getElementById('coach-insights').innerHTML=ins;
+
+  // Stats hero
+  const sportLabel={corrida:'🏃 Corrida',bike:'🚴 Bike',natacao:'🏊 Natação',academia:'💪 Academia',todos:'Geral'};
   document.getElementById('coach-stats-hero').innerHTML=`
-    <div class="div-label">Resumo — últimos 30 dias</div>
+    <div class="div-label">Resumo — últimos 30 dias · ${sportLabel[curCoachEsporte]}</div>
     <div class="sgrid sg3">
-      <div class="stat"><div class="sv" style="color:var(--blue)">${meta.km30dias??'—'}</div><div class="sl">km / 30d</div></div>
-      <div class="stat"><div class="sv" style="color:var(--green)">${meta.treinos30dias??'—'}</div><div class="sl">treinos / mês</div></div>
-      <div class="stat"><div class="sv" style="color:var(--muted);font-size:1rem">${meta.totalKm??'—'}</div><div class="sl">km total</div></div>
+      <div class="stat"><div class="sv" style="color:var(--blue)">${curCoachEsporte==='academia'?f30.length:km30f.toFixed(1)}</div><div class="sl">${curCoachEsporte==='academia'?'sessões':'km'} / 30d</div></div>
+      <div class="stat"><div class="sv" style="color:var(--green)">${f30.length}</div><div class="sl">treinos / mês</div></div>
+      <div class="stat"><div class="sv" style="color:var(--muted);font-size:1rem">${f7.length}</div><div class="sl">treinos / sem.</div></div>
     </div>`;
 
-  // Sport breakdown (últimos 30 dias)
-  const trintaDias30=(new Date(Date.now()-30*864e5)).toISOString().slice(0,10);
-  const km30c=ativ.filter(a=>getEsporte(a)==='corrida'&&a.data>=trintaDias30).reduce((s,a)=>s+a.distancia,0).toFixed(1);
-  const km30b=ativ.filter(a=>getEsporte(a)==='bike'&&a.data>=trintaDias30).reduce((s,a)=>s+a.distancia,0).toFixed(1);
-  const km30n=ativ.filter(a=>getEsporte(a)==='natacao'&&a.data>=trintaDias30).reduce((s,a)=>s+a.distancia,0).toFixed(1);
-  const sess30a=ativ.filter(a=>getEsporte(a)==='academia'&&a.data>=trintaDias30).length;
-  document.getElementById('coach-sport-stats').innerHTML=`
-    <div class="div-label">30 dias — por esporte</div>
-    <div class="sgrid" style="grid-template-columns:repeat(4,1fr);gap:.45rem">
-      <div class="stat"><div class="sv" style="color:var(--blue);font-size:1.1rem">${km30c}</div><div class="sl">🏃 corrida</div></div>
-      <div class="stat"><div class="sv" style="color:var(--orange);font-size:1.1rem">${km30b}</div><div class="sl">🚴 bike</div></div>
-      <div class="stat"><div class="sv" style="color:#0ea5e9;font-size:1.1rem">${km30n}</div><div class="sl">🏊 natação</div></div>
-      <div class="stat"><div class="sv" style="color:var(--purple);font-size:1.1rem">${sess30a}</div><div class="sl">💪 academia</div></div>
-    </div>`;
+  // Sport breakdown (só no modo todos)
+  if(curCoachEsporte==='todos'){
+    const td30=(new Date(Date.now()-30*864e5)).toISOString().slice(0,10);
+    const kc=ativ.filter(a=>getEsporte(a)==='corrida'&&a.data>=td30).reduce((s,a)=>s+a.distancia,0).toFixed(1);
+    const kb=ativ.filter(a=>getEsporte(a)==='bike'&&a.data>=td30).reduce((s,a)=>s+a.distancia,0).toFixed(1);
+    const kn=ativ.filter(a=>getEsporte(a)==='natacao'&&a.data>=td30).reduce((s,a)=>s+a.distancia,0).toFixed(1);
+    const sa=ativ.filter(a=>getEsporte(a)==='academia'&&a.data>=td30).length;
+    document.getElementById('coach-sport-stats').innerHTML=`
+      <div class="div-label">30 dias — por esporte</div>
+      <div class="sgrid" style="grid-template-columns:repeat(4,1fr);gap:.45rem">
+        <div class="stat"><div class="sv" style="color:var(--blue);font-size:1.1rem">${kc}</div><div class="sl">🏃 corrida</div></div>
+        <div class="stat"><div class="sv" style="color:var(--orange);font-size:1.1rem">${kb}</div><div class="sl">🚴 bike</div></div>
+        <div class="stat"><div class="sv" style="color:#0ea5e9;font-size:1.1rem">${kn}</div><div class="sl">🏊 natação</div></div>
+        <div class="stat"><div class="sv" style="color:var(--purple);font-size:1.1rem">${sa}</div><div class="sl">💪 academia</div></div>
+      </div>`;
+  } else {
+    document.getElementById('coach-sport-stats').innerHTML='';
+  }
 }
 
 // ════════════════ TREINOS ════════════════
