@@ -214,14 +214,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
     <!-- ══ EVOLUÇÃO ══ -->
     <div class="sec" id="sec-evolucao">
-      <div class="card"><div class="card-title">📈 Evolução do Pace (min/km)</div><div class="ch"><canvas id="cPace"></canvas></div></div>
-      <div class="card"><div class="card-title">❤️ Frequência Cardíaca Média</div><div class="ch"><canvas id="cFC"></canvas></div></div>
+      <div class="card"><div class="card-title">📈 Pace — últimos 30 dias (corridas)</div><div class="ch"><canvas id="cPace"></canvas></div></div>
+      <div class="card"><div class="card-title">❤️ FC Média — últimos 30 dias</div><div class="ch"><canvas id="cFC"></canvas></div></div>
       <div class="chart-row">
-        <div class="card"><div class="card-title">🔬 VO2 Max</div><div class="ch-sm"><canvas id="cVO2"></canvas></div></div>
-        <div class="card"><div class="card-title">🦵 Cadência (pass/min)</div><div class="ch-sm"><canvas id="cCad"></canvas></div></div>
+        <div class="card"><div class="card-title">🔬 VO2 Max — 30 dias</div><div class="ch-sm"><canvas id="cVO2"></canvas></div></div>
+        <div class="card"><div class="card-title">🦵 Cadência — 30 dias</div><div class="ch-sm"><canvas id="cCad"></canvas></div></div>
       </div>
       <div class="card" id="rd-card" style="display:none">
-        <div class="card-title">🦾 Running Dynamics — sua média vs ideal</div>
+        <div class="card-title">🦾 Running Dynamics — média 30 dias vs ideal</div>
         <div id="rd-list"></div>
         <div style="font-size:.65rem;color:var(--muted);margin-top:.6rem;line-height:1.5">Baseado nas últimas corridas com dados de dinâmica. Requer HRM-Run, HRM-Pro ou Running Dynamics Pod.</div>
       </div>
@@ -297,6 +297,7 @@ const FB_DB   = 'https://gastos-casa-7f431-default-rtdb.firebaseio.com';
 const FB_KEY  = 'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU';
 const FB_PATH = 'treinos/luiz';
 let charts = {}, curTab = 'coach', DATA = null, curEsporte = 'todos';
+const PERIODO = 30; // dias padrão para todas as médias do app
 
 function getEsporte(a){
   if(a.esporte) return a.esporte;
@@ -507,7 +508,7 @@ function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
 
   // Stats sumário
   document.getElementById('coach-stats-hero').innerHTML=`
-    <div class="div-label">Resumo Geral</div>
+    <div class="div-label">Resumo — últimos 30 dias</div>
     <div class="sgrid sg3">
       <div class="stat"><div class="sv" style="color:var(--blue)">${meta.km30dias??'—'}</div><div class="sl">km / 30d</div></div>
       <div class="stat"><div class="sv" style="color:var(--green)">${meta.treinos30dias??'—'}</div><div class="sl">treinos / mês</div></div>
@@ -594,11 +595,12 @@ function renderTreinos(ativ,meta,sem){
 
 // ════════════════ EVOLUÇÃO ════════════════
 function renderEvolucao(ativ){
-  const corrida=ativ.filter(a=>!a.esporte||a.esporte==='corrida');
-  const comPace=corrida.filter(a=>a.pace&&a.distancia>=1).slice(0,25).reverse();
-  const comFC=ativ.filter(a=>a.fcMed>0).slice(0,25).reverse();
-  const comVO2=ativ.filter(a=>a.vo2max>0).slice(0,20).reverse();
-  const comCad=corrida.filter(a=>a.cadencia>0).slice(0,20).reverse();
+  const d30=(new Date(Date.now()-PERIODO*864e5)).toISOString().slice(0,10);
+  const corrida=ativ.filter(a=>(!a.esporte||a.esporte==='corrida')&&a.data>=d30);
+  const comPace=corrida.filter(a=>a.pace&&a.distancia>=1).slice().reverse();
+  const comFC=ativ.filter(a=>a.fcMed>0&&a.data>=d30).slice().reverse();
+  const comVO2=ativ.filter(a=>a.vo2max>0&&a.data>=d30).slice().reverse();
+  const comCad=corrida.filter(a=>a.cadencia>0).slice().reverse();
 
   if(comPace.length>=2){
     charts.pace=new Chart(document.getElementById('cPace'),{type:'line',
@@ -650,7 +652,8 @@ function renderEvolucao(ativ){
 
 // ════════════════ RUNNING DYNAMICS ════════════════
 function renderRunningDynamics(corrida){
-  const acts = corrida.filter(a => a.oscilacao > 0 || a.contatoSolo > 0 || a.razaoVertical > 0).slice(0, 15);
+  // corrida já vem filtrada por 30 dias pelo renderEvolucao
+  const acts = corrida.filter(a => a.oscilacao > 0 || a.contatoSolo > 0 || a.razaoVertical > 0 || a.cadencia > 0);
   const card = document.getElementById('rd-card');
   if(acts.length < 1){ card.style.display='none'; return; }
   card.style.display='block';
