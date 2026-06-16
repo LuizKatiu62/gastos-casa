@@ -119,6 +119,27 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 .q-aviso{background:#fffbeb;border:1px solid #fcd34d;border-radius:10px;padding:.85rem;font-size:.82rem;color:#78350f;line-height:1.6;margin-bottom:1rem}
 
+/* ── CHAT ── */
+.chat-wrap{display:flex;flex-direction:column;gap:.55rem;max-height:55vh;overflow-y:auto;padding:.4rem 0;margin-bottom:.75rem}
+.chat-msg{max-width:88%;border-radius:12px;padding:.65rem .9rem;font-size:.84rem;line-height:1.65;word-break:break-word}
+.chat-user{background:var(--blue);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+.chat-coach{background:#f8fafc;border:1px solid var(--border);align-self:flex-start;border-bottom-left-radius:4px}
+.chat-coach-label{font-size:.65rem;font-weight:800;color:var(--blue);display:block;margin-bottom:.3rem;text-transform:uppercase;letter-spacing:.5px}
+.chat-typing{color:var(--muted);font-style:italic}
+.chat-input-row{display:flex;gap:.5rem;align-items:flex-end}
+.chat-ta{flex:1;border:1.5px solid var(--border);border-radius:12px;padding:.55rem .8rem;font-size:.85rem;font-family:inherit;resize:none;min-height:44px;max-height:110px;outline:none;line-height:1.5}
+.chat-ta:focus{border-color:var(--blue)}
+.chat-send{background:var(--blue);color:#fff;border:none;border-radius:12px;padding:.55rem 1.1rem;font-weight:700;font-size:.82rem;cursor:pointer;font-family:inherit;flex-shrink:0;min-height:44px;transition:opacity .15s}
+.chat-send:disabled{opacity:.35;cursor:default}
+.apikey-card{background:#fffbeb;border:1.5px solid #fcd34d;border-radius:12px;padding:.9rem;margin-bottom:.75rem}
+.apikey-row{display:flex;gap:.45rem;margin-top:.55rem}
+.apikey-inp{flex:1;border:1.5px solid #fcd34d;border-radius:8px;padding:.42rem .7rem;font-size:.82rem;font-family:inherit;outline:none;background:#fff}
+.apikey-inp:focus{border-color:var(--blue)}
+.apikey-btn{background:var(--blue);color:#fff;border:none;border-radius:8px;padding:.42rem 1rem;font-weight:700;font-size:.78rem;cursor:pointer;font-family:inherit;white-space:nowrap}
+.qr-list{display:flex;flex-direction:column;gap:.3rem}
+.qr{background:#f8fafc;border:1px solid var(--border);border-left:3px solid var(--blue);border-radius:0 10px 10px 0;padding:.55rem .8rem;font-size:.82rem;color:#334155;cursor:pointer;text-align:left;font-family:inherit;width:100%;line-height:1.4}
+.qr:hover{background:#eff6ff}
+
 /* ── EMPTY ── */
 .empty{text-align:center;padding:2.5rem 1rem;background:var(--card);border-radius:var(--r);border:1px solid var(--border)}
 .empty h3{margin-bottom:.5rem}
@@ -202,52 +223,51 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       </div>
     </div>
 
-    <!-- ══ PERGUNTAS ══ -->
+    <!-- ══ COACH IA ══ -->
     <div class="sec" id="sec-perguntas">
-      <div class="q-aviso">
-        💡 <strong>Como usar:</strong> Copie a pergunta abaixo, abra o <strong>Claude Desktop</strong> no seu projeto Treinador e cole. O Claude vai analisar seus dados reais do Garmin e responder como um treinador pessoal.
+
+      <!-- API Key -->
+      <div class="apikey-card" id="apikey-section" style="display:none">
+        <div style="font-size:.78rem;font-weight:800;color:#78350f">🔑 Chave API Anthropic</div>
+        <div style="font-size:.75rem;color:#92400e;margin-top:3px;line-height:1.5">Acesse <strong>console.anthropic.com</strong> → API Keys → Create Key. A chave fica salva só no seu celular.</div>
+        <div class="apikey-row">
+          <input type="password" class="apikey-inp" id="apikey-input" placeholder="sk-ant-...">
+          <button class="apikey-btn" onclick="saveApiKey()">Salvar</button>
+        </div>
       </div>
 
-      <div class="qcat">
-        <div class="qcat-title">📈 Performance</div>
-        <div class="q"><span class="q-txt">Como tá meu volume semanal nos últimos 30 dias? Tô progredindo?</span><button class="q-btn" onclick="qCopy(this)">Copiar</button></div>
-        <div class="q"><span class="q-txt">Compara meu pace médio desse mês com o mês passado. Melhorei?</span><button class="q-btn" onclick="qCopy(this)">Copiar</button></div>
-        <div class="q"><span class="q-txt">Quais treinos foram mais intensos essa semana? Tô equilibrando bem?</span><button class="q-btn" onclick="qCopy(this)">Copiar</button></div>
-        <div class="q"><span class="q-txt">Meu VO2 max tá evoluindo? O que preciso fazer pra melhorar?</span><button class="q-btn" onclick="qCopy(this)">Copiar</button></div>
-        <div class="q"><span class="q-txt">Analisa minha cadência nas últimas corridas. Tô numa faixa boa?</span><button class="q-btn" onclick="qCopy(this)">Copiar</button></div>
+      <!-- Chat -->
+      <div class="card">
+        <div class="card-title">🏋️ Coach IA — seus dados reais do Garmin</div>
+        <div class="chat-wrap" id="chat-messages">
+          <div class="chat-msg chat-coach">
+            <span class="chat-coach-label">🏋️ Coach</span>
+            Olá Luiz! Tenho acesso aos seus dados reais do Garmin — atividades, body battery, sono, HRV e stress. Pergunte o que quiser sobre seus treinos.
+          </div>
+        </div>
+        <div class="chat-input-row">
+          <textarea class="chat-ta" id="chat-input" placeholder="Pergunte para o coach…" rows="1" onkeydown="chatKey(event)" oninput="autoResize(this)"></textarea>
+          <button class="chat-send" id="chat-send" onclick="sendChat()">Enviar</button>
+        </div>
       </div>
 
-      <div class="qcat">
-        <div class="qcat-title">💤 Recuperação</div>
-        <div class="q"><span class="q-txt">Como tá meu sono em relação aos meus treinos? O descanso tá adequado?</span><button class="q-btn" onclick="qCopy(this)">Copiar</button></div>
-        <div class="q"><span class="q-txt">Tô em risco de overtraining? Analisa meu Body Battery e HRV dos últimos 14 dias.</span><button class="q-btn" onclick="qCopy(this)">Copiar</button></div>
-        <div class="q"><span class="q-txt">Meu nível de stress tá impactando meus treinos? O que recomenda?</span><button class="q-btn" onclick="qCopy(this)">Copiar</button></div>
-        <div class="q"><span class="q-txt">Quais foram os meus últimos 5 treinos? Tô recuperando bem entre eles?</span><button class="q-btn" onclick="qCopy(this)">Copiar</button></div>
+      <!-- Perguntas rápidas -->
+      <div class="card">
+        <div class="card-title">⚡ Perguntas Rápidas — toque para usar</div>
+        <div class="qr-list">
+          <button class="qr" onclick="fillChat(this)">Qual treino devo fazer hoje considerando minha recuperação atual?</button>
+          <button class="qr" onclick="fillChat(this)">Tô em risco de overtraining? Analisa meu Body Battery e HRV.</button>
+          <button class="qr" onclick="fillChat(this)">Como tá meu volume semanal nos últimos 30 dias? Tô progredindo?</button>
+          <button class="qr" onclick="fillChat(this)">Meu sono tá adequado pra minha carga de treino? O que melhorar?</button>
+          <button class="qr" onclick="fillChat(this)">Analisa minha evolução de pace no último mês.</button>
+          <button class="qr" onclick="fillChat(this)">Meu VO2 max tá evoluindo? O que preciso fazer pra melhorar?</button>
+          <button class="qr" onclick="fillChat(this)">Qual deveria ser meu treino longo essa semana?</button>
+          <button class="qr" onclick="fillChat(this)">Baseado no meu histórico, qual pace realista pra correr 10k?</button>
+          <button class="qr" onclick="fillChat(this)">Sugere ajustes na carga pra próxima semana considerando minha recuperação.</button>
+          <button class="qr" onclick="fillChat(this)">Faz uma análise completa dos meus últimos 30 dias como treinador.</button>
+        </div>
       </div>
 
-      <div class="qcat">
-        <div class="qcat-title">📅 Planejamento</div>
-        <div class="q"><span class="q-txt">Monta um plano de 12 semanas pra uma maratona baseado no meu pace atual e volume histórico.</span><button class="q-btn" onclick="qCopy(this)">Copiar</button></div>
-        <div class="q"><span class="q-txt">Qual deveria ser meu treino longo essa semana baseado no meu volume dos últimos 30 dias?</span><button class="q-btn" onclick="qCopy(this)">Copiar</button></div>
-        <div class="q"><span class="q-txt">Sugere ajustes na carga de treino pra próxima semana considerando minha recuperação atual.</span><button class="q-btn" onclick="qCopy(this)">Copiar</button></div>
-        <div class="q"><span class="q-txt">Qual é a melhor distribuição de treinos (fácil, tempo, longo, intervalo) pra minha semana?</span><button class="q-btn" onclick="qCopy(this)">Copiar</button></div>
-      </div>
-
-      <div class="qcat">
-        <div class="qcat-title">🏁 Provas e Metas</div>
-        <div class="q"><span class="q-txt">Baseado no meu histórico, qual pace realista pra correr 10k? E meia maratona?</span><button class="q-btn" onclick="qCopy(this)">Copiar</button></div>
-        <div class="q"><span class="q-txt">Estratégia de pace pra meia maratona: como devo distribuir o esforço?</span><button class="q-btn" onclick="qCopy(this)">Copiar</button></div>
-        <div class="q"><span class="q-txt">Em quanto tempo estaria pronto pra correr uma maratona no meu nível atual?</span><button class="q-btn" onclick="qCopy(this)">Copiar</button></div>
-        <div class="q"><span class="q-txt">O que devo focar pra melhorar 1 minuto no meu pace de 10k?</span><button class="q-btn" onclick="qCopy(this)">Copiar</button></div>
-      </div>
-
-      <div class="qcat">
-        <div class="qcat-title">🔎 Análise Detalhada</div>
-        <div class="q"><span class="q-txt">Faz uma análise completa dos meus últimos 30 dias de treino como treinador.</span><button class="q-btn" onclick="qCopy(this)">Copiar</button></div>
-        <div class="q"><span class="q-txt">Compara minha frequência cardíaca nos treinos desta semana com as últimas 4 semanas.</span><button class="q-btn" onclick="qCopy(this)">Copiar</button></div>
-        <div class="q"><span class="q-txt">Qual o meu padrão de treino — dias da semana, distâncias, horários? Tem algum padrão prejudicial?</span><button class="q-btn" onclick="qCopy(this)">Copiar</button></div>
-        <div class="q"><span class="q-txt">Analisa meu efeito de treino nas últimas corridas. Estou treinando nas zonas certas?</span><button class="q-btn" onclick="qCopy(this)">Copiar</button></div>
-      </div>
     </div>
 
   </div><!-- /content -->
@@ -357,6 +377,7 @@ function render(d){
 
   document.getElementById('loading').style.display='none';
   document.getElementById('content').style.display='block';
+  initApiKey();
 
   renderCoach(ativ,meta,bb,sono,stress,hrv,sem);
   renderTreinos(ativ,meta,sem);
@@ -669,14 +690,134 @@ function go(id,btn){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
-// ── COPIAR PERGUNTA ──
-function qCopy(btn){
-  const txt=btn.previousElementSibling.textContent;
-  navigator.clipboard.writeText('"'+txt+'"').then(()=>flash(btn)).catch(()=>flash(btn));
+// ════════════════ COACH IA ════════════════
+let ANTHRO_KEY = localStorage.getItem('anthro_key') || '';
+let chatHistory = [];
+
+function initApiKey(){
+  document.getElementById('apikey-section').style.display = ANTHRO_KEY ? 'none' : 'block';
+  if(ANTHRO_KEY) document.getElementById('apikey-input').value = '';
 }
-function flash(btn){
-  btn.textContent='Copiado!';btn.classList.add('ok');
-  setTimeout(()=>{btn.textContent='Copiar';btn.classList.remove('ok');},1800);
+
+function saveApiKey(){
+  const v = document.getElementById('apikey-input').value.trim();
+  if(!v.startsWith('sk-')){ alert('Cole uma chave válida (começa com sk-ant-…)'); return; }
+  ANTHRO_KEY = v;
+  localStorage.setItem('anthro_key', v);
+  document.getElementById('apikey-section').style.display = 'none';
+}
+
+function buildContext(){
+  if(!DATA) return 'Dados do Garmin não disponíveis.';
+  const ativ = (DATA.atividades||[]).slice(0,20);
+  const bb   = DATA.bodyBattery||{};
+  const sono = DATA.sono||{};
+  const hrv  = DATA.hrv||{};
+  const stre = DATA.stress||{};
+  const meta = DATA.meta||{};
+  const hoje = new Date().toISOString().slice(0,10);
+  const bbHoje = bb[hoje]?.max || bb[Object.keys(bb).sort().slice(-1)[0]]?.max || 0;
+  const sonoKeys = Object.keys(sono).sort().slice(-7);
+  const sonoMed  = sonoKeys.length ? (sonoKeys.reduce((s,k)=>s+sono[k].duracao,0)/sonoKeys.length).toFixed(1) : 0;
+  const hrvKeys  = Object.keys(hrv).sort().slice(-7).filter(k=>hrv[k].ontem>0);
+  const hrvMed   = hrvKeys.length ? Math.round(hrvKeys.reduce((s,k)=>s+hrv[k].ontem,0)/hrvKeys.length) : 0;
+  const strKeys  = Object.keys(stre).sort().slice(-7);
+  const strMed   = strKeys.length ? Math.round(strKeys.reduce((s,k)=>s+stre[k].avg,0)/strKeys.length) : 0;
+
+  return [
+    `Atleta: Luiz Silva, 63 anos, triatleta (corrida, bike, natação, musculação).`,
+    `Data: ${hoje}`,
+    `Totais: ${meta.totalKm??'?'} km acumulados | ${meta.km30dias??'?'} km / 30d | ${meta.treinos30dias??'?'} treinos / mês | ${meta.km7dias??'?'} km esta semana`,
+    `Saúde hoje: Body Battery ${bbHoje}% | Sono médio 7d: ${sonoMed}h | HRV médio 7d: ${hrvMed}ms | Stress médio 7d: ${strMed}/100`,
+    ``,
+    `Últimas 20 atividades (data, esporte, km, duração, pace, FC média, calorias, VO2max, cadência):`,
+    ...ativ.map(a=>`  ${a.data} [${getEsporte(a)}] ${a.distancia}km ${a.duracao||''} pace:${a.pace||'—'} FC:${a.fcMed||'—'}bpm cal:${a.calorias||'—'} VO2:${a.vo2max||'—'} cad:${a.cadencia||'—'}`)
+  ].join('\n');
+}
+
+function fillChat(btn){
+  const inp = document.getElementById('chat-input');
+  inp.value = btn.textContent.trim();
+  autoResize(inp);
+  inp.focus();
+  document.querySelector('.chat-wrap').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function autoResize(el){
+  el.style.height='auto';
+  el.style.height=Math.min(el.scrollHeight,110)+'px';
+}
+
+function chatKey(e){
+  if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); sendChat(); }
+}
+
+async function sendChat(){
+  if(!ANTHRO_KEY){
+    document.getElementById('apikey-section').style.display='block';
+    document.getElementById('apikey-input').focus();
+    return;
+  }
+  const inp = document.getElementById('chat-input');
+  const question = inp.value.trim();
+  if(!question) return;
+
+  inp.value = ''; autoResize(inp);
+  addMsg('user', question);
+  chatHistory.push({role:'user', content:question});
+  if(chatHistory.length > 20) chatHistory = chatHistory.slice(-20);
+
+  const sendBtn = document.getElementById('chat-send');
+  sendBtn.disabled = true;
+  const typing = addMsg('coach', '…', true);
+
+  const sys = `Você é um coach pessoal especializado em triathlon (corrida, bike, natação) e musculação. Analise os dados reais abaixo e responda de forma direta, objetiva e personalizada em português brasileiro. Use os números reais nas suas respostas. Seja conciso.
+
+DADOS DO ATLETA:
+${buildContext()}`;
+
+  try{
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{
+        'x-api-key': ANTHRO_KEY,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 1024,
+        system: sys,
+        messages: chatHistory
+      })
+    });
+    const data = await res.json();
+    if(data.error) throw new Error(data.error.message);
+    const reply = data.content?.[0]?.text || 'Sem resposta.';
+    chatHistory.push({role:'assistant', content:reply});
+    typing.remove();
+    addMsg('coach', reply);
+  }catch(e){
+    typing.remove();
+    chatHistory.pop();
+    addMsg('coach', '❌ Erro: '+e.message+'. Verifique sua chave API.');
+  }
+  sendBtn.disabled = false;
+}
+
+function addMsg(role, text, isTyping=false){
+  const wrap = document.getElementById('chat-messages');
+  const div  = document.createElement('div');
+  div.className = 'chat-msg chat-'+role+(isTyping?' chat-typing':'');
+  if(role==='coach'){
+    div.innerHTML = `<span class="chat-coach-label">🏋️ Coach</span>${text.replace(/\n/g,'<br>')}`;
+  } else {
+    div.textContent = text;
+  }
+  wrap.appendChild(div);
+  wrap.scrollTop = wrap.scrollHeight;
+  return div;
 }
 
 loadData();
