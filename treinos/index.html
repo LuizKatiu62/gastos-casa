@@ -988,20 +988,20 @@ function addMsg(role, text, isTyping=false){
 // ════════════════ PROVAS ════════════════
 const PROVAS_DATA = [
   // Atlantic Canada
-  {nome:"Fredericton Marathon",local:"Fredericton, NB",data:"2026-05-10",dists:[10,21.1,42.2],regiao:"atlantic"},
-  {nome:"Scotiabank Blue Nose Marathon",local:"Halifax, NS",data:"2026-05-17",dists:[5,10,21.1,42.2],regiao:"atlantic"},
-  {nome:"Maratona do Atlântico / Moncton",local:"Moncton, NB",data:"2026-09-20",dists:[10,21.1,42.2],regiao:"atlantic"},
-  {nome:"PEI Marathon",local:"Charlottetown, PEI",data:"2026-10-04",dists:[10,21.1,42.2],regiao:"atlantic"},
+  {nome:"Fredericton Marathon",local:"Fredericton, NB",data:"2026-05-10",dists:[10,21.1,42.2],regiao:"atlantic",url:"https://www.frederictonmarathon.com"},
+  {nome:"Scotiabank Blue Nose Marathon",local:"Halifax, NS",data:"2026-05-17",dists:[5,10,21.1,42.2],regiao:"atlantic",url:"https://www.blunosemarathon.com"},
+  {nome:"Maratona do Atlântico / Moncton",local:"Moncton, NB",data:"2026-09-20",dists:[10,21.1,42.2],regiao:"atlantic",url:"https://www.runmoncton.ca"},
+  {nome:"PEI Marathon",local:"Charlottetown, PEI",data:"2026-10-04",dists:[10,21.1,42.2],regiao:"atlantic",url:"https://www.peimarathon.com"},
   // Québec
-  {nome:"Québec City Marathon",local:"Québec, QC",data:"2026-08-23",dists:[10,21.1,42.2],regiao:"quebec"},
-  {nome:"Beneva Montréal Marathon",local:"Montréal, QC",data:"2026-09-27",dists:[5,10,21.1,42.2],regiao:"quebec"},
+  {nome:"Québec City Marathon",local:"Québec, QC",data:"2026-08-23",dists:[10,21.1,42.2],regiao:"quebec",url:"https://www.marathonquebec.com"},
+  {nome:"Beneva Montréal Marathon",local:"Montréal, QC",data:"2026-09-27",dists:[5,10,21.1,42.2],regiao:"quebec",url:"https://www.marathonmontreal.com"},
   // Ontario
-  {nome:"Ottawa Race Weekend",local:"Ottawa, ON",data:"2026-05-24",dists:[5,10,21.1,42.2],regiao:"ontario"},
-  {nome:"Scotiabank Toronto Waterfront",local:"Toronto, ON",data:"2026-10-18",dists:[5,10,21.1,42.2],regiao:"ontario"},
+  {nome:"Ottawa Race Weekend",local:"Ottawa, ON",data:"2026-05-24",dists:[5,10,21.1,42.2],regiao:"ontario",url:"https://www.runottawa.ca"},
+  {nome:"Scotiabank Toronto Waterfront",local:"Toronto, ON",data:"2026-10-18",dists:[5,10,21.1,42.2],regiao:"ontario",url:"https://www.torontowaterfrontmarathon.com"},
   // USA
-  {nome:"Boston Marathon",local:"Boston, MA",data:"2026-04-20",dists:[42.2],regiao:"usa"},
-  {nome:"Chicago Marathon",local:"Chicago, IL",data:"2026-10-11",dists:[42.2],regiao:"usa"},
-  {nome:"New York City Marathon",local:"New York, NY",data:"2026-11-01",dists:[42.2],regiao:"usa"},
+  {nome:"Boston Marathon",local:"Boston, MA",data:"2026-04-20",dists:[42.2],regiao:"usa",url:"https://www.baa.org"},
+  {nome:"Chicago Marathon",local:"Chicago, IL",data:"2026-10-11",dists:[42.2],regiao:"usa",url:"https://www.chicagomarathon.com"},
+  {nome:"New York City Marathon",local:"New York, NY",data:"2026-11-01",dists:[42.2],regiao:"usa",url:"https://www.nyrr.org/tcsnycmarathon"},
 ];
 const REGIAO_LBL={atlantic:"🌊 Atlantic Canada",quebec:"⚜️ Québec",ontario:"🍁 Ontario",usa:"🇺🇸 Estados Unidos"};
 let curProvaDist='todas';
@@ -1027,8 +1027,9 @@ function renderProvas(){
       const passada=p.data<hoje;
       const dias=Math.round((new Date(p.data+'T12:00:00')-new Date())/864e5);
       const diasTxt=passada?'realizada':dias===0?'hoje!':dias+' dias';
+      const btnInsc=p.url?`<a href="${p.url}" target="_blank" style="display:inline-block;background:${isUSA?'#dc2626':'var(--blue)'};color:#fff;border-radius:8px;padding:3px 10px;font-size:.65rem;font-weight:800;text-decoration:none;flex-shrink:0">Inscrever →</a>`:'';
       html+=`<div class="prova-card${isUSA?' prova-usa':''}${passada?' prova-passada':''}">
-        <div class="prova-nome">${p.nome}${isUSA?'<span class="prova-usa-tag">USA</span>':''}</div>
+        <div class="prova-nome">${p.nome}${isUSA?'<span class="prova-usa-tag">USA</span>':''}${btnInsc}</div>
         <div class="prova-local">${p.local}</div>
         <div class="prova-footer">
           <span class="prova-data">${fmtProvaData(p.data)} · ${diasTxt}</span>
