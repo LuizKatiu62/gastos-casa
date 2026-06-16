@@ -146,18 +146,29 @@ def safe_get(api, fn, *args, delay=0.4):
 def main():
     log("━━━ Iniciando sync automático ━━━")
 
-    if not os.path.exists(SESSION_DIR):
-        log("ERRO: sessão não encontrada. Rode sync-garmin.py manualmente primeiro.")
-        sys.exit(1)
+    senha_env = os.environ.get("GARMIN_PASSWORD", "")
 
-    try:
-        api = Garmin(GARMIN_EMAIL, "")
-        api.login(SESSION_DIR)
-        log("Login OK (sessão reutilizada)")
-    except Exception as e:
-        log(f"ERRO no login: {e}")
-        log("Sessão expirada — rode sync-garmin.py manualmente para renovar.")
-        sys.exit(1)
+    # Tenta sessão salva primeiro; se falhar usa senha do ambiente (GitHub Actions)
+    api = None
+    if os.path.exists(SESSION_DIR):
+        try:
+            api = Garmin(GARMIN_EMAIL, "")
+            api.login(SESSION_DIR)
+            log("Login OK (sessão reutilizada)")
+        except Exception:
+            api = None
+
+    if api is None:
+        if not senha_env:
+            log("ERRO: sem sessão e sem GARMIN_PASSWORD. Configure o secret no GitHub.")
+            sys.exit(1)
+        try:
+            api = Garmin(GARMIN_EMAIL, senha_env)
+            api.login()
+            log("Login OK (GARMIN_PASSWORD)")
+        except Exception as e:
+            log(f"ERRO no login: {e}")
+            sys.exit(1)
 
     hoje = datetime.today()
     ini  = hoje - timedelta(days=DIAS_ATIVIDADES)

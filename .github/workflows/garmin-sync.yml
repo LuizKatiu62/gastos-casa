@@ -1,0 +1,27 @@
+name: Garmin Sync
+
+on:
+  schedule:
+    - cron: '0 * * * *'   # toda hora
+  workflow_dispatch:        # botão manual no GitHub
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependências
+        run: pip install garminconnect
+
+      - name: Rodar sync Garmin → Firebase
+        run: python sync-garmin-auto.py
+        env:
+          GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
