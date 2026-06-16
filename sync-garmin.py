@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Garmin → Firebase Treinos sync
-Puxa atividades, body battery e sono do Garmin Connect e salva no Firebase.
+Puxa atividades, body battery, sono, stress e HRV do Garmin Connect.
 """
 
 import json, sys, os, time
@@ -12,8 +12,8 @@ GARMIN_EMAIL     = "lcdsilva@hotmail.com"
 FIREBASE_DB      = "https://gastos-casa-7f431-default-rtdb.firebaseio.com"
 FIREBASE_PATH    = "treinos/luiz"
 FIREBASE_KEY     = "AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU"
-DIAS_ATIVIDADES  = 90   # histórico de corridas
-DIAS_SAUDE       = 14   # body battery e sono (últimos N dias)
+DIAS_ATIVIDADES  = 120
+DIAS_SAUDE       = 21
 # ─────────────────────────────────────────────────────────────
 
 try:
@@ -59,18 +59,22 @@ def garmin_to_treino(act):
     dur_secs = act.get("duration", 0) or 0
     start    = (act.get("startTimeLocal") or act.get("startTimeGMT") or "")[:10]
     return {
-        "id":        "gm-" + str(act.get("activityId", "")),
-        "tipo":      TIPO_MAP.get(tipo_g, "facil"),
-        "data":      start,
-        "distancia": round(dist_m / 1000, 2),
-        "duracao":   fmt_dur(dur_secs),
-        "pace":      calc_pace(dist_m, dur_secs),
-        "fcMed":     int(act.get("averageHR", 0) or 0),
-        "fcMax":     int(act.get("maxHR", 0) or 0),
-        "elevGain":  round(act.get("elevationGain", 0) or 0),
-        "calorias":  int(act.get("calories", 0) or 0),
-        "notas":     act.get("activityName", ""),
-        "garminId":  str(act.get("activityId", "")),
+        "id":           "gm-" + str(act.get("activityId", "")),
+        "tipo":         TIPO_MAP.get(tipo_g, "facil"),
+        "data":         start,
+        "distancia":    round(dist_m / 1000, 2),
+        "duracao":      fmt_dur(dur_secs),
+        "pace":         calc_pace(dist_m, dur_secs),
+        "fcMed":        int(act.get("averageHR", 0) or 0),
+        "fcMax":        int(act.get("maxHR", 0) or 0),
+        "elevGain":     round(act.get("elevationGain", 0) or 0),
+        "calorias":     int(act.get("calories", 0) or 0),
+        "cadencia":     int(act.get("averageRunningCadenceInStepsPerMinute", 0) or 0),
+        "efAerobico":   round(float(act.get("trainingEffect", 0) or 0), 1),
+        "efAnaerobico": round(float(act.get("anaerobicTrainingEffect", 0) or 0), 1),
+        "vo2max":       round(float(act.get("vO2MaxValue", 0) or 0), 1),
+        "notas":        act.get("activityName", ""),
+        "garminId":     str(act.get("activityId", "")),
     }
 
 
@@ -99,9 +103,19 @@ def firebase_put(path, data, token):
         return r.status == 200
 
 
+def safe_get(api, fn, *args, delay=0.4):
+    try:
+        result = fn(*args)
+        time.sleep(delay)
+        return result
+    except Exception:
+        time.sleep(delay)
+        return None
+
+
 def main():
     print("═" * 52)
-    print("  🏃 Garmin → Firebase Treinos")
+    print("  🏃 Garmin → Firebase Treinos (completo)")
     print("═" * 52)
 
     senha = input(f"\n  Senha do Garmin ({GARMIN_EMAIL}): ").strip()
@@ -128,15 +142,12 @@ def main():
     except Exception as e:
         msg = str(e)
         print(f"  ❌ Erro no login: {msg[:200]}")
-        if "429" in msg:
-            print("     Garmin bloqueou temporariamente. Aguarde 10 min.")
-        elif "401" in msg or "password" in msg.lower():
-            print("     Senha incorreta. Tente fazer login em connect.garmin.com primeiro.")
         sys.exit(1)
 
-    # ── Atividades ──
     hoje = datetime.today()
     ini  = hoje - timedelta(days=DIAS_ATIVIDADES)
+
+    # ── Atividades ──
     print(f"\n  Buscando atividades (últimos {DIAS_ATIVIDADES} dias)...")
     try:
         raw = api.get_activities_by_date(ini.strftime("%Y-%m-%d"), hoje.strftime("%Y-%m-%d"))
@@ -147,18 +158,20 @@ def main():
 
     treinos   = [t for a in raw if (t := garmin_to_treino(a))]
     ignorados = len(raw) - len(treinos)
-    print(f"  🏃 {len(treinos)} treinos de corrida | ⏭ {ignorados} ignorados")
+    print(f"  🏃 {len(treinos)} treinos | ⏭ {ignorados} ignorados")
 
     if not treinos:
         print("\n  Nenhum treino para sincronizar.")
         return
 
     # ── Estatísticas ──
-    hoje_str = hoje.strftime("%Y-%m-%d")
     trintaDias = (hoje - timedelta(days=30)).strftime("%Y-%m-%d")
+    seteDias   = (hoje - timedelta(days=7)).strftime("%Y-%m-%d")
     treinos_30 = [t for t in treinos if t["data"] >= trintaDias]
+    treinos_7  = [t for t in treinos if t["data"] >= seteDias]
     total_km   = round(sum(t["distancia"] for t in treinos), 1)
     km_30      = round(sum(t["distancia"] for t in treinos_30), 1)
+    km_7       = round(sum(t["distancia"] for t in treinos_7), 1)
 
     # Volume por semana
     semanal = {}
@@ -174,15 +187,11 @@ def main():
     bodyBattery = {}
     for i in range(DIAS_SAUDE):
         d = (hoje - timedelta(days=i)).strftime("%Y-%m-%d")
-        try:
-            bb = api.get_body_battery(d)
-            if bb:
-                vals = [v[1] for v in bb if isinstance(v, list) and len(v) > 1 and v[1] is not None]
-                if vals:
-                    bodyBattery[d] = {"max": max(vals), "min": min(vals)}
-            time.sleep(0.4)
-        except Exception:
-            pass
+        bb = safe_get(api, api.get_body_battery, d)
+        if bb:
+            vals = [v[1] for v in bb if isinstance(v, list) and len(v) > 1 and v[1] is not None]
+            if vals:
+                bodyBattery[d] = {"max": max(vals), "min": min(vals)}
     print(f"  🔋 {len(bodyBattery)} dias com Body Battery")
 
     # ── Sono ──
@@ -190,23 +199,47 @@ def main():
     sono = {}
     for i in range(DIAS_SAUDE):
         d = (hoje - timedelta(days=i)).strftime("%Y-%m-%d")
-        try:
-            s = api.get_sleep_data(d)
-            if s and s.get("dailySleepDTO"):
-                dto = s["dailySleepDTO"]
-                scores = (dto.get("sleepScores") or {})
-                overall = (scores.get("overall") or {})
-                sono[d] = {
-                    "duracao":  round((dto.get("sleepTimeSeconds",  0) or 0) / 3600, 1),
-                    "profundo": round((dto.get("deepSleepSeconds",  0) or 0) / 3600, 1),
-                    "leve":     round((dto.get("lightSleepSeconds", 0) or 0) / 3600, 1),
-                    "rem":      round((dto.get("remSleepSeconds",   0) or 0) / 3600, 1),
-                    "score":    overall.get("value", 0) if isinstance(overall, dict) else 0,
-                }
-            time.sleep(0.4)
-        except Exception:
-            pass
+        s = safe_get(api, api.get_sleep_data, d)
+        if s and s.get("dailySleepDTO"):
+            dto     = s["dailySleepDTO"]
+            scores  = (dto.get("sleepScores") or {})
+            overall = (scores.get("overall") or {})
+            sono[d] = {
+                "duracao":  round((dto.get("sleepTimeSeconds",  0) or 0) / 3600, 1),
+                "profundo": round((dto.get("deepSleepSeconds",  0) or 0) / 3600, 1),
+                "leve":     round((dto.get("lightSleepSeconds", 0) or 0) / 3600, 1),
+                "rem":      round((dto.get("remSleepSeconds",   0) or 0) / 3600, 1),
+                "score":    overall.get("value", 0) if isinstance(overall, dict) else 0,
+            }
     print(f"  😴 {len(sono)} dias com dados de sono")
+
+    # ── Stress ──
+    print(f"  Buscando dados de stress ({DIAS_SAUDE} dias)...")
+    stress = {}
+    for i in range(DIAS_SAUDE):
+        d = (hoje - timedelta(days=i)).strftime("%Y-%m-%d")
+        s = safe_get(api, api.get_stress_data, d)
+        if s and s.get("stressValuesArray"):
+            vals = [v[1] for v in s["stressValuesArray"]
+                    if isinstance(v, list) and len(v) > 1 and v[1] is not None and v[1] >= 0]
+            if vals:
+                stress[d] = {"avg": round(sum(vals) / len(vals)), "max": max(vals)}
+    print(f"  😰 {len(stress)} dias com dados de stress")
+
+    # ── HRV ──
+    print(f"  Buscando HRV ({DIAS_SAUDE} dias)...")
+    hrv = {}
+    for i in range(DIAS_SAUDE):
+        d = (hoje - timedelta(days=i)).strftime("%Y-%m-%d")
+        h = safe_get(api, api.get_hrv_data, d)
+        if h and h.get("hrvSummary"):
+            s = h["hrvSummary"]
+            hrv[d] = {
+                "semanal":    s.get("weeklyAvg", 0),
+                "ontem":      s.get("lastNight", 0),
+                "status":     s.get("status", ""),
+            }
+    print(f"  💚 {len(hrv)} dias com HRV")
 
     # ── Firebase ──
     print("\n  Enviando para Firebase...")
@@ -215,20 +248,25 @@ def main():
         payload = {
             "atividades":  treinos,
             "meta": {
-                "ultimaSync":     hoje.strftime("%Y-%m-%dT%H:%M:%S"),
-                "totalTreinos":   len(treinos),
-                "totalKm":        total_km,
-                "km30dias":       km_30,
-                "treinos30dias":  len(treinos_30),
+                "ultimaSync":    hoje.strftime("%Y-%m-%dT%H:%M:%S"),
+                "totalTreinos":  len(treinos),
+                "totalKm":       total_km,
+                "km30dias":      km_30,
+                "km7dias":       km_7,
+                "treinos30dias": len(treinos_30),
+                "treinos7dias":  len(treinos_7),
             },
             "semanal":     semanal,
             "bodyBattery": bodyBattery,
             "sono":        sono,
+            "stress":      stress,
+            "hrv":         hrv,
         }
         ok = firebase_put(FIREBASE_PATH, payload, token)
         if ok:
-            print(f"  ✅ Firebase atualizado com sucesso!")
-            print(f"     {len(treinos)} treinos · {total_km} km total · {km_30} km nos últimos 30 dias")
+            print(f"  ✅ Firebase atualizado!")
+            print(f"     {len(treinos)} treinos · {total_km} km total")
+            print(f"     {km_30} km nos últimos 30 dias · {km_7} km esta semana")
         else:
             print("  ❌ Erro ao salvar no Firebase")
     except Exception as e:
