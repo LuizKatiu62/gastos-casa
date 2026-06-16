@@ -3,474 +3,479 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Garmin + Claude — Tutorial Completo</title>
+<title>Garmin + Claude — Treinador Pessoal</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
-:root{
-  --bg:#0b1f0d;--surf:#132b16;--card:#1a3a1e;
-  --border:rgba(255,255,255,.1);
-  --green:#00e676;--gdim:#43a047;--gold:#ffd54f;
-  --text:#f0f4f0;--muted:rgba(240,244,240,.55);
-  --code:#061608;--r:16px;
-}
-
 body{
-  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-  background:var(--bg);color:var(--text);
-  min-height:100vh;padding-bottom:60px;
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  background:#f0f4f8;color:#1a202c;line-height:1.6;
 }
 
-/* ── HERO ── */
-.hero{
-  background:linear-gradient(160deg,#061608 0%,#1a4a20 55%,#061608 100%);
-  padding:2.8rem 1.5rem 2.2rem;text-align:center;
-  border-bottom:1px solid var(--border);
+/* ── TOPO ── */
+.header{
+  background:linear-gradient(135deg,#1a56db 0%,#0e9f6e 100%);
+  color:#fff;padding:2.5rem 1.5rem 2rem;text-align:center;
 }
-.badge{
-  display:inline-flex;align-items:center;gap:6px;
-  background:rgba(0,230,118,.12);border:1px solid rgba(0,230,118,.3);
-  border-radius:20px;padding:4px 14px;
-  font-size:11px;font-weight:800;letter-spacing:1.5px;
-  color:var(--green);text-transform:uppercase;margin-bottom:1.2rem;
+.header-logo{font-size:2.5rem;margin-bottom:.5rem}
+.header h1{font-size:1.7rem;font-weight:900;margin-bottom:.4rem}
+.header p{font-size:.92rem;opacity:.88;max-width:360px;margin:0 auto 1.4rem}
+.chips{display:flex;gap:.6rem;justify-content:center;flex-wrap:wrap}
+.chip{
+  background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.35);
+  border-radius:20px;padding:.3rem .85rem;font-size:.75rem;font-weight:700;
 }
-.dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:blink 1.4s infinite}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
-.hero h1{font-size:2.1rem;font-weight:900;line-height:1.1;margin-bottom:.5rem}
-.hero h1 em{color:var(--green);font-style:normal}
-.hero p{font-size:.92rem;color:var(--muted);max-width:380px;margin:0 auto 1.6rem;line-height:1.65}
-.hero-stats{display:flex;gap:2rem;justify-content:center}
-.hs{text-align:center}
-.hs-v{font-size:1.5rem;font-weight:900;color:var(--gold);line-height:1}
-.hs-l{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
 
-/* ── NAV ── */
-.nav{
-  position:sticky;top:0;z-index:50;
-  background:var(--surf);border-bottom:1px solid var(--border);
-  display:flex;overflow-x:auto;scrollbar-width:none;padding:0 .5rem;
+/* ── NAV ÂNCORAS ── */
+.anav{
+  position:sticky;top:0;z-index:99;
+  background:#fff;border-bottom:2px solid #e2e8f0;
+  display:flex;overflow-x:auto;scrollbar-width:none;
+  padding:0 .5rem;gap:.1rem;
 }
-.nav::-webkit-scrollbar{display:none}
-.navb{
-  flex-shrink:0;padding:.7rem .85rem;
-  font-size:.7rem;font-weight:800;letter-spacing:.3px;
-  color:var(--muted);cursor:pointer;
-  border:none;border-bottom:2.5px solid transparent;
-  background:none;font-family:inherit;white-space:nowrap;
-  transition:all .2s;
+.anav::-webkit-scrollbar{display:none}
+.anav a{
+  flex-shrink:0;padding:.6rem .9rem;
+  font-size:.72rem;font-weight:700;color:#64748b;
+  text-decoration:none;border-bottom:2.5px solid transparent;
+  transition:all .2s;white-space:nowrap;
 }
-.navb.on,.navb:hover{color:var(--green);border-bottom-color:var(--green)}
+.anav a:hover{color:#1a56db;border-bottom-color:#1a56db}
 
 /* ── LAYOUT ── */
-.main{max-width:660px;margin:0 auto;padding:1.2rem 1rem}
+.wrap{max-width:680px;margin:0 auto;padding:1.5rem 1rem 3rem}
 
-/* ── SECTION ── */
-.sec{display:none}
-.sec.on{display:block}
-
-/* ── PART HEADER ── */
-.ph{
+/* ── PARTE ── */
+.parte{margin-bottom:2.5rem}
+.parte-titulo{
   display:flex;align-items:center;gap:.75rem;
-  padding:1.5rem 0 .9rem;
-  border-bottom:1px solid var(--border);margin-bottom:.9rem;
+  background:#fff;border-radius:14px 14px 0 0;
+  padding:1rem 1.2rem;
+  border-left:5px solid #1a56db;
+  box-shadow:0 1px 3px rgba(0,0,0,.07);
+  margin-bottom:1px;
 }
-.ph-num{
-  width:34px;height:34px;border-radius:50%;
-  background:var(--green);color:#061608;
-  font-size:.82rem;font-weight:900;
+.parte-num{
+  width:36px;height:36px;border-radius:50%;
+  background:#1a56db;color:#fff;
+  font-size:.85rem;font-weight:900;
   display:flex;align-items:center;justify-content:center;flex-shrink:0;
 }
-.ph-title{font-size:1rem;font-weight:800}
-.ph-time{
-  margin-left:auto;font-size:.68rem;color:var(--muted);
-  background:rgba(255,255,255,.07);border-radius:20px;padding:3px 10px;white-space:nowrap;
+.parte-nome{font-size:1rem;font-weight:800;flex:1}
+.parte-tempo{
+  font-size:.7rem;font-weight:700;color:#1a56db;
+  background:#eff6ff;border-radius:20px;padding:3px 10px;
+}
+.parte-corpo{
+  background:#fff;border-radius:0 0 14px 14px;
+  padding:1.2rem;
+  box-shadow:0 2px 6px rgba(0,0,0,.06);
 }
 
-/* ── STEP ── */
-.step{
-  background:var(--card);border:1px solid var(--border);
-  border-radius:var(--r);margin-bottom:.65rem;overflow:hidden;
+/* ── PASSO ── */
+.passo{margin-bottom:1.6rem;padding-bottom:1.6rem;border-bottom:1px solid #e2e8f0}
+.passo:last-child{margin-bottom:0;padding-bottom:0;border-bottom:none}
+.passo-titulo{
+  display:flex;align-items:center;gap:.65rem;margin-bottom:.75rem;
 }
-.step-hd{
-  display:flex;align-items:center;gap:.75rem;
-  padding:.85rem 1rem;cursor:pointer;user-select:none;
+.passo-num{
+  background:#eff6ff;color:#1a56db;border:1.5px solid #bfdbfe;
+  border-radius:8px;padding:.2rem .55rem;
+  font-size:.75rem;font-weight:900;flex-shrink:0;
 }
-.step-n{
-  width:26px;height:26px;border-radius:50%;
-  background:rgba(0,230,118,.13);border:1px solid rgba(0,230,118,.3);
-  color:var(--green);font-size:.7rem;font-weight:900;
-  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+.passo-nome{font-size:.95rem;font-weight:800;color:#1e293b}
+.passo p{font-size:.87rem;color:#475569;line-height:1.7;margin-bottom:.7rem}
+.passo ul,.passo ol{
+  font-size:.87rem;color:#475569;line-height:1.8;
+  padding-left:1.4rem;margin-bottom:.7rem;
 }
-.step-t{font-size:.88rem;font-weight:700;flex:1}
-.step-arr{font-size:.75rem;color:var(--muted);transition:transform .2s}
-.step.open .step-arr{transform:rotate(180deg)}
-.step-bd{
-  display:none;padding:.1rem 1rem 1rem;
-  border-top:1px solid var(--border);
-}
-.step.open .step-bd{display:block}
-.step-bd p{font-size:.86rem;line-height:1.7;color:var(--muted);margin-top:.7rem}
-.step-bd ul,.step-bd ol{
-  font-size:.86rem;color:var(--muted);line-height:1.8;
-  padding-left:1.4rem;margin-top:.5rem;
-}
-.step-bd li{margin-bottom:.15rem}
+.passo li{margin-bottom:.1rem}
+.passo strong{color:#1e293b}
 
-/* ── CODE ── */
-.cw{position:relative;margin:.75rem 0}
-.cb{
-  background:var(--code);border:1px solid rgba(0,230,118,.2);
-  border-radius:10px;padding:.85rem 3rem .85rem 1rem;
-  font-family:'SF Mono','Fira Code',Consolas,monospace;
-  font-size:.78rem;line-height:1.7;color:var(--green);
+/* ── CÓDIGO ── */
+.bloco-codigo{
+  position:relative;margin:.8rem 0;
+}
+.codigo{
+  background:#1e1e2e;color:#a6e22e;
+  border-radius:10px;padding:.85rem 3.2rem .85rem 1rem;
+  font-family:'SF Mono','Fira Code',Menlo,Consolas,monospace;
+  font-size:.78rem;line-height:1.65;
   overflow-x:auto;white-space:pre;
+  border:1px solid #2d2d3f;
 }
-.cpbtn{
+.btn-copiar{
   position:absolute;top:.45rem;right:.45rem;
-  background:rgba(0,230,118,.13);border:1px solid rgba(0,230,118,.25);
-  color:var(--green);border-radius:7px;
+  background:#2d2d3f;border:1px solid #3d3d5a;
+  color:#a6e22e;border-radius:7px;
   padding:.28rem .6rem;font-size:.65rem;font-weight:700;
   cursor:pointer;transition:all .2s;white-space:nowrap;
+  font-family:inherit;
 }
-.cpbtn:hover{background:rgba(0,230,118,.22)}
-.cpbtn.ok{background:rgba(0,230,118,.3);color:#0b1f0d}
+.btn-copiar:hover{background:#3d3d5a}
+.btn-copiar.ok{background:#0e9f6e;color:#fff;border-color:#0e9f6e}
 
-/* ── CALLOUTS ── */
-.co{
-  border-radius:10px;padding:.7rem 1rem;
-  font-size:.82rem;line-height:1.65;margin:.7rem 0;
+/* ── OUTPUT DE TERMINAL ── */
+.terminal-out{
+  background:#0d1117;border:1px solid #30363d;
+  border-radius:8px;padding:.75rem 1rem;
+  font-family:'SF Mono','Fira Code',Menlo,Consolas,monospace;
+  font-size:.76rem;color:#8b949e;line-height:1.6;
+  margin:.6rem 0;white-space:pre-wrap;
+}
+.terminal-out .green{color:#3fb950}
+.terminal-out .white{color:#e6edf3}
+
+/* ── ALERTAS ── */
+.alerta{
+  border-radius:10px;padding:.75rem 1rem;
+  font-size:.84rem;line-height:1.65;margin:.7rem 0;
   display:flex;gap:.6rem;align-items:flex-start;
 }
-.co.ok{background:rgba(0,230,118,.09);border:1px solid rgba(0,230,118,.22);color:#a5d6a7}
-.co.warn{background:rgba(255,213,79,.08);border:1px solid rgba(255,213,79,.22);color:#fff9c4}
-.co.info{background:rgba(33,150,243,.09);border:1px solid rgba(33,150,243,.22);color:#b3e5fc}
-.co-ico{font-size:1rem;flex-shrink:0;margin-top:1px}
+.alerta.ok{background:#ecfdf5;border:1px solid #6ee7b7;color:#065f46}
+.alerta.atencao{background:#fffbeb;border:1px solid #fcd34d;color:#78350f}
+.alerta.info{background:#eff6ff;border:1px solid #93c5fd;color:#1e40af}
+.alerta.dica{background:#f5f3ff;border:1px solid #c4b5fd;color:#4c1d95}
+.alerta-ico{font-size:1rem;flex-shrink:0;margin-top:1px}
 
-/* ── QUESTION LIST ── */
-.qcat{margin-bottom:1.4rem}
-.qcat-t{
-  font-size:.7rem;font-weight:800;letter-spacing:1.5px;
-  text-transform:uppercase;color:var(--gold);margin-bottom:.6rem;
+/* ── PERGUNTAS ── */
+.categoria-perguntas{margin-bottom:1.4rem}
+.cat-titulo{
+  font-size:.72rem;font-weight:800;letter-spacing:1.5px;
+  text-transform:uppercase;color:#1a56db;margin-bottom:.6rem;
+  display:flex;align-items:center;gap:.4rem;
 }
-.qi{
-  background:var(--card);border:1px solid var(--border);
-  border-radius:10px;padding:.65rem 1rem;
-  font-size:.84rem;color:var(--muted);margin-bottom:.35rem;
+.pergunta{
+  background:#f8fafc;border:1px solid #e2e8f0;border-left:3px solid #1a56db;
+  border-radius:0 8px 8px 0;padding:.6rem .9rem;
+  font-size:.85rem;color:#334155;margin-bottom:.35rem;
+  cursor:pointer;transition:background .15s;
+  display:flex;align-items:center;justify-content:space-between;gap:.5rem;
 }
-.qi::before{content:'› ';color:var(--green);font-weight:700}
+.pergunta:hover{background:#eff6ff}
+.pergunta-texto{flex:1}
+.pergunta-copiar{
+  background:#eff6ff;border:1px solid #bfdbfe;color:#1a56db;
+  border-radius:6px;padding:.18rem .5rem;font-size:.62rem;font-weight:700;
+  cursor:pointer;white-space:nowrap;flex-shrink:0;
+  font-family:inherit;transition:all .15s;
+}
+.pergunta-copiar:hover{background:#1a56db;color:#fff}
+.pergunta-copiar.ok{background:#0e9f6e;color:#fff;border-color:#0e9f6e}
 
-/* ── TROUBLE ── */
-.tr{background:var(--card);border:1px solid var(--border);border-radius:var(--r);margin-bottom:.55rem;overflow:hidden}
-.tr-q{
-  padding:.85rem 1rem;font-size:.86rem;font-weight:700;
-  cursor:pointer;display:flex;justify-content:space-between;align-items:center;
+/* ── PROBLEMAS ── */
+.problema{
+  background:#fff;border:1px solid #e2e8f0;border-radius:12px;
+  margin-bottom:.65rem;overflow:hidden;
 }
-.tr-q span{color:#ef9a9a}
-.tr-arr{font-size:.75rem;color:var(--muted);transition:transform .2s;flex-shrink:0;margin-left:.5rem}
-.tr.open .tr-arr{transform:rotate(180deg)}
-.tr-a{
+.problema-titulo{
+  padding:.85rem 1rem;font-size:.88rem;font-weight:700;
+  color:#dc2626;cursor:pointer;
+  display:flex;justify-content:space-between;align-items:center;
+  user-select:none;
+}
+.problema-arr{transition:transform .2s;color:#94a3b8;font-size:.75rem}
+.problema.open .problema-arr{transform:rotate(180deg)}
+.problema-corpo{
   display:none;padding:0 1rem .9rem;
-  font-size:.82rem;color:var(--muted);line-height:1.7;
-  border-top:1px solid var(--border);
+  font-size:.85rem;color:#475569;line-height:1.7;
+  border-top:1px solid #f1f5f9;
 }
-.tr.open .tr-a{display:block}
-.tr-a p{margin-top:.6rem}
+.problema.open .problema-corpo{display:block}
+.problema-corpo p{margin-top:.6rem}
 
-/* ── SECURITY GRID ── */
-.sec-grid{display:grid;grid-template-columns:1fr 1fr;gap:.55rem;margin-top:.85rem}
-.sg{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:.75rem .9rem}
-.sg strong{color:var(--text);display:block;font-size:.82rem;margin-bottom:3px}
-.sg p{font-size:.75rem;color:var(--muted);line-height:1.5}
+/* ── SEGURANÇA ── */
+.grid-seg{display:grid;grid-template-columns:1fr 1fr;gap:.55rem;margin-top:.75rem}
+.seg-card{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:.75rem .9rem}
+.seg-card strong{color:#065f46;display:block;font-size:.82rem;margin-bottom:2px}
+.seg-card p{font-size:.75rem;color:#166534;line-height:1.5}
 
-/* ── BONUS ── */
-.bonus{
-  background:linear-gradient(135deg,#1a3a1e,#0f2a12);
-  border:1px solid var(--gdim);border-radius:var(--r);padding:1.25rem;
+/* ── BÔNUS ── */
+.bonus-box{
+  background:#fefce8;border:1px solid #fde68a;border-radius:12px;padding:1.1rem;
+}
+.bonus-box pre{
+  background:#1e1e2e;border-radius:8px;padding:.85rem;
+  font-size:.76rem;line-height:1.75;color:#a6e22e;margin-top:.75rem;
+  overflow-x:auto;white-space:pre-wrap;
+  font-family:'SF Mono','Fira Code',Menlo,Consolas,monospace;
+  border:1px solid #2d2d3f;
 }
 
-/* ── CREDITS ── */
-.creds{
-  margin-top:2rem;background:var(--card);
-  border:1px solid var(--border);border-radius:var(--r);
-  padding:1.4rem;text-align:center;
+/* ── CRÉDITOS ── */
+.creditos{
+  background:#fff;border:1px solid #e2e8f0;border-radius:14px;
+  padding:1.4rem;text-align:center;margin-top:2rem;
 }
-.creds h3{font-size:1rem;font-weight:800;margin-bottom:.4rem}
-.creds p{font-size:.82rem;color:var(--muted);line-height:1.6}
-.cta-grid{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-top:1rem}
-.cta{
-  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.13);
-  border-radius:10px;padding:.65rem .5rem;
-  font-size:.78rem;font-weight:700;color:var(--text);
-  text-decoration:none;display:block;text-align:center;cursor:pointer;
+.creditos h3{font-size:1rem;font-weight:800;margin-bottom:.35rem;color:#1e293b}
+.creditos p{font-size:.83rem;color:#64748b;line-height:1.6}
+.cta-row{display:flex;gap:.5rem;margin-top:1rem;flex-wrap:wrap}
+.cta-btn{
+  flex:1;min-width:140px;
+  padding:.7rem .5rem;border-radius:10px;font-size:.82rem;font-weight:700;
+  text-align:center;text-decoration:none;cursor:pointer;border:none;font-family:inherit;
 }
-.cta.g{background:var(--green);color:#061608;border-color:var(--green)}
+.cta-ig{background:#e1306c;color:#fff}
+.cta-share{background:#f1f5f9;color:#334155;border:1px solid #e2e8f0}
 
 @media(max-width:400px){
-  .hero h1{font-size:1.75rem}
-  .hero-stats{gap:1.2rem}
-  .sec-grid{grid-template-columns:1fr}
-  .cta-grid{grid-template-columns:1fr}
+  .header h1{font-size:1.4rem}
+  .grid-seg{grid-template-columns:1fr}
+  .cta-row{flex-direction:column}
 }
 </style>
 </head>
 <body>
 
-<div class="hero">
-  <div class="badge"><span class="dot"></span> Tutorial</div>
-  <h1>Garmin + <em>Claude</em><br>Treinador Pessoal</h1>
-  <p>Conecte seu Garmin ao Claude e tenha um treinador pessoal que conhece cada treino seu.</p>
-  <div class="hero-stats">
-    <div class="hs"><div class="hs-v">~15</div><div class="hs-l">minutos</div></div>
-    <div class="hs"><div class="hs-v">5</div><div class="hs-l">partes</div></div>
-    <div class="hs"><div class="hs-v">100%</div><div class="hs-l">gratuito</div></div>
+<div class="header">
+  <div class="header-logo">🏃 🤖</div>
+  <h1>Garmin + Claude<br>Treinador Pessoal</h1>
+  <p>Conecte seu Garmin ao Claude e tenha um treinador que conhece cada treino seu — de graça.</p>
+  <div class="chips">
+    <span class="chip">⏱ ~15 minutos</span>
+    <span class="chip">🍎 Mac</span>
+    <span class="chip">✅ 100% gratuito</span>
   </div>
 </div>
 
-<nav class="nav">
-  <button class="navb on" onclick="go('p1',this)">1 · Ferramentas</button>
-  <button class="navb"    onclick="go('p2',this)">2 · Garmin MCP</button>
-  <button class="navb"    onclick="go('p3',this)">3 · Login</button>
-  <button class="navb"    onclick="go('p4',this)">4 · Claude</button>
-  <button class="navb"    onclick="go('p5',this)">5 · Teste</button>
-  <button class="navb"    onclick="go('perguntas',this)">💬 Perguntas</button>
-  <button class="navb"    onclick="go('problemas',this)">🆘 Problemas</button>
-  <button class="navb"    onclick="go('bonus',this)">🎁 Bônus</button>
+<nav class="anav">
+  <a href="#parte1">⚙️ Parte 1</a>
+  <a href="#parte2">🐍 Parte 2</a>
+  <a href="#parte3">🔐 Parte 3</a>
+  <a href="#parte4">⚙️ Parte 4</a>
+  <a href="#parte5">✅ Parte 5</a>
+  <a href="#perguntas">💬 Perguntas</a>
+  <a href="#problemas">🆘 Problemas</a>
+  <a href="#bonus">🎁 Bônus</a>
 </nav>
 
-<div class="main">
+<div class="wrap">
 
-<!-- ══ PARTE 1 ══ -->
-<div class="sec on" id="p1">
-  <div class="ph">
-    <div class="ph-num">1</div>
-    <div class="ph-title">Instalando as ferramentas</div>
-    <div class="ph-time">⏱ ~5 min</div>
+<!-- ══════════════ PARTE 1 ══════════════ -->
+<div class="parte" id="parte1">
+  <div class="parte-titulo">
+    <div class="parte-num">1</div>
+    <div class="parte-nome">⚙️ Instalando as ferramentas</div>
+    <div class="parte-tempo">5 min</div>
   </div>
+  <div class="parte-corpo">
 
-  <div class="step open">
-    <div class="step-hd" onclick="tog(this)">
-      <div class="step-n">1.1</div>
-      <div class="step-t">Abrir o Terminal</div>
-      <div class="step-arr">▼</div>
+    <div class="passo">
+      <div class="passo-titulo">
+        <span class="passo-num">1.1</span>
+        <span class="passo-nome">Abrir o Terminal</span>
+      </div>
+      <p>No seu Mac:</p>
+      <ul>
+        <li>Aperta <strong>Cmd + Espaço</strong> (abre o Spotlight)</li>
+        <li>Digita <strong>Terminal</strong></li>
+        <li>Aperta <strong>Enter</strong></li>
+      </ul>
+      <p>Vai abrir uma janela preta ou cinza. Não tem segredo: você vai colar uns comandos aqui.</p>
     </div>
-    <div class="step-bd">
-      <p>No seu Mac, aperta <strong>Cmd + Espaço</strong>, digita <strong>Terminal</strong> e aperta Enter.</p>
-      <p>Vai abrir uma janela preta ou cinza. Não tem segredo — você vai colar uns comandos aqui.</p>
-    </div>
-  </div>
 
-  <div class="step">
-    <div class="step-hd" onclick="tog(this)">
-      <div class="step-n">1.2</div>
-      <div class="step-t">Instalar o Homebrew</div>
-      <div class="step-arr">▼</div>
-    </div>
-    <div class="step-bd">
+    <div class="passo">
+      <div class="passo-titulo">
+        <span class="passo-num">1.2</span>
+        <span class="passo-nome">Instalar o Homebrew</span>
+      </div>
       <p>Cola esse comando no Terminal e aperta Enter:</p>
-      <div class="cw">
-        <div class="cb">/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"</div>
-        <button class="cpbtn" onclick="cp(this)">Copiar</button>
+      <div class="bloco-codigo">
+        <div class="codigo">/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"</div>
+        <button class="btn-copiar" onclick="copiar(this)">Copiar</button>
       </div>
       <p>O que vai acontecer:</p>
       <ul>
-        <li>Vai pedir sua senha do Mac (a mesma do login)</li>
-        <li>Digita e aperta Enter — <strong>não aparece nada na tela enquanto digita</strong>, é normal!</li>
+        <li>Vai pedir sua senha do Mac (a mesma que você usa pra fazer login)</li>
+        <li>Digita ela e aperta Enter — <strong>não aparece nada na tela enquanto digita, é normal!</strong></li>
         <li>Espera terminar (3–5 minutos)</li>
       </ul>
-      <div class="co ok"><span class="co-ico">✅</span>Quando terminar, vai aparecer uma mensagem com <strong>Next steps:</strong></div>
+      <p>Quando terminar, vai aparecer uma mensagem como esta:</p>
+      <div class="terminal-out"><span class="green">==> Next steps:</span>
+<span class="white">- Run these commands in your terminal to add Homebrew to your PATH:</span>
+  echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> /Users/SEUNOME/.zprofile
+  eval "$(/opt/homebrew/bin/brew shellenv)"</div>
     </div>
-  </div>
 
-  <div class="step">
-    <div class="step-hd" onclick="tog(this)">
-      <div class="step-n">1.3</div>
-      <div class="step-t">Adicionar Homebrew ao sistema</div>
-      <div class="step-arr">▼</div>
-    </div>
-    <div class="step-bd">
-      <p>Cola esses dois comandos, <strong>um de cada vez</strong>:</p>
-      <div class="cw">
-        <div class="cb">echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile</div>
-        <button class="cpbtn" onclick="cp(this)">Copiar</button>
+    <div class="passo">
+      <div class="passo-titulo">
+        <span class="passo-num">1.3</span>
+        <span class="passo-nome">Adicionar Homebrew ao sistema</span>
       </div>
-      <div class="cw">
-        <div class="cb">source ~/.zprofile</div>
-        <button class="cpbtn" onclick="cp(this)">Copiar</button>
+      <p>Cola esses dois comandos, <strong>um de cada vez</strong>:</p>
+      <div class="bloco-codigo">
+        <div class="codigo">echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile</div>
+        <button class="btn-copiar" onclick="copiar(this)">Copiar</button>
+      </div>
+      <div class="bloco-codigo">
+        <div class="codigo">source ~/.zprofile</div>
+        <button class="btn-copiar" onclick="copiar(this)">Copiar</button>
       </div>
       <p>Testa se funcionou:</p>
-      <div class="cw">
-        <div class="cb">brew --version</div>
-        <button class="cpbtn" onclick="cp(this)">Copiar</button>
+      <div class="bloco-codigo">
+        <div class="codigo">brew --version</div>
+        <button class="btn-copiar" onclick="copiar(this)">Copiar</button>
       </div>
-      <div class="co ok"><span class="co-ico">✅</span>Se aparecer <strong>Homebrew 4.x.x</strong>, tá certo!</div>
+      <div class="alerta ok"><span class="alerta-ico">✅</span>Se aparecer algo como <strong>Homebrew 4.x.x</strong>, tá certo!</div>
     </div>
-  </div>
 
-  <div class="step">
-    <div class="step-hd" onclick="tog(this)">
-      <div class="step-n">1.4</div>
-      <div class="step-t">Instalar o Python 3.11</div>
-      <div class="step-arr">▼</div>
-    </div>
-    <div class="step-bd">
-      <div class="cw">
-        <div class="cb">brew install python@3.11</div>
-        <button class="cpbtn" onclick="cp(this)">Copiar</button>
+    <div class="passo">
+      <div class="passo-titulo">
+        <span class="passo-num">1.4</span>
+        <span class="passo-nome">Instalar o Python 3.11</span>
       </div>
-      <div class="co info"><span class="co-ico">☕</span>Pode demorar uns 5 minutos. Aproveita pra fazer um café!</div>
+      <div class="bloco-codigo">
+        <div class="codigo">brew install python@3.11</div>
+        <button class="btn-copiar" onclick="copiar(this)">Copiar</button>
+      </div>
+      <div class="alerta info"><span class="alerta-ico">☕</span>Espera terminar (pode demorar 5 minutos). Aproveita pra fazer um café.</div>
     </div>
+
   </div>
 </div>
 
-<!-- ══ PARTE 2 ══ -->
-<div class="sec" id="p2">
-  <div class="ph">
-    <div class="ph-num">2</div>
-    <div class="ph-title">Instalando o conector Garmin</div>
-    <div class="ph-time">⏱ ~5 min</div>
+<!-- ══════════════ PARTE 2 ══════════════ -->
+<div class="parte" id="parte2">
+  <div class="parte-titulo" style="border-left-color:#0e9f6e">
+    <div class="parte-num" style="background:#0e9f6e">2</div>
+    <div class="parte-nome">🐍 Instalando o conector Garmin</div>
+    <div class="parte-tempo" style="color:#0e9f6e;background:#ecfdf5">5 min</div>
   </div>
+  <div class="parte-corpo">
 
-  <div class="step open">
-    <div class="step-hd" onclick="tog(this)">
-      <div class="step-n">2.1</div>
-      <div class="step-t">Baixar o programa</div>
-      <div class="step-arr">▼</div>
-    </div>
-    <div class="step-bd">
+    <div class="passo">
+      <div class="passo-titulo">
+        <span class="passo-num" style="color:#0e9f6e;background:#ecfdf5;border-color:#6ee7b7">2.1</span>
+        <span class="passo-nome">Baixar o programa</span>
+      </div>
       <p>Cola esses comandos <strong>um de cada vez</strong>:</p>
-      <div class="cw">
-        <div class="cb">mkdir -p ~/garmin_mcp_server</div>
-        <button class="cpbtn" onclick="cp(this)">Copiar</button>
+      <div class="bloco-codigo">
+        <div class="codigo">mkdir -p ~/garmin_mcp_server</div>
+        <button class="btn-copiar" onclick="copiar(this)">Copiar</button>
       </div>
-      <div class="cw">
-        <div class="cb">cd ~/garmin_mcp_server</div>
-        <button class="cpbtn" onclick="cp(this)">Copiar</button>
+      <div class="bloco-codigo">
+        <div class="codigo">cd ~/garmin_mcp_server</div>
+        <button class="btn-copiar" onclick="copiar(this)">Copiar</button>
       </div>
-      <div class="cw">
-        <div class="cb">git clone https://github.com/Taxuspt/garmin_mcp.git .</div>
-        <button class="cpbtn" onclick="cp(this)">Copiar</button>
+      <div class="bloco-codigo">
+        <div class="codigo">git clone https://github.com/Taxuspt/garmin_mcp.git .</div>
+        <button class="btn-copiar" onclick="copiar(this)">Copiar</button>
       </div>
     </div>
-  </div>
 
-  <div class="step">
-    <div class="step-hd" onclick="tog(this)">
-      <div class="step-n">2.2</div>
-      <div class="step-t">Criar ambiente Python isolado</div>
-      <div class="step-arr">▼</div>
-    </div>
-    <div class="step-bd">
-      <div class="cw">
-        <div class="cb">/opt/homebrew/bin/python3.11 -m venv venv</div>
-        <button class="cpbtn" onclick="cp(this)">Copiar</button>
+    <div class="passo">
+      <div class="passo-titulo">
+        <span class="passo-num" style="color:#0e9f6e;background:#ecfdf5;border-color:#6ee7b7">2.2</span>
+        <span class="passo-nome">Criar ambiente Python isolado</span>
       </div>
-      <div class="cw">
-        <div class="cb">source venv/bin/activate</div>
-        <button class="cpbtn" onclick="cp(this)">Copiar</button>
+      <div class="bloco-codigo">
+        <div class="codigo">/opt/homebrew/bin/python3.11 -m venv venv</div>
+        <button class="btn-copiar" onclick="copiar(this)">Copiar</button>
       </div>
-      <div class="co info"><span class="co-ico">ℹ️</span>O terminal vai começar com <strong>(venv)</strong> — isso é normal e tá tudo certo.</div>
+      <div class="bloco-codigo">
+        <div class="codigo">source venv/bin/activate</div>
+        <button class="btn-copiar" onclick="copiar(this)">Copiar</button>
+      </div>
+      <div class="alerta info"><span class="alerta-ico">ℹ️</span>Você vai notar que o terminal agora começa com <strong>(venv)</strong> — isso é normal e indica que tá tudo certo.</div>
     </div>
-  </div>
 
-  <div class="step">
-    <div class="step-hd" onclick="tog(this)">
-      <div class="step-n">2.3</div>
-      <div class="step-t">Instalar dependências</div>
-      <div class="step-arr">▼</div>
-    </div>
-    <div class="step-bd">
-      <div class="cw">
-        <div class="cb">pip install --upgrade pip</div>
-        <button class="cpbtn" onclick="cp(this)">Copiar</button>
+    <div class="passo">
+      <div class="passo-titulo">
+        <span class="passo-num" style="color:#0e9f6e;background:#ecfdf5;border-color:#6ee7b7">2.3</span>
+        <span class="passo-nome">Instalar dependências</span>
       </div>
-      <div class="cw">
-        <div class="cb">pip install -e .</div>
-        <button class="cpbtn" onclick="cp(this)">Copiar</button>
+      <div class="bloco-codigo">
+        <div class="codigo">pip install --upgrade pip</div>
+        <button class="btn-copiar" onclick="copiar(this)">Copiar</button>
       </div>
-      <div class="co ok"><span class="co-ico">✅</span>Quando aparecer <strong>Successfully installed garmin-mcp…</strong>, tá pronto!</div>
+      <div class="bloco-codigo">
+        <div class="codigo">pip install -e .</div>
+        <button class="btn-copiar" onclick="copiar(this)">Copiar</button>
+      </div>
+      <p>Espera terminar.</p>
+      <div class="alerta ok"><span class="alerta-ico">✅</span>Quando aparecer <strong>Successfully installed garmin-mcp…</strong>, tá pronto!</div>
     </div>
+
   </div>
 </div>
 
-<!-- ══ PARTE 3 ══ -->
-<div class="sec" id="p3">
-  <div class="ph">
-    <div class="ph-num">3</div>
-    <div class="ph-title">Conectando com sua conta Garmin</div>
-    <div class="ph-time">⏱ ~2 min</div>
+<!-- ══════════════ PARTE 3 ══════════════ -->
+<div class="parte" id="parte3">
+  <div class="parte-titulo" style="border-left-color:#7c3aed">
+    <div class="parte-num" style="background:#7c3aed">3</div>
+    <div class="parte-nome">🔐 Conectando com sua conta Garmin</div>
+    <div class="parte-tempo" style="color:#7c3aed;background:#f5f3ff">2 min</div>
   </div>
+  <div class="parte-corpo">
 
-  <div class="step open">
-    <div class="step-hd" onclick="tog(this)">
-      <div class="step-n">3.1</div>
-      <div class="step-t">Autenticar no Garmin Connect</div>
-      <div class="step-arr">▼</div>
-    </div>
-    <div class="step-bd">
-      <div class="cw">
-        <div class="cb">garmin-mcp-auth</div>
-        <button class="cpbtn" onclick="cp(this)">Copiar</button>
+    <div class="passo">
+      <div class="passo-titulo">
+        <span class="passo-num" style="color:#7c3aed;background:#f5f3ff;border-color:#c4b5fd">3.1</span>
+        <span class="passo-nome">Autenticar</span>
+      </div>
+      <p>Cola esse comando:</p>
+      <div class="bloco-codigo">
+        <div class="codigo">garmin-mcp-auth</div>
+        <button class="btn-copiar" onclick="copiar(this)">Copiar</button>
       </div>
       <p>O que vai acontecer:</p>
       <ol>
         <li>Vai pedir seu <strong>email do Garmin Connect</strong></li>
         <li>Vai pedir sua <strong>senha do Garmin</strong></li>
-        <li>Se você tem 2 fatores (MFA) ativado, vai pedir o código</li>
+        <li>Se você tem autenticação de 2 fatores (MFA) ativada no Garmin, vai pedir o código</li>
       </ol>
-      <div class="co ok"><span class="co-ico">✅</span><div>Sucesso quando aparecer:<br><strong>Authentication successful! · SUCCESS: You can now use the Garmin MCP server!</strong></div></div>
-      <div class="co info"><span class="co-ico">🎉</span>Os tokens de acesso ficam salvos no seu Mac e <strong>duram 6 meses</strong>.</div>
+      <p>Quando terminar com sucesso, você vai ver:</p>
+      <div class="terminal-out"><span class="green">✓ Authentication successful!</span>
+<span class="white">Logged in as: SEU NOME</span>
+
+<span class="green">SUCCESS: You can now use the Garmin MCP server!</span></div>
+      <div class="alerta ok"><span class="alerta-ico">🎉</span>Os tokens de acesso foram salvos no seu Mac e <strong>duram 6 meses</strong>.</div>
     </div>
+
   </div>
 </div>
 
-<!-- ══ PARTE 4 ══ -->
-<div class="sec" id="p4">
-  <div class="ph">
-    <div class="ph-num">4</div>
-    <div class="ph-title">Configurando o Claude Desktop</div>
-    <div class="ph-time">⏱ ~3 min</div>
+<!-- ══════════════ PARTE 4 ══════════════ -->
+<div class="parte" id="parte4">
+  <div class="parte-titulo" style="border-left-color:#d97706">
+    <div class="parte-num" style="background:#d97706">4</div>
+    <div class="parte-nome">⚙️ Configurando o Claude Desktop</div>
+    <div class="parte-tempo" style="color:#d97706;background:#fffbeb">3 min</div>
   </div>
+  <div class="parte-corpo">
 
-  <div class="step open">
-    <div class="step-hd" onclick="tog(this)">
-      <div class="step-n">4.1</div>
-      <div class="step-t">Descobrir seu nome de usuário</div>
-      <div class="step-arr">▼</div>
-    </div>
-    <div class="step-bd">
-      <div class="cw">
-        <div class="cb">whoami</div>
-        <button class="cpbtn" onclick="cp(this)">Copiar</button>
+    <div class="passo">
+      <div class="passo-titulo">
+        <span class="passo-num" style="color:#d97706;background:#fffbeb;border-color:#fcd34d">4.1</span>
+        <span class="passo-nome">Descobrir seu nome de usuário</span>
       </div>
-      <p>Vai aparecer seu nome de usuário do Mac (ex: <strong>joaopaulo</strong>). <strong>Anota</strong> — você vai usar agora.</p>
+      <div class="bloco-codigo">
+        <div class="codigo">whoami</div>
+        <button class="btn-copiar" onclick="copiar(this)">Copiar</button>
+      </div>
+      <p>Vai aparecer seu nome de usuário do Mac (exemplo: <strong>joaopaulo</strong>). <strong>Anota porque você vai usar ele agora.</strong></p>
     </div>
-  </div>
 
-  <div class="step">
-    <div class="step-hd" onclick="tog(this)">
-      <div class="step-n">4.2</div>
-      <div class="step-t">Abrir o arquivo de configuração</div>
-      <div class="step-arr">▼</div>
-    </div>
-    <div class="step-bd">
-      <div class="cw">
-        <div class="cb">open ~/Library/Application\ Support/Claude/claude_desktop_config.json</div>
-        <button class="cpbtn" onclick="cp(this)">Copiar</button>
+    <div class="passo">
+      <div class="passo-titulo">
+        <span class="passo-num" style="color:#d97706;background:#fffbeb;border-color:#fcd34d">4.2</span>
+        <span class="passo-nome">Abrir o arquivo de configuração</span>
+      </div>
+      <div class="bloco-codigo">
+        <div class="codigo">open ~/Library/Application\ Support/Claude/claude_desktop_config.json</div>
+        <button class="btn-copiar" onclick="copiar(this)">Copiar</button>
       </div>
       <p>Vai abrir um editor de texto com um arquivo JSON.</p>
     </div>
-  </div>
 
-  <div class="step">
-    <div class="step-hd" onclick="tog(this)">
-      <div class="step-n">4.3</div>
-      <div class="step-t">Substituir o conteúdo</div>
-      <div class="step-arr">▼</div>
-    </div>
-    <div class="step-bd">
-      <p><strong>Apaga tudo</strong> que tá no arquivo e cola exatamente isso:</p>
-      <div class="cw">
-        <div class="cb">{
+    <div class="passo">
+      <div class="passo-titulo">
+        <span class="passo-num" style="color:#d97706;background:#fffbeb;border-color:#fcd34d">4.3</span>
+        <span class="passo-nome">Substituir o conteúdo</span>
+      </div>
+      <p><strong>APAGA TUDO</strong> que tá no arquivo e cola exatamente isso:</p>
+      <div class="bloco-codigo">
+        <div class="codigo">{
   "mcpServers": {
     "garmin-local": {
       "command": "/Users/SEUNOME/garmin_mcp_server/venv/bin/garmin-mcp",
@@ -480,189 +485,203 @@ body{
     }
   }
 }</div>
-        <button class="cpbtn" onclick="cp(this)">Copiar</button>
+        <button class="btn-copiar" onclick="copiar(this)">Copiar</button>
       </div>
-      <div class="co warn"><span class="co-ico">⚠️</span>Substitua <strong>SEUNOME</strong> (nos 2 lugares) pelo nome que apareceu no <strong>whoami</strong>.</div>
+      <div class="alerta atencao"><span class="alerta-ico">⚠️</span><div><strong>IMPORTANTE:</strong> Substitua <strong>SEUNOME</strong> (em 2 lugares) pelo nome que apareceu no comando <code>whoami</code>.<br><br>Exemplo: se seu usuário é <strong>joaopaulo</strong>, troca SEUNOME por joaopaulo nos dois lugares.</div></div>
     </div>
-  </div>
 
-  <div class="step">
-    <div class="step-hd" onclick="tog(this)">
-      <div class="step-n">4.4</div>
-      <div class="step-t">Salvar e reiniciar o Claude</div>
-      <div class="step-arr">▼</div>
+    <div class="passo">
+      <div class="passo-titulo">
+        <span class="passo-num" style="color:#d97706;background:#fffbeb;border-color:#fcd34d">4.4</span>
+        <span class="passo-nome">Salvar</span>
+      </div>
+      <p>Aperta <strong>Cmd + S</strong> para salvar.</p>
     </div>
-    <div class="step-bd">
+
+    <div class="passo">
+      <div class="passo-titulo">
+        <span class="passo-num" style="color:#d97706;background:#fffbeb;border-color:#fcd34d">4.5</span>
+        <span class="passo-nome">Reiniciar Claude</span>
+      </div>
       <ol>
-        <li>Aperta <strong>Cmd + S</strong> para salvar o arquivo</li>
         <li>Feche o Claude Desktop completamente (<strong>Cmd + Q</strong>)</li>
-        <li>Abra o Claude de novo</li>
+        <li>Abra de novo</li>
       </ol>
-      <div class="co ok"><span class="co-ico">✅</span>O Claude Desktop agora tem acesso ao servidor Garmin!</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════ PARTE 5 ══════════════ -->
+<div class="parte" id="parte5">
+  <div class="parte-titulo" style="border-left-color:#059669">
+    <div class="parte-num" style="background:#059669">5</div>
+    <div class="parte-nome">✅ Testando</div>
+    <div class="parte-tempo" style="color:#059669;background:#ecfdf5">1 min</div>
+  </div>
+  <div class="parte-corpo">
+    <div class="passo">
+      <p>Abre seu projeto <strong>"Treinador"</strong> e pergunta:</p>
+      <div class="bloco-codigo">
+        <div class="codigo">Quais foram meus últimos 5 treinos?</div>
+        <button class="btn-copiar" onclick="copiar(this)">Copiar</button>
+      </div>
+      <div class="alerta ok" style="font-size:.92rem;padding:1rem"><span class="alerta-ico">🎉</span><strong>Se o Claude responder com seus dados reais do Garmin, DEU CERTO!</strong></div>
     </div>
   </div>
 </div>
 
-<!-- ══ PARTE 5 ══ -->
-<div class="sec" id="p5">
-  <div class="ph">
-    <div class="ph-num">5</div>
-    <div class="ph-title">Testando a conexão</div>
-    <div class="ph-time">⏱ ~1 min</div>
+<!-- ══════════════ PERGUNTAS ══════════════ -->
+<div class="parte" id="perguntas">
+  <div class="parte-titulo" style="border-left-color:#0ea5e9">
+    <div class="parte-num" style="background:#0ea5e9">💬</div>
+    <div class="parte-nome">Perguntas matadoras pra começar</div>
   </div>
+  <div class="parte-corpo">
+    <p style="font-size:.86rem;color:#475569;margin-bottom:1.2rem">Agora que tá conectado, experimenta perguntar coisas como:</p>
 
-  <div class="step open">
-    <div class="step-hd" onclick="tog(this)">
-      <div class="step-n">5.1</div>
-      <div class="step-t">Primeira pergunta</div>
-      <div class="step-arr">▼</div>
+    <div class="categoria-perguntas">
+      <div class="cat-titulo">📈 Análise de performance</div>
+      <div class="pergunta"><span class="pergunta-texto">Como tá meu volume semanal nos últimos 30 dias?</span><button class="pergunta-copiar" onclick="copiarPerg(this)">Copiar</button></div>
+      <div class="pergunta"><span class="pergunta-texto">Compara meu pace médio desse mês com o mês passado</span><button class="pergunta-copiar" onclick="copiarPerg(this)">Copiar</button></div>
+      <div class="pergunta"><span class="pergunta-texto">Quais treinos foram mais intensos essa semana?</span><button class="pergunta-copiar" onclick="copiarPerg(this)">Copiar</button></div>
     </div>
-    <div class="step-bd">
-      <p>Abre o Claude Desktop e pergunta:</p>
-      <div class="cw">
-        <div class="cb">Quais foram meus últimos 5 treinos?</div>
-        <button class="cpbtn" onclick="cp(this)">Copiar</button>
-      </div>
-      <div class="co ok"><span class="co-ico">🎉</span>Se o Claude responder com seus dados reais do Garmin, DEU CERTO! Seu treinador pessoal tá pronto.</div>
+
+    <div class="categoria-perguntas">
+      <div class="cat-titulo">💤 Recuperação e bem-estar</div>
+      <div class="pergunta"><span class="pergunta-texto">Como tá meu sono em relação aos meus treinos?</span><button class="pergunta-copiar" onclick="copiarPerg(this)">Copiar</button></div>
+      <div class="pergunta"><span class="pergunta-texto">Tô em risco de overtraining? Analisa meu Body Battery e HRV</span><button class="pergunta-copiar" onclick="copiarPerg(this)">Copiar</button></div>
+      <div class="pergunta"><span class="pergunta-texto">Meu VO2 max tá evoluindo?</span><button class="pergunta-copiar" onclick="copiarPerg(this)">Copiar</button></div>
+    </div>
+
+    <div class="categoria-perguntas">
+      <div class="cat-titulo">📅 Planejamento</div>
+      <div class="pergunta"><span class="pergunta-texto">Monta um plano de 12 semanas pra uma maratona, considerando meu pace atual</span><button class="pergunta-copiar" onclick="copiarPerg(this)">Copiar</button></div>
+      <div class="pergunta"><span class="pergunta-texto">Qual deveria ser meu treino longo essa semana baseado no meu volume?</span><button class="pergunta-copiar" onclick="copiarPerg(this)">Copiar</button></div>
+      <div class="pergunta"><span class="pergunta-texto">Sugere ajustes na carga de treino pra próxima semana</span><button class="pergunta-copiar" onclick="copiarPerg(this)">Copiar</button></div>
+    </div>
+
+    <div class="categoria-perguntas">
+      <div class="cat-titulo">🏁 Provas</div>
+      <div class="pergunta"><span class="pergunta-texto">Baseado no meu histórico, qual ritmo realista pra correr 10k em 45min?</span><button class="pergunta-copiar" onclick="copiarPerg(this)">Copiar</button></div>
+      <div class="pergunta"><span class="pergunta-texto">Estratégia de pace pra meia maratona</span><button class="pergunta-copiar" onclick="copiarPerg(this)">Copiar</button></div>
     </div>
   </div>
 </div>
 
-<!-- ══ PERGUNTAS ══ -->
-<div class="sec" id="perguntas">
-  <div class="ph">
-    <div class="ph-num" style="background:var(--gold);color:#061608">💬</div>
-    <div class="ph-title">Perguntas matadoras pra começar</div>
+<!-- ══════════════ PROBLEMAS ══════════════ -->
+<div class="parte" id="problemas">
+  <div class="parte-titulo" style="border-left-color:#dc2626">
+    <div class="parte-num" style="background:#dc2626">🆘</div>
+    <div class="parte-nome">Solução de problemas</div>
   </div>
+  <div class="parte-corpo">
 
-  <div class="qcat">
-    <div class="qcat-t">📈 Análise de performance</div>
-    <div class="qi">Como tá meu volume semanal nos últimos 30 dias?</div>
-    <div class="qi">Compara meu pace médio desse mês com o mês passado</div>
-    <div class="qi">Quais treinos foram mais intensos essa semana?</div>
-  </div>
-
-  <div class="qcat">
-    <div class="qcat-t">💤 Recuperação e bem-estar</div>
-    <div class="qi">Como tá meu sono em relação aos meus treinos?</div>
-    <div class="qi">Tô em risco de overtraining? Analisa meu Body Battery e HRV</div>
-    <div class="qi">Meu VO2 max tá evoluindo?</div>
-  </div>
-
-  <div class="qcat">
-    <div class="qcat-t">📅 Planejamento</div>
-    <div class="qi">Monta um plano de 12 semanas pra uma maratona, considerando meu pace atual</div>
-    <div class="qi">Qual deveria ser meu treino longo essa semana baseado no meu volume?</div>
-    <div class="qi">Sugere ajustes na carga de treino pra próxima semana</div>
-  </div>
-
-  <div class="qcat">
-    <div class="qcat-t">🏁 Provas</div>
-    <div class="qi">Baseado no meu histórico, qual ritmo realista pra correr 10k em 45min?</div>
-    <div class="qi">Estratégia de pace pra meia maratona</div>
-  </div>
-</div>
-
-<!-- ══ PROBLEMAS ══ -->
-<div class="sec" id="problemas">
-  <div class="ph">
-    <div class="ph-num" style="background:#ef5350;color:#fff">🆘</div>
-    <div class="ph-title">Solução de problemas</div>
-  </div>
-
-  <div class="tr">
-    <div class="tr-q" onclick="togTr(this)">
-      <span>"Server disconnected" no Claude</span>
-      <div class="tr-arr">▼</div>
-    </div>
-    <div class="tr-a">
-      <p>1. Verifica se você substituiu <strong>SEUNOME</strong> pelo seu usuário nos <strong>dois</strong> lugares no config.</p>
-      <p>2. Confirma que rodou o <code>garmin-mcp-auth</code> com sucesso (Parte 3).</p>
-      <p>3. No Claude Desktop, vai em <strong>Configurações → Servidores MCP locais → Ver Logs</strong> e lê a mensagem de erro.</p>
-    </div>
-  </div>
-
-  <div class="tr">
-    <div class="tr-q" onclick="togTr(this)">
-      <span>"Command not found: brew"</span>
-      <div class="tr-arr">▼</div>
-    </div>
-    <div class="tr-a">
-      <p>Você pulou o Passo 1.3. Roda esses dois comandos:</p>
-      <div class="cw" style="margin:.5rem 0">
-        <div class="cb">echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile</div>
-        <button class="cpbtn" onclick="cp(this)">Copiar</button>
+    <div class="problema">
+      <div class="problema-titulo" onclick="togProblema(this)">
+        <span>"Server disconnected" no Claude</span>
+        <span class="problema-arr">▼</span>
       </div>
-      <div class="cw">
-        <div class="cb">source ~/.zprofile</div>
-        <button class="cpbtn" onclick="cp(this)">Copiar</button>
+      <div class="problema-corpo">
+        <p>1. Verifica se você substituiu <strong>SEUNOME</strong> pelo seu usuário em <strong>AMBOS</strong> os lugares no arquivo de config.</p>
+        <p>2. Confirma que rodou o <code>garmin-mcp-auth</code> com sucesso (Parte 3).</p>
+        <p>3. No Claude Desktop, vai em <strong>Configurações → Servidores MCP locais</strong> e clica em "Ver Logs" no servidor garmin-local. Lê a mensagem de erro.</p>
       </div>
     </div>
-  </div>
 
-  <div class="tr">
-    <div class="tr-q" onclick="togTr(this)">
-      <span>"Module not found: garmin_mcp"</span>
-      <div class="tr-arr">▼</div>
+    <div class="problema">
+      <div class="problema-titulo" onclick="togProblema(this)">
+        <span>"Command not found: brew"</span>
+        <span class="problema-arr">▼</span>
+      </div>
+      <div class="problema-corpo">
+        <p>Você pulou o Passo 1.3. Roda esses dois comandos:</p>
+        <div class="bloco-codigo" style="margin:.5rem 0">
+          <div class="codigo">echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile</div>
+          <button class="btn-copiar" onclick="copiar(this)">Copiar</button>
+        </div>
+        <div class="bloco-codigo">
+          <div class="codigo">source ~/.zprofile</div>
+          <button class="btn-copiar" onclick="copiar(this)">Copiar</button>
+        </div>
+      </div>
     </div>
-    <div class="tr-a">
-      <p>O ambiente Python não foi ativado. Roda no Terminal:</p>
-      <div class="cw" style="margin:.5rem 0">
-        <div class="cb">cd ~/garmin_mcp_server
+
+    <div class="problema">
+      <div class="problema-titulo" onclick="togProblema(this)">
+        <span>"Module not found: garmin_mcp"</span>
+        <span class="problema-arr">▼</span>
+      </div>
+      <div class="problema-corpo">
+        <p>Provavelmente o ambiente Python não foi ativado. No Terminal:</p>
+        <div class="bloco-codigo" style="margin:.5rem 0">
+          <div class="codigo">cd ~/garmin_mcp_server
 source venv/bin/activate
 pip install -e .</div>
-        <button class="cpbtn" onclick="cp(this)">Copiar</button>
+          <button class="btn-copiar" onclick="copiar(this)">Copiar</button>
+        </div>
       </div>
     </div>
-  </div>
 
-  <div class="tr">
-    <div class="tr-q" onclick="togTr(this)">
-      <span>Tokens expiraram (após ~6 meses)</span>
-      <div class="tr-arr">▼</div>
-    </div>
-    <div class="tr-a">
-      <div class="cw" style="margin:.5rem 0">
-        <div class="cb">cd ~/garmin_mcp_server
+    <div class="problema">
+      <div class="problema-titulo" onclick="togProblema(this)">
+        <span>Tokens expiraram (depois de ~6 meses)</span>
+        <span class="problema-arr">▼</span>
+      </div>
+      <div class="problema-corpo">
+        <p>Roda de novo:</p>
+        <div class="bloco-codigo" style="margin:.5rem 0">
+          <div class="codigo">cd ~/garmin_mcp_server
 source venv/bin/activate
 garmin-mcp-auth</div>
-        <button class="cpbtn" onclick="cp(this)">Copiar</button>
+          <button class="btn-copiar" onclick="copiar(this)">Copiar</button>
+        </div>
       </div>
     </div>
-  </div>
 
-  <div class="tr">
-    <div class="tr-q" onclick="togTr(this)">
-      <span>Outro erro? Dica de ouro</span>
-      <div class="tr-arr">▼</div>
-    </div>
-    <div class="tr-a">
-      <p>O Claude pode te ajudar a resolver os próprios erros de instalação. Abre uma nova conversa e cola:</p>
-      <div class="cw" style="margin:.5rem 0">
-        <div class="cb">Tô seguindo um tutorial pra conectar meu Garmin ao Claude Desktop via MCP no Mac. Tô travado no passo X e aparece esse erro: [COLA O ERRO AQUI]. Me ajuda passo a passo.</div>
-        <button class="cpbtn" onclick="cp(this)">Copiar</button>
+    <div class="problema">
+      <div class="problema-titulo" onclick="togProblema(this)">
+        <span>Outro erro? Dica de ouro</span>
+        <span class="problema-arr">▼</span>
       </div>
-      <p>Se o erro for em algum log, vai em <strong>Configurações → Servidores MCP locais → Ver Logs</strong>, copia tudo e cola na conversa.</p>
+      <div class="problema-corpo">
+        <p>O Claude pode te ajudar a resolver erros de instalação dele mesmo. Funciona muito bem!</p>
+        <p>1. No Claude Desktop, abre uma nova conversa (fora do projeto Treinador)</p>
+        <p>2. Cola algo assim:</p>
+        <div class="bloco-codigo" style="margin:.5rem 0">
+          <div class="codigo" style="white-space:pre-wrap">Tô seguindo um tutorial pra conectar meu Garmin ao Claude Desktop via MCP no Mac. Tô travado no passo X e aparece esse erro: [COLA O ERRO AQUI]. Me ajuda a resolver passo a passo, considerando que sou leigo em tecnologia.</div>
+          <button class="btn-copiar" onclick="copiar(this)">Copiar</button>
+        </div>
+        <p>3. Se o erro for em algum log do Claude Desktop, vai em <strong>Configurações → Servidores MCP locais → Ver Logs</strong>, copia tudo e cola na conversa.</p>
+        <div class="alerta dica" style="margin-top:.7rem"><span class="alerta-ico">💡</span>O Claude consegue diagnosticar a maioria dos problemas e te dar o comando exato pra resolver.</div>
+        <p style="margin-top:.7rem">Ainda não conseguiu? Me chama no Instagram <strong>@jp.runningclub</strong>. Manda:</p>
+        <ul>
+          <li>📸 Print do erro</li>
+          <li>📸 Print dos logs (Configurações → Servidores MCP locais → Ver Logs)</li>
+          <li>📝 Em qual passo travou</li>
+        </ul>
+      </div>
     </div>
-  </div>
 
-  <div class="co info" style="margin-top:1rem"><span class="co-ico">📸</span><div>Ainda não conseguiu? Manda um direct pro <strong>@jp.runningclub</strong> no Instagram com print do erro e o log.</div></div>
+  </div>
 </div>
 
-<!-- ══ BÔNUS ══ -->
-<div class="sec" id="bonus">
-  <div class="ph">
-    <div class="ph-num" style="background:var(--gold);color:#061608">🎁</div>
-    <div class="ph-title">Bônus — Projeto "Treinador"</div>
+<!-- ══════════════ BÔNUS ══════════════ -->
+<div class="parte" id="bonus">
+  <div class="parte-titulo" style="border-left-color:#d97706">
+    <div class="parte-num" style="background:#d97706">🎁</div>
+    <div class="parte-nome">Bônus — Projeto "Treinador"</div>
   </div>
+  <div class="parte-corpo">
 
-  <p style="font-size:.86rem;color:var(--muted);line-height:1.65;margin-bottom:1rem">
-    Cole essas instruções em <strong style="color:var(--text)">Projeto → Instruções</strong> no Claude e edite os campos entre colchetes com seus dados:
-  </p>
+    <p style="font-size:.87rem;color:#475569;margin-bottom:1rem">
+      Pra deixar o Claude ainda mais útil, configura instruções personalizadas no seu projeto.<br>
+      Vai em <strong>Projeto → Instruções</strong> e cola o texto abaixo (editando seus dados entre colchetes):
+    </p>
 
-  <div class="bonus">
-    <div class="cw" style="margin:0">
-      <div class="cb" style="white-space:pre-wrap">Você é meu treinador pessoal de corrida.
+    <div class="bonus-box">
+      <div class="bloco-codigo" style="margin:0">
+        <div class="codigo" style="white-space:pre-wrap">Você é meu treinador pessoal de corrida.
 
 CONTEXTO SOBRE MIM:
 - Idade: [SUA IDADE]
@@ -670,7 +689,7 @@ CONTEXTO SOBRE MIM:
 - Peso: [SEU PESO]
 - Anos correndo: [QUANTOS ANOS]
 - Objetivo principal: [EX: maratona em outubro]
-- Frequência semanal: [EX: 4x na semana]
+- Frequência semanal de treinos: [EX: 4x na semana]
 
 COMO QUERO QUE VOCÊ ME AJUDE:
 - Use meus dados reais do Garmin (via MCP) sempre que possível
@@ -683,69 +702,59 @@ EVITE:
 - Conselhos genéricos do tipo "treine com consistência"
 - Recomendações sem considerar meus dados
 - Linguagem motivacional vazia</div>
-      <button class="cpbtn" onclick="cp(this)">Copiar</button>
+        <button class="btn-copiar" onclick="copiar(this)">Copiar</button>
+      </div>
     </div>
-  </div>
 
-  <div style="margin-top:1.5rem">
-    <div class="ph" style="padding-top:.5rem;margin-bottom:.85rem">
-      <div class="ph-num" style="background:rgba(0,230,118,.15);color:var(--green);font-size:1rem">🔒</div>
-      <div class="ph-title">É seguro?</div>
+    <div style="margin-top:1.5rem">
+      <p style="font-size:.87rem;font-weight:700;color:#1e293b;margin-bottom:.75rem">🔒 É seguro?</p>
+      <div class="grid-seg">
+        <div class="seg-card"><strong>Roda localmente</strong><p>Tudo no seu Mac — nenhum servidor de terceiros acessa seus dados.</p></div>
+        <div class="seg-card"><strong>Tokens seguros</strong><p>Credenciais ficam em <code style="font-size:.72rem">~/.garminconnect</code> só no seu computador.</p></div>
+        <div class="seg-card"><strong>Dados da fonte oficial</strong><p>Lidos direto do servidor do Garmin Connect.</p></div>
+        <div class="seg-card"><strong>Como desconectar</strong><p>Delete <code style="font-size:.72rem">~/garmin_mcp_server</code> e <code style="font-size:.72rem">~/.garminconnect</code>.</p></div>
+      </div>
     </div>
-    <div class="sec-grid">
-      <div class="sg"><strong>Roda localmente</strong><p>Tudo fica no seu Mac. Nenhum servidor de terceiros tem acesso aos seus dados.</p></div>
-      <div class="sg"><strong>Tokens seguros</strong><p>Suas credenciais ficam em <code style="font-size:.72rem">~/.garminconnect</code> só no seu computador.</p></div>
-      <div class="sg"><strong>Dados direto da fonte</strong><p>Os dados vêm direto do servidor oficial do Garmin Connect.</p></div>
-      <div class="sg"><strong>Como desconectar</strong><p>Delete <code style="font-size:.72rem">~/garmin_mcp_server</code> e <code style="font-size:.72rem">~/.garminconnect</code> e remova o bloco do config.</p></div>
-    </div>
-  </div>
 
-  <div class="creds">
-    <h3>🏃‍♂️ Feito por João Paulo Azevedo</h3>
-    <p>Corredor + entusiasta de tecnologia<br>
-    Tutorial montado depois de muito teste e erro — pra te poupar horas de dor de cabeça.</p>
-    <div class="cta-grid">
-      <a class="cta g" href="https://instagram.com/jp.runningclub" target="_blank">🎯 Seguir @jp.runningclub</a>
-      <div class="cta" onclick="share()">🔁 Compartilhar</div>
+    <div class="creditos">
+      <h3>🏃‍♂️ Feito por João Paulo Azevedo</h3>
+      <p>Corredor + entusiasta de tecnologia<br>
+      Montado depois de muito teste e erro — pra te poupar horas de dor de cabeça.<br>
+      <small style="opacity:.7">v1.0 — 09/05/2026</small></p>
+      <div class="cta-row">
+        <a class="cta-btn cta-ig" href="https://instagram.com/jp.runningclub" target="_blank">🎯 Seguir @jp.runningclub</a>
+        <button class="cta-btn cta-share" onclick="compartilhar()">🔁 Compartilhar tutorial</button>
+      </div>
     </div>
-    <p style="font-size:.7rem;color:var(--muted);margin-top:.75rem">v1.0 — 09/05/2026</p>
+
   </div>
 </div>
 
-</div><!-- /main -->
+</div><!-- /wrap -->
 
 <script>
-function go(id,btn){
-  document.querySelectorAll('.sec').forEach(s=>s.classList.remove('on'));
-  document.querySelectorAll('.navb').forEach(b=>b.classList.remove('on'));
-  document.getElementById(id).classList.add('on');
-  btn.classList.add('on');
-  window.scrollTo({top:0,behavior:'smooth'});
-}
-
-function tog(hd){ hd.parentElement.classList.toggle('open'); }
-
-function togTr(hd){
-  const tr=hd.parentElement;
-  tr.classList.toggle('open');
-  tr.querySelector('.tr-a').classList.toggle('open');
-}
-
-function cp(btn){
-  const txt=btn.previousElementSibling.textContent;
-  navigator.clipboard.writeText(txt).then(()=>done(btn)).catch(()=>{
+function copiar(btn){
+  const txt = btn.previousElementSibling.textContent;
+  navigator.clipboard.writeText(txt).then(()=>flash(btn)).catch(()=>{
     const t=document.createElement('textarea');
     t.value=txt;document.body.appendChild(t);t.select();
-    document.execCommand('copy');document.body.removeChild(t);
-    done(btn);
+    document.execCommand('copy');document.body.removeChild(t);flash(btn);
   });
 }
-function done(btn){
-  btn.textContent='Copiado!';btn.classList.add('ok');
-  setTimeout(()=>{btn.textContent='Copiar';btn.classList.remove('ok');},1800);
+function copiarPerg(btn){
+  const txt = btn.previousElementSibling.textContent;
+  navigator.clipboard.writeText('"'+txt+'"').then(()=>flash(btn)).catch(()=>{});
 }
-
-function share(){
+function flash(btn){
+  const orig=btn.textContent;
+  btn.textContent='Copiado!';btn.classList.add('ok');
+  setTimeout(()=>{btn.textContent=orig;btn.classList.remove('ok');},1800);
+}
+function togProblema(hd){
+  const p=hd.parentElement;
+  p.classList.toggle('open');
+}
+function compartilhar(){
   if(navigator.share) navigator.share({title:'Garmin + Claude Tutorial',url:location.href});
 }
 </script>
