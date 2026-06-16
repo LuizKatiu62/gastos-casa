@@ -987,18 +987,31 @@ function addMsg(role, text, isTyping=false){
 
 // ════════════════ PROVAS ════════════════
 const PROVAS_DATA = [
-  // Atlantic Canada
-  {nome:"Fredericton Marathon",local:"Fredericton, NB",data:"2026-05-10",dists:[10,21.1,42.2],regiao:"atlantic",url:"https://www.frederictonmarathon.com"},
+  // ── New Brunswick ──
+  {nome:"Stewart McKelvey Fredericton Marathon",local:"Fredericton, NB",data:"2026-05-10",dists:[5,10,21.1,42.2],regiao:"atlantic",url:"https://raceroster.com/events/2026/105524/2026-annual-stewart-mckelvey-fredericton-marathon-race-weekend"},
+  {nome:"Marathon by the Sea",local:"Saint John, NB",data:"2026-08-01",dists:[5,10,21.1,42.2],regiao:"atlantic",url:"https://marathonbythesea.com"},
+  {nome:"Legs for Literacy",local:"Moncton, NB",data:"2026-10-04",dists:[5,10,21.1,42.2],regiao:"atlantic",url:"https://raceroster.com/events/2026/113537/legs-for-literacy"},
+  // ── Nova Scotia ──
   {nome:"Scotiabank Blue Nose Marathon",local:"Halifax, NS",data:"2026-05-17",dists:[5,10,21.1,42.2],regiao:"atlantic",url:"https://www.blunosemarathon.com"},
-  {nome:"Marathon Moncton",local:"Moncton, NB",data:"2026-10-04",dists:[10,21.1,42.2],regiao:"atlantic"},
-  {nome:"PEI Marathon",local:"Charlottetown, PEI",data:"2026-10-04",dists:[10,21.1,42.2],regiao:"atlantic"},
-  // Québec
-  {nome:"Québec City Marathon",local:"Québec, QC",data:"2026-08-23",dists:[10,21.1,42.2],regiao:"quebec",url:"https://www.marathonquebec.com"},
-  {nome:"Beneva Montréal Marathon",local:"Montréal, QC",data:"2026-09-27",dists:[5,10,21.1,42.2],regiao:"quebec",url:"https://www.marathonmontreal.com"},
-  // Ontario
-  {nome:"Ottawa Race Weekend",local:"Ottawa, ON",data:"2026-05-24",dists:[5,10,21.1,42.2],regiao:"ontario",url:"https://www.runottawa.ca"},
-  {nome:"Scotiabank Toronto Waterfront",local:"Toronto, ON",data:"2026-10-18",dists:[5,10,21.1,42.2],regiao:"ontario",url:"https://www.torontowaterfrontmarathon.com"},
-  // USA
+  {nome:"Johnny Miles Running Event",local:"New Glasgow, NS",data:"2026-06-21",dists:[5,10,21.1],regiao:"atlantic",url:"https://raceroster.com/events/2026/112465/johnny-miles-weekend-2026-johnny-miles-running-event"},
+  {nome:"Nova Scotia Marathon",local:"Barrington Passage, NS",data:"2026-07-19",dists:[10,21.1,42.2],regiao:"atlantic",url:"https://raceroster.com/events/2026/108605/55th-annual-nova-scotia-marathon"},
+  {nome:"Valley Harvest Marathon",local:"Wolfville, NS",data:"2026-10-11",dists:[5,10,21.1,42.2],regiao:"atlantic",url:"https://raceroster.com/events/2026/108812/valley-harvest-marathon"},
+  {nome:"Cape Breton Fiddlers Marathon",local:"Sydney, NS",data:"2026-10-18",dists:[5,10,21.1,42.2],regiao:"atlantic",url:"https://raceroster.com/events/2026/112612/2026-cape-breton-fiddlers-marathon"},
+  // ── PEI ──
+  {nome:"PEI Marathon",local:"Charlottetown, PEI",data:"2026-10-18",dists:[5,10,21.1,42.2],regiao:"atlantic",url:"https://peimarathon.ca/register"},
+  // ── Newfoundland ──
+  {nome:"Run From Away Marathon",local:"Gander, NL",data:"2026-05-23",dists:[5,21.1,42.2],regiao:"atlantic",url:"https://www.yqxrc.ca/rfa-marathon-wk2026"},
+  {nome:"Uniformed Services Run",local:"St. John's, NL",data:"2026-09-13",dists:[5,10,21.1,42.2],regiao:"atlantic"},
+  {nome:"Trapline Marathon",local:"Goose Bay, NL",data:"2026-10-11",dists:[5,10,21.1,42.2],regiao:"atlantic",url:"https://www.traplinemarathon.com"},
+  // ── Québec ──
+  {nome:"Marathon Sun Life de Longueuil",local:"Longueuil, QC",data:"2026-05-17",dists:[5,10,21.1,42.2],regiao:"quebec",url:"https://raceroster.com/events/2026/108765/marathon-de-longueuil-sun-life"},
+  {nome:"Québec City Marathon",local:"Québec, QC",data:"2026-10-04",dists:[10,21.1,42.2],regiao:"quebec",url:"https://www.marathonquebec.com"},
+  {nome:"Beneva Montréal Marathon",local:"Montréal, QC",data:"2026-10-11",dists:[5,10,21.1,42.2],regiao:"quebec",url:"https://raceroster.com/events/2026/110280/marathon-beneva-de-montreal-edition-2026"},
+  // ── Ontario ──
+  {nome:"Toronto Marathon",local:"Toronto, ON",data:"2026-05-03",dists:[5,10,21.1,42.2],regiao:"ontario",url:"https://raceroster.com/events/2026/106978/2026-toronto-marathon"},
+  {nome:"Tamarack Ottawa Race Weekend",local:"Ottawa, ON",data:"2026-05-24",dists:[5,10,21.1,42.2],regiao:"ontario",url:"https://www.runottawa.ca"},
+  {nome:"TCS Toronto Waterfront Marathon",local:"Toronto, ON",data:"2026-10-18",dists:[5,10,21.1,42.2],regiao:"ontario",url:"https://raceroster.com/events/2026/111134/2026-tcs-toronto-waterfront-marathon"},
+  // ── USA ──
   {nome:"Boston Marathon",local:"Boston, MA",data:"2026-04-20",dists:[42.2],regiao:"usa",url:"https://www.baa.org"},
   {nome:"Chicago Marathon",local:"Chicago, IL",data:"2026-10-11",dists:[42.2],regiao:"usa",url:"https://www.chicagomarathon.com"},
   {nome:"New York City Marathon",local:"New York, NY",data:"2026-11-01",dists:[42.2],regiao:"usa",url:"https://www.nyrr.org/tcsnycmarathon"},
