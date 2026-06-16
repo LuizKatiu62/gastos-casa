@@ -72,7 +72,7 @@ ESPORTE_MAP = {
     "strength_training": "academia", "weight_training": "academia",
     "fitness_equipment": "academia", "cardio_training": "academia",
 }
-IGNORAR = {"yoga", "elliptical", "rowing"}
+IGNORAR = {"yoga", "elliptical", "rowing", "incident_detected"}
 
 
 def garmin_to_treino(act):

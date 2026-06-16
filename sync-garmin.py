@@ -79,7 +79,7 @@ ESPORTE_MAP = {
     "barre": "academia", "pilates": "academia",
 }
 IGNORAR = {
-    "yoga", "elliptical", "rowing",
+    "yoga", "elliptical", "rowing", "incident_detected",
 }
 
 
