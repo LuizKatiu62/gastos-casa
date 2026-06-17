@@ -446,7 +446,7 @@ const TIPO_LBL={facil:'Fácil',trilha:'Trilha',intervalado:'Intervalo',esteira:'
 function fd(d){if(!d)return'';const[y,m,dia]=d.split('-');return`${+dia} ${MESES[+m-1]}`;}
 function dow(d){if(!d)return'';return DIAS[new Date(d+'T12:00:00').getDay()];}
 function pad(n){return String(n).padStart(2,'0');}
-function fmtSync(s){if(!s)return'';const d=new Date(s);return`${pad(d.getDate())}/${pad(d.getMonth()+1)} às ${pad(d.getHours())}:${pad(d.getMinutes())}`;}
+function fmtSync(s){if(!s)return'';const d=new Date(s.includes('Z')||s.includes('+')?s:s+'Z');return`${pad(d.getDate())}/${pad(d.getMonth()+1)} às ${pad(d.getHours())}:${pad(d.getMinutes())}`;}
 function semLbl(s){const[,w]=s.split('-W');return`S${w}`;}
 function p2s(p){if(!p)return 0;const[m,s]=p.split(':').map(Number);return m*60+(s||0);}
 function s2p(s){if(!s)return'—';const m=Math.floor(s/60),sec=Math.round(s%60);return`${m}:${pad(sec)}`;}
