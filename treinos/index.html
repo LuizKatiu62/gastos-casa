@@ -284,8 +284,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div class="card"><div class="card-title">🔋 Body Battery (máximo diário)</div><div class="ch"><canvas id="cBB"></canvas></div></div>
       <div class="card"><div class="card-title">😴 Sono — Horas por Noite</div><div class="ch"><canvas id="cSono"></canvas></div></div>
       <div class="chart-row">
-        <div class="card" id="stress-card" style="display:none"><div class="card-title">😰 Stress Médio</div><div class="ch-sm"><canvas id="cStress"></canvas></div></div>
-        <div class="card" id="hrv-card" style="display:none"><div class="card-title">💚 HRV Noturno</div><div class="ch-sm"><canvas id="cHRV"></canvas></div></div>
+        <div class="card" id="stress-card" style="display:none"><div class="card-title">😰 Stress Médio</div><div class="ch"><canvas id="cStress"></canvas></div></div>
+        <div class="card" id="hrv-card" style="display:none"><div class="card-title">💚 HRV Noturno</div><div class="ch"><canvas id="cHRV"></canvas></div></div>
       </div>
     </div>
 
@@ -878,22 +878,28 @@ function renderSaude(bb,sono,stress,hrv){
   }
 
   if(stressKeys.length){
-    document.getElementById('stress-card').style.display='block';
-    charts.stress=new Chart(document.getElementById('cStress'),{type:'bar',
-      data:{labels:stressKeys.map(fd),datasets:[{data:stressKeys.map(k=>stress[k].avg),
-        backgroundColor:stressKeys.map(k=>stress[k].avg>75?'rgba(239,68,68,.5)':stress[k].avg>50?'rgba(249,115,22,.5)':'rgba(14,159,110,.5)'),borderRadius:4}]},
-      options:{...BASE,plugins:{...BASE.plugins,tooltip:{callbacks:{label:c=>c.raw+'/100'}}},
-        scales:{x:BASE.scales.x,y:{...BASE.scales.y,min:0,max:100}}}});
+    const sc=document.getElementById('stress-card');
+    sc.style.display='block';
+    requestAnimationFrame(()=>{
+      charts.stress=new Chart(document.getElementById('cStress'),{type:'bar',
+        data:{labels:stressKeys.map(fd),datasets:[{data:stressKeys.map(k=>stress[k].avg),
+          backgroundColor:stressKeys.map(k=>stress[k].avg>75?'rgba(239,68,68,.5)':stress[k].avg>50?'rgba(249,115,22,.5)':'rgba(14,159,110,.5)'),borderRadius:4}]},
+        options:{...BASE,plugins:{...BASE.plugins,tooltip:{callbacks:{label:c=>c.raw+'/100'}}},
+          scales:{x:BASE.scales.x,y:{...BASE.scales.y,min:0,max:100}}}});
+    });
   }
 
   if(hrvKeys.length){
     const comHRV=hrvKeys.filter(k=>hrv[k].ontem>0);
     if(comHRV.length){
-      document.getElementById('hrv-card').style.display='block';
+      const hc=document.getElementById('hrv-card');
+      hc.style.display='block';
+      requestAnimationFrame(()=>{
       charts.hrv=new Chart(document.getElementById('cHRV'),{type:'line',
         data:{labels:comHRV.map(fd),datasets:[{data:comHRV.map(k=>hrv[k].ontem),
           borderColor:'#0e9f6e',backgroundColor:'rgba(14,159,110,.1)',borderWidth:2,pointRadius:3,tension:.35,fill:true}]},
         options:{...BASE,plugins:{...BASE.plugins,tooltip:{callbacks:{label:c=>c.raw+' ms'}}}}});
+      });
     }
   }
 }
