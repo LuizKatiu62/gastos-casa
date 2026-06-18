@@ -8,6 +8,7 @@ on:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    if: github.repository == 'LuizKatiu62/gastos-casa'
 
     steps:
       - name: Checkout
