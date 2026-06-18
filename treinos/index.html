@@ -212,7 +212,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <h1>🏃 Treinos · Luiz Silva</h1>
     <p id="hSub">Carregando…</p>
   </div>
-  <button class="btn-refresh" onclick="loadData()">↻ Sync</button>
+  <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.3rem">
+    <button class="btn-refresh" id="btn-garmin" onclick="syncGarmin()">⚡ Sync Garmin</button>
+    <button class="btn-refresh" onclick="loadData()" style="opacity:.6;font-size:.6rem;padding:.2rem .6rem">↻ só recarregar</button>
+  </div>
+</div>
+<div id="gh-token-section" style="display:none;background:#fefce8;border-bottom:1px solid #fcd34d;padding:.75rem 1rem">
+  <div style="font-size:.75rem;font-weight:800;color:#78350f;margin-bottom:.35rem">🔑 Token GitHub (para disparar o sync)</div>
+  <div style="font-size:.7rem;color:#92400e;margin-bottom:.5rem;line-height:1.5">Crie em <strong>github.com → Settings → Developer settings → Personal access tokens</strong> com permissão <strong>workflow</strong>. Fica salvo só neste celular.</div>
+  <div style="display:flex;gap:.5rem">
+    <input type="password" id="gh-token-input" placeholder="ghp_..." style="flex:1;border:1px solid #fcd34d;border-radius:8px;padding:.4rem .6rem;font-size:.78rem;font-family:inherit;outline:none">
+    <button onclick="saveGhToken()" style="background:#d97706;color:#fff;border:none;border-radius:8px;padding:.4rem .9rem;font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit">Salvar</button>
+  </div>
 </div>
 
 <div class="tabs">
@@ -913,7 +924,49 @@ function go(id,btn){
 
 // ════════════════ COACH IA ════════════════
 let ANTHRO_KEY = localStorage.getItem('anthro_key') || '';
+let GH_TOKEN   = localStorage.getItem('gh_token')   || '';
 let chatHistory = [];
+
+function saveGhToken(){
+  const v = document.getElementById('gh-token-input').value.trim();
+  if(!v.startsWith('ghp_') && !v.startsWith('github_pat_')){
+    alert('Token inválido — deve começar com ghp_ ou github_pat_'); return;
+  }
+  GH_TOKEN = v;
+  localStorage.setItem('gh_token', v);
+  document.getElementById('gh-token-section').style.display = 'none';
+  document.getElementById('gh-token-input').value = '';
+  syncGarmin();
+}
+
+async function syncGarmin(){
+  if(!GH_TOKEN){ document.getElementById('gh-token-section').style.display='block'; return; }
+  const btn = document.getElementById('btn-garmin');
+  btn.disabled = true;
+  let secs = 70;
+  btn.textContent = `⏳ ${secs}s…`;
+  const tick = setInterval(()=>{ secs--; btn.textContent = secs>0?`⏳ ${secs}s…`:'⏳ carregando…'; },1000);
+  try {
+    const res = await fetch('https://api.github.com/repos/LuizKatiu62/gastos-casa/actions/workflows/garmin-sync.yml/dispatches',{
+      method:'POST',
+      headers:{'Authorization':'Bearer '+GH_TOKEN,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'},
+      body:JSON.stringify({ref:'main'})
+    });
+    if(res.status===204){
+      setTimeout(()=>{ clearInterval(tick); loadData(); btn.textContent='⚡ Sync Garmin'; btn.disabled=false; }, 70000);
+    } else if(res.status===401){
+      clearInterval(tick); GH_TOKEN=''; localStorage.removeItem('gh_token');
+      btn.textContent='⚡ Sync Garmin'; btn.disabled=false;
+      document.getElementById('gh-token-section').style.display='block';
+    } else {
+      clearInterval(tick); btn.textContent='⚡ Sync Garmin'; btn.disabled=false;
+      alert('Erro '+res.status+' ao disparar sync');
+    }
+  } catch(e){
+    clearInterval(tick); btn.textContent='⚡ Sync Garmin'; btn.disabled=false;
+    alert('Erro de rede: '+e.message);
+  }
+}
 
 function initApiKey(){
   document.getElementById('apikey-section').style.display = ANTHRO_KEY ? 'none' : 'block';
