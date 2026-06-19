@@ -282,18 +282,40 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <button class="sf-btn" onclick="setEsporte('academia',this)">💪 Academia</button>
       </div>
       <div id="t-stats" class="sgrid sg3" style="margin-bottom:.75rem"></div>
-      <div class="card"><div class="card-title">📊 Volume por Semana (km)</div><div class="ch"><canvas id="cVol"></canvas></div></div>
-      <div class="card"><div class="card-title">📅 Frequência Semanal (treinos)</div><div class="ch-sm"><canvas id="cFreq"></canvas></div></div>
+      <div class="card">
+        <div class="card-title">📊 Volume por Semana (km)</div>
+        <div class="ch" style="height:200px"><canvas id="cVol"></canvas></div>
+        <div class="ch-sub" id="vol-sub"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">📅 Frequência Semanal (treinos)</div>
+        <div class="ch" style="height:165px"><canvas id="cFreq"></canvas></div>
+        <div class="ch-sub" id="freq-sub"></div>
+      </div>
       <div class="card"><div class="card-title">🏃 Últimos Treinos</div><div class="run-list" id="run-list"></div></div>
     </div>
 
     <!-- ══ EVOLUÇÃO ══ -->
     <div class="sec" id="sec-evolucao">
-      <div class="card"><div class="card-title">📈 Pace — últimos 30 dias (corridas)</div><div class="ch"><canvas id="cPace"></canvas></div></div>
-      <div class="card"><div class="card-title">❤️ FC Média — últimos 30 dias</div><div class="ch"><canvas id="cFC"></canvas></div></div>
-      <div class="chart-row">
-        <div class="card"><div class="card-title">🔬 VO2 Max — 30 dias</div><div class="ch-sm"><canvas id="cVO2"></canvas></div></div>
-        <div class="card"><div class="card-title">🦵 Cadência — 30 dias</div><div class="ch-sm"><canvas id="cCad"></canvas></div></div>
+      <div class="card">
+        <div class="card-title">📈 Pace — últimos 30 dias (corridas)</div>
+        <div class="ch" style="height:210px"><canvas id="cPace"></canvas></div>
+        <div class="ch-sub" id="pace-sub"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">❤️ Frequência Cardíaca — últimos 30 dias</div>
+        <div class="ch" style="height:210px"><canvas id="cFC"></canvas></div>
+        <div class="ch-sub" id="fc-sub"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">🔬 VO2 Max — evolução</div>
+        <div class="ch" style="height:175px"><canvas id="cVO2"></canvas></div>
+        <div class="ch-sub" id="vo2-sub"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">🦵 Cadência — corridas 30 dias</div>
+        <div class="ch" style="height:175px"><canvas id="cCad"></canvas></div>
+        <div class="ch-sub" id="cad-sub"></div>
       </div>
       <div class="card" id="rd-card" style="display:none">
         <div class="card-title">🦾 Running Dynamics — média 30 dias vs ideal</div>
@@ -726,15 +748,84 @@ function renderTreinos(ativ,meta,sem){
   if(charts.freq){charts.freq.destroy();charts.freq=null;}
 
   if(semKeys.length){
-    charts.vol=new Chart(document.getElementById('cVol'),{type:'bar',
-      data:{labels:semKeys.map(semLbl),datasets:[{data:semKeys.map(k=>semData[k].km),
-        backgroundColor:semKeys.map((_,i)=>i===semKeys.length-1?'#1a56db':'rgba(26,86,219,.28)'),borderRadius:5}]},
-      options:{...BASE,plugins:{...BASE.plugins,tooltip:{callbacks:{label:c=>c.raw+' km'}}}}});
-    charts.freq=new Chart(document.getElementById('cFreq'),{type:'bar',
-      data:{labels:semKeys.map(semLbl),datasets:[{data:semKeys.map(k=>semData[k].treinos),
-        backgroundColor:'rgba(14,159,110,.35)',borderColor:'#0e9f6e',borderWidth:1,borderRadius:5}]},
-      options:{...BASE,plugins:{...BASE.plugins,tooltip:{callbacks:{label:c=>c.raw+' treinos'}}},
-        scales:{...BASE.scales,y:{...BASE.scales.y,ticks:{...BASE.scales.y.ticks,stepSize:1}}}}});
+    const volVals  = semKeys.map(k=>semData[k].km);
+    const volMed   = +(volVals.reduce((s,v)=>s+v,0)/volVals.length).toFixed(1);
+    const volMax   = Math.max(...volVals);
+    const volEsta  = volVals[volVals.length-1];
+    const volAnt   = volVals.length>1 ? volVals[volVals.length-2] : 0;
+    const volDelta = volAnt>0 ? Math.round((volEsta-volAnt)/volAnt*100) : null;
+
+    charts.vol = new Chart(document.getElementById('cVol'),{
+      data:{
+        labels: semKeys.map(semLbl),
+        datasets:[
+          { type:'bar', label:'Volume (km)',
+            data: volVals,
+            backgroundColor: volVals.map((v,i)=>{
+              if(i===volVals.length-1) return '#1a56db';       // semana atual
+              if(v>=volMed*1.1) return 'rgba(14,159,110,.65)'; // acima da média
+              if(v>=volMed*0.7) return 'rgba(26,86,219,.42)';  // perto da média
+              return 'rgba(148,163,184,.5)';                    // abaixo
+            }),
+            borderRadius:6, order:2 },
+          { type:'line', label:'Média', data:semKeys.map(()=>volMed),
+            borderColor:'rgba(217,119,6,.75)', borderDash:[5,4], borderWidth:2,
+            pointRadius:0, fill:false, order:1 }
+        ]
+      },
+      options:{
+        ...BASE,
+        plugins:{...BASE.plugins,
+          legend:{display:true,position:'bottom',labels:{font:{size:9},boxWidth:9,padding:8,usePointStyle:true}},
+          tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.raw} km`}}
+        }
+      }
+    });
+    const volSub = document.getElementById('vol-sub');
+    if(volSub) volSub.innerHTML =
+      `<b>Esta semana:</b> ${volEsta} km`+
+      (volDelta!==null ? ` &nbsp;<span class="chip ${volDelta>=0?'chip-v':'chip-r'}">${volDelta>=0?'▲':'▼'} ${Math.abs(volDelta)}% vs ant.</span>` : '')+
+      ` · <b>Média:</b> ${volMed} km/sem · <b>Máx:</b> ${volMax} km`+
+      `<div class="zone-legend">`+
+      `<span class="zl-chip zl-v">Verde = acima da média</span>`+
+      `<span class="zl-chip zl-b">Azul = semana atual ou regular</span>`+
+      `<span class="zl-chip" style="background:#f1f5f9;color:#64748b">Cinza = abaixo da média</span>`+
+      `</div>`;
+
+    const freqVals = semKeys.map(k=>semData[k].treinos);
+    const freqMed  = +(freqVals.reduce((s,v)=>s+v,0)/freqVals.length).toFixed(1);
+    const freqEsta = freqVals[freqVals.length-1];
+
+    charts.freq = new Chart(document.getElementById('cFreq'),{
+      data:{
+        labels: semKeys.map(semLbl),
+        datasets:[
+          { type:'bar', label:'Treinos',
+            data: freqVals,
+            backgroundColor: freqVals.map((v,i)=>{
+              if(i===freqVals.length-1) return v>=4?'#0e9f6e':'#1a56db';
+              return v>=4?'rgba(14,159,110,.62)':v>=3?'rgba(26,86,219,.42)':'rgba(239,68,68,.4)';
+            }),
+            borderRadius:5, order:2 },
+          { type:'line', label:'Alvo (4×/sem)', data:semKeys.map(()=>4),
+            borderColor:'rgba(14,159,110,.6)', borderDash:[5,4], borderWidth:1.5,
+            pointRadius:0, fill:false, order:1 }
+        ]
+      },
+      options:{
+        ...BASE,
+        plugins:{...BASE.plugins,
+          legend:{display:true,position:'bottom',labels:{font:{size:9},boxWidth:9,padding:8,usePointStyle:true}},
+          tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.raw}`}}
+        },
+        scales:{...BASE.scales, y:{...BASE.scales.y,min:0,ticks:{...BASE.scales.y.ticks,stepSize:1}}}
+      }
+    });
+    const freqSub = document.getElementById('freq-sub');
+    if(freqSub) freqSub.innerHTML =
+      `<b>Esta semana:</b> ${freqEsta} treinos`+
+      ` &nbsp;<span class="chip ${freqEsta>=4?'chip-v':freqEsta>=3?'chip-a':'chip-r'}">${freqEsta>=4?'✓ Meta atingida':freqEsta>=3?'Próximo do alvo':'Abaixo do alvo'}</span>`+
+      ` · <b>Média:</b> ${freqMed}x/sem · <b>Alvo:</b> 4×/sem`;
   }
 
   // Ícone por esporte
@@ -762,52 +853,227 @@ function renderEvolucao(ativ){
   const corrida=ativ.filter(a=>(!a.esporte||a.esporte==='corrida')&&a.data>=d30);
   const comPace=corrida.filter(a=>a.pace&&a.distancia>=1).slice().reverse();
   const comFC=ativ.filter(a=>a.fcMed>0&&a.data>=d30).slice().reverse();
-  const comVO2=ativ.filter(a=>a.vo2max>0&&a.data>=d30).slice().reverse();
+  const comVO2=ativ.filter(a=>a.vo2max>0).slice().reverse().slice(-20); // até 20 últimos
   const comCad=corrida.filter(a=>a.cadencia>0).slice().reverse();
 
+  // ── PACE ──
   if(comPace.length>=2){
-    charts.pace=new Chart(document.getElementById('cPace'),{type:'line',
-      data:{labels:comPace.map(a=>fd(a.data)),datasets:[{data:comPace.map(a=>p2s(a.pace)),
-        borderColor:'#0e9f6e',backgroundColor:'rgba(14,159,110,.1)',borderWidth:2,pointRadius:3,tension:.35,fill:true}]},
-      options:{...BASE,plugins:{...BASE.plugins,tooltip:{callbacks:{label:c=>'Pace: '+s2p(c.raw)+' /km'}}},
-        scales:{x:BASE.scales.x,y:{...BASE.scales.y,reverse:true,ticks:{...BASE.scales.y.ticks,callback:v=>s2p(v)}}}}});
+    const paceSecs = comPace.map(a=>p2s(a.pace));
+    const paceMed  = Math.round(paceSecs.reduce((s,v)=>s+v,0)/paceSecs.length);
+    const paceBest = Math.min(...paceSecs);
+    const n = paceSecs.length;
+    const paceRecente  = n>=4 ? paceSecs.slice(-Math.ceil(n/2)).reduce((s,v)=>s+v,0)/Math.ceil(n/2) : 0;
+    const paceAnterior = n>=4 ? paceSecs.slice(0,Math.floor(n/2)).reduce((s,v)=>s+v,0)/Math.floor(n/2) : 0;
+    const improving = paceAnterior>0 && paceRecente>0 && paceRecente < paceAnterior;
+
+    charts.pace = new Chart(document.getElementById('cPace'),{
+      type:'line',
+      data:{
+        labels: comPace.map(a=>`${fd(a.data)} ${a.distancia}km`),
+        datasets:[
+          { label:'Pace', data:paceSecs,
+            borderColor:'#0e9f6e', backgroundColor:'rgba(14,159,110,.09)',
+            borderWidth:2.5, pointRadius:5, tension:.35, fill:true,
+            pointBackgroundColor: paceSecs.map(v=>
+              v<=paceMed*0.97?'#0e9f6e':v>=paceMed*1.04?'#ef4444':'#1a56db'),
+            pointBorderColor:'#fff', pointBorderWidth:1.5 },
+          { type:'line', label:'Médio', data:comPace.map(()=>paceMed),
+            borderColor:'rgba(217,119,6,.7)', borderDash:[5,4], borderWidth:1.5,
+            pointRadius:0, fill:false }
+        ]
+      },
+      options:{
+        ...BASE,
+        plugins:{...BASE.plugins,
+          legend:{display:true,position:'bottom',labels:{font:{size:9},boxWidth:9,padding:8,usePointStyle:true}},
+          tooltip:{callbacks:{
+            title: i=>`${i[0].label}`,
+            label: c=>c.datasetIndex===0?`Pace: ${s2p(c.raw)} /km`:`Médio: ${s2p(c.raw)} /km`
+          }}
+        },
+        scales:{x:BASE.scales.x, y:{...BASE.scales.y, reverse:true,
+          ticks:{...BASE.scales.y.ticks,callback:v=>s2p(v)}}}
+      }
+    });
+    document.getElementById('pace-sub').innerHTML =
+      `<b>Melhor:</b> ${s2p(paceBest)}/km · <b>Médio:</b> ${s2p(paceMed)}/km`+
+      (n>=4 ? ` · <b>Tendência:</b> <span class="chip ${improving?'chip-v':'chip-a'}">${improving?'↑ melhorando':'→ estável'}</span>` : '')+
+      `<br><span style="font-size:.62rem;color:#94a3b8">🟢 Ponto verde = acima da média &nbsp;·&nbsp; 🔵 Azul = na média &nbsp;·&nbsp; 🔴 Vermelho = abaixo</span>`;
   }
 
+  // ── FC com zonas de treino ──
   if(comFC.length>=2){
-    charts.fc=new Chart(document.getElementById('cFC'),{type:'line',
-      data:{labels:comFC.map(a=>fd(a.data)),datasets:[{data:comFC.map(a=>a.fcMed),
-        borderColor:'#ef4444',backgroundColor:'rgba(239,68,68,.08)',borderWidth:2,pointRadius:3,tension:.35,fill:true}]},
-      options:{...BASE,plugins:{...BASE.plugins,tooltip:{callbacks:{label:c=>c.raw+' bpm'}}}}});
+    const FCMAX = 163; // 208 − 0.7 × 64 anos
+    const z1=Math.round(FCMAX*.60), z2=Math.round(FCMAX*.70),
+          z3=Math.round(FCMAX*.80), z4=Math.round(FCMAX*.90);
+    const fcMed = Math.round(comFC.reduce((s,a)=>s+a.fcMed,0)/comFC.length);
+    const fcLast = comFC[comFC.length-1].fcMed;
+    const fcZone = fcMed<z1?'Z1 — Recovery':fcMed<z2?'Z2 — Aeróbico base':
+                   fcMed<z3?'Z3 — Aeróbico eficiente':fcMed<z4?'Z4 — Limiar anaeróbico':'Z5 — Máxima';
+    const allVals = comFC.map(a=>a.fcMed);
+    const yMin = Math.max(50, Math.min(...allVals)-10);
+    const yMax = Math.min(210, Math.max(...allVals)+10);
+
+    charts.fc = new Chart(document.getElementById('cFC'),{
+      type:'line',
+      data:{
+        labels: comFC.map(a=>fd(a.data)),
+        datasets:[{
+          label:'FC média', data:allVals,
+          borderColor:'#ef4444', backgroundColor:'rgba(239,68,68,.08)',
+          borderWidth:2.5, pointRadius:4, tension:.35, fill:true,
+          pointBackgroundColor: allVals.map(v=>v<z2?'#0e9f6e':v<z3?'#1a56db':v<z4?'#f97316':'#ef4444'),
+          pointBorderColor:'#fff', pointBorderWidth:1.5
+        }]
+      },
+      options:{
+        ...BASE,
+        plugins:{...BASE.plugins,
+          tooltip:{callbacks:{label:c=>`FC: ${c.raw} bpm`}},
+          zoneBands:[
+            {min:0,   max:z1, color:'rgba(14,159,110,.08)'},
+            {min:z1,  max:z2, color:'rgba(26,86,219,.06)'},
+            {min:z2,  max:z3, color:'rgba(234,179,8,.05)'},
+            {min:z3,  max:z4, color:'rgba(249,115,22,.07)'},
+            {min:z4,  max:999,color:'rgba(239,68,68,.09)'}
+          ]
+        },
+        scales:{x:BASE.scales.x, y:{...BASE.scales.y,min:yMin,max:yMax,
+          ticks:{...BASE.scales.y.ticks,callback:v=>v+' bpm'}}}
+      }
+    });
+    document.getElementById('fc-sub').innerHTML =
+      `<b>FC média:</b> ${fcMed} bpm &nbsp;<span class="chip chip-v">${fcZone}</span>`+
+      ` · <b>FCmax estimada:</b> ${FCMAX} bpm (208−0.7×64)`+
+      `<div class="zone-legend">`+
+      `<span class="zl-chip zl-v">Z1 &lt;${z1} Recovery</span>`+
+      `<span class="zl-chip zl-b">Z2 ${z1}–${z2} Base</span>`+
+      `<span class="zl-chip" style="background:#fffbeb;color:#78350f">Z3 ${z2}–${z3} Eficiente</span>`+
+      `<span class="zl-chip zl-a">Z4 ${z3}–${z4} Limiar</span>`+
+      `<span class="zl-chip zl-r">Z5 &gt;${z4} Máxima</span>`+
+      `</div>`;
   }
 
+  // ── VO2 Max com classificação por faixa etária ──
   if(comVO2.length>=2){
-    charts.vo2=new Chart(document.getElementById('cVO2'),{type:'line',
-      data:{labels:comVO2.map(a=>fd(a.data)),datasets:[{data:comVO2.map(a=>a.vo2max),
-        borderColor:'#d97706',backgroundColor:'rgba(217,119,6,.1)',borderWidth:2,pointRadius:3,tension:.35,fill:true}]},
-      options:{...BASE,plugins:{...BASE.plugins,tooltip:{callbacks:{label:c=>c.raw+' ml/kg/min'}}}}});
+    const vo2Vals = comVO2.map(a=>a.vo2max);
+    const vo2Last = vo2Vals[vo2Vals.length-1];
+    const vo2Med  = +(vo2Vals.reduce((s,v)=>s+v,0)/vo2Vals.length).toFixed(1);
+    const vo2Min  = Math.min(...vo2Vals);
+    const vo2Assess = vo2Last>55?['Superior','chip-v']:vo2Last>45?['Excelente','chip-v']:
+                      vo2Last>35?['Bom','chip-v']:vo2Last>28?['Razoável','chip-a']:['Baixo','chip-r'];
+    const yMin = Math.max(0, Math.floor(vo2Min)-5);
+    const yMax = Math.ceil(Math.max(...vo2Vals))+5;
+
+    charts.vo2 = new Chart(document.getElementById('cVO2'),{
+      type:'line',
+      data:{
+        labels: comVO2.map(a=>fd(a.data)),
+        datasets:[
+          { label:'VO2 Max', data:vo2Vals,
+            borderColor:'#d97706', backgroundColor:'rgba(217,119,6,.1)',
+            borderWidth:2.5, pointRadius:4, tension:.35, fill:true,
+            pointBackgroundColor: vo2Vals.map(v=>v>45?'#0e9f6e':v>35?'#1a56db':'#f97316'),
+            pointBorderColor:'#fff', pointBorderWidth:1.5 },
+          { type:'line', label:'Meta (45)', data:comVO2.map(()=>45),
+            borderColor:'rgba(14,159,110,.55)', borderDash:[5,4], borderWidth:1.5,
+            pointRadius:0, fill:false }
+        ]
+      },
+      options:{
+        ...BASE,
+        plugins:{...BASE.plugins,
+          legend:{display:true,position:'bottom',labels:{font:{size:9},boxWidth:9,padding:8,usePointStyle:true}},
+          tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.raw} ml/kg/min`}},
+          zoneBands:[
+            {min:0,  max:28, color:'rgba(239,68,68,.07)'},
+            {min:28, max:35, color:'rgba(249,115,22,.06)'},
+            {min:35, max:45, color:'rgba(234,179,8,.05)'},
+            {min:45, max:999,color:'rgba(14,159,110,.07)'}
+          ]
+        },
+        scales:{x:BASE.scales.x, y:{...BASE.scales.y,min:yMin,max:yMax,
+          ticks:{...BASE.scales.y.ticks,callback:v=>v}}}
+      }
+    });
+    document.getElementById('vo2-sub').innerHTML =
+      `<b>Atual:</b> ${vo2Last} ml/kg/min &nbsp;<span class="chip ${vo2Assess[1]}">${vo2Assess[0]}</span>`+
+      ` · <b>Média período:</b> ${vo2Med}`+
+      `<div class="zone-legend">`+
+      `<span class="zl-chip zl-r">&lt;28 Baixo</span>`+
+      `<span class="zl-chip zl-a">28–35 Razoável</span>`+
+      `<span class="zl-chip" style="background:#fffbeb;color:#78350f">35–45 Bom</span>`+
+      `<span class="zl-chip zl-v">&gt;45 Excelente</span>`+
+      `</div>`+
+      `<span style="font-size:.62rem;color:#94a3b8">Referência: homens 60–64 anos (ACSM)</span>`;
   }
 
+  // ── Cadência com zona ideal ──
   if(comCad.length>=2){
-    charts.cad=new Chart(document.getElementById('cCad'),{type:'line',
-      data:{labels:comCad.map(a=>fd(a.data)),datasets:[{data:comCad.map(a=>a.cadencia),
-        borderColor:'#7c3aed',backgroundColor:'rgba(124,58,237,.1)',borderWidth:2,pointRadius:3,tension:.35,fill:true}]},
-      options:{...BASE,plugins:{...BASE.plugins,tooltip:{callbacks:{label:c=>c.raw+' pass/min'}}}}});
+    const cadVals = comCad.map(a=>a.cadencia);
+    const cadMed  = Math.round(cadVals.reduce((s,v)=>s+v,0)/cadVals.length);
+    const cadLast = cadVals[cadVals.length-1];
+    const cadAssess = cadLast>=175?['✓ Ótima','chip-v']:cadLast>=165?['Boa','chip-v']:
+                      cadLast>=155?['Melhorar','chip-a']:['Baixa','chip-r'];
+    const yMin = Math.max(140, Math.min(...cadVals)-10);
+    const yMax = Math.min(200, Math.max(...cadVals)+10);
+
+    charts.cad = new Chart(document.getElementById('cCad'),{
+      type:'line',
+      data:{
+        labels: comCad.map(a=>fd(a.data)),
+        datasets:[
+          { label:'Cadência', data:cadVals,
+            borderColor:'#7c3aed', backgroundColor:'rgba(124,58,237,.08)',
+            borderWidth:2.5, pointRadius:4, tension:.35, fill:true,
+            pointBackgroundColor: cadVals.map(v=>v>=165&&v<=185?'#0e9f6e':v>=155?'#1a56db':'#f97316'),
+            pointBorderColor:'#fff', pointBorderWidth:1.5 },
+          { type:'line', label:'Zona ideal (175)', data:comCad.map(()=>175),
+            borderColor:'rgba(14,159,110,.6)', borderDash:[5,4], borderWidth:1.5,
+            pointRadius:0, fill:false }
+        ]
+      },
+      options:{
+        ...BASE,
+        plugins:{...BASE.plugins,
+          legend:{display:true,position:'bottom',labels:{font:{size:9},boxWidth:9,padding:8,usePointStyle:true}},
+          tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.raw} spm`}},
+          zoneBands:[
+            {min:0,   max:155, color:'rgba(239,68,68,.07)'},
+            {min:155, max:165, color:'rgba(249,115,22,.06)'},
+            {min:165, max:185, color:'rgba(14,159,110,.07)'},
+            {min:185, max:999, color:'rgba(26,86,219,.05)'}
+          ]
+        },
+        scales:{x:BASE.scales.x, y:{...BASE.scales.y,min:yMin,max:yMax,
+          ticks:{...BASE.scales.y.ticks,callback:v=>v+' spm'}}}
+      }
+    });
+    document.getElementById('cad-sub').innerHTML =
+      `<b>Última:</b> ${cadLast} spm &nbsp;<span class="chip ${cadAssess[1]}">${cadAssess[0]}</span>`+
+      ` · <b>Média:</b> ${cadMed} spm`+
+      `<div class="zone-legend">`+
+      `<span class="zl-chip zl-r">&lt;155 Baixa</span>`+
+      `<span class="zl-chip zl-a">155–165 Ok</span>`+
+      `<span class="zl-chip zl-v">165–185 Ideal</span>`+
+      `<span class="zl-chip zl-b">&gt;185 Alta</span>`+
+      `</div>`;
   }
 
   renderRunningDynamics(corrida);
 
-  // Efeito de treino
+  // ── Efeito de treino aeróbico ──
   const comEf=ativ.filter(a=>a.efAerobico>0).slice(0,10);
   if(comEf.length){
-    const efCard=document.getElementById('ef-card');
-    efCard.style.display='block';
+    document.getElementById('ef-card').style.display='block';
     document.getElementById('ef-list').innerHTML=comEf.map(a=>{
       const pct=Math.round(a.efAerobico/5*100);
-      const cor=a.efAerobico>=4?'#ef4444':a.efAerobico>=3?'#f97316':a.efAerobico>=2?'#0e9f6e':'#94a3b8';
+      const [cor,lbl]=a.efAerobico>=4.5?['#ef4444','Sobrecarga']:a.efAerobico>=3.5?['#f97316','Alto impacto']:
+                       a.efAerobico>=2.5?['#0e9f6e','Melhora aeróbica']:a.efAerobico>=1.5?['#1a56db','Manutenção']:['#94a3b8','Baixo'];
       return `<div class="prog-item">
-        <div class="prog-label">${fd(a.data)}</div>
+        <div class="prog-label" style="min-width:68px">${fd(a.data)}</div>
         <div class="prog-bar-wrap"><div class="prog-fill" style="width:${pct}%;background:${cor}"></div></div>
-        <div class="prog-val" style="color:${cor}">${a.efAerobico}/5</div>
+        <div class="prog-val" style="color:${cor};min-width:90px;font-size:.7rem">${a.efAerobico}/5 — ${lbl}</div>
       </div>`;
     }).join('');
   }
