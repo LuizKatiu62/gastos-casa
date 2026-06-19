@@ -1321,11 +1321,12 @@ function renderSaude(bb,sono,stress,hrv){
   const remMed     = sonoReal.length ? +(sonoReal.reduce((s,k)=>s+(sono[k].rem||0),0)/sonoReal.length).toFixed(1) : 0;
   const stressMed  = stressKeys.length ? Math.round(stressKeys.reduce((s,k)=>s+stress[k].avg,0)/stressKeys.length) : 0;
   const maxMed     = stressKeys.length ? Math.round(stressKeys.reduce((s,k)=>s+(stress[k].max||0),0)/stressKeys.length) : 0;
-  const comHRV     = hrvKeys.filter(k=>hrv[k].ontem>0);
-  const hrvLast    = comHRV.length  ? hrv[comHRV[comHRV.length-1]].ontem : 0;
+  const hrvVal     = k => hrv[k].ontem > 0 ? hrv[k].ontem : (hrv[k].semanal || 0);
+  const comHRV     = hrvKeys.filter(k=>hrvVal(k)>0);
+  const hrvLast    = comHRV.length  ? hrvVal(comHRV[comHRV.length-1]) : 0;
   const semMed     = comHRV.length  ? Math.round(comHRV.reduce((s,k)=>s+(hrv[k].semanal||0),0)/comHRV.length) : 0;
   const hrvTrend   = comHRV.length>=4
-    ? (hrv[comHRV[comHRV.length-1]].ontem > hrv[comHRV[comHRV.length-4]].ontem ? '↑ subindo' : '↓ caindo')
+    ? (hrvVal(comHRV[comHRV.length-1]) > hrvVal(comHRV[comHRV.length-4]) ? '↑ subindo' : '↓ caindo')
     : '';
   // última noite com sono real para exibir
   const sonoLastKey = sonoReal.length ? sonoReal[sonoReal.length-1] : null;
@@ -1354,7 +1355,7 @@ function renderSaude(bb,sono,stress,hrv){
     </div>
     <div class="stat">
       <div class="sv" style="color:var(--green)">${hrvLast||'—'}<span style="font-size:.75rem">ms</span></div>
-      <div class="sl">HRV ontem</div>
+      <div class="sl">HRV semanal</div>
       ${hrvLast>0 ? `<div class="stat-assess ${hrvCls}">${hrvLbl}</div>` : ''}
     </div>`;
 
@@ -1511,11 +1512,11 @@ function renderSaude(bb,sono,stress,hrv){
         data:{
           labels: comHRV.map(fd),
           datasets:[
-            { label:'HRV noturno', data:comHRV.map(k=>hrv[k].ontem),
+            { label:'HRV noturno', data:comHRV.map(k=>hrvVal(k)),
               borderColor:'#0e9f6e', backgroundColor:'rgba(14,159,110,.12)',
               borderWidth:2.5, pointRadius:4,
               pointBackgroundColor: comHRV.map(k=>{
-                const v=hrv[k].ontem;
+                const v=hrvVal(k);
                 return v>=55?'#0e9f6e':v>=45?'#1a56db':v>=35?'#d97706':'#ef4444';
               }),
               tension:.35, fill:true, order:2 },
@@ -1535,10 +1536,11 @@ function renderSaude(bb,sono,stress,hrv){
             ticks:{...BASE.scales.y.ticks,callback:v=>v+' ms'}}}
         }
       });
+      const usingSem = hrvLast>0 && hrv[comHRV[comHRV.length-1]].ontem===0;
       const [hl]=hrvLast>0 ? hrvAssess(hrvLast) : ['—'];
       document.getElementById('hrv-sub').innerHTML=
-        `<b>Ontem:</b> ${hrvLast||'—'} ms`+
-        (hrvLast>0 ? ` &nbsp;<span class="chip ${hrvLast>=55?'chip-v':hrvLast>=45?'chip-v':'chip-a'}">${hl}</span>` : ' <span style="color:#f97316;font-size:.62rem">(sem dados — HRV requer uso do relógio a noite toda)</span>')+
+        `<b>${usingSem?'Média semanal':'Ontem'}:</b> ${hrvLast||'—'} ms`+
+        (hrvLast>0 ? ` &nbsp;<span class="chip ${hrvLast>=55?'chip-v':hrvLast>=45?'chip-v':'chip-a'}">${hl}</span>` : '')+
         `&nbsp;· <b>Média semanal:</b> ${semMed||'—'} ms`+
         (hrvTrend?` &nbsp;· <b>Tendência:</b> ${hrvTrend}`:'')+
         `<div class="zone-legend">`+
