@@ -100,6 +100,23 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .ch-sm{position:relative;height:130px}
 .chart-row{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:.75rem}
 
+/* ── SAÚDE CHARTS ── */
+.sg4{grid-template-columns:repeat(4,1fr)}
+.stat-assess{font-size:.55rem;font-weight:700;padding:1px 6px;border-radius:5px;margin-top:4px;display:inline-block;letter-spacing:.2px;text-transform:uppercase}
+.sa-verde{background:#ecfdf5;color:#065f46}
+.sa-azul{background:#eff6ff;color:#1e40af}
+.sa-amarelo{background:#fffbeb;color:#78350f}
+.sa-vermelho{background:#fef2f2;color:#991b1b}
+.ch-sub{font-size:.67rem;color:var(--muted);line-height:1.7;padding:.45rem .1rem 0;border-top:1px solid #f1f5f9;margin-top:.45rem}
+.ch-sub b{color:var(--text);font-weight:700}
+.ch-sub .chip{font-size:.58rem;font-weight:700;padding:1px 7px;border-radius:5px;vertical-align:middle;display:inline-block;margin:0 2px}
+.ch-sub .chip-v{background:#ecfdf5;color:#065f46}
+.ch-sub .chip-a{background:#fffbeb;color:#78350f}
+.ch-sub .chip-r{background:#fef2f2;color:#991b1b}
+.zone-legend{display:flex;gap:.3rem;flex-wrap:wrap;margin-top:.4rem}
+.zl-chip{font-size:.58rem;font-weight:700;padding:2px 7px;border-radius:5px}
+.zl-v{background:#ecfdf5;color:#065f46}.zl-a{background:#fffbeb;color:#78350f}.zl-r{background:#fef2f2;color:#991b1b}.zl-b{background:#eff6ff;color:#1e40af}
+
 /* ── PROGRESS BAR (VO2/Efeito) ── */
 .prog-list{display:flex;flex-direction:column;gap:.5rem}
 .prog-item{display:flex;align-items:center;gap:.6rem}
@@ -291,11 +308,27 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
     <!-- ══ SAÚDE ══ -->
     <div class="sec" id="sec-saude">
-      <div id="s-stats" class="sgrid sg3" style="margin-bottom:.75rem"></div>
-      <div class="card"><div class="card-title">🔋 Body Battery (máximo diário)</div><div class="ch"><canvas id="cBB"></canvas></div></div>
-      <div class="card"><div class="card-title">😴 Sono — Horas por Noite</div><div class="ch"><canvas id="cSono"></canvas></div></div>
-      <div class="card" id="stress-card" style="display:none"><div class="card-title">😰 Stress Médio</div><div class="ch"><canvas id="cStress"></canvas></div></div>
-      <div class="card" id="hrv-card" style="display:none"><div class="card-title">💚 HRV Noturno</div><div class="ch"><canvas id="cHRV"></canvas></div></div>
+      <div id="s-stats" class="sgrid sg4" style="margin-bottom:.75rem"></div>
+      <div class="card">
+        <div class="card-title">🔋 Body Battery — intervalo diário (máx/mín)</div>
+        <div class="ch" style="height:195px"><canvas id="cBB"></canvas></div>
+        <div class="ch-sub" id="bb-sub"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">😴 Sono — fases por noite</div>
+        <div class="ch" style="height:195px"><canvas id="cSono"></canvas></div>
+        <div class="ch-sub" id="sono-sub"></div>
+      </div>
+      <div class="card" id="stress-card" style="display:none">
+        <div class="card-title">😰 Stress — médio e máximo diário</div>
+        <div class="ch" style="height:195px"><canvas id="cStress"></canvas></div>
+        <div class="ch-sub" id="stress-sub"></div>
+      </div>
+      <div class="card" id="hrv-card" style="display:none">
+        <div class="card-title">💚 HRV — noturno e média semanal</div>
+        <div class="ch" style="height:195px"><canvas id="cHRV"></canvas></div>
+        <div class="ch-sub" id="hrv-sub"></div>
+      </div>
     </div>
 
     <!-- ══ COACH IA ══ -->
@@ -854,62 +887,263 @@ function renderRunningDynamics(corrida){
 }
 
 // ════════════════ SAÚDE ════════════════
+// Inline Chart.js plugin: colored zone bands (used by BB and Stress)
+const zoneBandsPlugin = {
+  id:'zoneBands',
+  beforeDraw(chart){
+    const zones = chart.config.options?.plugins?.zoneBands;
+    if(!zones||!zones.length) return;
+    const {ctx,chartArea,scales:{y}} = chart;
+    zones.forEach(z=>{
+      const top    = Math.max(y.getPixelForValue(z.max), chartArea.top);
+      const bottom = Math.min(y.getPixelForValue(z.min), chartArea.bottom);
+      if(bottom<=top) return;
+      ctx.fillStyle = z.color;
+      ctx.fillRect(chartArea.left, top, chartArea.width, bottom-top);
+    });
+  }
+};
+Chart.register(zoneBandsPlugin);
+
+function bbAssess(v){ return v>=75?['Excelente','sa-verde']:v>=50?['Boa','sa-azul']:v>=25?['Moderada','sa-amarelo']:['Baixa','sa-vermelho']; }
+function sonoAssess(v){ return v>=7?['Ótimo','sa-verde']:v>=6?['OK','sa-azul']:v>=5?['Curto','sa-amarelo']:['Insuficiente','sa-vermelho']; }
+function stressAssess(v){ return v<25?['Baixo','sa-verde']:v<50?['Moderado','sa-azul']:v<75?['Alto','sa-amarelo']:['Muito alto','sa-vermelho']; }
+function hrvAssess(v){ return v>=55?['Excelente','sa-verde']:v>=45?['Bom','sa-azul']:v>=35?['Moderado','sa-amarelo']:['Baixo','sa-vermelho']; }
+
 function renderSaude(bb,sono,stress,hrv){
-  const bbKeys=Object.keys(bb).sort().slice(-21);
-  const sonoKeys=Object.keys(sono).sort().slice(-21);
-  const stressKeys=Object.keys(stress).sort().slice(-14);
-  const hrvKeys=Object.keys(hrv).sort().slice(-14);
+  const bbKeys     = Object.keys(bb).sort().slice(-21);
+  const sonoKeys   = Object.keys(sono).sort().slice(-21);
+  const stressKeys = Object.keys(stress).sort().slice(-14);
+  const hrvKeys    = Object.keys(hrv).sort().slice(-14);
 
-  // Stats
-  const bbMed=bbKeys.length?Math.round(bbKeys.reduce((s,k)=>s+bb[k].max,0)/bbKeys.length):0;
-  const sonoMed=sonoKeys.length?+(sonoKeys.reduce((s,k)=>s+sono[k].duracao,0)/sonoKeys.length).toFixed(1):0;
-  const stressMed=stressKeys.length?Math.round(stressKeys.reduce((s,k)=>s+stress[k].avg,0)/stressKeys.length):0;
+  // ── computed stats ──
+  const bbMed    = bbKeys.length    ? Math.round(bbKeys.reduce((s,k)=>s+bb[k].max,0)/bbKeys.length) : 0;
+  const bbMinMed = bbKeys.length    ? Math.round(bbKeys.reduce((s,k)=>s+bb[k].min,0)/bbKeys.length) : 0;
+  const bbLast   = bbKeys.length    ? bb[bbKeys[bbKeys.length-1]] : null;
+  const sonoMed  = sonoKeys.length  ? +(sonoKeys.reduce((s,k)=>s+sono[k].duracao,0)/sonoKeys.length).toFixed(1) : 0;
+  const profMed  = sonoKeys.length  ? +(sonoKeys.reduce((s,k)=>s+(sono[k].profundo||0),0)/sonoKeys.length).toFixed(1) : 0;
+  const remMed   = sonoKeys.length  ? +(sonoKeys.reduce((s,k)=>s+(sono[k].rem||0),0)/sonoKeys.length).toFixed(1) : 0;
+  const stressMed= stressKeys.length? Math.round(stressKeys.reduce((s,k)=>s+stress[k].avg,0)/stressKeys.length) : 0;
+  const maxMed   = stressKeys.length? Math.round(stressKeys.reduce((s,k)=>s+(stress[k].max||0),0)/stressKeys.length) : 0;
+  const comHRV   = hrvKeys.filter(k=>hrv[k].ontem>0);
+  const hrvLast  = comHRV.length    ? hrv[comHRV[comHRV.length-1]].ontem : 0;
+  const semMed   = comHRV.length    ? Math.round(comHRV.reduce((s,k)=>s+(hrv[k].semanal||0),0)/comHRV.length) : 0;
+  const hrvTrend = comHRV.length>=4
+    ? (hrv[comHRV[comHRV.length-1]].ontem > hrv[comHRV[comHRV.length-4]].ontem ? '↑ subindo' : '↓ caindo')
+    : '';
+
+  // ── stats row (4 metrics) ──
+  const [bbLbl,bbCls]     = bbAssess(bbLast?.max||0);
+  const [sonoLbl,sonoCls] = sonoAssess(sonoMed);
+  const [strLbl,strCls]   = stressAssess(stressMed);
+  const [hrvLbl,hrvCls]   = hrvAssess(hrvLast);
   document.getElementById('s-stats').innerHTML=`
-    <div class="stat"><div class="sv" style="color:var(--orange)">${bbMed||'—'}</div><div class="sl">BB média</div></div>
-    <div class="stat"><div class="sv" style="color:var(--purple)">${sonoMed||'—'}h</div><div class="sl">sono médio</div></div>
-    <div class="stat"><div class="sv" style="color:var(--red)">${stressMed||'—'}</div><div class="sl">stress médio</div></div>`;
+    <div class="stat">
+      <div class="sv" style="color:var(--orange)">${bbLast?.max||'—'}<span style="font-size:.75rem">%</span></div>
+      <div class="sl">BB hoje</div>
+      <div class="stat-assess ${bbCls}">${bbLbl}</div>
+    </div>
+    <div class="stat">
+      <div class="sv" style="color:var(--purple)">${sonoMed||'—'}<span style="font-size:.75rem">h</span></div>
+      <div class="sl">sono médio</div>
+      <div class="stat-assess ${sonoCls}">${sonoLbl}</div>
+    </div>
+    <div class="stat">
+      <div class="sv" style="color:var(--red)">${stressMed||'—'}</div>
+      <div class="sl">stress médio</div>
+      <div class="stat-assess ${strCls}">${strLbl}</div>
+    </div>
+    <div class="stat">
+      <div class="sv" style="color:var(--green)">${hrvLast||'—'}<span style="font-size:.75rem">ms</span></div>
+      <div class="sl">HRV ontem</div>
+      <div class="stat-assess ${hrvCls}">${hrvLbl}</div>
+    </div>`;
 
+  // ── Body Battery: range (máx + mín) + zone bands ──
   if(bbKeys.length){
-    charts.bb=new Chart(document.getElementById('cBB'),{type:'line',
-      data:{labels:bbKeys.map(fd),datasets:[{data:bbKeys.map(k=>bb[k].max),
-        borderColor:'#f97316',backgroundColor:'rgba(249,115,22,.12)',borderWidth:2,pointRadius:3,tension:.35,fill:true}]},
-      options:{...BASE,plugins:{...BASE.plugins,tooltip:{callbacks:{label:c=>c.raw+'%'}}},
-        scales:{x:BASE.scales.x,y:{...BASE.scales.y,min:0,max:100,ticks:{...BASE.scales.y.ticks,callback:v=>v+'%'}}}}});
+    charts.bb = new Chart(document.getElementById('cBB'),{
+      data:{
+        labels: bbKeys.map(fd),
+        datasets:[
+          { type:'line', label:'Máximo', data:bbKeys.map(k=>bb[k].max),
+            borderColor:'#f97316', backgroundColor:'rgba(249,115,22,.18)',
+            borderWidth:2.5, pointRadius:2, tension:.35, fill:'+1', order:2 },
+          { type:'line', label:'Mínimo', data:bbKeys.map(k=>bb[k].min),
+            borderColor:'rgba(249,115,22,.45)', backgroundColor:'rgba(249,115,22,.04)',
+            borderWidth:1.5, pointRadius:0, tension:.35, fill:false, order:3,
+            borderDash:[4,3] }
+        ]
+      },
+      options:{
+        ...BASE,
+        plugins:{
+          ...BASE.plugins,
+          legend:{display:true,position:'bottom',labels:{font:{size:9},boxWidth:9,padding:8,usePointStyle:true}},
+          tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.raw}%`}},
+          zoneBands:[
+            {min:0, max:25,  color:'rgba(239,68,68,.08)'},
+            {min:25,max:50,  color:'rgba(249,115,22,.07)'},
+            {min:50,max:75,  color:'rgba(234,179,8,.06)'},
+            {min:75,max:100, color:'rgba(14,159,110,.07)'}
+          ]
+        },
+        scales:{x:BASE.scales.x, y:{...BASE.scales.y,min:0,max:100,
+          ticks:{...BASE.scales.y.ticks,callback:v=>v+'%'}}}
+      }
+    });
+    const [al,ac]=bbAssess(bbLast?.max||0);
+    document.getElementById('bb-sub').innerHTML=
+      `<b>Hoje:</b> máx ${bbLast?.max||'—'}% · mín ${bbLast?.min||'—'}% &nbsp;`+
+      `<span class="chip ${bbLast?.max>=75?'chip-v':bbLast?.max>=50?'chip-v':bbLast?.max>=25?'chip-a':'chip-r'}">${al}</span>`+
+      `<br><b>Média 21 dias:</b> máx ${bbMed}% · mín ${bbMinMed}%`+
+      `<div class="zone-legend">`+
+      `<span class="zl-chip zl-v">75–100% Excelente</span>`+
+      `<span class="zl-chip zl-b">50–75% Boa</span>`+
+      `<span class="zl-chip zl-a">25–50% Moderada</span>`+
+      `<span class="zl-chip zl-r">0–25% Baixa</span>`+
+      `</div>`;
   }
 
+  // ── Sono: fases empilhadas (profundo + REM + leve) + linha de ref. 7h ──
   if(sonoKeys.length){
-    charts.sono=new Chart(document.getElementById('cSono'),{type:'bar',
-      data:{labels:sonoKeys.map(fd),datasets:[{data:sonoKeys.map(k=>sono[k].duracao),
-        backgroundColor:sonoKeys.map(k=>sono[k].duracao>=7?'rgba(14,159,110,.5)':sono[k].duracao>=6?'rgba(217,119,6,.5)':'rgba(239,68,68,.5)'),
-        borderRadius:4}]},
-      options:{...BASE,plugins:{...BASE.plugins,tooltip:{callbacks:{label:c=>c.raw+'h de sono'}}},
-        scales:{x:BASE.scales.x,y:{...BASE.scales.y,min:0,max:10,ticks:{...BASE.scales.y.ticks,callback:v=>v+'h'}}}}});
+    const hasFases = sonoKeys.some(k=>(sono[k].profundo||0)+(sono[k].rem||0)>0);
+    charts.sono = new Chart(document.getElementById('cSono'),{
+      type:'bar',
+      data:{
+        labels: sonoKeys.map(fd),
+        datasets: hasFases ? [
+          { label:'Profundo', data:sonoKeys.map(k=>+(sono[k].profundo||0).toFixed(1)),
+            backgroundColor:'rgba(29,78,216,.72)', borderRadius:3, stack:'s' },
+          { label:'REM',      data:sonoKeys.map(k=>+(sono[k].rem||0).toFixed(1)),
+            backgroundColor:'rgba(124,58,237,.65)', borderRadius:0, stack:'s' },
+          { label:'Leve',     data:sonoKeys.map(k=>+((sono[k].leve||sono[k].duracao-(sono[k].profundo||0)-(sono[k].rem||0))||0).toFixed(1)),
+            backgroundColor:'rgba(99,102,241,.3)', borderRadius:0, stack:'s' },
+          { type:'line', label:'7h recomendado', data:sonoKeys.map(()=>7),
+            borderColor:'rgba(14,159,110,.7)', borderDash:[5,4], borderWidth:2,
+            pointRadius:0, fill:false, stack:undefined, order:0 }
+        ] : [
+          { label:'Horas de sono', data:sonoKeys.map(k=>sono[k].duracao),
+            backgroundColor:sonoKeys.map(k=>sono[k].duracao>=7?'rgba(14,159,110,.6)':sono[k].duracao>=6?'rgba(217,119,6,.6)':'rgba(239,68,68,.6)'),
+            borderRadius:4 },
+          { type:'line', label:'7h recomendado', data:sonoKeys.map(()=>7),
+            borderColor:'rgba(14,159,110,.7)', borderDash:[5,4], borderWidth:2,
+            pointRadius:0, fill:false, order:0 }
+        ]
+      },
+      options:{
+        ...BASE,
+        plugins:{
+          ...BASE.plugins,
+          legend:{display:true,position:'bottom',labels:{font:{size:9},boxWidth:9,padding:8,usePointStyle:true}},
+          tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.raw}h`}}
+        },
+        scales:{x:BASE.scales.x, y:{...BASE.scales.y,min:0,max:10,stacked:hasFases,
+          ticks:{...BASE.scales.y.ticks,callback:v=>v+'h'}}}
+      }
+    });
+    const sonoLast = sonoKeys.length ? sono[sonoKeys[sonoKeys.length-1]] : null;
+    const [sl,sc]=sonoAssess(sonoMed);
+    document.getElementById('sono-sub').innerHTML=
+      `<b>Última noite:</b> ${sonoLast?.duracao||'—'}h total`+
+        (hasFases&&sonoLast?.profundo ? ` · ${sonoLast.profundo}h profundo · ${sonoLast.rem||0}h REM` : '')+
+      `<br><b>Média 21 dias:</b> ${sonoMed}h total`+
+        (hasFases&&profMed ? ` · ${profMed}h profundo · ${remMed}h REM` : '')+
+      ` &nbsp;<span class="chip ${sonoMed>=7?'chip-v':sonoMed>=6?'chip-v':'chip-a'}">${sl}</span>`;
   }
 
+  // ── Stress: barras (avg) + linha (max) + zone bands ──
   if(stressKeys.length){
-    const sc=document.getElementById('stress-card');
-    sc.style.display='block';
+    document.getElementById('stress-card').style.display='block';
     requestAnimationFrame(()=>{
-      charts.stress=new Chart(document.getElementById('cStress'),{type:'bar',
-        data:{labels:stressKeys.map(fd),datasets:[{data:stressKeys.map(k=>stress[k].avg),
-          backgroundColor:stressKeys.map(k=>stress[k].avg>75?'rgba(239,68,68,.5)':stress[k].avg>50?'rgba(249,115,22,.5)':'rgba(14,159,110,.5)'),borderRadius:4}]},
-        options:{...BASE,plugins:{...BASE.plugins,tooltip:{callbacks:{label:c=>c.raw+'/100'}}},
-          scales:{x:BASE.scales.x,y:{...BASE.scales.y,min:0,max:100}}}});
+      charts.stress = new Chart(document.getElementById('cStress'),{
+        data:{
+          labels: stressKeys.map(fd),
+          datasets:[
+            { type:'bar', label:'Stress médio',
+              data:stressKeys.map(k=>stress[k].avg),
+              backgroundColor:stressKeys.map(k=>stress[k].avg<25?'rgba(14,159,110,.6)':stress[k].avg<50?'rgba(26,86,219,.5)':stress[k].avg<75?'rgba(249,115,22,.6)':'rgba(239,68,68,.65)'),
+              borderRadius:4, order:2 },
+            { type:'line', label:'Pico diário',
+              data:stressKeys.map(k=>stress[k].max||null),
+              borderColor:'rgba(239,68,68,.7)', borderDash:[4,3], borderWidth:1.5,
+              pointRadius:3, pointBackgroundColor:'rgba(239,68,68,.8)',
+              fill:false, order:1 }
+          ]
+        },
+        options:{
+          ...BASE,
+          plugins:{
+            ...BASE.plugins,
+            legend:{display:true,position:'bottom',labels:{font:{size:9},boxWidth:9,padding:8,usePointStyle:true}},
+            tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.raw}`}},
+            zoneBands:[
+              {min:0, max:25, color:'rgba(14,159,110,.07)'},
+              {min:25,max:50, color:'rgba(26,86,219,.05)'},
+              {min:50,max:75, color:'rgba(249,115,22,.07)'},
+              {min:75,max:100,color:'rgba(239,68,68,.09)'}
+            ]
+          },
+          scales:{x:BASE.scales.x, y:{...BASE.scales.y,min:0,max:100}}
+        }
+      });
+      const [sl,sc]=stressAssess(stressMed);
+      document.getElementById('stress-sub').innerHTML=
+        `<b>Média stress:</b> ${stressMed} &nbsp;<span class="chip ${stressMed<25?'chip-v':stressMed<50?'chip-v':'chip-a'}">${sl}</span>`+
+        `&nbsp;· <b>Pico médio:</b> ${maxMed}`+
+        `<div class="zone-legend">`+
+        `<span class="zl-chip zl-v">0–25 Baixo</span>`+
+        `<span class="zl-chip zl-b">25–50 Moderado</span>`+
+        `<span class="zl-chip zl-a">50–75 Alto</span>`+
+        `<span class="zl-chip zl-r">75–100 Muito alto</span>`+
+        `</div>`;
     });
   }
 
-  if(hrvKeys.length){
-    const comHRV=hrvKeys.filter(k=>hrv[k].ontem>0);
-    if(comHRV.length){
-      const hc=document.getElementById('hrv-card');
-      hc.style.display='block';
-      requestAnimationFrame(()=>{
-      charts.hrv=new Chart(document.getElementById('cHRV'),{type:'line',
-        data:{labels:comHRV.map(fd),datasets:[{data:comHRV.map(k=>hrv[k].ontem),
-          borderColor:'#0e9f6e',backgroundColor:'rgba(14,159,110,.1)',borderWidth:2,pointRadius:3,tension:.35,fill:true}]},
-        options:{...BASE,plugins:{...BASE.plugins,tooltip:{callbacks:{label:c=>c.raw+' ms'}}}}});
+  // ── HRV: noturno (linha) + média semanal (linha tracejada) ──
+  if(comHRV.length){
+    document.getElementById('hrv-card').style.display='block';
+    requestAnimationFrame(()=>{
+      charts.hrv = new Chart(document.getElementById('cHRV'),{
+        type:'line',
+        data:{
+          labels: comHRV.map(fd),
+          datasets:[
+            { label:'HRV noturno', data:comHRV.map(k=>hrv[k].ontem),
+              borderColor:'#0e9f6e', backgroundColor:'rgba(14,159,110,.12)',
+              borderWidth:2.5, pointRadius:4,
+              pointBackgroundColor: comHRV.map(k=>{
+                const v=hrv[k].ontem;
+                return v>=55?'#0e9f6e':v>=45?'#1a56db':v>=35?'#d97706':'#ef4444';
+              }),
+              tension:.35, fill:true, order:2 },
+            { label:'Média semanal', data:comHRV.map(k=>hrv[k].semanal||null),
+              borderColor:'rgba(26,86,219,.6)', borderDash:[5,4], borderWidth:1.5,
+              pointRadius:0, tension:.35, fill:false, order:1 }
+          ]
+        },
+        options:{
+          ...BASE,
+          plugins:{
+            ...BASE.plugins,
+            legend:{display:true,position:'bottom',labels:{font:{size:9},boxWidth:9,padding:8,usePointStyle:true}},
+            tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.raw} ms`}}
+          },
+          scales:{x:BASE.scales.x, y:{...BASE.scales.y,
+            ticks:{...BASE.scales.y.ticks,callback:v=>v+' ms'}}}
+        }
       });
-    }
+      const [hl,hc]=hrvAssess(hrvLast);
+      document.getElementById('hrv-sub').innerHTML=
+        `<b>Ontem:</b> ${hrvLast||'—'} ms &nbsp;<span class="chip ${hrvLast>=55?'chip-v':hrvLast>=45?'chip-v':'chip-a'}">${hl}</span>`+
+        `&nbsp;· <b>Média semanal:</b> ${semMed||'—'} ms`+
+        (hrvTrend?` &nbsp;· <b>Tendência:</b> ${hrvTrend}`:'')+
+        `<div class="zone-legend">`+
+        `<span class="zl-chip zl-v">≥55ms Excelente</span>`+
+        `<span class="zl-chip zl-b">45–55ms Bom</span>`+
+        `<span class="zl-chip zl-a">35–45ms Moderado</span>`+
+        `<span class="zl-chip zl-r">&lt;35ms Baixo</span>`+
+        `</div>`;
+    });
   }
 }
 
