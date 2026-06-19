@@ -875,10 +875,10 @@ function salvar() {
     for (var i = _parcIni - 1; i < _numParc; i++) {
       lancs.push({
         id:     grupoId + '-' + (i + 1),
-        cat:    _cat,
-        sub:    (_cat === 'carro'    ? _sub : null) || null,
-        loja:   (_cat === 'mercado'  ? _sub : null) || null,
-        divsub: (_cat === 'diversos' ? _sub : null) || null,
+        cat:    'parcelados',
+        sub:    null,
+        loja:   null,
+        divsub: null,
         valor:  parcValor,
         data:   addMeses(data, offset),
         desc:   desc,

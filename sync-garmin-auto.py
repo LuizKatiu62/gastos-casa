@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
 """
-Garmin → Firebase Treinos sync
-Puxa atividades, body battery, sono, stress e HRV do Garmin Connect.
+Garmin → Firebase — sync automático (sem senha, usa sessão salva)
+Rode sync-garmin.py manualmente se a sessão expirar.
 """
 
 import json, sys, os, time
 from datetime import datetime, timedelta
 
-# ── Configuração ──────────────────────────────────────────────
-GARMIN_EMAIL     = "lcdsilva@hotmail.com"
-FIREBASE_DB      = "https://gastos-casa-7f431-default-rtdb.firebaseio.com"
-FIREBASE_PATH    = "treinos/luiz"
-FIREBASE_KEY     = "AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU"
-DIAS_ATIVIDADES  = 365
-DIAS_SAUDE       = 180
-# ─────────────────────────────────────────────────────────────
+GARMIN_EMAIL    = "lcdsilva@hotmail.com"
+FIREBASE_DB     = "https://gastos-casa-7f431-default-rtdb.firebaseio.com"
+FIREBASE_PATH   = "treinos/luiz"
+FIREBASE_KEY    = "AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU"
+DIAS_ATIVIDADES = 365
+DIAS_SAUDE      = 21
+SESSION_DIR     = os.path.expanduser("~/.garth")
+LOG_FILE        = os.path.expanduser("~/gastos-casa/sync.log")
 
 try:
     from garminconnect import Garmin
@@ -23,6 +23,17 @@ except ImportError:
     sys.exit(1)
 
 import urllib.request as urlreq
+
+
+def log(msg):
+    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    line = f"[{ts}] {msg}"
+    print(line)
+    try:
+        with open(LOG_FILE, "a") as f:
+            f.write(line + "\n")
+    except Exception:
+        pass
 
 
 def fmt_dur(secs):
@@ -39,48 +50,29 @@ def calc_pace(dist_m, dur_secs):
 
 
 TIPO_MAP = {
-    # Corrida
     "running": "facil", "trail_running": "trilha", "ultra_run": "trilha",
     "treadmill_running": "esteira", "walking": "caminhada",
     "hiking": "trilha", "indoor_running": "esteira",
     "virtual_run": "virtual", "track_running": "intervalado",
     "obstacle_run": "intervalado",
-    # Bike — todos os tipos conhecidos do Garmin
-    "cycling": "bike", "road_biking": "bike", "gravel_cycling": "bike",
-    "indoor_cycling": "bike_indoor", "track_cycling": "bike",
-    "mountain_biking": "bike_trilha", "cyclocross": "bike_trilha",
-    "virtual_ride": "bike_virtual", "e_bike_mountain": "bike_trilha",
-    "e_bike_road": "bike", "e_bike_fitness": "bike",
-    "recumbent_cycling": "bike", "hand_cycling": "bike",
-    "commuting": "bike", "bmx": "bike_trilha",
-    # Natação
+    "cycling": "bike", "indoor_cycling": "bike_indoor",
+    "mountain_biking": "bike_trilha", "virtual_ride": "bike_virtual",
     "swimming": "natacao", "open_water_swimming": "natacao_ar",
-    "lap_swimming": "natacao",
-    # Academia
     "strength_training": "musculacao", "weight_training": "musculacao",
     "fitness_equipment": "musculacao", "cardio_training": "musculacao",
-    "barre": "musculacao", "pilates": "musculacao",
 }
 ESPORTE_MAP = {
     "running": "corrida", "trail_running": "corrida", "ultra_run": "corrida",
     "treadmill_running": "corrida", "walking": "corrida", "hiking": "corrida",
     "indoor_running": "corrida", "virtual_run": "corrida", "track_running": "corrida",
     "obstacle_run": "corrida",
-    "cycling": "bike", "road_biking": "bike", "gravel_cycling": "bike",
-    "indoor_cycling": "bike", "track_cycling": "bike",
-    "mountain_biking": "bike", "cyclocross": "bike",
-    "virtual_ride": "bike", "e_bike_mountain": "bike",
-    "e_bike_road": "bike", "e_bike_fitness": "bike",
-    "recumbent_cycling": "bike", "hand_cycling": "bike",
-    "commuting": "bike", "bmx": "bike",
-    "swimming": "natacao", "open_water_swimming": "natacao", "lap_swimming": "natacao",
+    "cycling": "bike", "indoor_cycling": "bike", "mountain_biking": "bike",
+    "virtual_ride": "bike",
+    "swimming": "natacao", "open_water_swimming": "natacao",
     "strength_training": "academia", "weight_training": "academia",
     "fitness_equipment": "academia", "cardio_training": "academia",
-    "barre": "academia", "pilates": "academia",
 }
-IGNORAR = {
-    "yoga", "elliptical", "rowing", "incident_detected",
-}
+IGNORAR = {"yoga", "elliptical", "rowing", "incident_detected"}
 
 
 def garmin_to_treino(act):
@@ -152,64 +144,49 @@ def safe_get(api, fn, *args, delay=0.4):
 
 
 def main():
-    print("═" * 52)
-    print("  🏃 Garmin → Firebase Treinos (completo)")
-    print("═" * 52)
+    log("━━━ Iniciando sync automático ━━━")
 
-    senha = input(f"\n  Senha do Garmin ({GARMIN_EMAIL}): ").strip()
-    if not senha:
-        print("  Cancelado.")
-        sys.exit(1)
+    senha_env = os.environ.get("GARMIN_PASSWORD", "")
 
-    SESSION_DIR = os.path.expanduser("~/.garth")
-    print("\n  Conectando ao Garmin...")
-    try:
-        api = Garmin(GARMIN_EMAIL, senha)
-        if os.path.exists(SESSION_DIR):
-            try:
-                api.login(SESSION_DIR)
-                print("  ✅ Login OK (sessão reutilizada)")
-            except Exception:
-                api.login()
-                api.garth.dump(SESSION_DIR)
-                print("  ✅ Login OK (sessão renovada)")
-        else:
+    # Tenta sessão salva primeiro; se falhar usa senha do ambiente (GitHub Actions)
+    api = None
+    if os.path.exists(SESSION_DIR):
+        try:
+            api = Garmin(GARMIN_EMAIL, "")
+            api.login(SESSION_DIR)
+            log("Login OK (sessão reutilizada)")
+        except Exception:
+            api = None
+
+    if api is None:
+        if not senha_env:
+            log("ERRO: sem sessão e sem GARMIN_PASSWORD. Configure o secret no GitHub.")
+            sys.exit(1)
+        try:
+            api = Garmin(GARMIN_EMAIL, senha_env)
             api.login()
-            api.garth.dump(SESSION_DIR)
-            print("  ✅ Login OK (sessão salva)")
-    except Exception as e:
-        msg = str(e)
-        print(f"  ❌ Erro no login: {msg[:200]}")
-        sys.exit(1)
+            log("Login OK (GARMIN_PASSWORD)")
+        except Exception as e:
+            log(f"ERRO no login: {e}")
+            sys.exit(1)
 
     hoje = datetime.today()
     ini  = hoje - timedelta(days=DIAS_ATIVIDADES)
 
-    # ── Atividades ──
-    print(f"\n  Buscando atividades (últimos {DIAS_ATIVIDADES} dias)...")
     try:
         raw = api.get_activities_by_date(ini.strftime("%Y-%m-%d"), hoje.strftime("%Y-%m-%d"))
-        print(f"  📋 {len(raw)} atividades encontradas")
+        log(f"{len(raw)} atividades encontradas")
     except Exception as e:
-        print(f"  ❌ Erro: {e}")
+        log(f"ERRO ao buscar atividades: {e}")
         sys.exit(1)
 
     treinos   = [t for a in raw if (t := garmin_to_treino(a))]
-    ignorados = len(raw) - len(treinos)
-    print(f"  🏃 {len(treinos)} treinos | ⏭ {ignorados} ignorados")
-
-    # Diagnóstico: tipos encontrados
-    tipos_raw = {}
-    for a in raw:
-        tg = (a.get("activityType") or {}).get("typeKey", "?").lower()
-        tipos_raw[tg] = tipos_raw.get(tg, 0) + 1
-    print("  📋 Tipos encontrados:", ", ".join(f"{k}({v})" for k, v in sorted(tipos_raw.items())))
+    log(f"{len(treinos)} treinos para sincronizar")
 
     if not treinos:
-        print("\n  Nenhum treino para sincronizar.")
+        log("Nenhum treino — abortando.")
         return
 
-    # ── Estatísticas ──
     trintaDias = (hoje - timedelta(days=30)).strftime("%Y-%m-%d")
     seteDias   = (hoje - timedelta(days=7)).strftime("%Y-%m-%d")
     treinos_30 = [t for t in treinos if t["data"] >= trintaDias]
@@ -218,7 +195,6 @@ def main():
     km_30      = round(sum(t["distancia"] for t in treinos_30), 1)
     km_7       = round(sum(t["distancia"] for t in treinos_7), 1)
 
-    # Volume por semana
     semanal = {}
     for t in treinos:
         s = semana_iso(t["data"])
@@ -227,8 +203,7 @@ def main():
         semanal[s]["km"]      = round(semanal[s]["km"] + t["distancia"], 2)
         semanal[s]["treinos"] += 1
 
-    # ── Saúde (loop único: BB + stress via get_stats, sono e HRV separados) ──
-    print(f"\n  Buscando dados de saúde ({DIAS_SAUDE} dias)...")
+    log(f"Buscando dados de saúde ({DIAS_SAUDE} dias)...")
     bodyBattery = {}
     stress      = {}
     sono        = {}
@@ -249,7 +224,7 @@ def main():
             if avg_s is not None and avg_s >= 0:
                 stress[d] = {"avg": int(avg_s), "max": int(max_s)}
 
-        # Sono — chamada separada
+        # Sono
         sl = safe_get(api, api.get_sleep_data, d, delay=0.5)
         if sl and sl.get("dailySleepDTO"):
             dto     = sl["dailySleepDTO"]
@@ -263,24 +238,17 @@ def main():
                 "score":    overall.get("value", 0) if isinstance(overall, dict) else 0,
             }
 
-        # HRV — chamada separada
+        # HRV
         hv = safe_get(api, api.get_hrv_data, d, delay=0.5)
         if hv and hv.get("hrvSummary"):
             hs = hv["hrvSummary"]
             hrv[d] = {
                 "semanal": hs.get("weeklyAvg", 0),
                 "ontem":   hs.get("lastNight", 0),
-                "avg":     hs.get("lastNight", 0),
                 "status":  hs.get("status", ""),
             }
 
-    print(f"  🔋 {len(bodyBattery)} dias com Body Battery")
-    print(f"  😴 {len(sono)} dias com sono")
-    print(f"  😰 {len(stress)} dias com stress")
-    print(f"  💚 {len(hrv)} dias com HRV")
-
-    # ── Firebase ──
-    print("\n  Enviando para Firebase...")
+    log("Enviando para Firebase...")
     try:
         token = firebase_token()
         payload = {
@@ -302,17 +270,13 @@ def main():
         }
         ok = firebase_put(FIREBASE_PATH, payload, token)
         if ok:
-            print(f"  ✅ Firebase atualizado!")
-            print(f"     {len(treinos)} treinos · {total_km} km total")
-            print(f"     {km_30} km nos últimos 30 dias · {km_7} km esta semana")
+            log(f"Firebase atualizado! {len(treinos)} treinos · {total_km} km · {km_7} km esta semana")
         else:
-            print("  ❌ Erro ao salvar no Firebase")
+            log("ERRO ao salvar no Firebase")
     except Exception as e:
-        print(f"  ❌ Firebase: {e}")
+        log(f"ERRO Firebase: {e}")
 
-    print("═" * 52)
-    print("  Abra o app: luizkatiu62.github.io/treinos")
-    print("═" * 52)
+    log("━━━ Sync concluído ━━━")
 
 
 if __name__ == "__main__":

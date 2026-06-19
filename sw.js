@@ -1,7 +1,8 @@
-const CACHE = 'gastos-v102';
+const CACHE = 'gastos-v198';
 
 const CORE_ASSETS = [
   './index.html',
+  './travel.html',
   './manifest.json',
 ];
 
@@ -22,21 +23,28 @@ self.addEventListener('install', e => {
             .catch(() => {})
         )
       );
-    })
+    }).then(() => self.skipWaiting())
   );
-  self.skipWaiting();
 });
 
 self.addEventListener('activate', e => {
   e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-    ).then(() => {
-      return self.clients.matchAll({ includeUncontrolled: true, type: 'window' })
-        .then(clients => clients.forEach(client => client.postMessage({ type: 'SW_UPDATED' })));
-    })
+    caches.keys()
+      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+      .then(() => self.clients.claim())
+      .then(() => self.clients.matchAll({ includeUncontrolled: true, type: 'window' }))
+      .then(clients => Promise.all(clients.map(client => {
+        // Navigate the client directly to fresh content — bypasses stale JS and bfcache
+        const freshUrl = new URL('./travel.html?_r=' + Date.now(), self.location.href).href;
+        return client.navigate(freshUrl)
+          .catch(() => client.postMessage({ type: 'SW_UPDATED' }));
+      })))
   );
-  self.clients.claim();
+});
+
+// Allow page to trigger skipWaiting explicitly
+self.addEventListener('message', e => {
+  if (e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('fetch', e => {
@@ -49,27 +57,41 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // Firebase / Firestore — sempre rede
-  if (url.includes('firebaseio.com') || url.includes('firebase.googleapis.com') || url.includes('firebaseapp.com')) {
-    e.respondWith(fetch(e.request).catch(() => new Response('', { status: 503 })));
-    return;
-  }
-
-  // HTML — network-first para sempre pegar versão mais nova
-  if (e.request.headers.get('accept') && e.request.headers.get('accept').includes('text/html')) {
+  // travel.html — sempre da rede com timestamp único; fallback para cache se offline
+  if (url.includes('travel.html')) {
+    const freshUrl = url.split('?')[0] + '?_r=' + Date.now();
     e.respondWith(
-      fetch(e.request, { cache: 'no-cache' }).then(res => {
-        if (res.ok) {
-          caches.open(CACHE).then(c => c.put(e.request, res.clone()));
-        }
-        return res;
-      }).catch(() => caches.match(e.request))
+      fetch(new Request(freshUrl, { cache: 'no-store' }))
+        .then(res => {
+          if (res.ok) caches.open(CACHE).then(c => c.put('./travel.html', res.clone()));
+          return res;
+        })
+        .catch(() => caches.match('./travel.html'))
     );
     return;
   }
 
+  // index.html — sempre da rede; fallback para cache se offline
+  if (url.endsWith('/') || url.includes('index.html')) {
+    e.respondWith(
+      fetch(e.request, { cache: 'no-store' })
+        .then(res => {
+          if (res.ok) caches.open(CACHE).then(c => c.put(e.request, res.clone()));
+          return res;
+        })
+        .catch(() => caches.match(e.request))
+    );
+    return;
+  }
+
+  // Firebase / auth APIs — sempre rede
+  if (url.includes('firebaseio.com') || url.includes('googleapis.com') || url.includes('firebaseapp.com')) {
+    e.respondWith(fetch(e.request).catch(() => new Response('', { status: 503 })));
+    return;
+  }
+
   // External CDN — cache-first
-  const isExt = url.includes('gstatic.com') || url.includes('googleapis.com') || url.includes('cloudflare.com');
+  const isExt = url.includes('gstatic.com') || url.includes('cloudflare.com');
   if (isExt) {
     e.respondWith(
       caches.match(e.request).then(cached => {
