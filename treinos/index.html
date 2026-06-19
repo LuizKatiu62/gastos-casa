@@ -72,6 +72,31 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .sugestao-title{font-size:.72rem;font-weight:800;color:#15803d;text-transform:uppercase;letter-spacing:.5px;margin-bottom:.5rem}
 .sugestao-texto{font-size:.88rem;color:#14532d;line-height:1.65;font-weight:500}
 
+/* ── COACH WORKOUT CARD ── */
+.sug-card{border-radius:14px;padding:1rem;margin-bottom:.75rem}
+.sug-card-rest{background:linear-gradient(135deg,#fef2f2,#fee2e2);border:1px solid #fca5a5;color:#7f1d1d}
+.sug-card-easy{background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #86efac;color:#14532d}
+.sug-card-moderate{background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1px solid #93c5fd;color:#1e3a8a}
+.sug-card-normal{background:linear-gradient(135deg,#eef2ff,#e0e7ff);border:1px solid #a5b4fc;color:#312e81}
+.sug-card-quality{background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #fcd34d;color:#78350f}
+.sug-hd{display:flex;align-items:flex-start;justify-content:space-between;gap:.5rem;margin-bottom:.8rem}
+.sug-sport{font-size:.78rem;font-weight:900;letter-spacing:.2px;text-transform:uppercase;flex:1}
+.sug-level{font-size:.62rem;font-weight:800;padding:2px 8px;border-radius:20px;white-space:nowrap;flex-shrink:0}
+.sug-level-rest{background:#fecaca;color:#991b1b}
+.sug-level-easy{background:#bbf7d0;color:#14532d}
+.sug-level-moderate{background:#bfdbfe;color:#1e3a8a}
+.sug-level-normal{background:#c7d2fe;color:#312e81}
+.sug-level-quality{background:#fde68a;color:#78350f}
+.sug-params{display:grid;grid-template-columns:repeat(4,1fr);gap:.4rem;margin-bottom:.8rem}
+.sug-param{background:rgba(255,255,255,.62);border-radius:10px;padding:.55rem .35rem;text-align:center}
+.sug-param-val{font-size:.9rem;font-weight:900;line-height:1.1;margin-bottom:3px}
+.sug-param-lbl{font-size:.58rem;font-weight:700;opacity:.65;text-transform:uppercase;letter-spacing:.2px}
+.sug-why{font-size:.8rem;line-height:1.65;font-weight:500;padding:.6rem .7rem;background:rgba(255,255,255,.52);border-radius:10px;margin-bottom:.65rem}
+.sug-why b{font-weight:900}
+.sug-alts-lbl{font-size:.62rem;font-weight:800;letter-spacing:.5px;text-transform:uppercase;opacity:.65;margin-bottom:.3rem}
+.sug-alts{display:flex;gap:.35rem;flex-wrap:wrap}
+.sug-alt{font-size:.72rem;font-weight:700;padding:.28rem .6rem;border-radius:20px;background:rgba(255,255,255,.7);border:none;font-family:inherit}
+
 /* ── RUN LIST ── */
 .run-list{display:flex;flex-direction:column;gap:.4rem}
 .run{background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:.7rem .85rem;display:flex;align-items:center;gap:.65rem}
@@ -551,6 +576,106 @@ function render(d){
 }
 
 // ════════════════ COACH ════════════════
+
+function getReadiness(bb,sonoMed,volTrend,diasSemTreino){
+  if(bb>0&&bb<25) return 'rest';
+  if(bb<45||sonoMed<5.5) return 'easy';
+  if(bb>=75&&sonoMed>=6.5) return 'quality';
+  if(volTrend>20) return 'moderate';
+  if(bb>=65&&sonoMed>=6) return 'normal';
+  return 'moderate';
+}
+
+function renderSugestaoCard(esporte,readiness,paceBase,bbHoje,sonoMed){
+  const FCX=163,pb=paceBase||420;
+  const z1=[Math.round(FCX*.6),Math.round(FCX*.7)];
+  const z2=[Math.round(FCX*.7),Math.round(FCX*.8)];
+  const z3=[Math.round(FCX*.8),Math.round(FCX*.9)];
+  const fcByLevel={rest:'Repouso',easy:z1[0]+'–'+z1[1],moderate:z2[0]+'–'+z2[1],normal:z2[0]+'–'+z2[1],quality:z3[0]+'–'+z3[1]};
+  const sonoStr=sonoMed<6?' e sono de '+sonoMed.toFixed(1)+'h (abaixo do ideal)':'';
+  const PLANS={
+    corrida:{
+      rest: {dist:'—',pace:'—',dur:'Repouso',why:`BB muito baixa (${bbHoje}%) — descanso total. Máximo: caminhada leve de 20min.`,alts:['🚶 Caminhada 20min','🧘 Mobilidade']},
+      easy: {dist:'4–6 km',pace:s2p(pb+45),dur:'35–45 min',why:`BB ${bbHoje}%${sonoStr}. Zona 1–2, ritmo de conversa fácil. Objetivo: mover sem sobrecarregar o sistema.`,alts:['🚴 Bike suave 30min','🏊 Nado técnico 1km']},
+      moderate:{dist:'6–8 km',pace:s2p(pb+20),dur:'50–60 min',why:`BB ${bbHoje}% — condições ok. Aeróbico Z2, mantenha ritmo confortável do início ao fim.`,alts:['🚴 Bike aeróbico 45min','🏊 Nado 1.5km']},
+      normal: {dist:'8–10 km',pace:s2p(pb+10),dur:'60–70 min',why:`BB ${bbHoje}% e sono adequado. Base aeróbica Z2 — consolidação do volume semanal no ritmo habitual.`,alts:['🚴 Bike Z2 60min','🏊 Nado 2km']},
+      quality:{dist:'8–12 km',pace:s2p(Math.max(pb-25,260)),dur:'65–80 min',why:`BB excelente (${bbHoje}%)! Opções: <b>Tempo run</b> 20min Z3, <b>Fartlek</b> com acelerações de 1–2min, ou <b>corrida longa Z2</b>. Aproveite a energia!`,alts:['⚡ 6×1km intervalado','🏃 Longa Z2 12km']}
+    },
+    bike:{
+      rest: {dist:'—',pace:'—',dur:'Repouso',why:`BB muito baixa (${bbHoje}%) — descanso ou spin suave de 20min sem nenhuma carga.`,alts:['🧘 Mobilidade 20min']},
+      easy: {dist:'20–30 km',pace:'Suave',dur:'45–60 min',why:`BB ${bbHoje}%${sonoStr} — pedal de recuperação Z1. Cadência 85-90rpm, sem esforço perceptível.`,alts:['🏃 Caminhada 30min','🏊 Nado 1km']},
+      moderate:{dist:'30–40 km',pace:'Aeróbico',dur:'60–75 min',why:`BB ${bbHoje}% — pedal aeróbico Z2. Cadência 85-95rpm, terreno moderado, ritmo sustentável.`,alts:['🏃 Corrida Z2 7km','🏊 Nado 1.5km']},
+      normal: {dist:'40–50 km',pace:'Moderado',dur:'75–90 min',why:`BB ${bbHoje}% — volume de bike Z2-Z3. Inclua 2-3 subidas moderadas se disponível no percurso.`,alts:['🏃 Corrida Z2 8km','🏊 Nado 2km']},
+      quality:{dist:'50–70 km',pace:'Forte',dur:'90–120 min',why:`BB excelente (${bbHoje}%)! Opções: <b>4×5min subida Z4</b>, <b>30min tempo Z3</b> ou pedal longo com acelerações progressivas.`,alts:['⚡ 4×5min subida Z4','🏃 Tijolo corrida 6km']}
+    },
+    natacao:{
+      rest: {dist:'—',pace:'—',dur:'Repouso',why:`BB muito baixa (${bbHoje}%) — descanso total ou nado suavíssimo de recuperação (15min).`,alts:['🧘 Alongamento']},
+      easy: {dist:'1.000 m',pace:'Técnica',dur:'30–40 min',why:`BB ${bbHoje}%${sonoStr} — nado de recuperação. Foco em técnica: rolamento, braçada, respiração. Sem cronometrar.`,alts:['🏃 Caminhada 30min','🚴 Bike suave 30min']},
+      moderate:{dist:'1.500 m',pace:'Aeróbico',dur:'40–50 min',why:`BB ${bbHoje}% — nado aeróbico Z2. Séries de 200-400m, intervalo 20-30s entre séries. Ritmo constante.`,alts:['🏃 Corrida Z2 7km','🚴 Bike 45min']},
+      normal: {dist:'2.000 m',pace:'Moderado',dur:'50–60 min',why:`BB ${bbHoje}% — sessão de volume. Sugestão: 4×400m + 4×100m técnica com recuperação ativa entre séries.`,alts:['🏃 Corrida Z2 8km','🚴 Bike 60min']},
+      quality:{dist:'2.500 m',pace:'Forte',dur:'60–75 min',why:`BB excelente (${bbHoje}%)! <b>Pirâmide</b> 100-200-400-200-100m em esforço máximo ou <b>10×100m</b> com intervalo curto (15s).`,alts:['⚡ Pirâmide 100-400m','🏃 Corrida forte 8km']}
+    },
+    academia:{
+      rest: {dist:'—',pace:'Repouso',dur:'—',why:`BB muito baixa (${bbHoje}%) — repouso ou mobilidade passiva sem cargas. Recupere o sistema.`,alts:['🧘 Alongamento 20min']},
+      easy: {dist:'—',pace:'Regenerativo',dur:'30–40 min',why:`BB ${bbHoje}%${sonoStr} — mobilidade, foam roller, exercícios de ativação. Sem cargas pesadas hoje.`,alts:['🏃 Caminhada 30min','🚴 Bike suave 30min']},
+      moderate:{dist:'—',pace:'60–70% 1RM',dur:'45–55 min',why:`BB ${bbHoje}% — circuito funcional ou musculação moderada. 3 séries × 12-15 reps com carga confortável.`,alts:['🏃 Corrida fácil 5km','🚴 Bike 45min']},
+      normal: {dist:'—',pace:'70–80% 1RM',dur:'55–65 min',why:`BB ${bbHoje}% — treino de força padrão. Grupos principais, 3-4 séries × 8-12 reps com boa execução.`,alts:['🏃 Corrida Z2 7km','🚴 Bike 60min']},
+      quality:{dist:'—',pace:'80–90% 1RM',dur:'65–75 min',why:`BB excelente (${bbHoje}%)! <b>Progressão de cargas</b> ou <b>HIIT de força</b> — aproveite a energia alta para ir além!`,alts:['⚡ HIIT força 30min','🏃 Corrida forte 6km']}
+    },
+    todos:{
+      rest: {dist:'—',pace:'—',dur:'Repouso',why:`BB muito baixa (${bbHoje}%) — dia de descanso total. Seu corpo precisa recuperar.`,alts:['🧘 Alongamento','🚶 Caminhada suave']},
+      easy: {dist:'4–6 km',pace:s2p(pb+45),dur:'35–45 min',why:`BB ${bbHoje}%${sonoStr} — treino leve. Corrida Z1-Z2 ou bike suave são ótimas opções.`,alts:['🚴 Bike fácil 30min','🏊 Nado técnico 1km']},
+      moderate:{dist:'6–8 km',pace:s2p(pb+20),dur:'50–60 min',why:`Condições moderadas — escolha o esporte preferido e mantenha Z2 todo o tempo.`,alts:['🚴 Bike Z2 45min','🏊 Nado 1.5km']},
+      normal: {dist:'8–10 km',pace:s2p(pb+10),dur:'60–70 min',why:`Bom dia para treinar! Corrida ou bike Z2, natação ou musculação completa — você escolhe.`,alts:['🚴 Bike 60min','🏊 Nado 2km','💪 Academia 60min']},
+      quality:{dist:'8–12 km',pace:s2p(Math.max(pb-25,260)),dur:'65–80 min',why:`BB excelente (${bbHoje}%)! Treine com intensidade — corrida forte Z3, bike Z4 ou musculação pesada.`,alts:['⚡ Intervalados Z4','🚴 Bike forte 60min']}
+    }
+  };
+  const sp=esporte in PLANS?esporte:'corrida';
+  const p=PLANS[sp][readiness];
+  const cc={rest:'sug-card-rest',easy:'sug-card-easy',moderate:'sug-card-moderate',normal:'sug-card-normal',quality:'sug-card-quality'};
+  const lc={rest:'sug-level-rest',easy:'sug-level-easy',moderate:'sug-level-moderate',normal:'sug-level-normal',quality:'sug-level-quality'};
+  const ll={rest:'😴 Repouso',easy:'💚 Leve',moderate:'💙 Moderado',normal:'✅ Normal',quality:'🔥 Qualidade'};
+  const sportLbl={corrida:'🏃 Corrida',bike:'🚴 Bike',natacao:'🏊 Natação',academia:'💪 Academia',todos:'🏅 Geral'};
+  const titleMap={
+    rest:     {corrida:'Descanso Ativo',bike:'Descanso',natacao:'Descanso',academia:'Repouso',todos:'Descanso'},
+    easy:     {corrida:'Corrida Fácil Z1',bike:'Pedal Suave Z1',natacao:'Nado Técnico',academia:'Regenerativo',todos:'Treino Leve'},
+    moderate: {corrida:'Corrida Aeróbica Z2',bike:'Pedal Aeróbico Z2',natacao:'Nado Aeróbico Z2',academia:'Força Moderada',todos:'Treino Aeróbico'},
+    normal:   {corrida:'Base Aeróbica Z2',bike:'Volume de Bike',natacao:'Nado de Volume',academia:'Força Completa',todos:'Treino Padrão'},
+    quality:  {corrida:'Treino de Qualidade',bike:'Bike Forte Z3-Z4',natacao:'Nado Intenso',academia:'Força Intensa',todos:'Treino Forte'}
+  };
+  const fcColor={rest:'#991b1b',easy:'#065f46',moderate:'#1e40af',normal:'#312e81',quality:'#92400e'};
+  const distLbl=sp==='natacao'?'Distância':sp==='academia'?'Nível':'Dist. km';
+  const paceLbl=sp==='corrida'?'Pace /km':sp==='academia'?'Intensidade':'Ritmo';
+  const altsHtml=p.alts.map(a=>`<span class="sug-alt">${a}</span>`).join('');
+  return `
+    <div class="sug-card ${cc[readiness]}">
+      <div class="sug-hd">
+        <div class="sug-sport">${sportLbl[sp]} · ${titleMap[readiness][sp]}</div>
+        <div class="sug-level ${lc[readiness]}">${ll[readiness]}</div>
+      </div>
+      <div class="sug-params">
+        <div class="sug-param">
+          <div class="sug-param-val" style="color:#1a56db">${p.dist}</div>
+          <div class="sug-param-lbl">${distLbl}</div>
+        </div>
+        <div class="sug-param">
+          <div class="sug-param-val" style="color:#0e9f6e">${p.pace}</div>
+          <div class="sug-param-lbl">${paceLbl}</div>
+        </div>
+        <div class="sug-param">
+          <div class="sug-param-val" style="color:${fcColor[readiness]}">${fcByLevel[readiness]}</div>
+          <div class="sug-param-lbl">FC bpm</div>
+        </div>
+        <div class="sug-param">
+          <div class="sug-param-val" style="color:#7c3aed">${p.dur}</div>
+          <div class="sug-param-lbl">Duração</div>
+        </div>
+      </div>
+      <div class="sug-why"><b>💡 Por que este treino?</b><br>${p.why}</div>
+      ${p.alts.length?`<div class="sug-alts-lbl">Alternativas</div><div class="sug-alts">${altsHtml}</div>`:''}
+    </div>`;
+}
+
 let curCoachEsporte='corrida';
 
 function setCoachEsporte(e,btn){
@@ -569,7 +694,8 @@ function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
   // Saúde (sempre global)
   const bbHoje=bb[hoje]?.max||bb[Object.keys(bb).sort().slice(-1)[0]]?.max||0;
   const sonoKeys=Object.keys(sono).sort().slice(-7);
-  const mediaSOno=sonoKeys.length?sonoKeys.reduce((s,k)=>s+sono[k].duracao,0)/sonoKeys.length:0;
+  const sonoReal7=sonoKeys.filter(k=>sono[k].duracao>=2);
+  const mediaSOno=sonoReal7.length?+(sonoReal7.reduce((s,k)=>s+sono[k].duracao,0)/sonoReal7.length).toFixed(1):0;
 
   // Atividades filtradas por esporte
   const filtrado=curCoachEsporte==='todos'?ativ:ativ.filter(a=>getEsporte(a)===curCoachEsporte);
@@ -587,20 +713,22 @@ function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
 
   // Status (baseado em BB + sono — sempre global)
   const diasSemTreino=ativ.length?Math.round((Date.now()-new Date(ativ[0].data+'T12:00:00').getTime())/864e5):99;
-  let status,statusClass,recomendacao;
-  if(bbHoje<25){status='😴 Descanse hoje';statusClass='status-descanso';recomendacao='Sua Body Battery está muito baixa ('+bbHoje+'%). Recuperação total hoje — sem treinos intensos.';}
-  else if(bbHoje<45||mediaSOno<6){status='⚠️ Treino Leve';statusClass='status-atencao';recomendacao='Body Battery moderada ('+bbHoje+'%)'+(mediaSOno<6?' e sono abaixo do ideal ('+mediaSOno.toFixed(1)+'h)':'')+'. Opte por treino fácil em zona 2.';}
-  else if(volTrend>20){status='📈 Cuidado com a carga';statusClass='status-atencao';recomendacao='Volume desta semana é +'+volTrend.toFixed(0)+'% vs semana passada. Aumento acima de 10%/semana aumenta risco de lesão.';}
-  else if(bbHoje>=75&&diasSemTreino>=1){status='🚀 Ótimo dia pra treinar!';statusClass='status-otimo';recomendacao='Body Battery alta ('+bbHoje+'%), sono OK'+(mediaSOno>=7?' ('+mediaSOno.toFixed(1)+'h)':'')+'. Condições ótimas para um treino forte!';}
-  else{status='✅ Dia bom pra treinar';statusClass='status-bom';recomendacao='Condições favoráveis. Body Battery em '+bbHoje+'%. Treino moderado ou conforme seu plano.';}
+  const paceBaseArr=ativ.filter(a=>getEsporte(a)==='corrida'&&a.data>=d7&&a.pace&&a.distancia>=1);
+  const paceBase=paceBaseArr.length?paceBaseArr.reduce((s,a)=>s+p2s(a.pace),0)/paceBaseArr.length:0;
+  const readiness=getReadiness(bbHoje,mediaSOno,volTrend,diasSemTreino);
+  let status,statusClass;
+  if(bbHoje<25){status='😴 Descanse hoje';statusClass='status-descanso';}
+  else if(bbHoje<45||mediaSOno<6){status='⚠️ Treino Leve';statusClass='status-atencao';}
+  else if(volTrend>20){status='📈 Cuidado com a carga';statusClass='status-atencao';}
+  else if(bbHoje>=75&&diasSemTreino>=1){status='🚀 Ótimo dia pra treinar!';statusClass='status-otimo';}
+  else{status='✅ Dia bom pra treinar';statusClass='status-bom';}
 
   document.getElementById('coach-status').innerHTML=`
     <div class="status-badge ${statusClass}">
       <div class="status-ico">${bbHoje>=75?'🚀':bbHoje>=45?'✅':bbHoje>=25?'⚠️':'😴'}</div>
       <div><div class="status-title">${status}</div><div class="status-sub">Hoje, ${fd(hoje)}</div></div>
     </div>`;
-  document.getElementById('coach-sugestao').innerHTML=`
-    <div class="sugestao"><div class="sugestao-title">💬 Recomendação do Coach</div><div class="sugestao-texto">${recomendacao}</div></div>`;
+  document.getElementById('coach-sugestao').innerHTML=renderSugestaoCard(curCoachEsporte,readiness,paceBase,bbHoje,mediaSOno);
 
   // ── Insights por esporte ──
   let ins='';
