@@ -12,7 +12,7 @@ GARMIN_EMAIL  = "lcdsilva@hotmail.com"
 FIREBASE_DB   = "https://gastos-casa-7f431-default-rtdb.firebaseio.com"
 FIREBASE_PATH = "treinos/luiz"
 FIREBASE_KEY  = "AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU"
-DIAS_PARA_TRAS = 90   # quantos dias de histórico buscar
+DIAS_PARA_TRAS = 180  # quantos dias de histórico buscar
 # ─────────────────────────────────────────────────────────────
 
 try:
@@ -207,13 +207,35 @@ def main():
         print("\n  Nenhum treino para importar.")
         return
 
+    # ── Buscar HRV por dia ──
+    print(f"\n  Buscando HRV de {data_ini:%d/%m/%Y} a {data_fim:%d/%m/%Y}...")
+    hrv_data = {}
+    dias_total = DIAS_PARA_TRAS
+    dias_ok = 0
+    day = data_ini
+    while day <= data_fim:
+        ds = day.strftime("%Y-%m-%d")
+        try:
+            raw = api.get_hrv_data(ds)
+            summ = (raw or {}).get("hrvSummary") or {}
+            avg  = summ.get("lastNight") or summ.get("lastNight5MinHigh") or 0
+            high = summ.get("lastNight5MinHigh") or 0
+            status = summ.get("status") or ""
+            if avg and avg > 0:
+                hrv_data[ds] = {"avg": int(avg), "high": int(high), "status": status.upper()}
+                dias_ok += 1
+        except Exception:
+            pass
+        day += timedelta(days=1)
+    print(f"  💓 HRV: {dias_ok} dias com dados de {dias_total} buscados")
+
     # ── Salvar arquivo de importação ──
     output = os.path.expanduser("~/garmin-import.json")
-    payload = { "treinos": novos }
+    payload = { "treinos": novos, "hrv": hrv_data }
     with open(output, "w") as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
 
-    print(f"\n  ✅ {len(novos)} treinos salvos em:")
+    print(f"\n  ✅ {len(novos)} treinos + {dias_ok} dias HRV salvos em:")
     print(f"     {output}")
     print("\n  Agora abra o app Treinos e use o botão Importar Garmin.")
     print("═" * 50)
