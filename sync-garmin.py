@@ -13,7 +13,7 @@ FIREBASE_DB      = "https://gastos-casa-7f431-default-rtdb.firebaseio.com"
 FIREBASE_PATH    = "treinos/luiz"
 FIREBASE_KEY     = "AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU"
 DIAS_ATIVIDADES  = 365
-DIAS_SAUDE       = 21
+DIAS_SAUDE       = 180
 # ─────────────────────────────────────────────────────────────
 
 try:
@@ -270,6 +270,7 @@ def main():
             hrv[d] = {
                 "semanal": hs.get("weeklyAvg", 0),
                 "ontem":   hs.get("lastNight", 0),
+                "avg":     hs.get("lastNight", 0),
                 "status":  hs.get("status", ""),
             }
 

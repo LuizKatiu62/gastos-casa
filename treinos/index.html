@@ -210,9 +210,15 @@ body{padding-top:45px}
 .rd-gauge-ptr{position:absolute;width:3px;height:100%;background:#1e293b;border-radius:2px;transition:left .4s ease}
 
 /* ── COACH ESPORTE FILTER ── */
-.cef-wrap{display:flex;gap:.4rem;margin-bottom:.75rem;flex-wrap:wrap}
+.cef-wrap{display:flex;gap:.4rem;margin-bottom:.4rem;flex-wrap:wrap}
 .cef-btn{border:1.5px solid var(--border);background:#fff;border-radius:20px;padding:.3rem .8rem;font-size:.72rem;font-weight:700;color:var(--muted);cursor:pointer;font-family:inherit;transition:all .15s}
 .cef-btn.cef-on{background:var(--blue);border-color:var(--blue);color:#fff}
+/* ── COACH EVENTO (goal) FILTER ── */
+.ev-wrap{display:flex;gap:.35rem;margin-bottom:.75rem;flex-wrap:wrap}
+.ev-btn{border:1.5px solid var(--border);background:#fff;border-radius:20px;padding:.25rem .75rem;font-size:.68rem;font-weight:700;color:var(--muted);cursor:pointer;font-family:inherit;transition:all .15s}
+.ev-btn.ev-on{background:#7c3aed;border-color:#7c3aed;color:#fff}
+.sug-evento{background:linear-gradient(135deg,#f5f3ff,#ede9fe);border:1px solid #c4b5fd;border-radius:10px;padding:.7rem;margin-top:.7rem}
+.sug-semana{font-size:.78rem;color:#5b21b6;line-height:1.6}
 
 /* ── OBJETIVO DE PROVA ── */
 .race-goal-card{background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1.5px solid #93c5fd;border-radius:12px;padding:1rem;margin-bottom:.75rem}
@@ -323,6 +329,7 @@ body{padding-top:45px}
 
 <div class="wrap">
   <div id="loading" class="loading"><div class="spin"></div>Carregando seus dados do Garmin…</div>
+  <div id="empty-msg" style="display:none;padding:2rem 1rem;text-align:center"></div>
   <div id="content" style="display:none">
       <div id="app-version" style="font-size:.75rem;color:var(--muted);margin:0 0 1rem">Versão v43</div>
 
@@ -335,7 +342,6 @@ body{padding-top:45px}
         <button class="cef-btn" onclick="setCoachEsporte('academia',this)">💪 Academia</button>
         <button class="cef-btn" onclick="setCoachEsporte('todos',this)">📊 Todos</button>
       </div>
-
       <!-- Objetivo de Prova -->
       <div class="race-goal-card" id="race-goal-card">
         <div class="race-goal-title">🎯 Objetivo de Prova</div>
@@ -360,7 +366,13 @@ body{padding-top:45px}
         </div>
         <div class="race-goal-meta" id="race-goal-meta"></div>
       </div>
-
+      <div class="ev-wrap" id="ev-wrap">
+        <button class="ev-btn" id="ev-btn-meia"     onclick="setEvento('meia',this)">🏃 Meia-Maratona</button>
+        <button class="ev-btn" id="ev-btn-maratona" onclick="setEvento('maratona',this)">🏃 Maratona</button>
+        <button class="ev-btn" id="ev-btn-ultra"    onclick="setEvento('ultra',this)">⛰️ Ultra-Maratona</button>
+        <button class="ev-btn" id="ev-btn-duathlon" onclick="setEvento('duathlon',this)">🚴🏃 Duathlon</button>
+        <button class="ev-btn" id="ev-btn-triathlon" onclick="setEvento('triathlon',this)">🏊🚴🏃 Triathlon</button>
+      </div>
       <div id="coach-status"></div>
       <div id="coach-sugestao"></div>
       <div id="coach-insights" class="insight-grid"></div>
@@ -394,12 +406,12 @@ body{padding-top:45px}
     <!-- ══ EVOLUÇÃO ══ -->
     <div class="sec" id="sec-evolucao">
       <div class="card">
-        <div class="card-title">📈 Pace — últimos 30 dias (corridas)</div>
+        <div class="card-title">📈 Pace — últimos 180 dias (corridas)</div>
         <div class="ch" style="height:210px"><canvas id="cPace"></canvas></div>
         <div class="ch-sub" id="pace-sub"></div>
       </div>
       <div class="card">
-        <div class="card-title">❤️ Frequência Cardíaca — últimos 30 dias</div>
+        <div class="card-title">❤️ Frequência Cardíaca — últimos 180 dias</div>
         <div class="ch" style="height:210px"><canvas id="cFC"></canvas></div>
         <div class="ch-sub" id="fc-sub"></div>
       </div>
@@ -409,12 +421,12 @@ body{padding-top:45px}
         <div class="ch-sub" id="vo2-sub"></div>
       </div>
       <div class="card">
-        <div class="card-title">🦵 Cadência — corridas 30 dias</div>
+        <div class="card-title">🦵 Cadência — corridas 180 dias</div>
         <div class="ch" style="height:175px"><canvas id="cCad"></canvas></div>
         <div class="ch-sub" id="cad-sub"></div>
       </div>
       <div class="card" id="rd-card" style="display:none">
-        <div class="card-title">🦾 Running Dynamics — média 30 dias vs ideal</div>
+        <div class="card-title">🦾 Running Dynamics — média 180 dias vs ideal</div>
         <div id="rd-list"></div>
         <div style="font-size:.65rem;color:var(--muted);margin-top:.6rem;line-height:1.5">Baseado nas últimas corridas com dados de dinâmica. Requer HRM-Run, HRM-Pro ou Running Dynamics Pod.</div>
       </div>
@@ -483,14 +495,14 @@ body{padding-top:45px}
         <div class="qr-list">
           <button class="qr" onclick="fillChat(this)">Qual treino devo fazer hoje considerando minha recuperação atual?</button>
           <button class="qr" onclick="fillChat(this)">Tô em risco de overtraining? Analisa meu Body Battery e HRV.</button>
-          <button class="qr" onclick="fillChat(this)">Como tá meu volume semanal nos últimos 30 dias? Tô progredindo?</button>
+          <button class="qr" onclick="fillChat(this)">Como tá meu volume semanal nos últimos 180 dias? Tô progredindo?</button>
           <button class="qr" onclick="fillChat(this)">Meu sono tá adequado pra minha carga de treino? O que melhorar?</button>
           <button class="qr" onclick="fillChat(this)">Analisa minha evolução de pace no último mês.</button>
           <button class="qr" onclick="fillChat(this)">Meu VO2 max tá evoluindo? O que preciso fazer pra melhorar?</button>
           <button class="qr" onclick="fillChat(this)">Qual deveria ser meu treino longo essa semana?</button>
           <button class="qr" onclick="fillChat(this)">Baseado no meu histórico, qual pace realista pra correr 10k?</button>
           <button class="qr" onclick="fillChat(this)">Sugere ajustes na carga pra próxima semana considerando minha recuperação.</button>
-          <button class="qr" onclick="fillChat(this)">Faz uma análise completa dos meus últimos 30 dias como treinador.</button>
+          <button class="qr" onclick="fillChat(this)">Faz uma análise completa dos meus últimos 180 dias como treinador.</button>
         </div>
       </div>
 
@@ -553,7 +565,7 @@ const FB_DB   = 'https://gastos-casa-7f431-default-rtdb.firebaseio.com';
 const FB_KEY  = 'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU';
 const FB_PATH = 'treinos/luiz';
 let charts = {}, curTab = 'coach', DATA = null, curEsporte = 'todos';
-const PERIODO = 30; // dias padrão para todas as médias do app
+const PERIODO = 180; // dias padrão para todas as médias do app
 
 function getEsporte(a){
   if(a.esporte) return a.esporte;
@@ -599,6 +611,7 @@ async function fbToken(){
 async function loadData(){
   document.getElementById('loading').style.display='block';
   document.getElementById('content').style.display='none';
+  document.getElementById('empty-msg').style.display='none';
   Object.values(charts).forEach(c=>c.destroy()); charts={};
   try{
     const token=await fbToken();
@@ -644,6 +657,7 @@ function showEmpty(err, errMsg){
   document.getElementById('coach-insights').innerHTML='';
   document.getElementById('coach-stats-hero').innerHTML='';
   document.getElementById('coach-sport-stats').innerHTML='';
+  document.getElementById('empty-msg').style.display='none';
   loadRaceGoal();
   if(err) document.getElementById('hSub').textContent=errMsg||'Erro ao carregar';
 }
@@ -691,6 +705,7 @@ function render(d){
   document.getElementById('content').style.display='block';
   initApiKey();
   loadRaceGoal();
+  if(typeof initEventoBtn === 'function') initEventoBtn();
 
   renderCoach(ativ,meta,bb,sono,stress,hrv,sem);
   renderTreinos(ativ,meta,sem);
@@ -726,7 +741,7 @@ function getTrainingPhase(){
   return {fase:'base',nome:'Base aeróbica',emoji:'🏗️'};
 }
 
-function renderSugestaoCard(esporte,readiness,paceBase,bbHoje,sonoMed){
+function renderSugestaoCard(esporte,readiness,paceBase,bbHoje,sonoMed,evento){
   const FCX=163,pb=paceBase||420;
   const z1=[Math.round(FCX*.6),Math.round(FCX*.7)];
   const z2=[Math.round(FCX*.7),Math.round(FCX*.8)];
@@ -770,11 +785,71 @@ function renderSugestaoCard(esporte,readiness,paceBase,bbHoje,sonoMed){
       quality:{dist:'8–12 km',pace:s2p(Math.max(pb-25,260)),dur:'65–80 min',why:`BB excelente (${bbHoje}%)! Treine com intensidade — corrida forte Z3, bike Z4 ou musculação pesada.`,alts:['⚡ Intervalados Z4','🚴 Bike forte 60min']}
     }
   };
-  const sp=esporte in PLANS?esporte:'corrida';
-  const p=PLANS[sp][readiness];
+  const EVENTO_PLANS={
+    meia:{label:'🏃 Meia-Maratona',planos:{
+      rest:    {dist:'—',dur:'Repouso',mod:'Recuperação ativa. Máximo: mobilidade e core leve.',alts:['🧘 Mobilidade 20min','💪 Core 15min']},
+      easy:    {dist:'5–8 km',dur:'40–50 min',mod:`BB ${bbHoje}% — corrida Z1 regenerativa, cadência alta (170+ spm), ritmo de conversa. Absorção do treino anterior.`,alts:['🚴 Bike suave 30min','🏊 Nado técnico 800m']},
+      moderate:{dist:'8–12 km',dur:'55–70 min',mod:`BB ${bbHoje}% — base aeróbica Z2. Pace consistente. Base essencial para suportar o ritmo de meia.`,alts:['🚴 Bike Z2 45min','⚡ Fartlek 10km']},
+      normal:  {dist:'10–14 km',dur:'65–80 min',mod:`BB ${bbHoje}% — Tempo run: 5min fácil + 20–25min no ritmo de meia (~5:00–5:30/km) + 5min fácil. Sessão limiar.`,alts:['⚡ 6×800m Z4','🏃 Progressiva 10km']},
+      quality: {dist:'12–16 km',dur:'75–90 min',mod:`BB excelente (${bbHoje}%)! Intervalados: <b>8–10×1km no ritmo de 10k</b> ou <b>20min Z4 + 20min Z3</b>. Melhora VO2max e limiar.`,alts:['⚡ 10×1km ritmo 10k','🏃 Longa Z2 18km']}},
+      semana:'📅 <b>Semana tipo Meia:</b> 1× qualidade (tempo/intervalado) · 1× longa Z2 16–22km · 3× fácil Z1-Z2 · Volume: 50–70km'},
+    maratona:{label:'🏃 Maratona',planos:{
+      rest:    {dist:'—',dur:'Repouso',mod:'Maratona exige descanso planejado. Recuperação = treino.',alts:['🧘 Mobilidade 20min','🧊 Gelo nas pernas']},
+      easy:    {dist:'6–10 km',dur:'45–60 min',mod:`BB ${bbHoje}% — corrida Z1 fácil, você deve conseguir cantar. Ritmo muito confortável para absorção.`,alts:['🚴 Bike 30min Z1','🏊 Nado 1km']},
+      moderate:{dist:'10–16 km',dur:'65–80 min',mod:`BB ${bbHoje}% — Z2 constante. Fundamental para resistência de maratona. Pace: ${s2p(paceBase+20)} a ${s2p(paceBase+30)}/km.`,alts:['🚴 Bike aeróbico 60min','🏊 Nado 2km']},
+      normal:  {dist:'14–20 km',dur:'80–100 min',mod:`BB ${bbHoje}% — "Corta-e-cola": 5km fácil + 10–12km no ritmo de maratona + 5km fácil. Simula o race day.`,alts:['🏃 Corta-e-cola 20km','⚡ 3×5km Z3']},
+      quality: {dist:'26–35 km',dur:'2h30–3h30',mod:`BB excelente (${bbHoje}%)! Longa Z2 — peça central da maratona. Beba a cada 20min. Mantenha pace ${s2p(paceBase+15)}/km.`,alts:['🏃 30km Z2','🏃 35km com 10km MP']}},
+      semana:'📅 <b>Semana tipo Maratona:</b> 1× longa Z2 (26–35km) · 1× MP run (12–20km) · 4× fácil Z1 · Volume: 70–100km'},
+    ultra:{label:'⛰️ Ultra-Maratona',planos:{
+      rest:    {dist:'—',dur:'Repouso',mod:'Ultra = recuperação mais longa entre longas. Repouso é treino.',alts:['🧘 Yoga/Mobilidade 30min','💪 Core estabilizador']},
+      easy:    {dist:'6–10 km',dur:'50–70 min',mod:`BB ${bbHoje}% — corrida fácil Z1, trilha se possível. Foco em tempo em pés, não em pace. Coma e beba em movimento.`,alts:['🚴 Bike 40min','🧘 Mobilidade 30min']},
+      moderate:{dist:'12–18 km',dur:'75–100 min',mod:`BB ${bbHoje}% — trilha ou asfalto Z2 com subidas (ganho >200m). Tempo em pés mais importante que pace.`,alts:['🏃 Trilha 15km','🚴 Bike Z2 60min']},
+      normal:  {dist:'18–25 km',dur:'2h–2h30',mod:`BB ${bbHoje}% — longa Z2 com elevação ou B2B dia 1. Pratique alimentação: gel a cada 40min.`,alts:['⛰️ Trilha 20km subida','🏃 25km Z2']},
+      quality: {dist:'28–40 km',dur:'3h–4h30',mod:`BB excelente (${bbHoje}%)! Ultra-longa em trilha ou B2B: 30km hoje + 18km amanhã. Foco em durabilidade e alimentação.`,alts:['⛰️ 40km trilha','🏃 B2B 30km+20km']}},
+      semana:'📅 <b>Semana tipo Ultra:</b> 1× ultra-longa (28–40km) · 1× trilha (15–22km) · 2-3× fácil Z1 · Elevação semanal: 1.500–3.000m'},
+    duathlon:{label:'🚴🏃 Duathlon',planos:{
+      rest:    {dist:'—',dur:'Repouso',mod:'3 modalidades = recuperação total essencial.',alts:['🧘 Mobilidade 20min','💪 Core 15min']},
+      easy:    {dist:'4–6 km corrida / 20–25 km bike',dur:'30–45 min',mod:`BB ${bbHoje}% — corrida fácil Z1 (20min) ou bike regenerativo Z1 (30min). Alterne nos dias leves.`,alts:['🚴 Bike suave 30min','🏃 Caminhada 30min']},
+      moderate:{dist:'8–10 km / 30–40 km bike',dur:'60–75 min',mod:`BB ${bbHoje}% — bike Z2 (40–50km) ou corrida Z2 (8–10km). Mantenha 2 esportes ativos na semana.`,alts:['🚴 Bike aeróbico 45min','🏃 Corrida Z2 8km']},
+      normal:  {dist:'Brick: 30km+5km',dur:'75–90 min',mod:`BB ${bbHoje}% — Brick bike→corrida: 30km bike Z2 + transição rápida + 5km corrida. Treina adaptação neuromuscular.`,alts:['🚴 Bike 50km','🏃 Corrida 10km']},
+      quality: {dist:'Brick: 45km+8km',dur:'100–120 min',mod:`BB excelente (${bbHoje}%)! Brick longo: 40–50km bike Z3 + 8–10km corrida, ou intervalados de corrida + bike 30min.`,alts:['⚡ Brick 50km+10km','🏃 Intervalados + bike 30min']}},
+      semana:'📅 <b>Semana tipo Duathlon:</b> 2× bike (1 qualidade + 1 volume) · 2× corrida · 1× brick · 1× descanso'},
+    triathlon:{label:'🏊🚴🏃 Triathlon',planos:{
+      rest:    {dist:'—',dur:'Repouso',mod:'3 esportes = recuperação planejada é parte do plano.',alts:['🧘 Mobilidade 20min','💆 Recuperação ativa']},
+      easy:    {dist:'1km nado / 4km corrida',dur:'30–45 min',mod:`BB ${bbHoje}% — nado técnico suave (1km) ou corrida regenerativa (4–5km). Foco no esporte mais deficiente.`,alts:['🏊 Nado técnico 800m','🏃 Corrida suave 4km']},
+      moderate:{dist:'Bike 40km / Nado 2km / Corrida 8km',dur:'60–80 min',mod:`BB ${bbHoje}% — bike Z2 (40km) ou nado Z2 (2km) ou corrida Z2 (8km). Mantenha os 3 esportes na semana.`,alts:['🏊 Nado 1.5km','🚴 Bike 40km']},
+      normal:  {dist:'Brick: 30km+5km',dur:'75–90 min',mod:`BB ${bbHoje}% — Brick bike→corrida: 30km bike Z2 + transição + 5km corrida. Adapta pernas ao run após bike.`,alts:['🏊 Nado 2km + bike 30min','🏃 Corrida 10km Z2']},
+      quality: {dist:'Nado+Bike+Corrida completo',dur:'2h–2h30',mod:`BB excelente (${bbHoje}%)! Mini-tri: 1.5km nado + 40km bike + 8km corrida. Ou brick longo 50km+10km corrida.`,alts:['🏊🚴🏃 Mini-tri','⚡ Brick 50km+10km']}},
+      semana:'📅 <b>Semana tipo Triathlon:</b> 2× nado · 2-3× bike (1 brick) · 2× corrida · Foco: transições e multi-esporte'}
+  };
+
   const cc={rest:'sug-card-rest',easy:'sug-card-easy',moderate:'sug-card-moderate',normal:'sug-card-normal',quality:'sug-card-quality'};
   const lc={rest:'sug-level-rest',easy:'sug-level-easy',moderate:'sug-level-moderate',normal:'sug-level-normal',quality:'sug-level-quality'};
   const ll={rest:'😴 Repouso',easy:'💚 Leve',moderate:'💙 Moderado',normal:'✅ Normal',quality:'🔥 Qualidade'};
+  const fcColor={rest:'#991b1b',easy:'#065f46',moderate:'#1e40af',normal:'#312e81',quality:'#92400e'};
+
+  if(evento && EVENTO_PLANS[evento]){
+    const ep=EVENTO_PLANS[evento];
+    const epp=ep.planos[readiness];
+    return `
+    <div class="sug-card ${cc[readiness]}">
+      <div class="sug-hd">
+        <div class="sug-sport">${ep.label}</div>
+        <div class="sug-level ${lc[readiness]}">${ll[readiness]}</div>
+      </div>
+      <div class="sug-params">
+        <div class="sug-param"><div class="sug-param-val" style="color:#1a56db;font-size:.82rem">${epp.dist}</div><div class="sug-param-lbl">Distância</div></div>
+        <div class="sug-param"><div class="sug-param-val" style="color:${fcColor[readiness]}">${fcByLevel[readiness]}</div><div class="sug-param-lbl">FC bpm</div></div>
+        <div class="sug-param"><div class="sug-param-val" style="color:#7c3aed">${epp.dur}</div><div class="sug-param-lbl">Duração</div></div>
+      </div>
+      <div class="sug-why"><b>💡 Por que este treino?</b><br>${epp.mod}</div>
+      <div class="sug-evento"><div class="sug-semana">${ep.semana}</div></div>
+      ${epp.alts&&epp.alts.length?`<div class="sug-alts-lbl">Alternativas</div><div class="sug-alts">${epp.alts.map(a=>`<span class="sug-alt">${a}</span>`).join('')}</div>`:''}
+    </div>`;
+  }
+
+  const sp=esporte in PLANS?esporte:'corrida';
+  const p=PLANS[sp][readiness];
   const sportLbl={corrida:'🏃 Corrida',bike:'🚴 Bike',natacao:'🏊 Natação',academia:'💪 Academia',todos:'🏅 Geral'};
   const titleMap={
     rest:     {corrida:'Descanso Ativo',bike:'Descanso',natacao:'Descanso',academia:'Repouso',todos:'Descanso'},
@@ -783,7 +858,6 @@ function renderSugestaoCard(esporte,readiness,paceBase,bbHoje,sonoMed){
     normal:   {corrida:'Base Aeróbica Z2',bike:'Volume de Bike',natacao:'Nado de Volume',academia:'Força Completa',todos:'Treino Padrão'},
     quality:  {corrida:'Treino de Qualidade',bike:'Bike Forte Z3-Z4',natacao:'Nado Intenso',academia:'Força Intensa',todos:'Treino Forte'}
   };
-  const fcColor={rest:'#991b1b',easy:'#065f46',moderate:'#1e40af',normal:'#312e81',quality:'#92400e'};
   const distLbl=sp==='natacao'?'Distância':sp==='academia'?'Nível':'Dist. km';
   const paceLbl=sp==='corrida'?'Pace /km':sp==='academia'?'Intensidade':'Ritmo';
   const altsHtml=p.alts.map(a=>`<span class="sug-alt">${a}</span>`).join('');
@@ -826,6 +900,22 @@ function renderSugestaoCard(esporte,readiness,paceBase,bbHoje,sonoMed){
 }
 
 let curCoachEsporte='corrida';
+let curEvento = localStorage.getItem('coachEvento')||'';
+
+function setEvento(ev,btn){
+  if(curEvento===ev){ curEvento=''; localStorage.removeItem('coachEvento'); }
+  else { curEvento=ev; localStorage.setItem('coachEvento',ev); }
+  initEventoBtn();
+  if(DATA){const a=(DATA.atividades||[]).sort((a,b)=>b.data.localeCompare(a.data));renderCoach(a,DATA.meta||{},DATA.bodyBattery||{},DATA.sono||{},DATA.stress||{},DATA.hrv||{},DATA.semanal||{});}
+}
+
+function initEventoBtn(){
+  document.querySelectorAll('.ev-btn').forEach(b=>b.classList.remove('ev-on'));
+  if(curEvento){
+    const b=document.getElementById('ev-btn-'+curEvento);
+    if(b) b.classList.add('ev-on');
+  }
+}
 
 function setCoachEsporte(e,btn){
   curCoachEsporte=e;
@@ -943,7 +1033,7 @@ function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
       <div class="status-ico">${bbHoje>=75?'🚀':bbHoje>=45?'✅':bbHoje>=25?'⚠️':'😴'}</div>
       <div><div class="status-title">${status}</div><div class="status-sub">Hoje, ${fd(hoje)}</div></div>
     </div>`;
-  document.getElementById('coach-sugestao').innerHTML=renderSugestaoCard(curCoachEsporte,readiness,paceBase,bbHoje,mediaSOno);
+  document.getElementById('coach-sugestao').innerHTML=renderSugestaoCard(curCoachEsporte,readiness,paceBase,bbHoje,mediaSOno,curEvento);
 
   // ── Insights por esporte ──
   let ins='';
@@ -1032,7 +1122,7 @@ function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
   // Stats hero
   const sportLabel={corrida:'🏃 Corrida',bike:'🚴 Bike',natacao:'🏊 Natação',academia:'💪 Academia',todos:'Geral'};
   document.getElementById('coach-stats-hero').innerHTML=`
-    <div class="div-label">Resumo — últimos 30 dias · ${sportLabel[curCoachEsporte]}</div>
+    <div class="div-label">Resumo — últimos 180 dias · ${sportLabel[curCoachEsporte]}</div>
     <div class="sgrid sg3">
       <div class="stat"><div class="sv" style="color:var(--blue)">${curCoachEsporte==='academia'?f30.length:km30f.toFixed(1)}</div><div class="sl">${curCoachEsporte==='academia'?'sessões':'km'} / 30d</div></div>
       <div class="stat"><div class="sv" style="color:var(--green)">${f30.length}</div><div class="sl">treinos / mês</div></div>
@@ -1041,13 +1131,13 @@ function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
 
   // Sport breakdown (só no modo todos)
   if(curCoachEsporte==='todos'){
-    const td30=(new Date(Date.now()-30*864e5)).toISOString().slice(0,10);
+    const td30=(new Date(Date.now()-180*864e5)).toISOString().slice(0,10);
     const kc=ativ.filter(a=>getEsporte(a)==='corrida'&&a.data>=td30).reduce((s,a)=>s+a.distancia,0).toFixed(1);
     const kb=ativ.filter(a=>getEsporte(a)==='bike'&&a.data>=td30).reduce((s,a)=>s+a.distancia,0).toFixed(1);
     const kn=ativ.filter(a=>getEsporte(a)==='natacao'&&a.data>=td30).reduce((s,a)=>s+a.distancia,0).toFixed(1);
     const sa=ativ.filter(a=>getEsporte(a)==='academia'&&a.data>=td30).length;
     document.getElementById('coach-sport-stats').innerHTML=`
-      <div class="div-label">30 dias — por esporte</div>
+      <div class="div-label">180 dias — por esporte</div>
       <div class="sgrid" style="grid-template-columns:repeat(4,1fr);gap:.45rem">
         <div class="stat"><div class="sv" style="color:var(--blue);font-size:1.1rem">${kc}</div><div class="sl">🏃 corrida</div></div>
         <div class="stat"><div class="sv" style="color:var(--orange);font-size:1.1rem">${kb}</div><div class="sl">🚴 bike</div></div>
@@ -1520,10 +1610,10 @@ function stressAssess(v){ return v<25?['Baixo','sa-verde']:v<50?['Moderado','sa-
 function hrvAssess(v){ return v>=55?['Excelente','sa-verde']:v>=45?['Bom','sa-azul']:v>=35?['Moderado','sa-amarelo']:['Baixo','sa-vermelho']; }
 
 function renderSaude(bb,sono,stress,hrv){
-  const bbKeys     = Object.keys(bb).sort().slice(-21);
-  const sonoKeys   = Object.keys(sono).sort().slice(-21);
-  const stressKeys = Object.keys(stress).sort().slice(-14);
-  const hrvKeys    = Object.keys(hrv).sort().slice(-14);
+  const bbKeys     = Object.keys(bb).sort().slice(-180);
+  const sonoKeys   = Object.keys(sono).sort().slice(-180);
+  const stressKeys = Object.keys(stress).sort().slice(-180);
+  const hrvKeys    = Object.keys(hrv).sort().slice(-180);
 
   // ── computed stats ── (sono/hrv só com noites reais ≥ 2h)
   const bbMed      = bbKeys.length  ? Math.round(bbKeys.reduce((s,k)=>s+bb[k].max,0)/bbKeys.length) : 0;
@@ -1536,11 +1626,12 @@ function renderSaude(bb,sono,stress,hrv){
   const remMed     = sonoReal.length ? +(sonoReal.reduce((s,k)=>s+(sono[k].rem||0),0)/sonoReal.length).toFixed(1) : 0;
   const stressMed  = stressKeys.length ? Math.round(stressKeys.reduce((s,k)=>s+stress[k].avg,0)/stressKeys.length) : 0;
   const maxMed     = stressKeys.length ? Math.round(stressKeys.reduce((s,k)=>s+(stress[k].max||0),0)/stressKeys.length) : 0;
-  const comHRV     = hrvKeys.filter(k=>hrv[k].ontem>0);
-  const hrvLast    = comHRV.length  ? hrv[comHRV[comHRV.length-1]].ontem : 0;
+  const hrvVal     = k => hrv[k].ontem > 0 ? hrv[k].ontem : (hrv[k].semanal || 0);
+  const comHRV     = hrvKeys.filter(k=>hrvVal(k)>0);
+  const hrvLast    = comHRV.length  ? hrvVal(comHRV[comHRV.length-1]) : 0;
   const semMed     = comHRV.length  ? Math.round(comHRV.reduce((s,k)=>s+(hrv[k].semanal||0),0)/comHRV.length) : 0;
   const hrvTrend   = comHRV.length>=4
-    ? (hrv[comHRV[comHRV.length-1]].ontem > hrv[comHRV[comHRV.length-4]].ontem ? '↑ subindo' : '↓ caindo')
+    ? (hrvVal(comHRV[comHRV.length-1]) > hrvVal(comHRV[comHRV.length-4]) ? '↑ subindo' : '↓ caindo')
     : '';
   // última noite com sono real para exibir
   const sonoLastKey = sonoReal.length ? sonoReal[sonoReal.length-1] : null;
@@ -1569,7 +1660,7 @@ function renderSaude(bb,sono,stress,hrv){
     </div>
     <div class="stat">
       <div class="sv" style="color:var(--green)">${hrvLast||'—'}<span style="font-size:.75rem">ms</span></div>
-      <div class="sl">HRV ontem</div>
+      <div class="sl">HRV semanal</div>
       ${hrvLast>0 ? `<div class="stat-assess ${hrvCls}">${hrvLbl}</div>` : ''}
     </div>`;
 
@@ -1726,11 +1817,11 @@ function renderSaude(bb,sono,stress,hrv){
         data:{
           labels: comHRV.map(fd),
           datasets:[
-            { label:'HRV noturno', data:comHRV.map(k=>hrv[k].ontem),
+            { label:'HRV noturno', data:comHRV.map(k=>hrvVal(k)),
               borderColor:'#0e9f6e', backgroundColor:'rgba(14,159,110,.12)',
               borderWidth:2.5, pointRadius:4,
               pointBackgroundColor: comHRV.map(k=>{
-                const v=hrv[k].ontem;
+                const v=hrvVal(k);
                 return v>=55?'#0e9f6e':v>=45?'#1a56db':v>=35?'#d97706':'#ef4444';
               }),
               tension:.35, fill:true, order:2 },
@@ -1750,10 +1841,11 @@ function renderSaude(bb,sono,stress,hrv){
             ticks:{...BASE.scales.y.ticks,callback:v=>v+' ms'}}}
         }
       });
+      const usingSem = hrvLast>0 && hrv[comHRV[comHRV.length-1]].ontem===0;
       const [hl]=hrvLast>0 ? hrvAssess(hrvLast) : ['—'];
       document.getElementById('hrv-sub').innerHTML=
-        `<b>Ontem:</b> ${hrvLast||'—'} ms`+
-        (hrvLast>0 ? ` &nbsp;<span class="chip ${hrvLast>=55?'chip-v':hrvLast>=45?'chip-v':'chip-a'}">${hl}</span>` : ' <span style="color:#f97316;font-size:.62rem">(sem dados — HRV requer uso do relógio a noite toda)</span>')+
+        `<b>${usingSem?'Média semanal':'Ontem'}:</b> ${hrvLast||'—'} ms`+
+        (hrvLast>0 ? ` &nbsp;<span class="chip ${hrvLast>=55?'chip-v':hrvLast>=45?'chip-v':'chip-a'}">${hl}</span>` : '')+
         `&nbsp;· <b>Média semanal:</b> ${semMed||'—'} ms`+
         (hrvTrend?` &nbsp;· <b>Tendência:</b> ${hrvTrend}`:'')+
         `<div class="zone-legend">`+
