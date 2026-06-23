@@ -682,6 +682,11 @@ function renderSugestaoCard(esporte,readiness,paceBase,bbHoje,sonoMed,evento){
       semana:'📅 <b>Semana tipo Triathlon:</b> 2× nado · 2-3× bike (1 brick) · 2× corrida · Foco: transições e multi-esporte'}
   };
 
+  const cc={rest:'sug-card-rest',easy:'sug-card-easy',moderate:'sug-card-moderate',normal:'sug-card-normal',quality:'sug-card-quality'};
+  const lc={rest:'sug-level-rest',easy:'sug-level-easy',moderate:'sug-level-moderate',normal:'sug-level-normal',quality:'sug-level-quality'};
+  const ll={rest:'😴 Repouso',easy:'💚 Leve',moderate:'💙 Moderado',normal:'✅ Normal',quality:'🔥 Qualidade'};
+  const fcColor={rest:'#991b1b',easy:'#065f46',moderate:'#1e40af',normal:'#312e81',quality:'#92400e'};
+
   if(evento && EVENTO_PLANS[evento]){
     const ep=EVENTO_PLANS[evento];
     const epp=ep.planos[readiness];
@@ -704,9 +709,6 @@ function renderSugestaoCard(esporte,readiness,paceBase,bbHoje,sonoMed,evento){
 
   const sp=esporte in PLANS?esporte:'corrida';
   const p=PLANS[sp][readiness];
-  const cc={rest:'sug-card-rest',easy:'sug-card-easy',moderate:'sug-card-moderate',normal:'sug-card-normal',quality:'sug-card-quality'};
-  const lc={rest:'sug-level-rest',easy:'sug-level-easy',moderate:'sug-level-moderate',normal:'sug-level-normal',quality:'sug-level-quality'};
-  const ll={rest:'😴 Repouso',easy:'💚 Leve',moderate:'💙 Moderado',normal:'✅ Normal',quality:'🔥 Qualidade'};
   const sportLbl={corrida:'🏃 Corrida',bike:'🚴 Bike',natacao:'🏊 Natação',academia:'💪 Academia',todos:'🏅 Geral'};
   const titleMap={
     rest:     {corrida:'Descanso Ativo',bike:'Descanso',natacao:'Descanso',academia:'Repouso',todos:'Descanso'},
@@ -715,7 +717,6 @@ function renderSugestaoCard(esporte,readiness,paceBase,bbHoje,sonoMed,evento){
     normal:   {corrida:'Base Aeróbica Z2',bike:'Volume de Bike',natacao:'Nado de Volume',academia:'Força Completa',todos:'Treino Padrão'},
     quality:  {corrida:'Treino de Qualidade',bike:'Bike Forte Z3-Z4',natacao:'Nado Intenso',academia:'Força Intensa',todos:'Treino Forte'}
   };
-  const fcColor={rest:'#991b1b',easy:'#065f46',moderate:'#1e40af',normal:'#312e81',quality:'#92400e'};
   const distLbl=sp==='natacao'?'Distância':sp==='academia'?'Nível':'Dist. km';
   const paceLbl=sp==='corrida'?'Pace /km':sp==='academia'?'Intensidade':'Ritmo';
   const altsHtml=p.alts.map(a=>`<span class="sug-alt">${a}</span>`).join('');
