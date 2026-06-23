@@ -1,4 +1,4 @@
-const CACHE = 'treinos-v42';
+const CACHE = 'treinos-v46';
 const CORE = ['./manifest.json']; // HTML never cached — always fetched fresh
 
 self.addEventListener('install', e => {
@@ -26,6 +26,7 @@ self.addEventListener('fetch', e => {
 
   // Firebase / external CDNs: always network
   if (url.includes('firebaseio.com') || url.includes('firebase.googleapis.com') ||
+      url.includes('identitytoolkit.googleapis.com') ||
       url.includes('gstatic.com') || url.includes('cdnjs.cloudflare.com') ||
       url.includes('strava.com')) {
     e.respondWith(fetch(e.request).catch(() => new Response('', { status: 503 })));

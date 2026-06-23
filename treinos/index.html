@@ -1,8 +1,17 @@
+.prova-destaque{border:2px solid #0e9f6e;background:rgba(14,159,110,.05);border-left-width:4px}
+.prova-icon{color:#0e9f6e;font-size:1.1rem;margin-left:.3rem}
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Treinos">
+<meta name="theme-color" content="#1a56db">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%231a56db' width='192' height='192'/><text x='50%' y='50%' font-size='120' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%231a56db' width='180' height='180' rx='40'/><text x='50%' y='50%' font-size='110' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <title>Treinos · Luiz Silva</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
@@ -20,6 +29,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .hdr h1{font-size:1rem;font-weight:900}
 .hdr p{font-size:.68rem;opacity:.72;margin-top:2px}
 .btn-refresh{background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.3);border-radius:20px;padding:.3rem .8rem;font-size:.7rem;font-weight:700;color:#fff;cursor:pointer;font-family:inherit}
+.app-version{font-size:.75rem;color:rgba(255,255,255,.85);margin-top:.3rem;letter-spacing:.02em}
+.app-debug{font-size:.65rem;color:rgba(255,255,255,.7);margin-top:.18rem;letter-spacing:.01em}
+.version-banner{position:fixed;top:0;left:0;right:0;z-index:9999;background:#dc2626;color:#fff;padding:.7rem 1rem;font-size:.8rem;font-weight:800;text-align:center;box-shadow:0 5px 18px rgba(0,0,0,.12)}
+body{padding-top:45px}
 
 /* ── TABS ── */
 .tabs{position:sticky;top:0;z-index:99;background:#fff;border-bottom:2px solid var(--border);display:flex;overflow-x:auto;scrollbar-width:none}
@@ -201,6 +214,30 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .cef-btn{border:1.5px solid var(--border);background:#fff;border-radius:20px;padding:.3rem .8rem;font-size:.72rem;font-weight:700;color:var(--muted);cursor:pointer;font-family:inherit;transition:all .15s}
 .cef-btn.cef-on{background:var(--blue);border-color:var(--blue);color:#fff}
 
+/* ── OBJETIVO DE PROVA ── */
+.race-goal-card{background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1.5px solid #93c5fd;border-radius:12px;padding:1rem;margin-bottom:.75rem}
+.race-goal-card.set{background:linear-gradient(135deg,#ecfdf5,#d1fae5);border-color:#6ee7b7}
+.race-goal-title{font-size:.75rem;font-weight:800;color:#1e40af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:.75rem}
+.race-goal-card.set .race-goal-title{color:#065f46}
+.race-goal-content{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:.6rem}
+.race-goal-field label{display:block;font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:.3px;color:var(--muted);margin-bottom:.3rem}
+.race-goal-field input,.race-goal-field select{width:100%;border:1.5px solid #93c5fd;border-radius:8px;padding:.5rem .6rem;font-size:.85rem;font-family:inherit;outline:none;background:#fff}
+.race-goal-card.set .race-goal-field input,.race-goal-card.set .race-goal-field select{border-color:#6ee7b7}
+.race-goal-field input:focus,.race-goal-field select:focus{border-color:var(--blue)}
+.race-goal-display{background:rgba(255,255,255,.8);border-radius:8px;padding:.75rem;text-align:center}
+.race-goal-dist{font-size:1.35rem;font-weight:900;color:var(--blue);line-height:1}
+.race-goal-card.set .race-goal-dist{color:#0e9f6e}
+.race-goal-date{font-size:.72rem;color:var(--muted);margin-top:.3rem}
+.race-goal-countdown{font-size:.75rem;font-weight:800;color:#1a56db;margin-top:.3rem}
+.race-goal-card.set .race-goal-countdown{color:#0e9f6e}
+.race-goal-btns{display:flex;gap:.5rem}
+.race-goal-btn-save{flex:1;background:var(--blue);color:#fff;border:none;border-radius:8px;padding:.55rem;font-weight:800;font-size:.82rem;cursor:pointer;font-family:inherit;transition:all .15s}
+.race-goal-btn-clear{background:#f1f5f9;color:var(--muted);border:none;border-radius:8px;padding:.55rem .8rem;font-weight:700;font-size:.78rem;cursor:pointer;font-family:inherit;transition:all .15s}
+.race-goal-btn-save:hover{opacity:.9}
+.race-goal-btn-clear:hover{background:#e2e8f0}
+.race-goal-meta{font-size:.68rem;color:var(--muted);line-height:1.5;margin-top:.6rem;padding-top:.6rem;border-top:1px solid rgba(255,255,255,.5)}
+.race-goal-card.set .race-goal-meta{border-top-color:rgba(16,185,129,.2)}
+
 /* ── EMPTY ── */
 .empty{text-align:center;padding:2.5rem 1rem;background:var(--card);border-radius:var(--r);border:1px solid var(--border)}
 .empty h3{margin-bottom:.5rem}
@@ -213,9 +250,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 @media(max-width:380px){.insight-grid{grid-template-columns:1fr}.chart-row{grid-template-columns:1fr}.sg3{grid-template-columns:repeat(3,1fr)}.sv{font-size:1.15rem}}
 
 /* ── PROVAS ── */
-.provas-filter{display:flex;gap:.4rem;margin-bottom:.75rem;flex-wrap:wrap}
-.pf-btn{border:1.5px solid var(--border);background:#fff;border-radius:20px;padding:.28rem .7rem;font-size:.72rem;font-weight:700;color:var(--muted);cursor:pointer;font-family:inherit;transition:all .15s}
+.provas-filter{display:flex;gap:.4rem;margin-bottom:1rem;flex-wrap:wrap}
+.provas-filter-group{margin-bottom:1rem}
+.provas-filter-label{font-size:.7rem;font-weight:700;color:var(--muted);margin-bottom:.4rem;display:block;text-transform:uppercase;letter-spacing:.5px}
+.pf-btn{border:1.5px solid var(--border);background:#fff;border-radius:20px;padding:.35rem .85rem;font-size:.75rem;font-weight:600;color:var(--muted);cursor:pointer;font-family:inherit;transition:all .15s}
 .pf-btn.pf-on{background:var(--blue);border-color:var(--blue);color:#fff}
+.pf-regiao-btn{border:1.5px solid var(--border);background:#fff;border-radius:20px;padding:.35rem .85rem;font-size:.75rem;font-weight:600;color:var(--muted);cursor:pointer;font-family:inherit;transition:all .15s}
+.pf-regiao-btn.pf-on{background:#0e9f6e;border-color:#0e9f6e;color:#fff}
 .prova-card{border:1px solid var(--border);border-radius:12px;padding:.85rem;margin-bottom:.5rem;background:var(--card);border-left:4px solid var(--blue)}
 .prova-usa{border-left-color:#dc2626;background:#fff9f9}
 .prova-passada{opacity:.45}
@@ -248,11 +289,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 </style>
 </head>
 <body>
+  <div id="version-banner" class="version-banner">Versão v43 | URL: ? | host: ?</div>
 
 <div class="hdr">
   <div>
     <h1>🏃 Treinos · Luiz Silva</h1>
     <p id="hSub">Carregando…</p>
+    <div class="app-version">Versão v43</div>
+    <div id="app-debug" class="app-debug">URL: ?</div>
   </div>
   <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.3rem">
     <button class="btn-refresh" id="btn-garmin" onclick="syncGarmin()">⚡ Sync Garmin</button>
@@ -280,6 +324,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <div class="wrap">
   <div id="loading" class="loading"><div class="spin"></div>Carregando seus dados do Garmin…</div>
   <div id="content" style="display:none">
+      <div id="app-version" style="font-size:.75rem;color:var(--muted);margin:0 0 1rem">Versão v43</div>
 
     <!-- ══ COACH ══ -->
     <div class="sec on" id="sec-coach">
@@ -290,6 +335,32 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <button class="cef-btn" onclick="setCoachEsporte('academia',this)">💪 Academia</button>
         <button class="cef-btn" onclick="setCoachEsporte('todos',this)">📊 Todos</button>
       </div>
+
+      <!-- Objetivo de Prova -->
+      <div class="race-goal-card" id="race-goal-card">
+        <div class="race-goal-title">🎯 Objetivo de Prova</div>
+        <div class="race-goal-content">
+          <div class="race-goal-field">
+            <label>Distância</label>
+            <select id="race-goal-dist">
+              <option value="">— Nenhuma</option>
+              <option value="10">10 km</option>
+              <option value="21.1">21,1 km — Meia</option>
+              <option value="42.2">42,2 km — Maratona</option>
+            </select>
+          </div>
+          <div class="race-goal-field">
+            <label>Data da Prova</label>
+            <input type="date" id="race-goal-date">
+          </div>
+        </div>
+        <div class="race-goal-btns">
+          <button class="race-goal-btn-save" onclick="saveRaceGoal()">💾 Salvar Objetivo</button>
+          <button class="race-goal-btn-clear" onclick="clearRaceGoal()">Limpar</button>
+        </div>
+        <div class="race-goal-meta" id="race-goal-meta"></div>
+      </div>
+
       <div id="coach-status"></div>
       <div id="coach-sugestao"></div>
       <div id="coach-insights" class="insight-grid"></div>
@@ -450,12 +521,27 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <div id="calc-result"></div>
       </div>
 
-      <div class="provas-filter">
-        <button class="pf-btn pf-on" onclick="filterProvas('todas',this)">Todas</button>
-        <button class="pf-btn" onclick="filterProvas('10',this)">10 km</button>
-        <button class="pf-btn" onclick="filterProvas('21.1',this)">Meia</button>
-        <button class="pf-btn" onclick="filterProvas('42.2',this)">Maratona</button>
+      <div class="provas-filter-group">
+        <span class="provas-filter-label">📍 Filtrar por Região</span>
+        <div class="provas-filter">
+          <button class="pf-regiao-btn pf-on" onclick="filterProvasRegiao('todas',this)">🌍 Todas</button>
+          <button class="pf-regiao-btn" onclick="filterProvasRegiao('atlantic',this)">🌊 Atlantic</button>
+          <button class="pf-regiao-btn" onclick="filterProvasRegiao('quebec',this)">⚜️ Québec</button>
+          <button class="pf-regiao-btn" onclick="filterProvasRegiao('ontario',this)">🍁 Ontario</button>
+          <button class="pf-regiao-btn" onclick="filterProvasRegiao('usa',this)">🇺🇸 USA</button>
+        </div>
       </div>
+
+      <div class="provas-filter-group">
+        <span class="provas-filter-label">📏 Filtrar por Distância</span>
+        <div class="provas-filter">
+          <button class="pf-btn pf-on" onclick="filterProvas('todas',this)">Todas</button>
+          <button class="pf-btn" onclick="filterProvas('10',this)">10 km</button>
+          <button class="pf-btn" onclick="filterProvas('21.1',this)">Meia (21,1 km)</button>
+          <button class="pf-btn" onclick="filterProvas('42.2',this)">Maratona (42,2 km)</button>
+        </div>
+      </div>
+
       <div id="provas-list"></div>
     </div>
 
@@ -496,9 +582,18 @@ function setEsporte(e,btn){
 }
 
 async function fbToken(){
-  const r = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${FB_KEY}`,
-    {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({returnSecureToken:true})});
-  return (await r.json()).idToken||'';
+  try {
+    const r = await Promise.race([
+      fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${FB_KEY}`,
+        {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({returnSecureToken:true})}),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('Firebase timeout')), 8000))
+    ]);
+    const json = await r.json();
+    return json.idToken || '';
+  } catch (e) {
+    console.error('fbToken error:', e.message);
+    return '';
+  }
 }
 
 async function loadData(){
@@ -507,23 +602,50 @@ async function loadData(){
   Object.values(charts).forEach(c=>c.destroy()); charts={};
   try{
     const token=await fbToken();
-    const res=await fetch(`${FB_DB}/${FB_PATH}.json?auth=${token}`);
+    if(!token){
+      console.error('Falha ao obter token Firebase');
+      showEmpty(true, 'Firebase auth falhou');
+      return;
+    }
+    const res=await fetch(`${FB_DB}/${FB_PATH}.json?auth=${token}`,{signal:AbortSignal.timeout(10000)});
+    if(!res.ok){
+      console.error(`HTTP ${res.status}: ${res.statusText}`);
+      showEmpty(true, `Erro HTTP ${res.status}`);
+      return;
+    }
     const d=await res.json();
-    if(!d||!d.atividades||!d.atividades.length){showEmpty();return;}
+    if(!d||!d.atividades||!d.atividades.length){
+      console.warn('Sem dados no Firebase');
+      showEmpty();
+      return;
+    }
     DATA=d; render(d);
-  }catch(e){showEmpty(true);}
+  }catch(e){
+    console.error('loadData erro:', e.message);
+    showEmpty(true, e.message);
+  }
 }
 
-function showEmpty(err){
+function showEmpty(err, errMsg){
   document.getElementById('loading').style.display='none';
-  document.getElementById('hSub').textContent=err?'Erro ao carregar':'Sem dados';
   document.getElementById('content').style.display='block';
-  document.getElementById('sec-coach').innerHTML=`
-    <div class="empty"><div style="font-size:3rem;margin-bottom:.75rem">🏃</div>
-    <h3>Nenhum dado ainda</h3>
+  const hdr=err?'⚠️ Problema ao carregar':'ℹ️ Sem dados yet';
+  const msg=err?`<p style="font-size:.8rem;color:#e11d48;margin-bottom:.5rem">Erro: ${errMsg||'Desconhecido'}</p>`:'';
+  const retry=err?'<button class="btn-refresh" onclick="loadData()" style="background:rgba(239,68,68,.2);border-color:#ef4444;color:#dc2626">🔄 Tentar novamente</button>':'';
+  document.getElementById('coach-status').innerHTML=`
+    <div class="empty"><div style="font-size:3rem;margin-bottom:.75rem">${err?'⚠️':'🏃'}</div>
+    <h3>${hdr}</h3>
+    ${msg}
     <p>Rode o script no Terminal para importar seus treinos:<br><br>
     <code>cd ~/gastos-casa && python3 sync-garmin.py</code><br><br>
-    Depois clique em <strong>↻ Sync</strong> acima.</p></div>`;
+    Depois clique em <strong>↻ Sync</strong> acima.</p>
+    ${retry}</div>`;
+  document.getElementById('coach-sugestao').innerHTML='';
+  document.getElementById('coach-insights').innerHTML='';
+  document.getElementById('coach-stats-hero').innerHTML='';
+  document.getElementById('coach-sport-stats').innerHTML='';
+  loadRaceGoal();
+  if(err) document.getElementById('hSub').textContent=errMsg||'Erro ao carregar';
 }
 
 // ── helpers ──
@@ -568,6 +690,7 @@ function render(d){
   document.getElementById('loading').style.display='none';
   document.getElementById('content').style.display='block';
   initApiKey();
+  loadRaceGoal();
 
   renderCoach(ativ,meta,bb,sono,stress,hrv,sem);
   renderTreinos(ativ,meta,sem);
@@ -578,12 +701,29 @@ function render(d){
 // ════════════════ COACH ════════════════
 
 function getReadiness(bb,sonoMed,volTrend,diasSemTreino){
+  // Se tem objetivo de prova muito próximo, prioriza taper/recuperação
+  if(raceGoal){
+    const dias = Math.round((new Date(raceGoal.date+'T12:00:00') - new Date())/864e5);
+    if(dias >= 0 && dias <= 14) return 'easy'; // Última 2 semanas = taper
+    if(dias < 0) return 'rest'; // Após a prova = descanso
+  }
+  
   if(bb>0&&bb<25) return 'rest';
   if(bb<45||sonoMed<5.5) return 'easy';
   if(bb>=75&&sonoMed>=6.5) return 'quality';
   if(volTrend>20) return 'moderate';
   if(bb>=65&&sonoMed>=6) return 'normal';
   return 'moderate';
+}
+
+function getTrainingPhase(){
+  if(!raceGoal) return null;
+  const dias = Math.round((new Date(raceGoal.date+'T12:00:00') - new Date())/864e5);
+  if(dias < 0) return {fase:'recuperacao',nome:'Recuperação pós-prova',emoji:'✨'};
+  if(dias <= 14) return {fase:'taper',nome:'Taper (redução)',emoji:'🎯'};
+  if(dias <= 28) return {fase:'specific',nome:'Prep. Específica',emoji:'⚡'};
+  if(dias <= 70) return {fase:'build',nome:'Construção',emoji:'📈'};
+  return {fase:'base',nome:'Base aeróbica',emoji:'🏗️'};
 }
 
 function renderSugestaoCard(esporte,readiness,paceBase,bbHoje,sonoMed){
@@ -673,6 +813,15 @@ function renderSugestaoCard(esporte,readiness,paceBase,bbHoje,sonoMed){
       </div>
       <div class="sug-why"><b>💡 Por que este treino?</b><br>${p.why}</div>
       ${p.alts.length?`<div class="sug-alts-lbl">Alternativas</div><div class="sug-alts">${altsHtml}</div>`:''}
+      ${raceGoal?(() => {
+        const phase = getTrainingPhase();
+        const dias = Math.round((new Date(raceGoal.date+'T12:00:00')-new Date())/864e5);
+        return `<div style="font-size:.68rem;color:#64748b;margin-top:.75rem;padding-top:.75rem;border-top:1px solid rgba(255,255,255,.3)">
+          <b>🎯 Objetivo:</b> ${{10:'10 km',21.1:'21,1 km (Meia)',42.2:'42,2 km (Maratona)'}[raceGoal.dist]} em ${fd(raceGoal.date)}<br>
+          <b>${phase.emoji} Fase:</b> ${phase.nome} (${dias} dias)<br>
+          <span style="opacity:.7">Este treino está alinhado com sua progressão para a prova!</span>
+        </div>`;
+      })():''}
     </div>`;
 }
 
@@ -683,6 +832,72 @@ function setCoachEsporte(e,btn){
   document.querySelectorAll('.cef-btn').forEach(b=>b.classList.remove('cef-on'));
   btn.classList.add('cef-on');
   if(DATA){const a=(DATA.atividades||[]).sort((a,b)=>b.data.localeCompare(a.data));renderCoach(a,DATA.meta||{},DATA.bodyBattery||{},DATA.sono||{},DATA.stress||{},DATA.hrv||{},DATA.semanal||{});}
+}
+
+// ── Objetivo de Prova ──
+let raceGoal = null;
+
+function loadRaceGoal(){
+  const saved = localStorage.getItem('raceGoal');
+  if(saved) raceGoal = JSON.parse(saved);
+  
+  // Carregar valores nos campos
+  if(raceGoal){
+    document.getElementById('race-goal-dist').value = raceGoal.dist || '';
+    document.getElementById('race-goal-date').value = raceGoal.date || '';
+  }
+  
+  updateRaceGoalUI();
+}
+
+function saveRaceGoal(){
+  const dist = document.getElementById('race-goal-dist').value;
+  const date = document.getElementById('race-goal-date').value;
+  if(!dist || !date){
+    alert('Preencha distância e data da prova');
+    return;
+  }
+  raceGoal = {dist: +dist, date: date};
+  localStorage.setItem('raceGoal', JSON.stringify(raceGoal));
+  updateRaceGoalUI();
+  if(DATA){const a=(DATA.atividades||[]).sort((a,b)=>b.data.localeCompare(a.data));renderCoach(a,DATA.meta||{},DATA.bodyBattery||{},DATA.sono||{},DATA.stress||{},DATA.hrv||{},DATA.semanal||{});}
+}
+
+function clearRaceGoal(){
+  raceGoal = null;
+  localStorage.removeItem('raceGoal');
+  document.getElementById('race-goal-dist').value = '';
+  document.getElementById('race-goal-date').value = '';
+  updateRaceGoalUI();
+  if(DATA){const a=(DATA.atividades||[]).sort((a,b)=>b.data.localeCompare(a.data));renderCoach(a,DATA.meta||{},DATA.bodyBattery||{},DATA.sono||{},DATA.stress||{},DATA.hrv||{},DATA.semanal||{});}
+}
+
+function updateRaceGoalUI(){
+  const distLbl = {10:'10 km', 21.1:'21,1 km (Meia)', 42.2:'42,2 km (Maratona)'};
+  if(raceGoal){
+    const semana = semanaISO(raceGoal.date);
+    const dias = Math.round((new Date(raceGoal.date+'T12:00:00') - new Date())/864e5);
+    const card = document.getElementById('race-goal-card');
+    card.classList.add('set');
+    document.getElementById('race-goal-dist').value = raceGoal.dist;
+    document.getElementById('race-goal-date').value = raceGoal.date;
+    document.getElementById('race-goal-meta').innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem">
+        <div>
+          <div class="race-goal-dist">${distLbl[raceGoal.dist]}</div>
+          <div class="race-goal-date">${fd(raceGoal.date)}</div>
+          <div class="race-goal-countdown">${dias > 0 ? dias + ' dias restantes' : dias === 0 ? '🎉 Hoje!' : '✓ Realizada'}</div>
+        </div>
+        <div style="text-align:right;font-size:.75rem;color:var(--muted);line-height:1.6">
+          <div><b>${semana}</b></div>
+          <div>${dias > 0 ? '~' + Math.round(dias/7) + ' semanas' : '—'}</div>
+        </div>
+      </div>`;
+  } else {
+    const card = document.getElementById('race-goal-card');
+    card.classList.remove('set');
+    document.getElementById('race-goal-meta').innerHTML = '';
+  }
 }
 
 function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
@@ -1766,6 +1981,7 @@ const PROVAS_DATA = [
 ];
 const REGIAO_LBL={atlantic:"🌊 Atlantic Canada",quebec:"⚜️ Québec",ontario:"🍁 Ontario",usa:"🇺🇸 Estados Unidos"};
 let curProvaDist='todas';
+let curProvaRegiao='todas';
 
 function filterProvas(dist,btn){
   curProvaDist=dist;
@@ -1774,32 +1990,76 @@ function filterProvas(dist,btn){
   renderProvas();
 }
 
+function filterProvasRegiao(regiao,btn){
+  curProvaRegiao=regiao;
+  document.querySelectorAll('.pf-regiao-btn').forEach(b=>b.classList.remove('pf-on'));
+  btn.classList.add('pf-on');
+  renderProvas();
+}
+
 function renderProvas(){
   const hoje=new Date().toISOString().slice(0,10);
-  let lista=curProvaDist==='todas'?PROVAS_DATA:PROVAS_DATA.filter(p=>p.dists.includes(+curProvaDist));
+  let lista=PROVAS_DATA;
+  
+  // Filtrar por distância
+  if(curProvaDist!=='todas'){
+    lista=lista.filter(p=>p.dists.includes(+curProvaDist));
+  }
+  
+  // Filtrar por região
+  if(curProvaRegiao!=='todas'){
+    lista=lista.filter(p=>p.regiao===curProvaRegiao);
+  }
+  
   const regioes=['atlantic','quebec','ontario','usa'];
   let html='';
+  let totalProvas=0;
+  let proximaProva=null;
+    let provaObjetivo=null;
+  
+    // Se há um objetivo de prova, procurar por provas que correspondem
+    if(raceGoal){
+      provaObjetivo=PROVAS_DATA.find(p=>p.data===raceGoal.date && p.dists.includes(raceGoal.dist));
+    }
+  
   regioes.forEach(reg=>{
     const ps=lista.filter(p=>p.regiao===reg).sort((a,b)=>a.data.localeCompare(b.data));
     if(!ps.length)return;
+    
+    ps.forEach(p=>{
+      totalProvas++;
+      if(!proximaProva && p.data>=hoje){
+        proximaProva=p;
+      }
+    });
+    
     html+=`<div class="prova-reg-sep">${REGIAO_LBL[reg]}</div>`;
     ps.forEach(p=>{
       const isUSA=p.regiao==='usa';
       const passada=p.data<hoje;
       const dias=Math.round((new Date(p.data+'T12:00:00')-new Date())/864e5);
-      const diasTxt=passada?'realizada':dias===0?'hoje!':dias+' dias';
-      const btnInsc=p.url?`<a href="${p.url}" target="_blank" style="display:inline-block;background:${isUSA?'#dc2626':'var(--blue)'};color:#fff;border-radius:8px;padding:3px 10px;font-size:.65rem;font-weight:800;text-decoration:none;flex-shrink:0">Inscrever →</a>`:'';
-      html+=`<div class="prova-card${isUSA?' prova-usa':''}${passada?' prova-passada':''}">
-        <div class="prova-nome">${p.nome}${isUSA?'<span class="prova-usa-tag">USA</span>':''}${btnInsc}</div>
+      const diasTxt=passada?'realizada':dias===0?'🔥 hoje!':dias+' dias';
+      const btnInsc=p.url?`<a href="${p.url}" target="_blank" style="display:inline-block;background:${isUSA?'#dc2626':'var(--blue)'};color:#fff;border-radius:8px;padding:4px 12px;font-size:.65rem;font-weight:800;text-decoration:none;flex-shrink:0">Inscrever →</a>`:'';
+      const destaque=(proximaProva&&p.nome===proximaProva.nome)||(provaObjetivo&&p.nome===provaObjetivo.nome)?' prova-destaque':'';
+      html+=`<div class="prova-card${isUSA?' prova-usa':''}${passada?' prova-passada':''}${destaque}">
+        <div class="prova-nome">${p.nome}${isUSA?'<span class="prova-usa-tag">USA</span>':''}${destaque?'<span class="prova-icon">📍</span>':''}</div>
         <div class="prova-local">${p.local}</div>
         <div class="prova-footer">
-          <span class="prova-data">${fmtProvaData(p.data)} · ${diasTxt}</span>
+          <span class="prova-data">${fmtProvaData(p.data)} · <strong>${diasTxt}</strong></span>
           <div class="prova-dists">${p.dists.map(d=>`<span class="prova-dist" onclick="usarDistCalc(${d})">${d}km</span>`).join('')}</div>
         </div>
+        ${btnInsc}
       </div>`;
     });
   });
-  document.getElementById('provas-list').innerHTML=html;
+  
+  if(!html){
+    html=`<div style="text-align:center;padding:2rem 1rem;color:var(--muted);font-size:.9rem">📭 Nenhuma prova encontrada com esses filtros</div>`;
+  }
+  
+  const contador=totalProvas>0?`<div style="font-size:.75rem;color:var(--muted);margin-bottom:1rem"><strong>${totalProvas}</strong> prova${totalProvas>1?'s':''} encontrada${totalProvas>1?'s':''}</div>`:'';
+  
+  document.getElementById('provas-list').innerHTML=contador+html;
 }
 
 function fmtProvaData(d){
@@ -1860,6 +2120,26 @@ function calcPace(){
 
 renderProvas();
 loadData();
+
+// Service Worker registration + fallback
+if('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(regs => {
+    regs.forEach(r => {
+      console.log('Unregistering old SW', r);
+      r.unregister();
+    });
+  }).finally(() => {
+    navigator.serviceWorker.register('./sw.js', {scope: './'})
+      .then(reg => console.log('✓ SW registered'))
+      .catch(err => console.warn('SW registration failed:', err));
+  });
+} else {
+  console.warn('Service Workers not supported');
+}
+const debugText = 'Versão v43 | URL: ' + location.href + ' | host: ' + location.hostname;
+document.getElementById('app-debug').textContent = debugText;
+document.getElementById('version-banner').textContent = debugText;
+console.log(debugText);
 </script>
 </body>
 </html>
