@@ -520,23 +520,23 @@ async function loadData(){
   Object.values(charts).forEach(c=>c.destroy()); charts={};
   try{
     const token=await fbToken();
+    if(!token) throw new Error('Token Firebase vazio');
     const res=await fetch(`${FB_DB}/${FB_PATH}.json?auth=${token}`);
+    if(!res.ok) throw new Error('Firebase HTTP '+res.status);
     const d=await res.json();
     if(!d||!d.atividades||!d.atividades.length){showEmpty();return;}
     DATA=d; render(d);
-  }catch(e){showEmpty(true);}
+  }catch(e){showEmpty(true, e.message||String(e));}
 }
 
-function showEmpty(err){
+function showEmpty(err, msg){
   document.getElementById('loading').style.display='none';
   document.getElementById('hSub').textContent=err?'Erro ao carregar':'Sem dados';
   document.getElementById('content').style.display='block';
   document.getElementById('sec-coach').innerHTML=`
     <div class="empty"><div style="font-size:3rem;margin-bottom:.75rem">🏃</div>
-    <h3>Nenhum dado ainda</h3>
-    <p>Rode o script no Terminal para importar seus treinos:<br><br>
-    <code>cd ~/gastos-casa && python3 sync-garmin.py</code><br><br>
-    Depois clique em <strong>↻ Sync</strong> acima.</p></div>`;
+    <h3>${err?'Erro ao carregar':'Nenhum dado ainda'}</h3>
+    <p>${err&&msg?`<code style="font-size:.7rem;color:#ef4444">${msg}</code><br><br>Verifique sua conexão e toque em <strong>↻ só recarregar</strong>.`:'Rode o script no Terminal para importar seus treinos:<br><br><code>cd ~/gastos-casa && python3 sync-garmin.py</code><br><br>Depois clique em <strong>↻ Sync</strong> acima.'}</p></div>`;
 }
 
 // ── helpers ──
