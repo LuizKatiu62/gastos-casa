@@ -1,5 +1,3 @@
-.prova-destaque{border:2px solid #0e9f6e;background:rgba(14,159,110,.05);border-left-width:4px}
-.prova-icon{color:#0e9f6e;font-size:1.1rem;margin-left:.3rem}
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -689,9 +687,6 @@ function render(d){
   const sono=d.sono||{};
   const stress=d.stress||{};
   const hrv=d.hrv||{};
-
-  document.getElementById('hSub').textContent=
-    meta.ultimaSync?'Sync: '+fmtSync(meta.ultimaSync):'Garmin Connect';
 
   document.getElementById('loading').style.display='none';
   document.getElementById('content').style.display='block';
