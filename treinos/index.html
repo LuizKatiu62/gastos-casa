@@ -29,7 +29,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .hdr h1{font-size:1rem;font-weight:900}
 .hdr p{font-size:.68rem;opacity:.72;margin-top:2px}
 .btn-refresh{background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.3);border-radius:20px;padding:.3rem .8rem;font-size:.7rem;font-weight:700;color:#fff;cursor:pointer;font-family:inherit}
-.app-version{font-size:.75rem;color:rgba(255,255,255,.85);margin-top:.3rem;letter-spacing:.02em}
 body{padding-top:45px}
 
 /* ── TABS ── */
@@ -297,7 +296,6 @@ body{padding-top:45px}
   <div>
     <h1>🏃 Treinos · Luiz Silva</h1>
     <p id="hSub">Carregando…</p>
-    <div class="app-version">Versão v43</div>
   </div>
   <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.3rem">
     <button class="btn-refresh" id="btn-garmin" onclick="syncGarmin()">⚡ Sync Garmin</button>
@@ -326,7 +324,6 @@ body{padding-top:45px}
   <div id="loading" class="loading"><div class="spin"></div>Carregando seus dados do Garmin…</div>
   <div id="empty-msg" style="display:none;padding:2rem 1rem;text-align:center"></div>
   <div id="content" style="display:none">
-      <div id="app-version" style="font-size:.75rem;color:var(--muted);margin:0 0 1rem">Versão v43</div>
 
     <!-- ══ COACH ══ -->
     <div class="sec on" id="sec-coach">
