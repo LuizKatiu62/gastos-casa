@@ -1782,7 +1782,7 @@ function renderSaude(bb,sono,stress,hrv){
           ...BASE,
           plugins:{
             ...BASE.plugins,
-            legend:{display:true,position:'bottom',labels:{font:{size:9},boxWidth:9,padding:8,usePointStyle:true}},
+            legend:{display:true,position:'bottom',labels:{font:{size:10},boxWidth:12,padding:10,usePointStyle:true}},
             tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.raw}`}},
             zoneBands:[
               {min:0, max:25, color:'rgba(14,159,110,.07)'},
@@ -1791,7 +1791,18 @@ function renderSaude(bb,sono,stress,hrv){
               {min:75,max:100,color:'rgba(239,68,68,.09)'}
             ]
           },
-          scales:{x:BASE.scales.x, y:{...BASE.scales.y,min:0,max:100}}
+          scales:{
+            x:{
+              ...BASE.scales.x,
+              title:{display:true,text:'Dia',color:'#475569',font:{size:10,weight:'600'}}
+            },
+            y:{
+              ...BASE.scales.y,
+              min:0,
+              max:100,
+              title:{display:true,text:'Stress',color:'#475569',font:{size:10,weight:'600'}}
+            }
+          }
         }
       });
       const [sl,sc]=stressAssess(stressMed);
