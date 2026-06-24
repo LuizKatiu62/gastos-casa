@@ -618,6 +618,12 @@ const PERIODO = 180; // dias padrão para todas as médias do app
 let curDirecionadoNivel = 'iniciante';
 let lastUpgradeReason = '';
 
+// Anti-surpresa de custo da IA
+const AI_MAX_TOKENS = 420;
+const AI_CONTEXT_ATIVIDADES = 8;
+const AI_CONTEXT_CHAT_HISTORY = 6;
+const AI_DAILY_API_LIMIT = 8;
+
 const PLAN_CONFIG = {
   free:{name:'FREE'},
   pro:{name:'PRO'},
@@ -2161,7 +2167,7 @@ function saveApiKey(){
 
 function buildContext(){
   if(!DATA) return 'Dados do Garmin não disponíveis.';
-  const ativ = (DATA.atividades||[]).slice(0,20);
+  const ativ = (DATA.atividades||[]).slice(0,AI_CONTEXT_ATIVIDADES);
   const bb   = DATA.bodyBattery||{};
   const sono = DATA.sono||{};
   const hrv  = DATA.hrv||{};
@@ -2179,12 +2185,39 @@ function buildContext(){
   return [
     `Atleta: Luiz Silva, 63 anos, triatleta (corrida, bike, natação, musculação).`,
     `Data: ${hoje}`,
-    `Totais: ${meta.totalKm??'?'} km acumulados | ${meta.km30dias??'?'} km / 30d | ${meta.treinos30dias??'?'} treinos / mês | ${meta.km7dias??'?'} km esta semana`,
+    `Totais: ${meta.totalKm??'?'} km acumulados | ${meta.km30dias??'?'} km / 30d | ${meta.km7dias??'?'} km esta semana`,
     `Saúde hoje: Body Battery ${bbHoje}% | Sono médio 7d: ${sonoMed}h | HRV médio 7d: ${hrvMed}ms | Stress médio 7d: ${strMed}/100`,
     ``,
-    `Últimas 20 atividades (data, esporte, km, duração, pace, FC média, calorias, VO2max, cadência):`,
-    ...ativ.map(a=>`  ${a.data} [${getEsporte(a)}] ${a.distancia}km ${a.duracao||''} pace:${a.pace||'—'} FC:${a.fcMed||'—'}bpm cal:${a.calorias||'—'} VO2:${a.vo2max||'—'} cad:${a.cadencia||'—'}`)
+    `Últimas ${AI_CONTEXT_ATIVIDADES} atividades (data, esporte, km, duração, pace, FC média):`,
+    ...ativ.map(a=>`  ${a.data} [${getEsporte(a)}] ${a.distancia}km ${a.duracao||''} pace:${a.pace||'—'} FC:${a.fcMed||'—'}bpm`)
   ].join('\n');
+}
+
+function todayKey(){
+  return new Date().toISOString().slice(0,10);
+}
+
+function getAIDailyUsage(){
+  const raw = localStorage.getItem('coach_ai_usage');
+  if(!raw) return {day:todayKey(),count:0};
+  try{
+    const u = JSON.parse(raw);
+    if(u.day!==todayKey()) return {day:todayKey(),count:0};
+    return {day:u.day,count:Number(u.count||0)};
+  }catch(e){
+    return {day:todayKey(),count:0};
+  }
+}
+
+function saveAIDailyUsage(u){
+  localStorage.setItem('coach_ai_usage', JSON.stringify(u));
+}
+
+function incAIDailyUsage(){
+  const u=getAIDailyUsage();
+  u.count+=1;
+  saveAIDailyUsage(u);
+  return u.count;
 }
 
 function buildLocalCoachReply(question){
@@ -2293,6 +2326,16 @@ async function sendChat(){
   const question = inp.value.trim();
   if(!question) return;
 
+  const usage = getAIDailyUsage();
+  if(usage.count >= AI_DAILY_API_LIMIT){
+    inp.value='';
+    autoResize(inp);
+    addMsg('user', question);
+    addMsg('coach', `⚠️ Limite diário de IA atingido (${AI_DAILY_API_LIMIT}/${AI_DAILY_API_LIMIT}) para evitar custo surpresa.\n\nVou responder com o coach local hoje.`);
+    addMsg('coach', buildLocalCoachReply(question));
+    return;
+  }
+
   inp.value = ''; autoResize(inp);
   addMsg('user', question);
   chatHistory.push({role:'user', content:question});
@@ -2302,7 +2345,7 @@ async function sendChat(){
   sendBtn.disabled = true;
   const typing = addMsg('coach', '…', true);
 
-  const sys = `Você é um coach pessoal especializado em triathlon (corrida, bike, natação) e musculação. Analise os dados reais abaixo e responda de forma direta, objetiva e personalizada em português brasileiro. Use os números reais nas suas respostas. Seja conciso.
+  const sys = `Você é um coach pessoal especializado em triathlon (corrida, bike, natação) e musculação. Analise os dados reais abaixo e responda de forma direta, objetiva e personalizada em português brasileiro. Seja conciso e limite a resposta a no máximo 8 linhas curtas.
 
 DADOS DO ATLETA:
 ${buildContext()}`;
@@ -2318,17 +2361,21 @@ ${buildContext()}`;
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 1024,
+        max_tokens: AI_MAX_TOKENS,
         system: sys,
-        messages: chatHistory
+        messages: chatHistory.slice(-AI_CONTEXT_CHAT_HISTORY)
       })
     });
     const data = await res.json().catch(()=>({}));
     if(!res.ok || data.error) throw new Error(data?.error?.message || `HTTP ${res.status}`);
+    const used = incAIDailyUsage();
     const reply = data.content?.[0]?.text || 'Sem resposta.';
     chatHistory.push({role:'assistant', content:reply});
     typing.remove();
     addMsg('coach', reply);
+    if(used >= AI_DAILY_API_LIMIT-2){
+      addMsg('coach', `ℹ️ Uso de IA hoje: ${used}/${AI_DAILY_API_LIMIT}.`);
+    }
   }catch(e){
     typing.remove();
     chatHistory.pop();
