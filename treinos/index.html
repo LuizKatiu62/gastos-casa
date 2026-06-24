@@ -22,6 +22,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .btn-refresh{background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.3);border-radius:20px;padding:.3rem .8rem;font-size:.7rem;font-weight:700;color:#fff;cursor:pointer;font-family:inherit}
 .btn-upgrade{background:#fff;color:#0f766e;border:none;border-radius:20px;padding:.28rem .8rem;font-size:.68rem;font-weight:900;cursor:pointer;font-family:inherit}
 .plan-badge{font-size:.58rem;font-weight:800;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:2px 8px}
+.usage-badge{font-size:.56rem;font-weight:800;border-radius:999px;padding:2px 8px;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.16)}
+.usage-badge.ok{color:#dcfce7;background:rgba(34,197,94,.22)}
+.usage-badge.warn{color:#fef9c3;background:rgba(234,179,8,.24)}
+.usage-badge.limit{color:#fecaca;background:rgba(239,68,68,.26)}
 
 /* ── TABS ── */
 .tabs{position:sticky;top:0;z-index:99;background:#fff;border-bottom:2px solid var(--border);display:flex;overflow-x:auto;scrollbar-width:none}
@@ -305,6 +309,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   </div>
   <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.3rem">
     <span class="plan-badge" id="plan-badge">Plano FREE</span>
+    <span class="usage-badge ok" id="ai-usage-badge">IA mês: US$ 0.00 / 5.00</span>
     <button class="btn-refresh" id="btn-garmin" onclick="syncGarmin()">⚡ Sync Garmin</button>
     <button class="btn-refresh" onclick="loadData()" style="opacity:.6;font-size:.6rem;padding:.2rem .6rem">↻ só recarregar</button>
     <button class="btn-upgrade" onclick="openUpgradeModal('upgrade-header')">💎 Upgrade</button>
@@ -664,6 +669,17 @@ function renderSubscriptionUI(){
   const plan = currentPlan();
   const badge = document.getElementById('plan-badge');
   if(badge) badge.textContent = 'Plano ' + PLAN_CONFIG[plan].name;
+
+  const usage = getAIMonthUsage();
+  const usageBadge = document.getElementById('ai-usage-badge');
+  if(usageBadge){
+    const pct = AI_MONTHLY_LOCAL_LIMIT_USD>0 ? (usage.estimatedUsd/AI_MONTHLY_LOCAL_LIMIT_USD) : 0;
+    usageBadge.textContent = `IA mês: US$ ${usage.estimatedUsd.toFixed(2)} / ${AI_MONTHLY_LOCAL_LIMIT_USD.toFixed(2)}`;
+    usageBadge.classList.remove('ok','warn','limit');
+    if(pct>=1) usageBadge.classList.add('limit');
+    else if(pct>=0.7) usageBadge.classList.add('warn');
+    else usageBadge.classList.add('ok');
+  }
 
   const coachPaywall = document.getElementById('coach-paywall');
   if(coachPaywall) coachPaywall.style.display = hasAccess('coach_ai') ? 'none' : 'block';
@@ -2373,6 +2389,7 @@ async function sendChat(){
     addMsg('user', question);
     addMsg('coach', `⚠️ Limite mensal local de IA atingido (US$ ${AI_MONTHLY_LOCAL_LIMIT_USD.toFixed(2)}).\n\nPara evitar custo extra, vou responder com o coach local até virar o mês.`);
     addMsg('coach', buildLocalCoachReply(question));
+    renderSubscriptionUI();
     return;
   }
 
@@ -2410,6 +2427,7 @@ ${buildContext()}`;
     if(!res.ok || data.error) throw new Error(data?.error?.message || `HTTP ${res.status}`);
     const used = incAIDailyUsage();
     const monthUsed = incAIMonthUsage();
+    renderSubscriptionUI();
     const reply = data.content?.[0]?.text || 'Sem resposta.';
     chatHistory.push({role:'assistant', content:reply});
     typing.remove();
