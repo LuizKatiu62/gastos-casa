@@ -804,7 +804,7 @@ function getReadiness(bb,sonoMed,volTrend,diasSemTreino){
   return 'moderate';
 }
 
-function renderSugestaoCard(esporte,readiness,paceBase,bbHoje,sonoMed,evento){
+function renderSugestaoCard(esporte,readiness,paceBase,bbHoje,sonoMed,evento,restReason=''){
   const FCX=163,pb=paceBase||420;
   const z1=[Math.round(FCX*.6),Math.round(FCX*.7)];
   const z2=[Math.round(FCX*.7),Math.round(FCX*.8)];
@@ -894,6 +894,7 @@ function renderSugestaoCard(esporte,readiness,paceBase,bbHoje,sonoMed,evento){
   if(evento && EVENTO_PLANS[evento]){
     const ep=EVENTO_PLANS[evento];
     const epp=ep.planos[readiness];
+    const extraRest = (readiness==='rest' && restReason) ? `<br><b>📉 Sinal do Garmin:</b> ${restReason}` : '';
     return `
     <div class="sug-card ${cc[readiness]}">
       <div class="sug-hd">
@@ -905,7 +906,7 @@ function renderSugestaoCard(esporte,readiness,paceBase,bbHoje,sonoMed,evento){
         <div class="sug-param"><div class="sug-param-val" style="color:${fcColor[readiness]}">${fcByLevel[readiness]}</div><div class="sug-param-lbl">FC bpm</div></div>
         <div class="sug-param"><div class="sug-param-val" style="color:#7c3aed">${epp.dur}</div><div class="sug-param-lbl">Duração</div></div>
       </div>
-      <div class="sug-why"><b>💡 Por que este treino?</b><br>${epp.mod}</div>
+      <div class="sug-why"><b>💡 Por que este treino?</b><br>${epp.mod}${extraRest}</div>
       <div class="sug-evento"><div class="sug-semana">${ep.semana}</div></div>
       ${epp.alts&&epp.alts.length?`<div class="sug-alts-lbl">Alternativas</div><div class="sug-alts">${epp.alts.map(a=>`<span class="sug-alt">${a}</span>`).join('')}</div>`:''}
     </div>`;
@@ -924,6 +925,7 @@ function renderSugestaoCard(esporte,readiness,paceBase,bbHoje,sonoMed,evento){
   const distLbl=sp==='natacao'?'Distância':sp==='academia'?'Nível':'Dist. km';
   const paceLbl=sp==='corrida'?'Pace /km':sp==='academia'?'Intensidade':'Ritmo';
   const altsHtml=p.alts.map(a=>`<span class="sug-alt">${a}</span>`).join('');
+  const extraRest = (readiness==='rest' && restReason) ? `<br><b>📉 Sinal do Garmin:</b> ${restReason}` : '';
   return `
     <div class="sug-card ${cc[readiness]}">
       <div class="sug-hd">
@@ -948,7 +950,7 @@ function renderSugestaoCard(esporte,readiness,paceBase,bbHoje,sonoMed,evento){
           <div class="sug-param-lbl">Duração</div>
         </div>
       </div>
-      <div class="sug-why"><b>💡 Por que este treino?</b><br>${p.why}</div>
+      <div class="sug-why"><b>💡 Por que este treino?</b><br>${p.why}${extraRest}</div>
       ${p.alts.length?`<div class="sug-alts-lbl">Alternativas</div><div class="sug-alts">${altsHtml}</div>`:''}
     </div>`;
 }
@@ -989,12 +991,27 @@ function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
   const sonoKeys=Object.keys(sono).sort().slice(-7);
   const sonoReal7=sonoKeys.filter(k=>sono[k].duracao>=2);
   const mediaSOno=sonoReal7.length?+(sonoReal7.reduce((s,k)=>s+sono[k].duracao,0)/sonoReal7.length).toFixed(1):0;
+  const stressKeys=Object.keys(stress).sort();
+  const stressHoje=stressKeys.length?+(stress[stressKeys[stressKeys.length-1]].avg||0):0;
+  const hrvKeys=Object.keys(hrv).sort();
+  const hrvHoje=hrvKeys.length?+((hrv[hrvKeys[hrvKeys.length-1]].ontem||hrv[hrvKeys[hrvKeys.length-1]].semanal||0)):0;
 
   // Atividades filtradas por esporte
   const filtrado=curCoachEsporte==='todos'?ativ:ativ.filter(a=>getEsporte(a)===curCoachEsporte);
   const f7=filtrado.filter(a=>a.data>=d7);
   const f30=filtrado.filter(a=>a.data>=d30);
   const km30f=f30.reduce((s,a)=>s+a.distancia,0);
+
+  // Carga global (todos os esportes) para decidir folga
+  const all7=ativ.filter(a=>a.data>=d7);
+  const treinos7=all7.length;
+  const diasTreinoSet=new Set(ativ.map(a=>a.data));
+  let streak=0;
+  for(let i=0;i<14;i++){
+    const di=new Date(Date.now()-i*864e5).toISOString().slice(0,10);
+    if(diasTreinoSet.has(di)) streak++;
+    else break;
+  }
 
   // Volume semanal calculado das atividades filtradas
   const semData={};
@@ -1008,9 +1025,22 @@ function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
   const diasSemTreino=ativ.length?Math.round((Date.now()-new Date(ativ[0].data+'T12:00:00').getTime())/864e5):99;
   const paceBaseArr=ativ.filter(a=>getEsporte(a)==='corrida'&&a.data>=d7&&a.pace&&a.distancia>=1);
   const paceBase=paceBaseArr.length?paceBaseArr.reduce((s,a)=>s+p2s(a.pace),0)/paceBaseArr.length:0;
-  const readiness=getReadiness(bbHoje,mediaSOno,volTrend,diasSemTreino);
+
+  const restTriggers=[];
+  if(bbHoje>0&&bbHoje<35) restTriggers.push(`Body Battery baixo (${bbHoje}%)`);
+  if(mediaSOno>0&&mediaSOno<5.8) restTriggers.push(`sono médio baixo (${mediaSOno.toFixed(1)}h)`);
+  if(hrvHoje>0&&hrvHoje<38) restTriggers.push(`HRV baixa (${hrvHoje} ms)`);
+  if(stressHoje>=65) restTriggers.push(`stress alto (${stressHoje}/100)`);
+  if(streak>=6) restTriggers.push(`${streak} dias seguidos treinando`);
+  if(treinos7>=6&&bbHoje<55) restTriggers.push(`frequência alta (${treinos7} treinos/7d) com recuperação incompleta`);
+
+  const forceRest=restTriggers.length>0;
+  const restReason=restTriggers.join(' · ');
+
+  const readinessBase=getReadiness(bbHoje,mediaSOno,volTrend,diasSemTreino);
+  const readiness=forceRest?'rest':readinessBase;
   let status,statusClass;
-  if(bbHoje<25){status='😴 Descanse hoje';statusClass='status-descanso';}
+  if(forceRest){status='😴 Folga recomendada hoje';statusClass='status-descanso';}
   else if(bbHoje<45||mediaSOno<6){status='⚠️ Treino Leve';statusClass='status-atencao';}
   else if(volTrend>20){status='📈 Cuidado com a carga';statusClass='status-atencao';}
   else if(bbHoje>=75&&diasSemTreino>=1){status='🚀 Ótimo dia pra treinar!';statusClass='status-otimo';}
@@ -1019,9 +1049,9 @@ function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
   document.getElementById('coach-status').innerHTML=`
     <div class="status-badge ${statusClass}">
       <div class="status-ico">${bbHoje>=75?'🚀':bbHoje>=45?'✅':bbHoje>=25?'⚠️':'😴'}</div>
-      <div><div class="status-title">${status}</div><div class="status-sub">Hoje, ${fd(hoje)}</div></div>
+      <div><div class="status-title">${status}</div><div class="status-sub">Hoje, ${fd(hoje)}${forceRest?` · ${restReason}`:''}</div></div>
     </div>`;
-  document.getElementById('coach-sugestao').innerHTML=renderSugestaoCard(curCoachEsporte,readiness,paceBase,bbHoje,mediaSOno,curEvento);
+  document.getElementById('coach-sugestao').innerHTML=renderSugestaoCard(curCoachEsporte,readiness,paceBase,bbHoje,mediaSOno,curEvento,restReason);
 
   // ── Insights por esporte ──
   let ins='';
