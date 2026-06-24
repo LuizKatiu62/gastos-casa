@@ -676,10 +676,15 @@ const BASE={responsive:true,maintainAspectRatio:false,
 
 function mkChart(id,type,labels,data,color,opts={}){
   const el=document.getElementById(id); if(!el)return;
-  const dataset = {data,label:opts.label||'',backgroundColor:color,...(opts.dataset||{})};
-  return new Chart(el,{type,data:{labels,datasets:[dataset]},
-    options:{...BASE,...opts.options,plugins:{...BASE.plugins,...opts.options?.plugins,...(opts.tooltip?{tooltip:{callbacks:{label:opts.tooltip}}}:{})},
-    scales:{...BASE.scales,...opts.scales}}});
+  const datasets = opts.datasets ? opts.datasets : [{label:opts.label||'',data,backgroundColor:color,...(opts.dataset||{})}];
+  return new Chart(el,{type,data:{labels,datasets},
+    options:{
+      ...BASE,
+      ...opts.options,
+      plugins:{...BASE.plugins,...opts.options?.plugins,...(opts.tooltip?{tooltip:{callbacks:{label:opts.tooltip}}}:{})},
+      scales:{...BASE.scales,...opts.scales}
+    }
+  });
 }
 
 // ── RENDER ──
@@ -1179,32 +1184,20 @@ function renderTreinos(ativ,meta,sem){
     const volAnt   = volVals.length>1 ? volVals[volVals.length-2] : 0;
     const volDelta = volAnt>0 ? Math.round((volEsta-volAnt)/volAnt*100) : null;
 
-    charts.vol = new Chart(document.getElementById('cVol'),{
-      data:{
-        labels: semKeys.map(semLbl),
-        datasets:[
-          { type:'bar', label:'Volume (km)',
-            data: volVals,
-            backgroundColor: volVals.map((v,i)=>{
-              if(i===volVals.length-1) return '#1a56db';       // semana atual
-              if(v>=volMed*1.1) return 'rgba(14,159,110,.65)'; // acima da média
-              if(v>=volMed*0.7) return 'rgba(26,86,219,.42)';  // perto da média
-              return 'rgba(148,163,184,.5)';                    // abaixo
-            }),
-            borderRadius:6, order:2 },
-          { type:'line', label:'Média', data:semKeys.map(()=>volMed),
-            borderColor:'rgba(217,119,6,.75)', borderDash:[5,4], borderWidth:2,
-            pointRadius:0, fill:false, order:1 }
-        ]
-      },
-      options:{
-        ...BASE,
-        plugins:{...BASE.plugins,
-          legend:{display:true,position:'bottom',labels:{font:{size:9},boxWidth:9,padding:8,usePointStyle:true}},
-          tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.raw} km`}}
-        }
-      }
-    });
+    charts.vol = mkChart('cVol','bar',semKeys.map(semLbl),volVals,null,{datasets:[
+      { type:'bar', label:'Volume (km)',
+        data: volVals,
+        backgroundColor: volVals.map((v,i)=>{
+          if(i===volVals.length-1) return '#1a56db';
+          if(v>=volMed*1.1) return 'rgba(14,159,110,.65)';
+          if(v>=volMed*0.7) return 'rgba(26,86,219,.42)';
+          return 'rgba(148,163,184,.5)';
+        }),
+        borderRadius:6, order:2 },
+      { type:'line', label:'Média', data:semKeys.map(()=>volMed),
+        borderColor:'rgba(217,119,6,.75)', borderDash:[5,4], borderWidth:2,
+        pointRadius:0, fill:false, order:1 }
+    ], options:{plugins:{tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.raw} km`}}}}});
     const volSub = document.getElementById('vol-sub');
     if(volSub) volSub.innerHTML =
       `<b>Esta semana:</b> ${volEsta} km`+
@@ -1220,31 +1213,18 @@ function renderTreinos(ativ,meta,sem){
     const freqMed  = +(freqVals.reduce((s,v)=>s+v,0)/freqVals.length).toFixed(1);
     const freqEsta = freqVals[freqVals.length-1];
 
-    charts.freq = new Chart(document.getElementById('cFreq'),{
-      data:{
-        labels: semKeys.map(semLbl),
-        datasets:[
-          { type:'bar', label:'Treinos',
-            data: freqVals,
-            backgroundColor: freqVals.map((v,i)=>{
-              if(i===freqVals.length-1) return v>=4?'#0e9f6e':'#1a56db';
-              return v>=4?'rgba(14,159,110,.62)':v>=3?'rgba(26,86,219,.42)':'rgba(239,68,68,.4)';
-            }),
-            borderRadius:5, order:2 },
-          { type:'line', label:'Alvo (4×/sem)', data:semKeys.map(()=>4),
-            borderColor:'rgba(14,159,110,.6)', borderDash:[5,4], borderWidth:1.5,
-            pointRadius:0, fill:false, order:1 }
-        ]
-      },
-      options:{
-        ...BASE,
-        plugins:{...BASE.plugins,
-          legend:{display:true,position:'bottom',labels:{font:{size:9},boxWidth:9,padding:8,usePointStyle:true}},
-          tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.raw}`}}
-        },
-        scales:{...BASE.scales, y:{...BASE.scales.y,min:0,ticks:{...BASE.scales.y.ticks,stepSize:1}}}
-      }
-    });
+    charts.freq = mkChart('cFreq','bar',semKeys.map(semLbl),freqVals,null,{datasets:[
+      { type:'bar', label:'Treinos',
+        data: freqVals,
+        backgroundColor: freqVals.map((v,i)=>{
+          if(i===freqVals.length-1) return v>=4?'#0e9f6e':'#1a56db';
+          return v>=4?'rgba(14,159,110,.62)':v>=3?'rgba(26,86,219,.42)':'rgba(239,68,68,.4)';
+        }),
+        borderRadius:5, order:2 },
+      { type:'line', label:'Alvo (4×/sem)', data:semKeys.map(()=>4),
+        borderColor:'rgba(14,159,110,.6)', borderDash:[5,4], borderWidth:1.5,
+        pointRadius:0, fill:false, order:1 }
+    ], options:{plugins:{tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.raw}`}}}, scales:{y:{...BASE.scales.y,min:0,ticks:{...BASE.scales.y.ticks,stepSize:1}}}}});
     const freqSub = document.getElementById('freq-sub');
     if(freqSub) freqSub.innerHTML =
       `<b>Esta semana:</b> ${freqEsta} treinos`+
@@ -1290,35 +1270,21 @@ function renderEvolucao(ativ){
     const paceAnterior = n>=4 ? paceSecs.slice(0,Math.floor(n/2)).reduce((s,v)=>s+v,0)/Math.floor(n/2) : 0;
     const improving = paceAnterior>0 && paceRecente>0 && paceRecente < paceAnterior;
 
-    charts.pace = new Chart(document.getElementById('cPace'),{
-      type:'line',
-      data:{
-        labels: comPace.map(a=>`${fd(a.data)} ${a.distancia}km`),
-        datasets:[
-          { label:'Pace', data:paceSecs,
-            borderColor:'#0e9f6e', backgroundColor:'rgba(14,159,110,.09)',
-            borderWidth:2.5, pointRadius:5, tension:.35, fill:true,
-            pointBackgroundColor: paceSecs.map(v=>
-              v<=paceMed*0.97?'#0e9f6e':v>=paceMed*1.04?'#ef4444':'#1a56db'),
-            pointBorderColor:'#fff', pointBorderWidth:1.5 },
-          { type:'line', label:'Médio', data:comPace.map(()=>paceMed),
-            borderColor:'rgba(217,119,6,.7)', borderDash:[5,4], borderWidth:1.5,
-            pointRadius:0, fill:false }
-        ]
-      },
-      options:{
-        ...BASE,
-        plugins:{...BASE.plugins,
-          legend:{display:true,position:'bottom',labels:{font:{size:9},boxWidth:9,padding:8,usePointStyle:true}},
-          tooltip:{callbacks:{
+    charts.pace = mkChart('cPace','line',comPace.map(a=>`${fd(a.data)} ${a.distancia}km`),paceSecs,null,{datasets:[
+      { label:'Pace', data:paceSecs,
+        borderColor:'#0e9f6e', backgroundColor:'rgba(14,159,110,.09)',
+        borderWidth:2.5, pointRadius:5, tension:.35, fill:true,
+        pointBackgroundColor: paceSecs.map(v=>
+          v<=paceMed*0.97?'#0e9f6e':v>=paceMed*1.04?'#ef4444':'#1a56db'),
+        pointBorderColor:'#fff', pointBorderWidth:1.5 },
+      { type:'line', label:'Médio', data:comPace.map(()=>paceMed),
+        borderColor:'rgba(217,119,6,.7)', borderDash:[5,4], borderWidth:1.5,
+        pointRadius:0, fill:false }
+    ], options:{plugins:{tooltip:{callbacks:{
             title: i=>`${i[0].label}`,
             label: c=>c.datasetIndex===0?`Pace: ${s2p(c.raw)} /km`:`Médio: ${s2p(c.raw)} /km`
-          }}
-        },
-        scales:{x:BASE.scales.x, y:{...BASE.scales.y, reverse:true,
-          ticks:{...BASE.scales.y.ticks,callback:v=>s2p(v)}}}
-      }
-    });
+          }}}, scales:{x:BASE.scales.x, y:{...BASE.scales.y, reverse:true,
+          ticks:{...BASE.scales.y.ticks,callback:v=>s2p(v)}}}}});
     document.getElementById('pace-sub').innerHTML =
       `<b>Melhor:</b> ${s2p(paceBest)}/km · <b>Médio:</b> ${s2p(paceMed)}/km`+
       (n>=4 ? ` · <b>Tendência:</b> <span class="chip ${improving?'chip-v':'chip-a'}">${improving?'↑ melhorando':'→ estável'}</span>` : '')+
@@ -1338,22 +1304,14 @@ function renderEvolucao(ativ){
     const yMin = Math.max(50, Math.min(...allVals)-10);
     const yMax = Math.min(210, Math.max(...allVals)+10);
 
-    charts.fc = new Chart(document.getElementById('cFC'),{
-      type:'line',
-      data:{
-        labels: comFC.map(a=>fd(a.data)),
-        datasets:[{
+    charts.fc = mkChart('cFC','line',comFC.map(a=>fd(a.data)),allVals,null,{datasets:[{
           label:'FC média', data:allVals,
           borderColor:'#ef4444', backgroundColor:'rgba(239,68,68,.08)',
           borderWidth:2.5, pointRadius:4, tension:.35, fill:true,
           pointBackgroundColor: allVals.map(v=>v<z2?'#0e9f6e':v<z3?'#1a56db':v<z4?'#f97316':'#ef4444'),
           pointBorderColor:'#fff', pointBorderWidth:1.5
-        }]
-      },
-      options:{
-        ...BASE,
-        plugins:{...BASE.plugins,
-          tooltip:{callbacks:{label:c=>`FC: ${c.raw} bpm`}},
+        }], options:{
+        plugins:{tooltip:{callbacks:{label:c=>`FC: ${c.raw} bpm`}},
           zoneBands:[
             {min:0,   max:z1, color:'rgba(14,159,110,.08)'},
             {min:z1,  max:z2, color:'rgba(26,86,219,.06)'},
@@ -1364,9 +1322,7 @@ function renderEvolucao(ativ){
         },
         scales:{x:BASE.scales.x, y:{...BASE.scales.y,min:yMin,max:yMax,
           ticks:{...BASE.scales.y.ticks,callback:v=>v+' bpm'}}}
-      }
-    });
-    document.getElementById('fc-sub').innerHTML =
+      }});    document.getElementById('fc-sub').innerHTML =
       `<b>FC média:</b> ${fcMed} bpm &nbsp;<span class="chip chip-v">${fcZone}</span>`+
       ` · <b>FCmax estimada:</b> ${FCMAX} bpm (208−0.7×64)`+
       `<div class="zone-legend">`+
@@ -1389,11 +1345,7 @@ function renderEvolucao(ativ){
     const yMin = Math.max(0, Math.floor(vo2Min)-5);
     const yMax = Math.ceil(Math.max(...vo2Vals))+5;
 
-    charts.vo2 = new Chart(document.getElementById('cVO2'),{
-      type:'line',
-      data:{
-        labels: comVO2.map(a=>fd(a.data)),
-        datasets:[
+    charts.vo2 = mkChart('cVO2','line',comVO2.map(a=>fd(a.data)),vo2Vals,null,{datasets:[
           { label:'VO2 Max', data:vo2Vals,
             borderColor:'#d97706', backgroundColor:'rgba(217,119,6,.1)',
             borderWidth:2.5, pointRadius:4, tension:.35, fill:true,
@@ -1402,24 +1354,15 @@ function renderEvolucao(ativ){
           { type:'line', label:'Meta (45)', data:comVO2.map(()=>45),
             borderColor:'rgba(14,159,110,.55)', borderDash:[5,4], borderWidth:1.5,
             pointRadius:0, fill:false }
-        ]
-      },
-      options:{
-        ...BASE,
-        plugins:{...BASE.plugins,
-          legend:{display:true,position:'bottom',labels:{font:{size:9},boxWidth:9,padding:8,usePointStyle:true}},
-          tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.raw} ml/kg/min`}},
+        ], options:{plugins:{tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.raw} ml/kg/min`}},
           zoneBands:[
             {min:0,  max:28, color:'rgba(239,68,68,.07)'},
             {min:28, max:35, color:'rgba(249,115,22,.06)'},
             {min:35, max:45, color:'rgba(234,179,8,.05)'},
             {min:45, max:999,color:'rgba(14,159,110,.07)'}
           ]
-        },
-        scales:{x:BASE.scales.x, y:{...BASE.scales.y,min:yMin,max:yMax,
-          ticks:{...BASE.scales.y.ticks,callback:v=>v}}}
-      }
-    });
+        }, scales:{x:BASE.scales.x, y:{...BASE.scales.y,min:yMin,max:yMax,
+          ticks:{...BASE.scales.y.ticks,callback:v=>v}}}}});
     document.getElementById('vo2-sub').innerHTML =
       `<b>Atual:</b> ${vo2Last} ml/kg/min &nbsp;<span class="chip ${vo2Assess[1]}">${vo2Assess[0]}</span>`+
       ` · <b>Média período:</b> ${vo2Med}`+
@@ -1442,11 +1385,7 @@ function renderEvolucao(ativ){
     const yMin = Math.max(140, Math.min(...cadVals)-10);
     const yMax = Math.min(200, Math.max(...cadVals)+10);
 
-    charts.cad = new Chart(document.getElementById('cCad'),{
-      type:'line',
-      data:{
-        labels: comCad.map(a=>fd(a.data)),
-        datasets:[
+    charts.cad = mkChart('cCad','line',comCad.map(a=>fd(a.data)),cadVals,null,{datasets:[
           { label:'Cadência', data:cadVals,
             borderColor:'#7c3aed', backgroundColor:'rgba(124,58,237,.08)',
             borderWidth:2.5, pointRadius:4, tension:.35, fill:true,
@@ -1455,24 +1394,15 @@ function renderEvolucao(ativ){
           { type:'line', label:'Zona ideal (175)', data:comCad.map(()=>175),
             borderColor:'rgba(14,159,110,.6)', borderDash:[5,4], borderWidth:1.5,
             pointRadius:0, fill:false }
-        ]
-      },
-      options:{
-        ...BASE,
-        plugins:{...BASE.plugins,
-          legend:{display:true,position:'bottom',labels:{font:{size:9},boxWidth:9,padding:8,usePointStyle:true}},
-          tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.raw} spm`}},
+        ], options:{plugins:{tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.raw} spm`}},
           zoneBands:[
             {min:0,   max:155, color:'rgba(239,68,68,.07)'},
             {min:155, max:165, color:'rgba(249,115,22,.06)'},
             {min:165, max:185, color:'rgba(14,159,110,.07)'},
             {min:185, max:999, color:'rgba(26,86,219,.05)'}
           ]
-        },
-        scales:{x:BASE.scales.x, y:{...BASE.scales.y,min:yMin,max:yMax,
-          ticks:{...BASE.scales.y.ticks,callback:v=>v+' spm'}}}
-      }
-    });
+        }, scales:{x:BASE.scales.x, y:{...BASE.scales.y,min:yMin,max:yMax,
+          ticks:{...BASE.scales.y.ticks,callback:v=>v+' spm'}}}}});
     document.getElementById('cad-sub').innerHTML =
       `<b>Última:</b> ${cadLast} spm &nbsp;<span class="chip ${cadAssess[1]}">${cadAssess[0]}</span>`+
       ` · <b>Média:</b> ${cadMed} spm`+
@@ -1704,11 +1634,7 @@ function renderSaude(bb,sono,stress,hrv){
   const sonoChart = sonoReal.length ? sonoReal : sonoKeys; // fallback se todos < 2h
   if(sonoChart.length){
     const hasFases = sonoChart.some(k=>(sono[k].profundo||0)+(sono[k].rem||0)>0);
-    charts.sono = new Chart(document.getElementById('cSono'),{
-      type:'bar',
-      data:{
-        labels: sonoChart.map(fd),
-        datasets: hasFases ? [
+    charts.sono = mkChart('cSono','bar',sonoChart.map(fd),null,null,{datasets: hasFases ? [
           { label:'Profundo', data:sonoChart.map(k=>+(sono[k].profundo||0).toFixed(1)),
             backgroundColor:'rgba(29,78,216,.72)', borderRadius:3, stack:'s' },
           { label:'REM',      data:sonoChart.map(k=>+(sono[k].rem||0).toFixed(1)),
@@ -1725,31 +1651,10 @@ function renderSaude(bb,sono,stress,hrv){
           { type:'line', label:'7h recomendado', data:sonoChart.map(()=>7),
             borderColor:'rgba(14,159,110,.7)', borderDash:[5,4], borderWidth:2,
             pointRadius:0, fill:false, order:0 }
-        ]
-      },
-      options:{
-        ...BASE,
-        plugins:{
-          ...BASE.plugins,
-          legend:{display:true,position:'bottom',labels:{font:{size:10},boxWidth:12,padding:10,usePointStyle:true}},
-          tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.raw}h`}}
-        },
-        scales:{
-          x:{
-            ...BASE.scales.x,
-            title:{display:true,text:'Noite',color:'#475569',font:{size:10,weight:'600'}}
-          },
-          y:{
-            ...BASE.scales.y,
-            min:0,
-            max:10,
-            stacked:hasFases,
-            title:{display:true,text:'Horas de sono',color:'#475569',font:{size:10,weight:'600'}},
-            ticks:{...BASE.scales.y.ticks,callback:v=>v+'h'}
-          }
-        }
-      }
-    });
+        ], options:{plugins:{tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.raw}h`}}}, scales:{
+          x:{...BASE.scales.x,title:{display:true,text:'Noite',color:'#475569',font:{size:10,weight:'600'}}},
+          y:{...BASE.scales.y,min:0,max:10,stacked:hasFases,title:{display:true,text:'Horas de sono',color:'#475569',font:{size:10,weight:'600'}},ticks:{...BASE.scales.y.ticks,callback:v=>v+'h'}}
+        }}});
     const [sl]=sonoMed>0 ? sonoAssess(sonoMed) : ['—'];
     const sonoNote = sonoReal.length < sonoKeys.length
       ? ` <span style="color:#f97316;font-size:.62rem">(${sonoKeys.length - sonoReal.length} dias sem dados de sono excluídos)</span>` : '';
@@ -1767,10 +1672,7 @@ function renderSaude(bb,sono,stress,hrv){
   if(stressKeys.length){
     document.getElementById('stress-card').style.display='block';
     requestAnimationFrame(()=>{
-      charts.stress = new Chart(document.getElementById('cStress'),{
-        data:{
-          labels: stressKeys.map(fd),
-          datasets:[
+      charts.stress = mkChart('cStress','bar',stressKeys.map(fd),null,null,{datasets:[
             { type:'bar', label:'Stress médio',
               data:stressKeys.map(k=>stress[k].avg),
               backgroundColor:stressKeys.map(k=>stress[k].avg<25?'rgba(14,159,110,.6)':stress[k].avg<50?'rgba(26,86,219,.5)':stress[k].avg<75?'rgba(249,115,22,.6)':'rgba(239,68,68,.65)'),
@@ -1780,35 +1682,17 @@ function renderSaude(bb,sono,stress,hrv){
               borderColor:'rgba(239,68,68,.7)', borderDash:[4,3], borderWidth:1.5,
               pointRadius:3, pointBackgroundColor:'rgba(239,68,68,.8)',
               fill:false, order:1 }
-          ]
-        },
-        options:{
-          ...BASE,
-          plugins:{
-            ...BASE.plugins,
-            legend:{display:true,position:'bottom',labels:{font:{size:10},boxWidth:12,padding:10,usePointStyle:true}},
-            tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.raw}`}},
+          ], options:{plugins:{tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.raw}`}},
             zoneBands:[
               {min:0, max:25, color:'rgba(14,159,110,.07)'},
               {min:25,max:50, color:'rgba(26,86,219,.05)'},
               {min:50,max:75, color:'rgba(249,115,22,.07)'},
               {min:75,max:100,color:'rgba(239,68,68,.09)'}
             ]
-          },
-          scales:{
-            x:{
-              ...BASE.scales.x,
-              title:{display:true,text:'Dia',color:'#475569',font:{size:10,weight:'600'}}
-            },
-            y:{
-              ...BASE.scales.y,
-              min:0,
-              max:100,
-              title:{display:true,text:'Stress',color:'#475569',font:{size:10,weight:'600'}}
-            }
-          }
-        }
-      });
+          }, scales:{
+            x:{...BASE.scales.x,title:{display:true,text:'Dia',color:'#475569',font:{size:10,weight:'600'}}},
+            y:{...BASE.scales.y,min:0,max:100,title:{display:true,text:'Stress',color:'#475569',font:{size:10,weight:'600'}}}
+          }}});
       const [sl,sc]=stressAssess(stressMed);
       document.getElementById('stress-sub').innerHTML=
         `<b>Média stress:</b> ${stressMed} &nbsp;<span class="chip ${stressMed<25?'chip-v':stressMed<50?'chip-v':'chip-a'}">${sl}</span>`+
@@ -1826,11 +1710,7 @@ function renderSaude(bb,sono,stress,hrv){
   if(comHRV.length){
     document.getElementById('hrv-card').style.display='block';
     requestAnimationFrame(()=>{
-      charts.hrv = new Chart(document.getElementById('cHRV'),{
-        type:'line',
-        data:{
-          labels: comHRV.map(fd),
-          datasets:[
+      charts.hrv = mkChart('cHRV','line',comHRV.map(fd),null,null,{datasets:[
             { label:'HRV noturno', data:comHRV.map(k=>hrvVal(k)),
               borderColor:'#0e9f6e', backgroundColor:'rgba(14,159,110,.12)',
               borderWidth:2.5, pointRadius:4,
@@ -1842,28 +1722,10 @@ function renderSaude(bb,sono,stress,hrv){
             { label:'Média semanal', data:comHRV.map(k=>hrv[k].semanal||null),
               borderColor:'rgba(26,86,219,.6)', borderDash:[5,4], borderWidth:1.5,
               pointRadius:0, tension:.35, fill:false, order:1 }
-          ]
-        },
-        options:{
-          ...BASE,
-          plugins:{
-            ...BASE.plugins,
-            legend:{display:true,position:'bottom',labels:{font:{size:10},boxWidth:12,padding:10,usePointStyle:true}},
-            tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.raw} ms`}}
-          },
-          scales:{
-            x:{
-              ...BASE.scales.x,
-              title:{display:true,text:'Dia',color:'#475569',font:{size:10,weight:'600'}}
-            },
-            y:{
-              ...BASE.scales.y,
-              title:{display:true,text:'HRV (ms)',color:'#475569',font:{size:10,weight:'600'}},
-              ticks:{...BASE.scales.y.ticks,callback:v=>v+' ms'}
-            }
-          }
-        }
-      });
+          ], options:{plugins:{tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.raw} ms`}}}, scales:{
+            x:{...BASE.scales.x,title:{display:true,text:'Dia',color:'#475569',font:{size:10,weight:'600'}}},
+            y:{...BASE.scales.y,title:{display:true,text:'HRV (ms)',color:'#475569',font:{size:10,weight:'600'}},ticks:{...BASE.scales.y.ticks,callback:v=>v+' ms'}}
+          }}});
       const usingSem = hrvLast>0 && hrv[comHRV[comHRV.length-1]].ontem===0;
       const [hl]=hrvLast>0 ? hrvAssess(hrvLast) : ['—'];
       document.getElementById('hrv-sub').innerHTML=
