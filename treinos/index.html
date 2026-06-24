@@ -20,6 +20,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .hdr h1{font-size:1rem;font-weight:900}
 .hdr p{font-size:.68rem;opacity:.72;margin-top:2px}
 .btn-refresh{background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.3);border-radius:20px;padding:.3rem .8rem;font-size:.7rem;font-weight:700;color:#fff;cursor:pointer;font-family:inherit}
+.btn-upgrade{background:#fff;color:#0f766e;border:none;border-radius:20px;padding:.28rem .8rem;font-size:.68rem;font-weight:900;cursor:pointer;font-family:inherit}
+.plan-badge{font-size:.58rem;font-weight:800;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:2px 8px}
 
 /* ── TABS ── */
 .tabs{position:sticky;top:0;z-index:99;background:#fff;border-bottom:2px solid var(--border);display:flex;overflow-x:auto;scrollbar-width:none}
@@ -133,6 +135,32 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .td-note{font-size:.7rem;color:#475569;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:8px;padding:.5rem .6rem;margin-top:.5rem}
 .td-block{margin-top:.42rem;font-size:.75rem;line-height:1.55;color:#334155}
 .td-lbl{font-weight:800;color:#0f172a}
+
+/* ── PLANOS ── */
+.paywall{background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #fcd34d;border-radius:12px;padding:.85rem;margin-bottom:.75rem}
+.paywall-title{font-size:.8rem;font-weight:900;color:#92400e;margin-bottom:.3rem}
+.paywall-sub{font-size:.73rem;color:#78350f;line-height:1.55}
+.paywall-btn{margin-top:.55rem;background:#0ea5a4;color:#fff;border:none;border-radius:8px;padding:.42rem .85rem;font-size:.74rem;font-weight:800;cursor:pointer;font-family:inherit}
+.team-card{background:#eef2ff;border:1px solid #c7d2fe;border-radius:12px;padding:.8rem;margin-top:.55rem}
+.team-title{font-size:.76rem;font-weight:900;color:#312e81;margin-bottom:.3rem}
+.team-sub{font-size:.72rem;color:#4338ca;line-height:1.55}
+
+.modal-bg{position:fixed;inset:0;background:rgba(2,6,23,.55);display:none;align-items:center;justify-content:center;padding:1rem;z-index:9999}
+.modal{width:min(680px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:16px;border:1px solid #e2e8f0;padding:1rem}
+.m-title{font-size:1rem;font-weight:900;color:#0f172a;margin-bottom:.35rem}
+.m-sub{font-size:.78rem;color:#64748b;line-height:1.5;margin-bottom:.85rem}
+.plan-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.55rem}
+.plan-box{border:1px solid #e2e8f0;border-radius:12px;padding:.75rem}
+.plan-name{font-size:.75rem;font-weight:900;color:#0f172a}
+.plan-price{font-size:1.1rem;font-weight:900;color:#0f766e;margin:.25rem 0}
+.plan-list{font-size:.7rem;color:#475569;line-height:1.5}
+.plan-cta{margin-top:.55rem;width:100%;border:none;border-radius:8px;padding:.45rem .6rem;font-size:.73rem;font-weight:800;cursor:pointer;font-family:inherit;background:#0ea5a4;color:#fff}
+.plan-cta.free{background:#e2e8f0;color:#334155}
+.plan-cta.team{background:#1e3a8a}
+.m-foot{display:flex;gap:.5rem;align-items:center;margin-top:.75rem;flex-wrap:wrap}
+.m-input{flex:1;min-width:170px;border:1px solid #cbd5e1;border-radius:8px;padding:.42rem .6rem;font-size:.74rem;font-family:inherit}
+.m-close{margin-left:auto;border:none;background:#e2e8f0;color:#334155;border-radius:8px;padding:.42rem .7rem;font-size:.74rem;font-weight:800;cursor:pointer;font-family:inherit}
+@media(max-width:640px){.plan-grid{grid-template-columns:1fr}.m-close{margin-left:0}}
 
 /* ── CHARTS ── */
 .ch{position:relative;height:175px}
@@ -276,8 +304,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div id="debug-stage" style="font-size:.5rem;color:#fff;opacity:.6;font-family:monospace"></div>
   </div>
   <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.3rem">
+    <span class="plan-badge" id="plan-badge">Plano FREE</span>
     <button class="btn-refresh" id="btn-garmin" onclick="syncGarmin()">⚡ Sync Garmin</button>
     <button class="btn-refresh" onclick="loadData()" style="opacity:.6;font-size:.6rem;padding:.2rem .6rem">↻ só recarregar</button>
+    <button class="btn-upgrade" onclick="openUpgradeModal('upgrade-header')">💎 Upgrade</button>
   </div>
 </div>
 <div id="gh-token-section" style="display:none;background:#fefce8;border-bottom:1px solid #fcd34d;padding:.75rem 1rem">
@@ -370,6 +400,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
           <button class="td-btn" onclick="setDirecionadoNivel('avancado',this)">Avançado</button>
         </div>
         <div id="td-list"></div>
+        <div class="team-card" id="team-tools" style="display:none">
+          <div class="team-title">👥 Modo Team (Assessoria)</div>
+          <div class="team-sub">Planejamento por pelotão A/B/C com mesma sessão do dia: A em pace-alvo, B em ritmo controlado, C com redução de volume. Recurso exclusivo Team.</div>
+        </div>
       </div>
     </div>
 
@@ -447,6 +481,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
     <!-- ══ COACH IA ══ -->
     <div class="sec" id="sec-perguntas">
+
+      <div class="paywall" id="coach-paywall" style="display:none">
+        <div class="paywall-title">🔒 Coach IA disponível no plano Pro ou Team</div>
+        <div class="paywall-sub">No plano Free você mantém dashboards e treinos. Para perguntas ilimitadas com IA e análise personalizada, faça upgrade.</div>
+        <button class="paywall-btn" onclick="openUpgradeModal('coach-ia')">Ver planos</button>
+      </div>
 
       <!-- API Key -->
       <div class="apikey-card" id="apikey-section" style="display:none">
@@ -529,6 +569,38 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   </div><!-- /content -->
 </div>
 
+<div class="modal-bg" id="upgrade-modal">
+  <div class="modal">
+    <div class="m-title">Assinatura Treinos Pro</div>
+    <div class="m-sub">Escolha o plano para desbloquear Coach IA, filtros avançados e recursos de equipe.</div>
+    <div class="plan-grid">
+      <div class="plan-box">
+        <div class="plan-name">FREE</div>
+        <div class="plan-price">R$0</div>
+        <div class="plan-list">• Dashboards básicos<br>• Treinos direcionados iniciante<br>• Sem Coach IA</div>
+        <button class="plan-cta free" onclick="setPlanLocal('free')">Continuar no Free</button>
+      </div>
+      <div class="plan-box" style="border-color:#14b8a6;background:#f0fdfa">
+        <div class="plan-name">PRO</div>
+        <div class="plan-price">R$39/mês</div>
+        <div class="plan-list">• Coach IA<br>• Filtros 90/180/365 dias<br>• Direcionados completo</div>
+        <button class="plan-cta" onclick="checkoutPlan('pro')">Assinar Pro</button>
+      </div>
+      <div class="plan-box" style="border-color:#1e3a8a;background:#eff6ff">
+        <div class="plan-name">TEAM</div>
+        <div class="plan-price">R$199/mês</div>
+        <div class="plan-list">• Tudo do Pro<br>• Recursos de equipe<br>• Gestão por pelotão</div>
+        <button class="plan-cta team" onclick="checkoutPlan('team')">Assinar Team</button>
+      </div>
+    </div>
+    <div class="m-foot">
+      <input class="m-input" id="plan-code-input" placeholder="Já assinou? código (PRO2026 ou TEAM2026)">
+      <button class="plan-cta" style="width:auto" onclick="applyPlanCode()">Ativar código</button>
+      <button class="m-close" onclick="closeUpgradeModal()">Fechar</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // Debug logo no início
 console.log('[START] Script carregando...');
@@ -544,6 +616,109 @@ const FB_PATH = 'treinos/luiz';
 let charts = {}, curTab = 'coach', DATA = null, curEsporte = 'todos', curPeriodo = 180, curPeriodoEvolucao = 180, curPeriodoSaude = 180;
 const PERIODO = 180; // dias padrão para todas as médias do app
 let curDirecionadoNivel = 'iniciante';
+let lastUpgradeReason = '';
+
+const PLAN_CONFIG = {
+  free:{name:'FREE'},
+  pro:{name:'PRO'},
+  team:{name:'TEAM'}
+};
+const CHECKOUT_URLS = {
+  pro:'https://buy.stripe.com/PLACEHOLDER_PRO',
+  team:'https://buy.stripe.com/PLACEHOLDER_TEAM'
+};
+
+function getSubscription(){
+  const raw = localStorage.getItem('treinos_subscription');
+  if(!raw) return {plan:'free',status:'active'};
+  try{return JSON.parse(raw);}catch(e){return {plan:'free',status:'active'};}
+}
+
+function saveSubscription(s){
+  localStorage.setItem('treinos_subscription', JSON.stringify(s));
+}
+
+function currentPlan(){
+  const s = getSubscription();
+  if(!PLAN_CONFIG[s.plan]) return 'free';
+  return s.plan;
+}
+
+function hasAccess(feature){
+  const plan = currentPlan();
+  if(plan==='team') return true;
+  if(plan==='pro') return feature!=='team_tools';
+  if(feature==='free') return true;
+  return false;
+}
+
+function renderSubscriptionUI(){
+  const plan = currentPlan();
+  const badge = document.getElementById('plan-badge');
+  if(badge) badge.textContent = 'Plano ' + PLAN_CONFIG[plan].name;
+
+  const coachPaywall = document.getElementById('coach-paywall');
+  if(coachPaywall) coachPaywall.style.display = hasAccess('coach_ai') ? 'none' : 'block';
+
+  const teamTools = document.getElementById('team-tools');
+  if(teamTools) teamTools.style.display = hasAccess('team_tools') ? 'block' : 'none';
+
+  const ta = document.getElementById('chat-input');
+  const send = document.getElementById('chat-send');
+  if(ta && send){
+    const enabled = hasAccess('coach_ai');
+    ta.disabled = !enabled;
+    send.disabled = !enabled;
+    if(!enabled) ta.placeholder = 'Disponível no plano Pro/Team';
+  }
+}
+
+function openUpgradeModal(reason){
+  lastUpgradeReason = reason || '';
+  const modal = document.getElementById('upgrade-modal');
+  if(modal) modal.style.display='flex';
+}
+
+function closeUpgradeModal(){
+  const modal = document.getElementById('upgrade-modal');
+  if(modal) modal.style.display='none';
+}
+
+function setPlanLocal(plan){
+  saveSubscription({plan,status:'active'});
+  renderSubscriptionUI();
+  closeUpgradeModal();
+}
+
+function checkoutPlan(plan){
+  const url = CHECKOUT_URLS[plan];
+  if(url && !url.includes('PLACEHOLDER')){
+    window.open(url, '_blank');
+  } else {
+    alert('Checkout ainda não configurado. Use código PRO2026/TEAM2026 para teste local.');
+  }
+}
+
+function applyPlanCode(){
+  const inp = document.getElementById('plan-code-input');
+  const v = (inp?.value||'').trim().toUpperCase();
+  if(v==='PRO2026') saveSubscription({plan:'pro',status:'active'});
+  else if(v==='TEAM2026') saveSubscription({plan:'team',status:'active'});
+  else if(v==='FREE2026') saveSubscription({plan:'free',status:'active'});
+  else { alert('Código inválido.'); return; }
+  if(inp) inp.value='';
+  renderSubscriptionUI();
+  closeUpgradeModal();
+}
+
+document.addEventListener('click', (e) => {
+  const modal = document.getElementById('upgrade-modal');
+  if(modal && e.target===modal) closeUpgradeModal();
+});
+
+document.addEventListener('keydown', (e) => {
+  if(e.key==='Escape') closeUpgradeModal();
+});
 
 const TREINOS_DIRECIONADOS = {
   iniciante: [
@@ -599,6 +774,10 @@ function renderDirecionados(){
 }
 
 function setDirecionadoNivel(nivel,btn){
+  if(nivel!=='iniciante' && !hasAccess('direcionados_advanced')){
+    openUpgradeModal('direcionados-avancados');
+    return;
+  }
   curDirecionadoNivel = nivel;
   document.querySelectorAll('#td-levels .td-btn').forEach(b=>b.classList.remove('td-on'));
   if(btn) btn.classList.add('td-on');
@@ -639,6 +818,10 @@ function setPeriodo(dias,btn){
 }
 
 function setPeriodoEvolucao(dias,btn){
+  if(dias>30 && !hasAccess('periodos_advanced')){
+    openUpgradeModal('periodo-evolucao');
+    return;
+  }
   curPeriodoEvolucao=dias;
   document.querySelectorAll('.sf-wrap')[2].querySelectorAll('.sf-btn').forEach(b=>b.classList.remove('sf-on'));
   btn.classList.add('sf-on');
@@ -646,6 +829,10 @@ function setPeriodoEvolucao(dias,btn){
 }
 
 function setPeriodoSaude(dias,btn){
+  if(dias>30 && !hasAccess('periodos_advanced')){
+    openUpgradeModal('periodo-saude');
+    return;
+  }
   curPeriodoSaude=dias;
   document.querySelectorAll('.sf-wrap')[3].querySelectorAll('.sf-btn').forEach(b=>b.classList.remove('sf-on'));
   btn.classList.add('sf-on');
@@ -770,6 +957,7 @@ function render(d){
     dbg('UI mostrada');
     
     initApiKey();
+    renderSubscriptionUI();
     dbg('apikey ok');
     
     initEventoBtn();
@@ -1903,6 +2091,7 @@ function go(id,btn){
   document.querySelectorAll('.tab').forEach(b=>b.classList.remove('on'));
   document.getElementById('sec-'+id).classList.add('on');
   btn.classList.add('on'); curTab=id;
+  renderSubscriptionUI();
   if(id==='direcionados') renderDirecionados();
   window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -1954,6 +2143,10 @@ async function syncGarmin(){
 }
 
 function initApiKey(){
+  if(!hasAccess('coach_ai')){
+    document.getElementById('apikey-section').style.display = 'none';
+    return;
+  }
   document.getElementById('apikey-section').style.display = ANTHRO_KEY ? 'none' : 'block';
   if(ANTHRO_KEY) document.getElementById('apikey-input').value = '';
 }
@@ -2069,6 +2262,7 @@ function buildLocalCoachReply(question){
 }
 
 function fillChat(btn){
+  if(!hasAccess('coach_ai')){ openUpgradeModal('quick-questions'); return; }
   const inp = document.getElementById('chat-input');
   inp.value = btn.textContent.trim();
   autoResize(inp);
@@ -2086,6 +2280,10 @@ function chatKey(e){
 }
 
 async function sendChat(){
+  if(!hasAccess('coach_ai')){
+    openUpgradeModal('coach-ia');
+    return;
+  }
   if(!ANTHRO_KEY){
     document.getElementById('apikey-section').style.display='block';
     document.getElementById('apikey-input').focus();
