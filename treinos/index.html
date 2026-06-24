@@ -571,26 +571,51 @@ function mkChart(id,type,labels,data,color,opts={}){
 
 // ── RENDER ──
 function render(d){
-  const ativ=(d.atividades||[]).sort((a,b)=>b.data.localeCompare(a.data));
-  const meta=d.meta||{};
-  const sem=d.semanal||{};
-  const bb=d.bodyBattery||{};
-  const sono=d.sono||{};
-  const stress=d.stress||{};
-  const hrv=d.hrv||{};
+  const dbg = el => {
+    const debug = document.getElementById('debug-stage');
+    if (debug) debug.textContent = 'render: ' + el;
+    console.log('[RENDER]', el);
+  };
+  
+  try {
+    const ativ=(d.atividades||[]).sort((a,b)=>b.data.localeCompare(a.data));
+    const meta=d.meta||{};
+    const sem=d.semanal||{};
+    const bb=d.bodyBattery||{};
+    const sono=d.sono||{};
+    const stress=d.stress||{};
+    const hrv=d.hrv||{};
+    dbg('dados ok');
 
-  document.getElementById('hSub').textContent=
-    meta.ultimaSync?'Sync: '+fmtSync(meta.ultimaSync):'Garmin Connect';
+    document.getElementById('hSub').textContent=
+      meta.ultimaSync?'Sync: '+fmtSync(meta.ultimaSync):'Garmin Connect';
 
-  document.getElementById('loading').style.display='none';
-  document.getElementById('content').style.display='block';
-  initApiKey();
-  initEventoBtn();
+    document.getElementById('loading').style.display='none';
+    document.getElementById('content').style.display='block';
+    dbg('UI mostrada');
+    
+    initApiKey();
+    dbg('apikey ok');
+    
+    initEventoBtn();
+    dbg('evento ok');
 
-  renderCoach(ativ,meta,bb,sono,stress,hrv,sem);
-  renderTreinos(ativ,meta,sem);
-  renderEvolucao(ativ);
-  renderSaude(bb,sono,stress,hrv);
+    renderCoach(ativ,meta,bb,sono,stress,hrv,sem);
+    dbg('coach ok');
+    
+    renderTreinos(ativ,meta,sem);
+    dbg('treinos ok');
+    
+    renderEvolucao(ativ);
+    dbg('evolucao ok');
+    
+    renderSaude(bb,sono,stress,hrv);
+    dbg('saude ok - COMPLETO');
+  } catch(e) {
+    console.error('[RENDER ERRO]', e);
+    const debug = document.getElementById('debug-stage');
+    if (debug) debug.textContent = 'RENDER ERRO: ' + e.message;
+  }
 }
 
 // ════════════════ COACH ════════════════
