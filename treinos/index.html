@@ -321,6 +321,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <button class="sf-btn" onclick="setEsporte('natacao',this)">🏊 Natação</button>
         <button class="sf-btn" onclick="setEsporte('academia',this)">💪 Academia</button>
       </div>
+      <div class="sf-wrap" style="margin-bottom:.5rem;border-top:1px solid var(--border);padding-top:.4rem">
+        <button class="sf-btn sf-on" onclick="setPeriodo(7,this)">📅 7 dias</button>
+        <button class="sf-btn" onclick="setPeriodo(30,this)">📅 30 dias</button>
+        <button class="sf-btn" onclick="setPeriodo(90,this)">📅 90 dias</button>
+        <button class="sf-btn" onclick="setPeriodo(180,this)">📅 180 dias</button>
+        <button class="sf-btn" onclick="setPeriodo(365,this)">📅 1 ano</button>
+      </div>
       <div id="t-stats" class="sgrid sg3" style="margin-bottom:.75rem"></div>
       <div class="card">
         <div class="card-title">📊 Volume por Semana (km)</div>
@@ -489,7 +496,7 @@ setTimeout(debugInit, 100);
 const FB_DB   = 'https://gastos-casa-7f431-default-rtdb.firebaseio.com';
 const FB_KEY  = 'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU';
 const FB_PATH = 'treinos/luiz';
-let charts = {}, curTab = 'coach', DATA = null, curEsporte = 'todos';
+let charts = {}, curTab = 'coach', DATA = null, curEsporte = 'todos', curPeriodo = 180;
 const PERIODO = 180; // dias padrão para todas as médias do app
 
 function getEsporte(a){
@@ -514,6 +521,13 @@ function semanaISO(dateStr){
 function setEsporte(e,btn){
   curEsporte=e;
   document.querySelectorAll('.sf-btn').forEach(b=>b.classList.remove('sf-on'));
+  btn.classList.add('sf-on');
+  if(DATA){const a=(DATA.atividades||[]).sort((a,b)=>b.data.localeCompare(a.data));renderTreinos(a,DATA.meta||{},DATA.semanal||{});}
+}
+
+function setPeriodo(dias,btn){
+  curPeriodo=dias;
+  document.querySelectorAll('.sf-wrap')[1].querySelectorAll('.sf-btn').forEach(b=>b.classList.remove('sf-on'));
   btn.classList.add('sf-on');
   if(DATA){const a=(DATA.atividades||[]).sort((a,b)=>b.data.localeCompare(a.data));renderTreinos(a,DATA.meta||{},DATA.semanal||{});}
 }
@@ -1007,9 +1021,13 @@ function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
 function renderTreinos(ativ,meta,sem){
   const filtrado=curEsporte==='todos'?ativ:ativ.filter(a=>getEsporte(a)===curEsporte);
 
+  // Filtrar por período
+  const dataLimite = new Date(Date.now() - curPeriodo * 864e5).toISOString().slice(0,10);
+  const filtradoPeriodo = filtrado.filter(a => a.data >= dataLimite);
+
   // Recalcular semanal a partir dos dados filtrados
   const semData={};
-  filtrado.forEach(a=>{
+  filtradoPeriodo.forEach(a=>{
     const s=semanaISO(a.data);
     if(!semData[s])semData[s]={km:0,treinos:0};
     semData[s].km=+(semData[s].km+a.distancia).toFixed(2);
@@ -1019,10 +1037,10 @@ function renderTreinos(ativ,meta,sem){
 
   // Stats esta semana
   const d7s=(new Date(Date.now()-7*864e5)).toISOString().slice(0,10);
-  const f7=filtrado.filter(a=>a.data>=d7s);
+  const f7=filtradoPeriodo.filter(a=>a.data>=d7s);
   const km7f=f7.reduce((s,a)=>s+a.distancia,0).toFixed(1);
   const t7f=f7.length;
-  const comPace=filtrado.filter(a=>a.pace&&a.distancia>=1);
+  const comPace=filtradoPeriodo.filter(a=>a.pace&&a.distancia>=1);
   const melhor=comPace.length?s2p(Math.min(...comPace.map(a=>p2s(a.pace)))):'—';
 
   document.getElementById('t-stats').innerHTML=`
@@ -1120,7 +1138,7 @@ function renderTreinos(ativ,meta,sem){
 
   // Lista de atividades
   document.getElementById('run-list').innerHTML=
-    filtrado.slice(0,20).map(a=>`
+    filtradoPeriodo.slice(0,20).map(a=>`
       <div class="run">
         <div class="run-ico" style="${icoStyle(getEsporte(a))}">${TIPO_ICO[a.tipo]||'🏃'}</div>
         <div class="run-info">
