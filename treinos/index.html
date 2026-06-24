@@ -344,6 +344,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
     <!-- ══ EVOLUÇÃO ══ -->
     <div class="sec" id="sec-evolucao">
+      <div class="sf-wrap" style="margin-bottom:.5rem">
+        <button class="sf-btn sf-on" onclick="setPeriodoEvolucao(7,this)">📅 7 dias</button>
+        <button class="sf-btn" onclick="setPeriodoEvolucao(30,this)">📅 30 dias</button>
+        <button class="sf-btn" onclick="setPeriodoEvolucao(90,this)">📅 90 dias</button>
+        <button class="sf-btn" onclick="setPeriodoEvolucao(180,this)">📅 180 dias</button>
+        <button class="sf-btn" onclick="setPeriodoEvolucao(365,this)">📅 1 ano</button>
+      </div>
       <div class="card">
         <div class="card-title">📈 Pace — últimos 180 dias (corridas)</div>
         <div class="ch" style="height:210px"><canvas id="cPace"></canvas></div>
@@ -377,6 +384,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
     <!-- ══ SAÚDE ══ -->
     <div class="sec" id="sec-saude">
+      <div class="sf-wrap" style="margin-bottom:.5rem">
+        <button class="sf-btn sf-on" onclick="setPeriodoSaude(7,this)">📅 7 dias</button>
+        <button class="sf-btn" onclick="setPeriodoSaude(30,this)">📅 30 dias</button>
+        <button class="sf-btn" onclick="setPeriodoSaude(90,this)">📅 90 dias</button>
+        <button class="sf-btn" onclick="setPeriodoSaude(180,this)">📅 180 dias</button>
+        <button class="sf-btn" onclick="setPeriodoSaude(365,this)">📅 1 ano</button>
+      </div>
       <div id="s-stats" class="sgrid sg4" style="margin-bottom:.75rem"></div>
       <div class="card">
         <div class="card-title">🔋 Body Battery — intervalo diário (máx/mín)</div>
@@ -496,7 +510,7 @@ setTimeout(debugInit, 100);
 const FB_DB   = 'https://gastos-casa-7f431-default-rtdb.firebaseio.com';
 const FB_KEY  = 'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU';
 const FB_PATH = 'treinos/luiz';
-let charts = {}, curTab = 'coach', DATA = null, curEsporte = 'todos', curPeriodo = 180;
+let charts = {}, curTab = 'coach', DATA = null, curEsporte = 'todos', curPeriodo = 180, curPeriodoEvolucao = 180, curPeriodoSaude = 180;
 const PERIODO = 180; // dias padrão para todas as médias do app
 
 function getEsporte(a){
@@ -530,6 +544,20 @@ function setPeriodo(dias,btn){
   document.querySelectorAll('.sf-wrap')[1].querySelectorAll('.sf-btn').forEach(b=>b.classList.remove('sf-on'));
   btn.classList.add('sf-on');
   if(DATA){const a=(DATA.atividades||[]).sort((a,b)=>b.data.localeCompare(a.data));renderTreinos(a,DATA.meta||{},DATA.semanal||{});}
+}
+
+function setPeriodoEvolucao(dias,btn){
+  curPeriodoEvolucao=dias;
+  document.querySelectorAll('.sf-wrap')[2].querySelectorAll('.sf-btn').forEach(b=>b.classList.remove('sf-on'));
+  btn.classList.add('sf-on');
+  if(DATA){const a=(DATA.atividades||[]).sort((a,b)=>b.data.localeCompare(a.data));renderEvolucao(a);}
+}
+
+function setPeriodoSaude(dias,btn){
+  curPeriodoSaude=dias;
+  document.querySelectorAll('.sf-wrap')[3].querySelectorAll('.sf-btn').forEach(b=>b.classList.remove('sf-on'));
+  btn.classList.add('sf-on');
+  if(DATA){renderSaude(DATA.bodyBattery||{},DATA.sono||{},DATA.stress||{},DATA.hrv||{});}
 }
 
 async function fbToken(){
@@ -1154,7 +1182,7 @@ function renderTreinos(ativ,meta,sem){
 
 // ════════════════ EVOLUÇÃO ════════════════
 function renderEvolucao(ativ){
-  const d30=(new Date(Date.now()-PERIODO*864e5)).toISOString().slice(0,10);
+  const d30=(new Date(Date.now()-curPeriodoEvolucao*864e5)).toISOString().slice(0,10);
   const corrida=ativ.filter(a=>(!a.esporte||a.esporte==='corrida')&&a.data>=d30);
   const comPace=corrida.filter(a=>a.pace&&a.distancia>=1).slice().reverse();
   const comFC=ativ.filter(a=>a.fcMed>0&&a.data>=d30).slice().reverse();
@@ -1482,10 +1510,10 @@ function stressAssess(v){ return v<25?['Baixo','sa-verde']:v<50?['Moderado','sa-
 function hrvAssess(v){ return v>=55?['Excelente','sa-verde']:v>=45?['Bom','sa-azul']:v>=35?['Moderado','sa-amarelo']:['Baixo','sa-vermelho']; }
 
 function renderSaude(bb,sono,stress,hrv){
-  const bbKeys     = Object.keys(bb).sort().slice(-180);
-  const sonoKeys   = Object.keys(sono).sort().slice(-180);
-  const stressKeys = Object.keys(stress).sort().slice(-180);
-  const hrvKeys    = Object.keys(hrv).sort().slice(-180);
+  const bbKeys     = Object.keys(bb).sort().slice(-curPeriodoSaude);
+  const sonoKeys   = Object.keys(sono).sort().slice(-curPeriodoSaude);
+  const stressKeys = Object.keys(stress).sort().slice(-curPeriodoSaude);
+  const hrvKeys    = Object.keys(hrv).sort().slice(-curPeriodoSaude);
 
   // ── computed stats ── (sono/hrv só com noites reais ≥ 2h)
   const bbMed      = bbKeys.length  ? Math.round(bbKeys.reduce((s,k)=>s+bb[k].max,0)/bbKeys.length) : 0;
