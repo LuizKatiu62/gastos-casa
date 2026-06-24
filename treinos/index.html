@@ -981,6 +981,7 @@ function setCoachEsporte(e,btn){
 }
 
 function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
+  const MAX_DIAS_TREINO_SEMANA = 5;
   const hoje=new Date().toISOString().slice(0,10);
   const d7=(new Date(Date.now()-7*864e5)).toISOString().slice(0,10);
   const d14=(new Date(Date.now()-14*864e5)).toISOString().slice(0,10);
@@ -1004,6 +1005,7 @@ function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
 
   // Carga global (todos os esportes) para decidir folga
   const all7=ativ.filter(a=>a.data>=d7);
+  const diasTreino7 = new Set(all7.map(a=>a.data)).size;
   const treinos7=all7.length;
   const diasTreinoSet=new Set(ativ.map(a=>a.data));
   let streak=0;
@@ -1032,6 +1034,7 @@ function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
   if(hrvHoje>0&&hrvHoje<38) restTriggers.push(`HRV baixa (${hrvHoje} ms)`);
   if(stressHoje>=65) restTriggers.push(`stress alto (${stressHoje}/100)`);
   if(streak>=6) restTriggers.push(`${streak} dias seguidos treinando`);
+  if(diasTreino7>=MAX_DIAS_TREINO_SEMANA) restTriggers.push(`regra semanal: ${diasTreino7} dias de treino nos últimos 7 (máx ${MAX_DIAS_TREINO_SEMANA})`);
   if(treinos7>=6&&bbHoje<55) restTriggers.push(`frequência alta (${treinos7} treinos/7d) com recuperação incompleta`);
 
   const forceRest=restTriggers.length>0;
