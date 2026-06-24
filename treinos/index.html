@@ -1961,6 +1961,80 @@ function buildContext(){
   ].join('\n');
 }
 
+function buildLocalCoachReply(question){
+  if(!DATA) return 'Sem acesso aos dados locais no momento. Toque em ⚡ Sync Garmin e tente novamente.';
+
+  const q = (question||'').toLowerCase();
+  const hoje = new Date().toISOString().slice(0,10);
+  const bb = DATA.bodyBattery||{};
+  const sono = DATA.sono||{};
+  const hrv = DATA.hrv||{};
+  const stre = DATA.stress||{};
+  const meta = DATA.meta||{};
+
+  const bbHoje = bb[hoje]?.max || bb[Object.keys(bb).sort().slice(-1)[0]]?.max || 0;
+  const sonoKeys = Object.keys(sono).sort().slice(-7);
+  const sonoMed = sonoKeys.length ? (sonoKeys.reduce((s,k)=>s+(sono[k].duracao||0),0)/sonoKeys.length) : 0;
+  const hrvKeys = Object.keys(hrv).sort().slice(-7).filter(k=>(hrv[k].ontem||0)>0);
+  const hrvMed = hrvKeys.length ? Math.round(hrvKeys.reduce((s,k)=>s+(hrv[k].ontem||0),0)/hrvKeys.length) : 0;
+  const strKeys = Object.keys(stre).sort().slice(-7);
+  const strMed = strKeys.length ? Math.round(strKeys.reduce((s,k)=>s+(stre[k].avg||0),0)/strKeys.length) : 0;
+
+  const km7 = Number(meta.km7dias||0);
+  const treinos30 = Number(meta.treinos30dias||0);
+
+  const recuperacaoRuim = bbHoje < 45 || sonoMed < 6 || (hrvMed > 0 && hrvMed < 40) || strMed > 55;
+  const recuperacaoBoa = bbHoje >= 70 && sonoMed >= 6.8 && (hrvMed === 0 || hrvMed >= 48) && strMed < 40;
+
+  if(q.includes('hoje') || q.includes('recupera') || q.includes('treino devo')){
+    if(recuperacaoRuim){
+      return [
+        'Plano sugerido para hoje (fallback local):',
+        `Recuperacao baixa/moderada: BB ${bbHoje}%, sono medio ${sonoMed.toFixed(1)}h, HRV ${hrvMed||'—'} ms, stress ${strMed}/100.`,
+        'Treino: 30-40 min leve (Z1-Z2) + 6x20s tecnico (passadas soltas) com 60s leve.',
+        'Evite intervalado forte hoje. Priorize sono e hidratacao para tentar qualidade amanha.'
+      ].join('\n');
+    }
+    if(recuperacaoBoa){
+      return [
+        'Plano sugerido para hoje (fallback local):',
+        `Recuperacao boa: BB ${bbHoje}%, sono medio ${sonoMed.toFixed(1)}h, HRV ${hrvMed||'—'} ms, stress ${strMed}/100.`,
+        'Treino: 15 min leve + 5x3 min forte (Z4) com 2 min leve + 10 min desaquecimento.',
+        'Foco em constancia de ritmo e tecnica limpa nas ultimas repeticoes.'
+      ].join('\n');
+    }
+    return [
+      'Plano sugerido para hoje (fallback local):',
+      `Recuperacao intermediaria: BB ${bbHoje}%, sono medio ${sonoMed.toFixed(1)}h, HRV ${hrvMed||'—'} ms, stress ${strMed}/100.`,
+      'Treino: 10 min leve + 3x8 min ritmo moderado (Z3) com 2 min leve + 8 min desaquecimento.'
+    ].join('\n');
+  }
+
+  if(q.includes('overtraining') || q.includes('overtraining?') || q.includes('risco')){
+    const risco = (recuperacaoRuim && km7>55) || (strMed>60 && sonoMed<6) ? 'alto' : (recuperacaoRuim ? 'moderado' : 'baixo');
+    return [
+      'Leitura de risco (fallback local):',
+      `Risco ${risco}. BB ${bbHoje}%, sono medio ${sonoMed.toFixed(1)}h, HRV ${hrvMed||'—'} ms, stress ${strMed}/100, km semana ${km7.toFixed(1)}.`,
+      'Se mantiver 2-3 dias com sinais ruins, troque qualidade por regenerativo e reduza volume em 20-30% por 3 dias.'
+    ].join('\n');
+  }
+
+  if(q.includes('volume') || q.includes('progredindo')){
+    return [
+      'Resumo de carga (fallback local):',
+      `Km em 7 dias: ${km7.toFixed(1)} | treinos em 30 dias: ${treinos30}.`,
+      `Recuperacao atual: BB ${bbHoje}%, sono medio ${sonoMed.toFixed(1)}h, stress ${strMed}/100.`,
+      'Se o cansaço subir, mantenha o volume e reduza intensidade por 1 semana.'
+    ].join('\n');
+  }
+
+  return [
+    'Coach local ativo (fallback):',
+    `BB ${bbHoje}% | Sono medio 7d ${sonoMed.toFixed(1)}h | HRV ${hrvMed||'—'} ms | Stress ${strMed}/100.`,
+    'Sem API externa, posso responder com base nesses dados locais e sugerir treinos seguros.'
+  ].join('\n');
+}
+
 function fillChat(btn){
   const inp = document.getElementById('chat-input');
   inp.value = btn.textContent.trim();
@@ -2018,8 +2092,8 @@ ${buildContext()}`;
         messages: chatHistory
       })
     });
-    const data = await res.json();
-    if(data.error) throw new Error(data.error.message);
+    const data = await res.json().catch(()=>({}));
+    if(!res.ok || data.error) throw new Error(data?.error?.message || `HTTP ${res.status}`);
     const reply = data.content?.[0]?.text || 'Sem resposta.';
     chatHistory.push({role:'assistant', content:reply});
     typing.remove();
@@ -2027,7 +2101,16 @@ ${buildContext()}`;
   }catch(e){
     typing.remove();
     chatHistory.pop();
-    addMsg('coach', '❌ Erro: '+e.message+'. Verifique sua chave API.');
+    const msg = String(e.message||'');
+    const lowCredit = /credit|billing|insufficient|quota|429/i.test(msg);
+    if(lowCredit){
+      addMsg('coach', '⚠️ A API Anthropic está sem saldo/créditos nesta chave. Vá em Plans & Billing para recarregar.\n\nEnquanto isso, vou te responder com coach local usando seus dados do Garmin.');
+      addMsg('coach', buildLocalCoachReply(question));
+      document.getElementById('apikey-section').style.display='block';
+    } else {
+      addMsg('coach', '❌ Erro na API: '+msg+'. Vou usar resposta local agora.');
+      addMsg('coach', buildLocalCoachReply(question));
+    }
   }
   sendBtn.disabled = false;
 }
