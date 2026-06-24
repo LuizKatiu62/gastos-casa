@@ -1183,6 +1183,13 @@ function renderTreinos(ativ,meta,sem){
 // ════════════════ EVOLUÇÃO ════════════════
 function renderEvolucao(ativ){
   const d30=(new Date(Date.now()-curPeriodoEvolucao*864e5)).toISOString().slice(0,10);
+  
+  // Destruir gráficos antigos
+  if(charts.pace){charts.pace.destroy(); charts.pace=null;}
+  if(charts.fc){charts.fc.destroy(); charts.fc=null;}
+  if(charts.vo2){charts.vo2.destroy(); charts.vo2=null;}
+  if(charts.cad){charts.cad.destroy(); charts.cad=null;}
+  
   const corrida=ativ.filter(a=>(!a.esporte||a.esporte==='corrida')&&a.data>=d30);
   const comPace=corrida.filter(a=>a.pace&&a.distancia>=1).slice().reverse();
   const comFC=ativ.filter(a=>a.fcMed>0&&a.data>=d30).slice().reverse();
@@ -1510,6 +1517,12 @@ function stressAssess(v){ return v<25?['Baixo','sa-verde']:v<50?['Moderado','sa-
 function hrvAssess(v){ return v>=55?['Excelente','sa-verde']:v>=45?['Bom','sa-azul']:v>=35?['Moderado','sa-amarelo']:['Baixo','sa-vermelho']; }
 
 function renderSaude(bb,sono,stress,hrv){
+  // Destruir gráficos antigos
+  if(charts.bb){charts.bb.destroy(); charts.bb=null;}
+  if(charts.sono){charts.sono.destroy(); charts.sono=null;}
+  if(charts.stress){charts.stress.destroy(); charts.stress=null;}
+  if(charts.hrv){charts.hrv.destroy(); charts.hrv=null;}
+  
   const bbKeys     = Object.keys(bb).sort().slice(-curPeriodoSaude);
   const sonoKeys   = Object.keys(sono).sort().slice(-curPeriodoSaude);
   const stressKeys = Object.keys(stress).sort().slice(-curPeriodoSaude);
