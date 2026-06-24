@@ -478,6 +478,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 </div>
 
 <script>
+// Debug logo no início
+console.log('[START] Script carregando...');
+const debugInit = () => {
+  const d = document.getElementById('debug-stage');
+  if (d) d.textContent = 'SCRIPT CARREGOU';
+};
+setTimeout(debugInit, 100);
+
 const FB_DB   = 'https://gastos-casa-7f431-default-rtdb.firebaseio.com';
 const FB_KEY  = 'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU';
 const FB_PATH = 'treinos/luiz';
@@ -517,19 +525,43 @@ async function fbToken(){
 }
 
 async function loadData(){
+  const dbg = el => {
+    const d = document.getElementById('debug-stage');
+    if (d) d.textContent = 'loadData: ' + el;
+    console.log('[LOADDATA]', el);
+  };
+  
+  dbg('limpando UI');
   document.getElementById('loading').style.display='block';
   document.getElementById('content').style.display='none';
   document.getElementById('empty-msg').style.display='none';
-  Object.values(charts).forEach(c=>c.destroy()); charts={};
+  
+  dbg('destruindo gráficos antigos');
+  Object.values(charts).forEach(c=>{try{c.destroy();}catch(e){}}); 
+  charts={};
+  
   try{
+    dbg('obtendo token');
     const token=await fbToken();
     if(!token) throw new Error('Token Firebase vazio');
+    
+    dbg('fazendo fetch');
     const res=await fetch(`${FB_DB}/${FB_PATH}.json?auth=${token}`);
     if(!res.ok) throw new Error('Firebase HTTP '+res.status);
+    
+    dbg('parseando JSON');
     const d=await res.json();
-    if(!d||!d.atividades||!d.atividades.length){showEmpty();return;}
-    DATA=d; render(d);
-  }catch(e){showEmpty(true, e.message||String(e));}
+    
+    dbg('validando dados');
+    if(!d||!d.atividades||!d.atividades.length){dbg('sem dados');showEmpty();return;}
+    
+    dbg('salvando e renderizando');
+    DATA=d; 
+    render(d);
+  }catch(e){
+    dbg('ERRO: '+e.message);
+    showEmpty(true, e.message||String(e));
+  }
 }
 
 function showEmpty(err, msg){
@@ -563,10 +595,19 @@ const BASE={responsive:true,maintainAspectRatio:false,
           y:{grid:{color:'#f1f5f9'},ticks:{font:{size:9}}}}};
 
 function mkChart(id,type,labels,data,color,opts={}){
-  const el=document.getElementById(id); if(!el)return;
-  return new Chart(el,{type,data:{labels,datasets:[{data,...opts}]},
+  const el=document.getElementById(id); 
+  if(!el) return;
+  
+  // Destruir gráfico antigo se existir
+  if(charts[id]) {
+    charts[id].destroy();
+    delete charts[id];
+  }
+  
+  charts[id] = new Chart(el,{type,data:{labels,datasets:[{data,...opts}]},
     options:{...BASE,plugins:{...BASE.plugins,...(opts.tooltip?{tooltip:{callbacks:{label:opts.tooltip}}}:{})},
     scales:{...BASE.scales,...(opts.scales||{})}}});
+  return charts[id];
 }
 
 // ── RENDER ──
@@ -1895,10 +1936,16 @@ function filterProvas(dist,btn){
 }
 
 function renderProvas(){
-  const hoje=new Date().toISOString().slice(0,10);
-  let lista=curProvaDist==='todas'?PROVAS_DATA:PROVAS_DATA.filter(p=>p.dists.includes(+curProvaDist));
-  const regioes=['atlantic','quebec','ontario','usa'];
-  let html='';
+  try {
+    const dbg = el => {
+      console.log('[RENDERPROVAS]', el);
+    };
+    
+    dbg('iniciando');
+    const hoje=new Date().toISOString().slice(0,10);
+    let lista=curProvaDist==='todas'?PROVAS_DATA:PROVAS_DATA.filter(p=>p.dists.includes(+curProvaDist));
+    const regioes=['atlantic','quebec','ontario','usa'];
+    let html='';
   regioes.forEach(reg=>{
     const ps=lista.filter(p=>p.regiao===reg).sort((a,b)=>a.data.localeCompare(b.data));
     if(!ps.length)return;
@@ -1920,6 +1967,9 @@ function renderProvas(){
     });
   });
   document.getElementById('provas-list').innerHTML=html;
+  } catch(e) {
+    console.error('[RENDERPROVAS ERRO]', e);
+  }
 }
 
 function fmtProvaData(d){
