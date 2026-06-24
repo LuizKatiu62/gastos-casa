@@ -120,6 +120,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .sf-btn{border:1.5px solid var(--border);background:#fff;border-radius:20px;padding:.28rem .7rem;font-size:.72rem;font-weight:700;color:var(--muted);cursor:pointer;font-family:inherit;transition:all .15s}
 .sf-btn.sf-on{background:var(--blue);border-color:var(--blue);color:#fff}
 
+/* ── TREINOS DIRECIONADOS ── */
+.td-wrap{display:flex;gap:.4rem;margin-bottom:.65rem;flex-wrap:wrap}
+.td-btn{border:1.5px solid var(--border);background:#fff;border-radius:20px;padding:.32rem .82rem;font-size:.72rem;font-weight:700;color:var(--muted);cursor:pointer;font-family:inherit;transition:all .15s}
+.td-btn.td-on{background:#0e9f6e;border-color:#0e9f6e;color:#fff}
+.td-card{background:var(--card);border:1px solid var(--border);border-left:4px solid #0e9f6e;border-radius:12px;padding:.85rem;margin-bottom:.55rem}
+.td-top{display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-wrap:wrap}
+.td-wk{font-size:.72rem;font-weight:900;letter-spacing:.45px;text-transform:uppercase;color:#065f46}
+.td-type{font-size:.62rem;font-weight:800;background:#ecfdf5;color:#065f46;border:1px solid #86efac;border-radius:999px;padding:2px 8px}
+.td-main{font-size:.92rem;font-weight:800;color:var(--text);margin:.4rem 0 .3rem}
+.td-meta{font-size:.76rem;color:var(--muted);line-height:1.6}
+.td-note{font-size:.7rem;color:#475569;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:8px;padding:.5rem .6rem;margin-top:.5rem}
+
 /* ── CHARTS ── */
 .ch{position:relative;height:175px}
 .ch-sm{position:relative;height:130px}
@@ -278,6 +290,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <div class="tabs">
   <button class="tab on" onclick="go('coach',this)">🏋️ Coach</button>
   <button class="tab"    onclick="go('treinos',this)">🏃 Treinos</button>
+  <button class="tab"    onclick="go('direcionados',this)">🎯 Direcionados</button>
   <button class="tab"    onclick="go('evolucao',this)">📈 Evolução</button>
   <button class="tab"    onclick="go('saude',this)">❤️ Saúde</button>
   <button class="tab"    onclick="go('perguntas',this)">💬 Perguntas</button>
@@ -340,6 +353,22 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <div class="ch-sub" id="freq-sub"></div>
       </div>
       <div class="card"><div class="card-title">🏃 Últimos Treinos</div><div class="run-list" id="run-list"></div></div>
+    </div>
+
+    <!-- ══ TREINOS DIRECIONADOS ══ -->
+    <div class="sec" id="sec-direcionados">
+      <div class="card">
+        <div class="card-title">🎯 Treinos Direcionados — sessão da semana (1x)</div>
+        <div style="font-size:.8rem;color:var(--muted);line-height:1.6;margin-bottom:.6rem">
+          Sugestões para conduzir o grupo em níveis diferentes, com progressão semanal e foco técnico.
+        </div>
+        <div class="td-wrap" id="td-levels">
+          <button class="td-btn td-on" onclick="setDirecionadoNivel('iniciante',this)">Iniciante</button>
+          <button class="td-btn" onclick="setDirecionadoNivel('intermediario',this)">Intermediário</button>
+          <button class="td-btn" onclick="setDirecionadoNivel('avancado',this)">Avançado</button>
+        </div>
+        <div id="td-list"></div>
+      </div>
     </div>
 
     <!-- ══ EVOLUÇÃO ══ -->
@@ -512,6 +541,64 @@ const FB_KEY  = 'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU';
 const FB_PATH = 'treinos/luiz';
 let charts = {}, curTab = 'coach', DATA = null, curEsporte = 'todos', curPeriodo = 180, curPeriodoEvolucao = 180, curPeriodoSaude = 180;
 const PERIODO = 180; // dias padrão para todas as médias do app
+let curDirecionadoNivel = 'iniciante';
+
+const TREINOS_DIRECIONADOS = {
+  iniciante: [
+    {semana:'Semana 1',tipo:'Rodagem',main:'30-40 min contínuo confortável (Z2)',meta:'Aquecimento 10 min + 4 acelerações de 20s + rodagem + desaquecimento 8 min',note:'Objetivo: criar base aeróbica e hábito.'},
+    {semana:'Semana 2',tipo:'Regenerativa',main:'25-35 min leve + mobilidade',meta:'Ritmo conversável; incluir 8-10 min de técnica de corrida',note:'Objetivo: recuperar e melhorar padrão de movimento.'},
+    {semana:'Semana 3',tipo:'Fartlek',main:'6x (1 min forte / 2 min leve)',meta:'Bloco central curto, sem buscar exaustão',note:'Objetivo: introduzir variação de ritmo com controle.'},
+    {semana:'Semana 4',tipo:'Ritmo',main:'3x6 min em ritmo moderado',meta:'Recuperação 2 min trote entre blocos',note:'Objetivo: sustentar ritmo estável sem quebrar.'},
+    {semana:'Semana 5',tipo:'Subidas',main:'8x 30s subida moderada',meta:'Volta caminhando/trotando; foco em postura e cadência',note:'Objetivo: força específica e técnica.'},
+    {semana:'Semana 6',tipo:'Tiros',main:'10x 200m controlado',meta:'Recuperação 200m caminhada/trote',note:'Objetivo: velocidade sem perder mecânica.'},
+    {semana:'Semana 7',tipo:'Intervalado',main:'5x 3 min forte (Z4)',meta:'Rec 2 min leve; manter constância entre repetições',note:'Objetivo: elevar VO2 e tolerância ao esforço.'},
+    {semana:'Semana 8',tipo:'Misto',main:'2x (6 min ritmo + 4x 1 min forte/1 min leve)',meta:'Bloco híbrido: ritmo + estímulo neuromuscular',note:'Objetivo: consolidar capacidades para provas curtas.'}
+  ],
+  intermediario: [
+    {semana:'Semana 1',tipo:'Rodagem',main:'45-60 min contínuo com final progressivo',meta:'Últimos 12 min subindo de Z2 para Z3',note:'Objetivo: resistência com controle de ritmo.'},
+    {semana:'Semana 2',tipo:'Regenerativa',main:'35-45 min leve + drills',meta:'Inserir skipping, elevação de joelho e educativos',note:'Objetivo: recuperar sem perder qualidade técnica.'},
+    {semana:'Semana 3',tipo:'Fartlek',main:'10x (1 min forte / 1 min leve)',meta:'Fechar com 8 min moderado contínuo',note:'Objetivo: tolerar oscilações de intensidade.'},
+    {semana:'Semana 4',tipo:'Ritmo',main:'2x12 min em limiar (tempo)',meta:'Recuperação 3 min trote',note:'Objetivo: melhorar resistência de ritmo de prova.'},
+    {semana:'Semana 5',tipo:'Subidas',main:'10x 45s subida forte',meta:'Rec descida trotando; foco em impulsão e tronco firme',note:'Objetivo: força e economia de corrida.'},
+    {semana:'Semana 6',tipo:'Tiros',main:'12x 300m em ritmo 5K',meta:'Recuperação 200m trote',note:'Objetivo: velocidade específica com consistência.'},
+    {semana:'Semana 7',tipo:'Intervalado',main:'6x 4 min em Z4',meta:'Recuperação 2 min leve',note:'Objetivo: potência aeróbica e sustentação de intensidade.'},
+    {semana:'Semana 8',tipo:'Misto',main:'3x (5 min ritmo + 3x 400m forte)',meta:'Rec 90s entre 400m e 3 min entre blocos',note:'Objetivo: combinar limiar e velocidade em sessão única.'}
+  ],
+  avancado: [
+    {semana:'Semana 1',tipo:'Rodagem',main:'60-75 min com progressão final forte',meta:'Últimos 15 min em ritmo de meia maratona',note:'Objetivo: resistência específica e controle de pacing.'},
+    {semana:'Semana 2',tipo:'Regenerativa',main:'40-50 min muito leve + strides',meta:'6 acelerações de 20s com recuperação completa',note:'Objetivo: absorver carga mantendo ativação neural.'},
+    {semana:'Semana 3',tipo:'Fartlek',main:'12x (1 min forte / 1 min leve)',meta:'Fechar com 10 min em ritmo moderado-alto',note:'Objetivo: elevar resposta cardiorrespiratória.'},
+    {semana:'Semana 4',tipo:'Ritmo',main:'3x10 min em limiar alto',meta:'Recuperação 2 min trote; controlar deriva cardíaca',note:'Objetivo: aumentar tolerância ao lactato.'},
+    {semana:'Semana 5',tipo:'Subidas',main:'12x 60s subida forte',meta:'Rec descida ativa; incluir 4 tiros planos no final',note:'Objetivo: força, técnica e velocidade residual.'},
+    {semana:'Semana 6',tipo:'Tiros',main:'16x 400m ritmo 3-5K',meta:'Recuperação 200m trote controlado',note:'Objetivo: velocidade específica com volume alto.'},
+    {semana:'Semana 7',tipo:'Intervalado',main:'7x 4 min em Z4-Z5 baixa',meta:'Recuperação 2 min; manter repetições homogêneas',note:'Objetivo: VO2 alto e robustez mental.'},
+    {semana:'Semana 8',tipo:'Misto',main:'2x (12 min ritmo + 5x 300m forte)',meta:'Rec 60s entre 300m e 4 min entre blocos',note:'Objetivo: sessão chave para performance em grupo avançado.'}
+  ]
+};
+
+function renderDirecionados(){
+  const lista = TREINOS_DIRECIONADOS[curDirecionadoNivel] || [];
+  const box = document.getElementById('td-list');
+  if(!box) return;
+  box.innerHTML = lista.map(t=>`
+    <div class="td-card">
+      <div class="td-top">
+        <span class="td-wk">${t.semana}</span>
+        <span class="td-type">${t.tipo}</span>
+      </div>
+      <div class="td-main">${t.main}</div>
+      <div class="td-meta">${t.meta}</div>
+      <div class="td-note">${t.note}</div>
+    </div>
+  `).join('');
+}
+
+function setDirecionadoNivel(nivel,btn){
+  curDirecionadoNivel = nivel;
+  document.querySelectorAll('#td-levels .td-btn').forEach(b=>b.classList.remove('td-on'));
+  if(btn) btn.classList.add('td-on');
+  renderDirecionados();
+}
 
 function getEsporte(a){
   if(a.esporte) return a.esporte;
@@ -1778,6 +1865,7 @@ function go(id,btn){
   document.querySelectorAll('.tab').forEach(b=>b.classList.remove('on'));
   document.getElementById('sec-'+id).classList.add('on');
   btn.classList.add('on'); curTab=id;
+  if(id==='direcionados') renderDirecionados();
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
