@@ -1727,11 +1727,23 @@ function renderSaude(bb,sono,stress,hrv){
         ...BASE,
         plugins:{
           ...BASE.plugins,
-          legend:{display:true,position:'bottom',labels:{font:{size:9},boxWidth:9,padding:8,usePointStyle:true}},
+          legend:{display:true,position:'bottom',labels:{font:{size:10},boxWidth:12,padding:10,usePointStyle:true}},
           tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.raw}h`}}
         },
-        scales:{x:BASE.scales.x, y:{...BASE.scales.y,min:0,max:10,stacked:hasFases,
-          ticks:{...BASE.scales.y.ticks,callback:v=>v+'h'}}}
+        scales:{
+          x:{
+            ...BASE.scales.x,
+            title:{display:true,text:'Noite',color:'#475569',font:{size:10,weight:'600'}}
+          },
+          y:{
+            ...BASE.scales.y,
+            min:0,
+            max:10,
+            stacked:hasFases,
+            title:{display:true,text:'Horas de sono',color:'#475569',font:{size:10,weight:'600'}},
+            ticks:{...BASE.scales.y.ticks,callback:v=>v+'h'}
+          }
+        }
       }
     });
     const [sl]=sonoMed>0 ? sonoAssess(sonoMed) : ['—'];
