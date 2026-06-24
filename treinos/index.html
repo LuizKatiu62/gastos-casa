@@ -667,15 +667,19 @@ function p2s(p){if(!p)return 0;const[m,s]=p.split(':').map(Number);return m*60+(
 function s2p(s){if(!s)return'—';const m=Math.floor(s/60),sec=Math.round(s%60);return`${m}:${pad(sec)}`;}
 
 const BASE={responsive:true,maintainAspectRatio:false,
-  plugins:{legend:{display:false}},
-  scales:{x:{grid:{display:false},ticks:{font:{size:9},maxRotation:0}},
-          y:{grid:{color:'#f1f5f9'},ticks:{font:{size:9}}}}};
+  plugins:{
+    legend:{display:true,position:'bottom',labels:{font:{size:10},boxWidth:12,padding:10,usePointStyle:true}},
+    tooltip:{mode:'index',intersect:false,padding:8,callbacks:{label:c=>`${c.dataset.label}: ${c.raw}`}}
+  },
+  scales:{x:{grid:{display:false},ticks:{font:{size:10},maxRotation:0}},
+          y:{grid:{color:'#f1f5f9'},ticks:{font:{size:10}}}}};
 
 function mkChart(id,type,labels,data,color,opts={}){
   const el=document.getElementById(id); if(!el)return;
-  return new Chart(el,{type,data:{labels,datasets:[{data,...opts}]},
-    options:{...BASE,plugins:{...BASE.plugins,...(opts.tooltip?{tooltip:{callbacks:{label:opts.tooltip}}}:{})},
-    scales:{...BASE.scales,...(opts.scales||{})}}});
+  const dataset = {data,label:opts.label||'',backgroundColor:color,...(opts.dataset||{})};
+  return new Chart(el,{type,data:{labels,datasets:[dataset]},
+    options:{...BASE,...opts.options,plugins:{...BASE.plugins,...opts.options?.plugins,...(opts.tooltip?{tooltip:{callbacks:{label:opts.tooltip}}}:{})},
+    scales:{...BASE.scales,...opts.scales}}});
 }
 
 // ── RENDER ──
@@ -1844,11 +1848,20 @@ function renderSaude(bb,sono,stress,hrv){
           ...BASE,
           plugins:{
             ...BASE.plugins,
-            legend:{display:true,position:'bottom',labels:{font:{size:9},boxWidth:9,padding:8,usePointStyle:true}},
+            legend:{display:true,position:'bottom',labels:{font:{size:10},boxWidth:12,padding:10,usePointStyle:true}},
             tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.raw} ms`}}
           },
-          scales:{x:BASE.scales.x, y:{...BASE.scales.y,
-            ticks:{...BASE.scales.y.ticks,callback:v=>v+' ms'}}}
+          scales:{
+            x:{
+              ...BASE.scales.x,
+              title:{display:true,text:'Dia',color:'#475569',font:{size:10,weight:'600'}}
+            },
+            y:{
+              ...BASE.scales.y,
+              title:{display:true,text:'HRV (ms)',color:'#475569',font:{size:10,weight:'600'}},
+              ticks:{...BASE.scales.y.ticks,callback:v=>v+' ms'}
+            }
+          }
         }
       });
       const usingSem = hrvLast>0 && hrv[comHRV[comHRV.length-1]].ontem===0;
