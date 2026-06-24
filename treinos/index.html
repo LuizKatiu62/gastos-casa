@@ -259,6 +259,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div>
     <h1>🏃 Treinos · Luiz Silva</h1>
     <p id="hSub">Carregando…</p>
+    <div id="debug-stage" style="font-size:.5rem;color:#fff;opacity:.6;font-family:monospace"></div>
   </div>
   <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.3rem">
     <button class="btn-refresh" id="btn-garmin" onclick="syncGarmin()">⚡ Sync Garmin</button>
@@ -1954,6 +1955,43 @@ function calcPace(){
 
 renderProvas();
 loadData();
+
+// Bootstrap com debug e timeout
+(function bootstrapApp() {
+  const dbg = el => {
+    const d = document.getElementById('debug-stage');
+    if (d) d.textContent = el;
+    console.log('[BOOT]', el);
+  };
+
+  dbg('renderProvas...');
+  try { renderProvas(); } catch (e) { dbg('renderProvas ERRO: ' + e.message); }
+
+  dbg('loadData...');
+  try { loadData(); } catch (e) { dbg('loadData ERRO: ' + e.message); }
+
+  // Safety timeout: force exit loading after 6 seconds.
+  const handle = setTimeout(() => {
+    dbg('TIMEOUT - modo offline');
+    const lo = document.getElementById('loading');
+    const co = document.getElementById('content');
+    if (lo && lo.style.display !== 'none') {
+      lo.style.display = 'none';
+      if (co) co.style.display = 'block';
+      const em = document.getElementById('empty-msg');
+      if (em) em.textContent = 'Tempo limite (verifique sua conexão)';
+      if (em) em.style.display = 'block';
+    }
+  }, 6000);
+
+  // Clear timeout if render completes.
+  const origRender = window.render;
+  window.render = function(d) {
+    clearTimeout(handle);
+    dbg('renderizado OK');
+    if (origRender) origRender(d);
+  };
+})();
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js').catch(() => {});
