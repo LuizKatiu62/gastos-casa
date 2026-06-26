@@ -387,6 +387,8 @@ body{padding-top:45px}
         <button class="ev-btn" id="ev-btn-duathlon" onclick="setEvento('duathlon',this)">🚴🏃 Duathlon</button>
         <button class="ev-btn" id="ev-btn-triathlon" onclick="setEvento('triathlon',this)">🏊🚴🏃 Triathlon</button>
       </div>
+      <div id="coach-hero" class="ring-grid"></div>
+      <div class="glass-note" id="coach-note" style="display:none"></div>
       <div id="coach-status"></div>
       <div id="coach-sugestao"></div>
       <div id="coach-insights" class="insight-grid"></div>
@@ -767,6 +769,10 @@ function showEmpty(err, errMsg){
   document.getElementById('coach-insights').innerHTML='';
   document.getElementById('coach-stats-hero').innerHTML='';
   document.getElementById('coach-sport-stats').innerHTML='';
+  const coachHero=document.getElementById('coach-hero');
+  const coachNote=document.getElementById('coach-note');
+  if(coachHero) coachHero.innerHTML='';
+  if(coachNote){ coachNote.innerHTML=''; coachNote.style.display='none'; }
   document.getElementById('empty-msg').style.display='none';
   loadRaceGoal();
   if(err) document.getElementById('hSub').textContent=errMsg||'Erro ao carregar';
@@ -941,6 +947,73 @@ function renderEvolucaoHero({paceLast,paceMed,vo2Last,cadLast}){
     <div class="glass-note-text">
       VO2 em <b>${vo2Last||'—'}</b>, idade fitness estimada em <b>${fitAge||'—'}</b>, cadência atual <b>${cadLast||'—'} spm</b> e pace recente <b>${paceLast||'—'}/km</b>.
       ${vo2Last>=45&&cadLast>=165?'Seu motor aeróbico e eficiência mecânica estão em boa zona.':vo2Last>0?'A evolução existe, mas vale reforçar base e técnica para ganhar consistência.':'Assim que houver mais corridas com dados, este painel fica mais preciso.'}
+    </div>`;
+}
+
+function renderCoachHero({bbHoje,sonoMed,hrvLast,stressMed,kmSemana,treinosSemana,volTrend,readiness}){
+  const el = document.getElementById('coach-hero');
+  const note = document.getElementById('coach-note');
+  if(!el || !note) return;
+
+  const sonoScore = sonoMed ? Math.round(clamp((sonoMed/8)*100,0,100)) : 0;
+  const hrvScore = hrvLast ? Math.round(clamp((hrvLast-20)/40*100,0,100)) : 0;
+  const stressScore = stressMed ? Math.round(clamp(100-stressMed,0,100)) : 0;
+  const recoveryScore = Math.round((bbHoje*0.45) + (sonoScore*0.25) + (hrvScore*0.2) + (stressScore*0.1));
+  const consistencyScore = Math.round(clamp((treinosSemana/5)*100,0,100));
+  const loadScore = volTrend>0 ? Math.round(clamp(50+volTrend,0,100)) : Math.round(clamp(50+(volTrend*1.3),0,100));
+
+  const readyTone = recoveryScore>=75 ? '#22c55e' : recoveryScore>=55 ? '#0ea5e9' : recoveryScore>=40 ? '#f59e0b' : '#ef4444';
+  const readyTxt = recoveryScore>=75 ? 'Alta prontidão' : recoveryScore>=55 ? 'Boa prontidão' : recoveryScore>=40 ? 'Prontidão moderada' : 'Baixa prontidão';
+
+  el.innerHTML = [
+    ringCard({
+      title:'Prontidão', pct:recoveryScore, val:recoveryScore||'—', unit:'/100',
+      status:readyTxt, color:readyTone,
+      desc:'Combina energia, sono, HRV e stress para decidir intensidade do dia.',
+      meta:[
+        {value:bbHoje+'%', label:'body battery'},
+        {value:sonoMed?sonoMed.toFixed(1)+'h':'—', label:'sono 7d'}
+      ]
+    }),
+    ringCard({
+      title:'Recuperação', pct:stressScore, val:stressMed||'—', unit:'stress',
+      status:stressScore>=70?'Bem controlado':stressScore>=55?'Controle ok':stressScore>=40?'Atenção':'Alto stress',
+      color:stressScore>=70?'#22c55e':stressScore>=55?'#0ea5e9':stressScore>=40?'#f59e0b':'#ef4444',
+      desc:'Quanto menor o stress médio e melhor o HRV, maior capacidade de carga.',
+      meta:[
+        {value:hrvLast?hrvLast+' ms':'—', label:'hrv'},
+        {value:stressScore+'%', label:'score'}
+      ]
+    }),
+    ringCard({
+      title:'Consistência', pct:consistencyScore, val:treinosSemana, unit:'treinos',
+      status:treinosSemana>=5?'Meta semanal completa':treinosSemana>=4?'Ótimo ritmo':treinosSemana>=3?'Boa base':'Abaixo da meta',
+      color:treinosSemana>=5?'#22c55e':treinosSemana>=4?'#0ea5e9':treinosSemana>=3?'#f59e0b':'#ef4444',
+      desc:'Frequência semanal para manter evolução sem picos bruscos.',
+      meta:[
+        {value:treinosSemana+'/5', label:'meta'},
+        {value:consistencyScore+'%', label:'score'}
+      ]
+    }),
+    ringCard({
+      title:'Carga semanal', pct:loadScore, val:kmSemana.toFixed(1), unit:'km',
+      status:volTrend>12?'Carga subindo rápido':volTrend>=-5?'Carga estável':'Carga em queda',
+      color:volTrend>12?'#f59e0b':volTrend>=-5?'#0ea5e9':'#22c55e',
+      desc:'Compara volume atual com a semana anterior para evitar excesso.',
+      meta:[
+        {value:(volTrend>=0?'+':'')+volTrend.toFixed(0)+'%', label:'vs semana ant'},
+        {value:kmSemana.toFixed(1)+' km', label:'esta semana'}
+      ]
+    })
+  ].join('');
+
+  const readyLabel = readiness==='quality'?'dia de qualidade':readiness==='normal'?'dia normal':readiness==='moderate'?'dia moderado':readiness==='easy'?'dia leve':'dia de descanso';
+  note.style.display = 'block';
+  note.innerHTML = `
+    <div class="glass-note-title">Leitura Coach</div>
+    <div class="glass-note-text">
+      Hoje seu score de prontidão está em <b>${recoveryScore}/100</b>. Com <b>${treinosSemana}</b> treinos e <b>${kmSemana.toFixed(1)} km</b> na semana,
+      o app recomenda <b>${readyLabel}</b>. ${volTrend>12?'Atenção para não acelerar demais a carga de uma semana para outra.':'Progressão de carga está sob controle.'}
     </div>`;
 }
 
@@ -1276,6 +1349,12 @@ function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
   const sonoKeys=Object.keys(sono).sort().slice(-7);
   const sonoReal7=sonoKeys.filter(k=>sono[k].duracao>=2);
   const mediaSOno=sonoReal7.length?+(sonoReal7.reduce((s,k)=>s+sono[k].duracao,0)/sonoReal7.length).toFixed(1):0;
+  const stressKeys=Object.keys(stress).sort().slice(-7);
+  const stressMed7=stressKeys.length?Math.round(stressKeys.reduce((s,k)=>s+(stress[k].avg||0),0)/stressKeys.length):0;
+  const hrvKeys=Object.keys(hrv).sort().slice(-7);
+  const hrvVal=k=>hrv[k].ontem>0?hrv[k].ontem:(hrv[k].semanal||0);
+  const hrvCom=hrvKeys.filter(k=>hrvVal(k)>0);
+  const hrvLast=hrvCom.length?hrvVal(hrvCom[hrvCom.length-1]):0;
 
   // Atividades filtradas por esporte
   const filtrado=curCoachEsporte==='todos'?ativ:ativ.filter(a=>getEsporte(a)===curCoachEsporte);
@@ -1302,6 +1381,17 @@ function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
   else if(volTrend>20){status='📈 Cuidado com a carga';statusClass='status-atencao';}
   else if(bbHoje>=75&&diasSemTreino>=1){status='🚀 Ótimo dia pra treinar!';statusClass='status-otimo';}
   else{status='✅ Dia bom pra treinar';statusClass='status-bom';}
+
+  renderCoachHero({
+    bbHoje,
+    sonoMed:mediaSOno,
+    hrvLast,
+    stressMed:stressMed7,
+    kmSemana:kmEsta,
+    treinosSemana:f7.length,
+    volTrend,
+    readiness
+  });
 
   document.getElementById('coach-status').innerHTML=`
     <div class="status-badge ${statusClass}">
