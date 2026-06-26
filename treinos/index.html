@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Treinos">
 <meta name="theme-color" content="#1a56db">
-<link rel="manifest" href="./manifest.json">
+<link rel="manifest" href="./manifest.json?v=2026-06-26-3">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%231a56db' width='192' height='192'/><text x='50%' y='50%' font-size='120' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%231a56db' width='180' height='180' rx='40'/><text x='50%' y='50%' font-size='110' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <title>Treinos · Luiz Silva</title>
@@ -609,6 +609,7 @@ body{padding-top:45px}
 const FB_DB   = 'https://gastos-casa-7f431-default-rtdb.firebaseio.com';
 const FB_KEY  = 'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU';
 const FB_PATH = 'treinos/luiz';
+const APP_VERSION = '2026-06-26-3';
 let charts = {}, curTab = 'coach', DATA = null, curEsporte = 'todos';
 const PERIODO = 180; // dias padrão para todas as médias do app
 let curPeriodo = PERIODO;
@@ -682,7 +683,7 @@ async function loadData(){
     const el = document.getElementById('hSub');
     if(el) el.textContent = txt;
   };
-  setHeaderStatus('Atualizando dados...');
+  setHeaderStatus(`Atualizando dados... (v${APP_VERSION})`);
   document.getElementById('loading').style.display='block';
   document.getElementById('content').style.display='none';
   document.getElementById('empty-msg').style.display='none';
@@ -2521,15 +2522,20 @@ function bootstrapApp(){
     console.log('[BOOT]', el);
   };
 
+  const hs = document.getElementById('hSub');
+  if (hs) hs.textContent = `Inicializando app v${APP_VERSION}...`;
+
   dbg('renderProvas...');
   try { renderProvas(); } catch (e) { dbg('renderProvas ERRO: ' + e.message); }
 
   dbg('loadData...');
+  if (hs) hs.textContent = `Conectando com Garmin/Firebase... (v${APP_VERSION})`;
   try { loadData(); } catch (e) { dbg('loadData ERRO: ' + e.message); showEmpty(true, 'Erro ao carregar'); }
 
   // Safety timeout: force exit loading after 6 seconds.
   const handle = setTimeout(() => {
     dbg('TIMEOUT - modo offline');
+    if (hs) hs.textContent = 'Sem resposta do servidor — modo offline';
     const lo = document.getElementById('loading');
     const co = document.getElementById('content');
     if (lo && lo.style.display !== 'none') {
