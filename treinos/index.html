@@ -930,6 +930,20 @@ function ensureWeeklyPlano(nivel){
     return {dia:item.dia, treino:chosen.treino, nota:chosen.nota};
   });
 
+  if(prev?.plan?.length===plan.length){
+    const sameAll = plan.every((p,idx)=> p.treino===prev.plan[idx]?.treino && p.nota===prev.plan[idx]?.nota);
+    if(sameAll){
+      for(let i=0;i<plan.length;i++){
+        const opts = pools[i] || [plan[i]];
+        if(opts.length>1){
+          const alt = opts[(seed + i + 1) % opts.length] || opts[0];
+          plan[i] = {dia:plan[i].dia, treino:alt.treino, nota:alt.nota};
+          break;
+        }
+      }
+    }
+  }
+
   tpState.weeks[nowWeek][nivel] = { plan, done:{} };
   saveTpState();
   return {weekKey:nowWeek, data:tpState.weeks[nowWeek][nivel]};
