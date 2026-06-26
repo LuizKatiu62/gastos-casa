@@ -47,6 +47,8 @@ body{padding-top:45px}
 /* ── CARDS ── */
 .card{background:var(--card);border-radius:var(--r);border:1px solid var(--border);padding:1rem;margin-bottom:.75rem}
 .card-title{font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:.85rem;display:flex;align-items:center;gap:.4rem}
+.hub-frame{width:100%;height:74vh;min-height:520px;border:1px solid var(--border);border-radius:12px;background:#fff}
+.hub-open-btn{display:inline-flex;align-items:center;gap:.4rem;background:var(--blue);color:#fff;text-decoration:none;border-radius:9px;padding:.5rem .8rem;font-size:.78rem;font-weight:700}
 
 /* ── STATS ── */
 .sgrid{display:grid;gap:.55rem;margin-bottom:.75rem}
@@ -338,6 +340,7 @@ body{padding-top:45px}
 <div class="tabs">
   <button class="tab on" onclick="go('coach',this)">🏋️ Coach</button>
   <button class="tab"    onclick="go('treinos',this)">🏃 Treinos</button>
+  <button class="tab"    onclick="go('programados',this)">🗓️ Programados</button>
   <button class="tab"    onclick="go('evolucao',this)">📈 Evolução</button>
   <button class="tab"    onclick="go('saude',this)">❤️ Saúde</button>
   <button class="tab"    onclick="go('perguntas',this)">💬 Perguntas</button>
@@ -428,6 +431,18 @@ body{padding-top:45px}
         <div class="ch-sub" id="freq-sub"></div>
       </div>
       <div class="card"><div class="card-title">🏃 Últimos Treinos</div><div class="run-list" id="run-list"></div></div>
+    </div>
+
+    <!-- ══ TREINOS PROGRAMADOS ══ -->
+    <div class="sec" id="sec-programados">
+      <div class="card">
+        <div class="card-title">🗓️ Treinos Programados</div>
+        <div style="font-size:.78rem;color:var(--muted);line-height:1.6;margin-bottom:.75rem">
+          Plano semanal, fases por prova e organização de treinos.
+        </div>
+        <a class="hub-open-btn" href="./training-hub.html" target="_blank" rel="noopener">↗ Abrir em tela cheia</a>
+      </div>
+      <iframe class="hub-frame" src="./training-hub.html" title="Treinos Programados"></iframe>
     </div>
 
     <!-- ══ EVOLUÇÃO ══ -->
