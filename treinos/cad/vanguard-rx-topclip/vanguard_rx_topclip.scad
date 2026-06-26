@@ -20,11 +20,15 @@
 // A) MAIN PARAMETERS
 ///////////////////////////////
 
+// Preset (2026-06-26):
+// - top width: 55 mm
+// - lens edge thickness: 2.0 mm
+
 // Global multiplier for quick scaling after first test print.
 global_scale = 1.00;
 
 // Overall layout (front view).
-half_total_width = 74;      // half distance from center to outer edge
+half_total_width = 27.5;    // half distance from center to outer edge (total = 55 mm)
 inner_gap = 11;             // gap between left and right inner lens areas
 outer_top_y = 0;            // reference top line
 inner_top_y = -1.2;         // inner top point slightly lower
@@ -32,7 +36,7 @@ outer_drop = 8.5;           // outer end lower than top
 
 // Top strip geometry.
 strip_width = 4.2;          // visual strip height in front view
-part_thickness = 2.3;       // extrusion thickness
+part_thickness = 3.0;       // extrusion thickness (increased for 2 mm lens slot)
 
 // Bridge block (center).
 bridge_w = 14;
@@ -53,8 +57,8 @@ glue_pad_depth = 1.3;
 glue_pad_height = 1.8;
 
 // Slot settings (if retention_mode == "slot")
-slot_depth = 1.2;           // inward cut from back face
-slot_height = 1.8;          // vertical channel height
+slot_depth = 2.1;           // inward cut from back face (2.0 mm lens + clearance)
+slot_height = 2.2;          // vertical channel height
 slot_y_offset = -2.0;       // channel center in front view (negative = lower)
 
 // Build helpers.
