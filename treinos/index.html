@@ -678,6 +678,11 @@ async function fbToken(){
 }
 
 async function loadData(){
+  const setHeaderStatus = (txt) => {
+    const el = document.getElementById('hSub');
+    if(el) el.textContent = txt;
+  };
+  setHeaderStatus('Atualizando dados...');
   document.getElementById('loading').style.display='block';
   document.getElementById('content').style.display='none';
   document.getElementById('empty-msg').style.display='none';
@@ -732,6 +737,11 @@ async function loadData(){
     showEmpty(true, e.message);
   }finally{
     if (safetyTimer) clearTimeout(safetyTimer);
+    const loadingEl = document.getElementById('loading');
+    if (loadingEl && loadingEl.style.display !== 'none') {
+      // Last-resort guard: never leave spinner indefinitely.
+      showEmpty(true, 'App travou no carregamento');
+    }
   }
 }
 
@@ -776,7 +786,7 @@ function showEmpty(err, errMsg){
   if(coachNote){ coachNote.innerHTML=''; coachNote.style.display='none'; }
   document.getElementById('empty-msg').style.display='none';
   loadRaceGoal();
-  if(err) document.getElementById('hSub').textContent=errMsg||'Erro ao carregar';
+  document.getElementById('hSub').textContent = err ? (errMsg||'Erro ao carregar') : 'Sem dados disponíveis';
 }
 
 // ── helpers ──
@@ -1052,6 +1062,8 @@ function render(d){
 
   document.getElementById('loading').style.display='none';
   document.getElementById('content').style.display='block';
+  const now = new Date();
+  document.getElementById('hSub').textContent = `Atualizado às ${pad(now.getHours())}:${pad(now.getMinutes())}`;
   initApiKey();
   loadRaceGoal();
   if(typeof initEventoBtn === 'function') initEventoBtn();
