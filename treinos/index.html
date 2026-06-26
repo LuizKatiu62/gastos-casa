@@ -129,10 +129,13 @@ body{padding-top:45px}
 .sf-btn.sf-on{background:var(--blue);border-color:var(--blue);color:#fff}
 .tp-levels{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.6rem}
 .tp-week{display:flex;flex-direction:column;gap:.45rem}
-.tp-row{display:grid;grid-template-columns:56px 1fr;gap:.55rem;align-items:center;background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:.5rem .6rem}
+.tp-row{display:grid;grid-template-columns:56px 1fr auto;gap:.55rem;align-items:center;background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:.5rem .6rem}
 .tp-day{font-size:.66rem;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--blue)}
 .tp-work{font-size:.8rem;font-weight:700;color:var(--text)}
 .tp-note{font-size:.7rem;color:var(--muted);margin-top:1px;line-height:1.5}
+.tp-meta{font-size:.68rem;color:var(--muted);margin:.2rem 0 .55rem;line-height:1.5}
+.tp-done{border:1px solid #bfdbfe;background:#eff6ff;color:#1e40af;border-radius:999px;padding:.23rem .58rem;font-size:.65rem;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap}
+.tp-done.on{border-color:#22c55e;background:#ecfdf5;color:#166534}
 
 /* ── CHARTS ── */
 .ch{position:relative;height:175px}
@@ -654,6 +657,7 @@ let charts = {}, curTab = 'coach', DATA = null, curEsporte = 'todos';
 const PERIODO = 180; // dias padrão para todas as médias do app
 let curPeriodo = PERIODO;
 let curPlanoNivel = 'intermediario';
+const TP_STATE_KEY = 'treinos_programados_state_v2';
 const PLANO_SEMANAL = {
   iniciante: [
     {dia:'Seg', treino:'Descanso ativo', nota:'Mobilidade + caminhada leve 25-35 min.'},
@@ -683,6 +687,99 @@ const PLANO_SEMANAL = {
     {dia:'Dom', treino:'Longão progressivo', nota:'18-24 km com último terço em ritmo de maratona.'}
   ]
 };
+const PLANO_VARIACOES = {
+  iniciante: [
+    [
+      {treino:'Descanso ativo',nota:'Mobilidade + caminhada leve 25-35 min.'},
+      {treino:'Recuperação leve',nota:'Alongamento + bike solta 20-30 min.'}
+    ],
+    [
+      {treino:'Rodagem leve',nota:'5-6 km em Z1/Z2 (ritmo confortável).'},
+      {treino:'Rodagem contínua',nota:'6 km fácil + 4 acelerações curtas.'}
+    ],
+    [
+      {treino:'Força',nota:'Treino de base 35-45 min (core, glúteo, posterior).'},
+      {treino:'Força funcional',nota:'Circuito de estabilidade + mobilidade 40 min.'}
+    ],
+    [
+      {treino:'Fartlek curto',nota:'6x (1 min forte + 2 min leve) após aquecimento.'},
+      {treino:'Fartlek leve',nota:'8x (45s forte + 75s leve) em terreno plano.'}
+    ],
+    [
+      {treino:'Descanso',nota:'Recuperação e hidratação.'},
+      {treino:'Descanso + mobilidade',nota:'Soltar quadril e panturrilha por 20 min.'}
+    ],
+    [
+      {treino:'Rodagem contínua',nota:'6-8 km em ritmo estável.'},
+      {treino:'Rodagem progressiva',nota:'7-8 km começando leve e fechando moderado.'}
+    ],
+    [
+      {treino:'Longão leve',nota:'8-10 km sem forçar, foco em consistência.'},
+      {treino:'Longão controlado',nota:'9-11 km em Z2 mantendo cadência estável.'}
+    ]
+  ],
+  intermediario: [
+    [
+      {treino:'Recuperação',nota:'Bike leve ou trote 30 min + mobilidade.'},
+      {treino:'Recuperação ativa',nota:'Trote muito leve 35 min + liberação miofascial.'}
+    ],
+    [
+      {treino:'Intervalado',nota:'5x 1 km forte com 2 min trote de recuperação.'},
+      {treino:'Intervalado em bloco',nota:'3x 2 km forte com 3 min leve entre blocos.'}
+    ],
+    [
+      {treino:'Rodagem',nota:'8-10 km em Z2.'},
+      {treino:'Rodagem técnica',nota:'9 km com 6 educativos na parte final.'}
+    ],
+    [
+      {treino:'Fartlek progressivo',nota:'4 blocos de 6 min alternando 2 min forte/2 min moderado/2 min leve.'},
+      {treino:'Fartlek por tempo',nota:'10x (1 min forte + 1 min leve) após 15 min de aquecimento.'}
+    ],
+    [
+      {treino:'Força + técnica',nota:'Academia 40 min + educativos de corrida.'},
+      {treino:'Força de corrida',nota:'Subidas curtas + core + estabilidade 45 min.'}
+    ],
+    [
+      {treino:'Ritmo / tempo run',nota:'2 km aquecer + 20-30 min em ritmo de prova + desaquecimento.'},
+      {treino:'Ritmo sustentável',nota:'3 km leve + 6 km ritmo controlado + 2 km leve.'}
+    ],
+    [
+      {treino:'Longão',nota:'12-16 km com final controlado mais forte.'},
+      {treino:'Longão com variação',nota:'14-16 km alternando 2 km Z2 / 1 km moderado.'}
+    ]
+  ],
+  avancado: [
+    [
+      {treino:'Recuperação ativa',nota:'Trote leve 40 min + mobilidade.'},
+      {treino:'Recuperação longa',nota:'50 min leve com foco em soltura.'}
+    ],
+    [
+      {treino:'Intervalado longo',nota:'6-8x 1 km em ritmo forte com recuperação curta.'},
+      {treino:'Intervalado VO2',nota:'5x 1200 m forte com 2 min de recuperação.'}
+    ],
+    [
+      {treino:'Rodagem aeróbica',nota:'12-14 km em Z2.'},
+      {treino:'Rodagem extensa',nota:'14-16 km mantendo FC estável em Z2.'}
+    ],
+    [
+      {treino:'Fartlek avançado',nota:'10x 2 min forte / 1 min leve.'},
+      {treino:'Fartlek de limiar',nota:'6x 4 min forte / 2 min leve.'}
+    ],
+    [
+      {treino:'Força',nota:'Treino funcional e prevenção de lesão (45 min).'},
+      {treino:'Força avançada',nota:'Pliometria controlada + estabilidade + core.'}
+    ],
+    [
+      {treino:'Tempo run',nota:'30-40 min em ritmo sustentado (limiar).'},
+      {treino:'Tempo fracionado',nota:'2 blocos de 20 min limiar com 5 min leve.'}
+    ],
+    [
+      {treino:'Longão progressivo',nota:'18-24 km com último terço em ritmo de maratona.'},
+      {treino:'Longão específico',nota:'20-24 km com trechos em ritmo de prova.'}
+    ]
+  ]
+};
+let tpState = loadTpState();
 
 if(typeof Chart==='undefined'){
   console.warn('Chart.js não carregou. Continuando sem gráficos.');
@@ -767,17 +864,103 @@ function setPlanoNivel(nivel,btn){
   renderPlanoSemanal();
 }
 
+function loadTpState(){
+  try{
+    const raw = localStorage.getItem(TP_STATE_KEY);
+    if(!raw) return {weeks:{}};
+    const parsed = JSON.parse(raw);
+    if(!parsed || typeof parsed!=='object') return {weeks:{}};
+    if(!parsed.weeks || typeof parsed.weeks!=='object') parsed.weeks={};
+    return parsed;
+  }catch(_){
+    return {weeks:{}};
+  }
+}
+
+function saveTpState(){
+  try{ localStorage.setItem(TP_STATE_KEY, JSON.stringify(tpState)); }catch(_){}
+}
+
+function isoWeekInfo(refDate=new Date()){
+  const d = new Date(refDate);
+  d.setHours(12,0,0,0);
+  const day = (d.getDay()+6)%7;
+  d.setDate(d.getDate()-day+3);
+  const year = d.getFullYear();
+  const firstThu = new Date(year,0,4);
+  const firstDay = (firstThu.getDay()+6)%7;
+  firstThu.setDate(firstThu.getDate()-firstDay+3);
+  const week = 1 + Math.round((d-firstThu)/604800000);
+  return {year, week, key:`${year}-W${String(week).padStart(2,'0')}`};
+}
+
+function prevWeekKey(weekKey){
+  const [y,w] = weekKey.split('-W');
+  const jan4 = new Date(Number(y),0,4);
+  const janDay = (jan4.getDay()+6)%7;
+  const mondayWeek1 = new Date(jan4);
+  mondayWeek1.setDate(jan4.getDate()-janDay);
+  const monday = new Date(mondayWeek1);
+  monday.setDate(mondayWeek1.getDate() + (Number(w)-1)*7);
+  monday.setDate(monday.getDate()-7);
+  return isoWeekInfo(monday).key;
+}
+
+function nivelIndex(nivel){
+  return nivel==='iniciante'?1:nivel==='intermediario'?2:3;
+}
+
+function ensureWeeklyPlano(nivel){
+  const nowWeek = isoWeekInfo().key;
+  if(!tpState.weeks[nowWeek]) tpState.weeks[nowWeek] = {};
+  if(tpState.weeks[nowWeek][nivel]) return {weekKey:nowWeek, data:tpState.weeks[nowWeek][nivel]};
+
+  const prevKey = prevWeekKey(nowWeek);
+  const prev = tpState.weeks?.[prevKey]?.[nivel];
+  const prevDoneCount = prev && prev.done ? Object.values(prev.done).filter(Boolean).length : 0;
+  const pools = PLANO_VARIACOES[nivel] || [];
+  const base = PLANO_SEMANAL[nivel] || PLANO_SEMANAL.intermediario;
+  const weekNum = Number(nowWeek.split('-W')[1]) || 1;
+  const seed = weekNum + prevDoneCount + nivelIndex(nivel);
+
+  const plan = base.map((item,idx)=>{
+    const opts = pools[idx] || [item];
+    const pick = (seed + idx) % opts.length;
+    const chosen = opts[pick] || item;
+    return {dia:item.dia, treino:chosen.treino, nota:chosen.nota};
+  });
+
+  tpState.weeks[nowWeek][nivel] = { plan, done:{} };
+  saveTpState();
+  return {weekKey:nowWeek, data:tpState.weeks[nowWeek][nivel]};
+}
+
+function togglePlanoDone(idx){
+  const {weekKey, data} = ensureWeeklyPlano(curPlanoNivel);
+  if(!tpState.weeks[weekKey]) tpState.weeks[weekKey] = {};
+  if(!tpState.weeks[weekKey][curPlanoNivel]) tpState.weeks[weekKey][curPlanoNivel] = data;
+  const cur = !!tpState.weeks[weekKey][curPlanoNivel].done[idx];
+  tpState.weeks[weekKey][curPlanoNivel].done[idx] = !cur;
+  saveTpState();
+  renderPlanoSemanal();
+}
+
 function renderPlanoSemanal(){
   const el = document.getElementById('tp-list');
   if(!el) return;
-  const plano = PLANO_SEMANAL[curPlanoNivel] || PLANO_SEMANAL.intermediario;
-  el.innerHTML = plano.map(item => `
+  const wk = ensureWeeklyPlano(curPlanoNivel);
+  const plano = wk.data.plan || PLANO_SEMANAL[curPlanoNivel] || PLANO_SEMANAL.intermediario;
+  const done = wk.data.done || {};
+  const doneCount = Object.values(done).filter(Boolean).length;
+  const meta = `<div class="tp-meta">Semana ${wk.weekKey} · concluídos ${doneCount}/7 · quanto mais você confirmar, mais o app varia as sugestões da próxima semana.</div>`;
+  el.innerHTML = meta + plano.map((item,idx) => `
     <div class="tp-row">
       <div class="tp-day">${item.dia}</div>
       <div>
         <div class="tp-work">${item.treino}</div>
         <div class="tp-note">${item.nota}</div>
       </div>
+      <button class="tp-done ${done[idx]?'on':''}" onclick="togglePlanoDone(${idx})">${done[idx]?'Feito':'Confirmar'}</button>
     </div>
   `).join('');
 }
