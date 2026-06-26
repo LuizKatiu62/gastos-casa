@@ -127,6 +127,12 @@ body{padding-top:45px}
 .sf-wrap{display:flex;gap:.4rem;margin-bottom:.75rem;flex-wrap:wrap}
 .sf-btn{border:1.5px solid var(--border);background:#fff;border-radius:20px;padding:.28rem .7rem;font-size:.72rem;font-weight:700;color:var(--muted);cursor:pointer;font-family:inherit;transition:all .15s}
 .sf-btn.sf-on{background:var(--blue);border-color:var(--blue);color:#fff}
+.tp-levels{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.6rem}
+.tp-week{display:flex;flex-direction:column;gap:.45rem}
+.tp-row{display:grid;grid-template-columns:56px 1fr;gap:.55rem;align-items:center;background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:.5rem .6rem}
+.tp-day{font-size:.66rem;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--blue)}
+.tp-work{font-size:.8rem;font-weight:700;color:var(--text)}
+.tp-note{font-size:.7rem;color:var(--muted);margin-top:1px;line-height:1.5}
 
 /* ── CHARTS ── */
 .ch{position:relative;height:175px}
@@ -338,7 +344,6 @@ body{padding-top:45px}
 <div class="tabs">
   <button class="tab on" onclick="go('coach',this)">🏋️ Coach</button>
   <button class="tab"    onclick="go('treinos',this)">🏃 Treinos</button>
-  <button class="tab"    onclick="go('programados',this)">🗓️ Programados</button>
   <button class="tab"    onclick="go('evolucao',this)">📈 Evolução</button>
   <button class="tab"    onclick="go('saude',this)">❤️ Saúde</button>
   <button class="tab"    onclick="go('perguntas',this)">💬 Perguntas</button>
@@ -416,6 +421,15 @@ body{padding-top:45px}
         <button class="sf-btn period-btn" data-days="30" onclick="setPeriodo(30,this)">30d</button>
         <button class="sf-btn period-btn" data-days="7" onclick="setPeriodo(7,this)">7d</button>
       </div>
+      <div class="card">
+        <div class="card-title">🗓️ Treinos Programados (Grupo semanal)</div>
+        <div id="tp-levels" class="tp-levels">
+          <button class="sf-btn" onclick="setPlanoNivel('iniciante',this)">Iniciante</button>
+          <button class="sf-btn sf-on" onclick="setPlanoNivel('intermediario',this)">Intermediário</button>
+          <button class="sf-btn" onclick="setPlanoNivel('avancado',this)">Avançado</button>
+        </div>
+        <div id="tp-list" class="tp-week"></div>
+      </div>
       <div class="div-label">Últimos <span class="period-note">180 dias</span></div>
       <div id="t-stats" class="sgrid sg3" style="margin-bottom:.75rem"></div>
       <div class="card">
@@ -429,20 +443,6 @@ body{padding-top:45px}
         <div class="ch-sub" id="freq-sub"></div>
       </div>
       <div class="card"><div class="card-title">🏃 Últimos Treinos</div><div class="run-list" id="run-list"></div></div>
-    </div>
-
-    <!-- ══ TREINOS PROGRAMADOS ══ -->
-    <div class="sec" id="sec-programados">
-      <div class="card">
-        <div class="card-title">🗓️ Treinos Programados</div>
-        <div style="font-size:.78rem;color:var(--muted);line-height:1.6;margin-bottom:.75rem">
-          Plano semanal, fases por prova e organização de treinos.
-        </div>
-        <div class="empty">
-          <h3>Treinos programados restaurados</h3>
-          <p>Use o planejador completo em <a href="./training-hub.html" target="_blank" rel="noopener">training-hub</a>.</p>
-        </div>
-      </div>
     </div>
 
     <!-- ══ EVOLUÇÃO ══ -->
@@ -653,6 +653,36 @@ const SNAPSHOT_KEY = 'treinos_last_snapshot_v1';
 let charts = {}, curTab = 'coach', DATA = null, curEsporte = 'todos';
 const PERIODO = 180; // dias padrão para todas as médias do app
 let curPeriodo = PERIODO;
+let curPlanoNivel = 'intermediario';
+const PLANO_SEMANAL = {
+  iniciante: [
+    {dia:'Seg', treino:'Descanso ativo', nota:'Mobilidade + caminhada leve 25-35 min.'},
+    {dia:'Ter', treino:'Rodagem leve', nota:'5-6 km em Z1/Z2 (ritmo confortável).'},
+    {dia:'Qua', treino:'Força', nota:'Treino de base 35-45 min (core, glúteo, posterior).'},
+    {dia:'Qui', treino:'Fartlek curto', nota:'6x (1 min forte + 2 min leve) após aquecimento.'},
+    {dia:'Sex', treino:'Descanso', nota:'Recuperação e hidratação.'},
+    {dia:'Sab', treino:'Rodagem contínua', nota:'6-8 km em ritmo estável.'},
+    {dia:'Dom', treino:'Longão leve', nota:'8-10 km sem forçar, foco em consistência.'}
+  ],
+  intermediario: [
+    {dia:'Seg', treino:'Recuperação', nota:'Bike leve ou trote 30 min + mobilidade.'},
+    {dia:'Ter', treino:'Intervalado', nota:'5x 1 km forte com 2 min trote de recuperação.'},
+    {dia:'Qua', treino:'Rodagem', nota:'8-10 km em Z2.'},
+    {dia:'Qui', treino:'Fartlek progressivo', nota:'4 blocos de 6 min alternando 2 min forte/2 min moderado/2 min leve.'},
+    {dia:'Sex', treino:'Força + técnica', nota:'Academia 40 min + educativos de corrida.'},
+    {dia:'Sab', treino:'Ritmo / tempo run', nota:'2 km aquecer + 20-30 min em ritmo de prova + desaquecimento.'},
+    {dia:'Dom', treino:'Longão', nota:'12-16 km com final controlado mais forte.'}
+  ],
+  avancado: [
+    {dia:'Seg', treino:'Recuperação ativa', nota:'Trote leve 40 min + mobilidade.'},
+    {dia:'Ter', treino:'Intervalado longo', nota:'6-8x 1 km em ritmo forte com recuperação curta.'},
+    {dia:'Qua', treino:'Rodagem aeróbica', nota:'12-14 km em Z2.'},
+    {dia:'Qui', treino:'Fartlek avançado', nota:'10x 2 min forte / 1 min leve.'},
+    {dia:'Sex', treino:'Força', nota:'Treino funcional e prevenção de lesão (45 min).'},
+    {dia:'Sab', treino:'Tempo run', nota:'30-40 min em ritmo sustentado (limiar).'},
+    {dia:'Dom', treino:'Longão progressivo', nota:'18-24 km com último terço em ritmo de maratona.'}
+  ]
+};
 
 if(typeof Chart==='undefined'){
   console.warn('Chart.js não carregou. Continuando sem gráficos.');
@@ -728,6 +758,28 @@ function setEsporte(e,btn){
   document.querySelectorAll('#sec-treinos .sf-wrap .sf-btn').forEach(b=>b.classList.remove('sf-on'));
   btn.classList.add('sf-on');
   if(DATA){const a=(DATA.atividades||[]).sort((a,b)=>b.data.localeCompare(a.data));renderTreinos(a,DATA.meta||{},DATA.semanal||{});}
+}
+
+function setPlanoNivel(nivel,btn){
+  curPlanoNivel = nivel;
+  document.querySelectorAll('#tp-levels .sf-btn').forEach(b=>b.classList.remove('sf-on'));
+  if(btn) btn.classList.add('sf-on');
+  renderPlanoSemanal();
+}
+
+function renderPlanoSemanal(){
+  const el = document.getElementById('tp-list');
+  if(!el) return;
+  const plano = PLANO_SEMANAL[curPlanoNivel] || PLANO_SEMANAL.intermediario;
+  el.innerHTML = plano.map(item => `
+    <div class="tp-row">
+      <div class="tp-day">${item.dia}</div>
+      <div>
+        <div class="tp-work">${item.treino}</div>
+        <div class="tp-note">${item.nota}</div>
+      </div>
+    </div>
+  `).join('');
 }
 
 function setAppAlert(msg, tone='info'){
@@ -1659,6 +1711,7 @@ function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
 
 // ════════════════ TREINOS ════════════════
 function renderTreinos(ativ,meta,sem){
+  renderPlanoSemanal();
   const filtrado=curEsporte==='todos'?ativ:ativ.filter(a=>getEsporte(a)===curEsporte);
   const d0=(new Date(Date.now()-curPeriodo*864e5)).toISOString().slice(0,10);
   const periodFiltered = filtrado.filter(a=>a.data>=d0);
