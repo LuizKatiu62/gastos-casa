@@ -11,6 +11,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%231a56db' width='192' height='192'/><text x='50%' y='50%' font-size='120' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%231a56db' width='180' height='180' rx='40'/><text x='50%' y='50%' font-size='110' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <title>Treinos · Luiz Silva</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -682,7 +683,7 @@ function semanaISO(dateStr){
 
 function setEsporte(e,btn){
   curEsporte=e;
-  document.querySelectorAll('.sf-btn').forEach(b=>b.classList.remove('sf-on'));
+  document.querySelectorAll('#sec-treinos .sf-wrap .sf-btn').forEach(b=>b.classList.remove('sf-on'));
   btn.classList.add('sf-on');
   if(DATA){const a=(DATA.atividades||[]).sort((a,b)=>b.data.localeCompare(a.data));renderTreinos(a,DATA.meta||{},DATA.semanal||{});}
 }
@@ -1150,7 +1151,7 @@ function render(d){
   document.getElementById('content').style.display='block';
   const now = new Date();
   document.getElementById('hSub').textContent = `Atualizado às ${pad(now.getHours())}:${pad(now.getMinutes())}`;
-  if(document.getElementById('app-alert')?.style.display!=='block') setAppAlert('');
+  setAppAlert('');
   initApiKey();
   loadRaceGoal();
   if(typeof initEventoBtn === 'function') initEventoBtn();
