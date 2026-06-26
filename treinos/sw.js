@@ -1,4 +1,4 @@
-const CACHE = 'treinos-v46';
+const CACHE = 'treinos-v48';
 const CORE = ['./manifest.json']; // HTML never cached — always fetched fresh
 
 self.addEventListener('install', e => {
@@ -16,6 +16,12 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   const url = e.request.url;
+
+  // Always bypass cache for the service worker itself.
+  if (url.includes('/sw.js')) {
+    e.respondWith(fetch(e.request, { cache: 'no-store' }));
+    return;
+  }
 
   // HTML: NEVER cache — always go to network
   if (e.request.destination === 'document' ||
