@@ -347,6 +347,7 @@ body{padding-top:45px}
   <div id="loading" class="loading"><div class="spin"></div>Carregando seus dados do Garmin…</div>
   <div id="empty-msg" style="display:none;padding:2rem 1rem;text-align:center"></div>
   <div id="content" style="display:none">
+    <div id="app-alert" style="display:none;margin-bottom:.75rem"></div>
 
     <!-- ══ COACH ══ -->
     <div class="sec on" id="sec-coach">
@@ -606,10 +607,33 @@ body{padding-top:45px}
 </div>
 
 <script>
+// Boot watchdog: if the main app script fails before rendering, never leave loading forever.
+window.__APP_BOOT_OK = false;
+window.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => {
+    if (window.__APP_BOOT_OK) return;
+    const lo = document.getElementById('loading');
+    const co = document.getElementById('content');
+    const em = document.getElementById('empty-msg');
+    if (lo) lo.style.display = 'none';
+    if (co) co.style.display = 'block';
+    if (em) {
+      em.style.display = 'block';
+      em.innerHTML = `<div class="empty">
+        <h3>⚠️ Falha de inicialização</h3>
+        <p>O app não conseguiu iniciar corretamente.<br>Use <b>🧹 Atualizar app</b> e depois <b>↻ só recarregar</b>.</p>
+      </div>`;
+    }
+  }, 9000);
+});
+</script>
+
+<script>
 const FB_DB   = 'https://gastos-casa-7f431-default-rtdb.firebaseio.com';
 const FB_KEY  = 'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU';
 const FB_PATH = 'treinos/luiz';
 const APP_VERSION = '2026-06-26-3';
+const SNAPSHOT_KEY = 'treinos_last_snapshot_v1';
 let charts = {}, curTab = 'coach', DATA = null, curEsporte = 'todos';
 const PERIODO = 180; // dias padrão para todas as médias do app
 let curPeriodo = PERIODO;
@@ -663,6 +687,55 @@ function setEsporte(e,btn){
   if(DATA){const a=(DATA.atividades||[]).sort((a,b)=>b.data.localeCompare(a.data));renderTreinos(a,DATA.meta||{},DATA.semanal||{});}
 }
 
+function setAppAlert(msg, tone='info'){
+  const el = document.getElementById('app-alert');
+  if(!el) return;
+  if(!msg){ el.style.display='none'; el.innerHTML=''; return; }
+  const palette = tone==='warn'
+    ? {bg:'#fffbeb',bd:'#fcd34d',tx:'#92400e'}
+    : {bg:'#eff6ff',bd:'#93c5fd',tx:'#1e3a8a'};
+  el.style.display='block';
+  el.innerHTML = `<div style="background:${palette.bg};border:1px solid ${palette.bd};color:${palette.tx};border-radius:10px;padding:.7rem .85rem;font-size:.78rem;line-height:1.5">${msg}</div>`;
+}
+
+function saveSnapshot(d){
+  try {
+    localStorage.setItem(SNAPSHOT_KEY, JSON.stringify({
+      ts: new Date().toISOString(),
+      data: d
+    }));
+  } catch (_) {}
+}
+
+function loadSnapshot(){
+  try {
+    const raw = localStorage.getItem(SNAPSHOT_KEY);
+    if(!raw) return null;
+    const parsed = JSON.parse(raw);
+    if(!parsed || !parsed.data || !parsed.data.atividades) return null;
+    return parsed;
+  } catch (_) {
+    return null;
+  }
+}
+
+function renderFromSnapshot(reason){
+  const snap = loadSnapshot();
+  if(!snap) return false;
+  try {
+    DATA = snap.data;
+    render(snap.data);
+    const ts = snap.ts ? new Date(snap.ts) : null;
+    const tsTxt = ts ? `${pad(ts.getDate())}/${pad(ts.getMonth()+1)} ${pad(ts.getHours())}:${pad(ts.getMinutes())}` : 'desconhecido';
+    setAppAlert(`Modo offline: exibindo último snapshot local (${tsTxt}). Motivo: ${reason}.`, 'warn');
+    const hs = document.getElementById('hSub');
+    if(hs) hs.textContent = `Offline com último snapshot (v${APP_VERSION})`;
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
 async function fbToken(){
   try {
     const r = await Promise.race([
@@ -684,6 +757,8 @@ async function loadData(){
     if(el) el.textContent = txt;
   };
   setHeaderStatus(`Atualizando dados... (v${APP_VERSION})`);
+  window.__APP_BOOT_OK = false;
+  setAppAlert('Sincronizando dados ao vivo...');
   document.getElementById('loading').style.display='block';
   document.getElementById('content').style.display='none';
   document.getElementById('empty-msg').style.display='none';
@@ -701,6 +776,7 @@ async function loadData(){
     const token=await fbToken();
     if(!token){
       console.error('Falha ao obter token Firebase');
+      if(renderFromSnapshot('Falha de autenticação Firebase')) return;
       showEmpty(true, 'Firebase auth falhou');
       return;
     }
@@ -713,28 +789,34 @@ async function loadData(){
 
     if(!res.ok){
       console.error(`HTTP ${res.status}: ${res.statusText}`);
+      if(renderFromSnapshot(`HTTP ${res.status} no Firebase`)) return;
       showEmpty(true, `Erro HTTP ${res.status}`);
       return;
     }
     const d=await res.json();
     if(!d||!d.atividades||!d.atividades.length){
       console.warn('Sem dados no Firebase');
+      if(renderFromSnapshot('Firebase sem atividades')) return;
       showEmpty();
       return;
     }
     DATA=d;
+    saveSnapshot(d);
     try {
       render(d);
     } catch (renderErr) {
       console.error('render erro:', renderErr);
+      if(renderFromSnapshot('Erro ao renderizar dados ao vivo')) return;
       showEmpty(true, 'Erro ao renderizar os dados');
     }
   }catch(e){
     console.error('loadData erro:', e.message);
     if (e.name === 'AbortError') {
+      if(renderFromSnapshot('Timeout de rede')) return;
       showEmpty(true, 'Tempo esgotado para buscar dados do Firebase');
       return;
     }
+    if(renderFromSnapshot(e.message||'Erro de rede')) return;
     showEmpty(true, e.message);
   }finally{
     if (safetyTimer) clearTimeout(safetyTimer);
@@ -764,6 +846,7 @@ window.addEventListener('unhandledrejection', (e) => {
 });
 
 function showEmpty(err, errMsg){
+  window.__APP_BOOT_OK = true;
   document.getElementById('loading').style.display='none';
   document.getElementById('content').style.display='block';
   const hdr=err?'⚠️ Problema ao carregar':'ℹ️ Sem dados yet';
@@ -786,6 +869,7 @@ function showEmpty(err, errMsg){
   if(coachHero) coachHero.innerHTML='';
   if(coachNote){ coachNote.innerHTML=''; coachNote.style.display='none'; }
   document.getElementById('empty-msg').style.display='none';
+  setAppAlert('');
   loadRaceGoal();
   document.getElementById('hSub').textContent = err ? (errMsg||'Erro ao carregar') : 'Sem dados disponíveis';
 }
@@ -1053,6 +1137,7 @@ function mkChart(id,type,labels,data,color,opts={}){
 
 // ── RENDER ──
 function render(d){
+  window.__APP_BOOT_OK = true;
   const ativ=(d.atividades||[]).sort((a,b)=>b.data.localeCompare(a.data));
   const meta=d.meta||{};
   const sem=d.semanal||{};
@@ -1065,6 +1150,7 @@ function render(d){
   document.getElementById('content').style.display='block';
   const now = new Date();
   document.getElementById('hSub').textContent = `Atualizado às ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  if(document.getElementById('app-alert')?.style.display!=='block') setAppAlert('');
   initApiKey();
   loadRaceGoal();
   if(typeof initEventoBtn === 'function') initEventoBtn();
