@@ -549,8 +549,8 @@
     </div>
     <div class="metric-card">
       <div class="metric-label">Dias Disponíveis</div>
-      <div class="metric-val" style="color:var(--blue)">5</div>
-      <div class="metric-sub">Ter·Qua·Qui·Sáb·Dom</div>
+      <div class="metric-val" style="color:var(--blue)">1</div>
+      <div class="metric-sub">1 treino por semana</div>
     </div>
   </div>
 
@@ -580,7 +580,7 @@
 
   <div style="margin-bottom:20px">
     <h2 class="section-h">Planos de Treino</h2>
-    <p style="font-size:13px;color:var(--text2)">Planos personalizados para seus 5 dias disponíveis (Ter/Qua/Qui/Sáb/Dom) com treino longo às Sábados.</p>
+    <p style="font-size:13px;color:var(--text2)">Planos personalizados com frequência de 1 treino por semana.</p>
   </div>
 
   <div class="race-selector" id="race-selector">
@@ -1140,12 +1140,12 @@ function buildDashboard() {
   const wc = document.getElementById('dash-week');
   const days = [
     {d:'Seg',t:'Descanso',c:'day-rest'},
-    {d:'Ter',t:'Pool run',c:'day-active'},
-    {d:'Qua',t:'Fisio/Força',c:'day-active'},
-    {d:'Qui',t:'Ciclismo Z1',c:'day-active'},
+    {d:'Ter',t:'Descanso',c:'day-rest'},
+    {d:'Qua',t:'Descanso',c:'day-rest'},
+    {d:'Qui',t:'Descanso',c:'day-rest'},
     {d:'Sex',t:'Descanso',c:'day-rest'},
-    {d:'Sáb',t:'Natação Z2',c:'day-long'},
-    {d:'Dom',t:'Caminhada',c:'day-active'},
+    {d:'Sáb',t:'Treino da semana',c:'day-long'},
+    {d:'Dom',t:'Descanso',c:'day-rest'},
   ];
   let wh = '';
   days.forEach(d => {
@@ -1190,7 +1190,7 @@ function renderRace() {
     <div class="metric-card"><div class="metric-label">Duração</div><div class="metric-val">${r.weeks}</div><div class="metric-sub">semanas</div></div>
     <div class="metric-card"><div class="metric-label">Ritmo alvo</div><div class="metric-val" style="font-size:16px">${r.pace}</div></div>
     <div class="metric-card"><div class="metric-label">Meta</div><div class="metric-val" style="font-size:12px;line-height:1.3">${r.goal}</div></div>
-    <div class="metric-card"><div class="metric-label">Sessões/semana</div><div class="metric-val">4–5</div><div class="metric-sub">Ter·Qua·Qui·Sáb·Dom</div></div>
+    <div class="metric-card"><div class="metric-label">Sessões/semana</div><div class="metric-val">1</div><div class="metric-sub">1 treino por semana</div></div>
   </div>`;
 
   // tips
@@ -1204,7 +1204,7 @@ function renderRace() {
         <span class="tag ${phase.color}">${phase.name}</span>
         <span class="phase-week">${phase.week}</span>
       </div>`;
-    phase.sessions.forEach(s => {
+    phase.sessions.slice(0,1).forEach(s => {
       const effDay = getEffectiveDay(s.day);
       const isLong = effDay === 'Sáb' || s.day === 'Sáb';
       const isRest = s.dist === '—';
@@ -1385,7 +1385,7 @@ const LOCAL = {
   'ritmo alvo': `🏃 Ritmos alvo para Luiz (64 anos, FC repouso 49 bpm):\n\n🏅 Meia Maratona: 6:30–7:00/km (Z3, ~130–144 bpm)\n🏆 Maratona: 7:00–7:30/km (Z2–Z3, ~116–138 bpm)\n⛰️ Ultra: 7:30–8:30/km com caminhadas em subidas\n🔥 Desafio 64 km: 8:00–9:30/km (loop strategy) — 4 km corrida + 400m caminhada\n\nDica principal: nos primeiros km/loops da prova, vá 30 seg/km mais devagar que o ritmo alvo. Você recupera tudo no final!`,
   'zona': `❤️ Suas zonas pelo método Karvonen (FCmax 156, repouso 49, HRR 107):\n\nZ1 Recuperação:  103–116 bpm\nZ2 Aeróbico: 116–130 bpm ← 80% do tempo aqui!\nZ3 Aeróbico+: 130–144 bpm\nZ4 Limiar: 144–156 bpm\nZ5 VO₂Max: >156 bpm\n\nRegra de ouro: 80% dos treinos em Z1–Z2, 20% em Z3–Z5.`,
   'comer antes': `🥗 Nutrição pré-treino longo para Luiz:\n\n⏰ 2h antes: Panquecas de aveia + mel + banana + café\n⏰ 30 min antes: Gel de cafeína (100mg) + 500ml água\n🏃 A cada 45 min: 25–30g carboidratos (gel ou mastigáveis)\n\nSeu BMR é ~1.820 kcal/dia. Em treinos longos, adicione ~500–700 kcal por hora de exercício.`,
-  'quantos km': `📏 Volume semanal recomendado:\n\n🏅 Meia Maratona: 40–55 km/semana (pico semana 14)\n🏆 Maratona: 55–70 km/semana (pico semana 17)\n⛰️ Ultra: 70–90 km/semana (back-to-back fins de semana)\n\nA cada 4ª semana: reduza 30% do volume (semana de recuperação). Com 5 dias disponíveis, você está bem posicionado!`,
+  'quantos km': `📏 Volume semanal recomendado para 1 treino/semana:\n\n🏅 Meia Maratona: 8–14 km/semana\n🏆 Maratona: 12–20 km/semana\n⛰️ Ultra: 15–25 km/semana\n\nA cada 4ª semana: reduza 25–30% do volume (semana de recuperação). Foque em consistência e joelho sem dor.`,
   'câimbra': `⚡ Estratégias anti-câimbras para atleta de 64 anos:\n\n💧 Hidratação: 500–700 ml/hora + eletrólitos\n🧂 Sódio: 500–700 mg/hora em provas longas\n💊 Magnésio: suplemento noturno (310 mg/dia)\n🏋️ Força: fortalecer quadríceps e panturrilhas 2x/semana\n🧘 Mobilidade: 10 min de alongamento pós-treino\n\nAos 64 anos, magnésio e potássio são especialmente importantes!`,
   'galloway': `🚶 Método Jeff Galloway (Walk-Run):\n\nEstratégia: corrida por X min → caminhada por Y min\n\n🏅 Meia Maratona: 9 min corrida + 1 min caminhada\n🏆 Maratona: 8 min corrida + 1 min caminhada\n⛰️ Ultra: 5 min corrida + 1 min (subidas: sempre caminhando)\n\nBenefícios: reduz tempo de recuperação, previne "hitting the wall", ideal para atletas masters. Muitos terminam mais rápido com este método!`,
   'estratégia': `🏆 Estratégia de prova para maratona:\n\n1. Km 1–5: 15–20 seg/km MAIS devagar que o alvo\n2. Km 5–30: ritmo alvo estável (7:00–7:30/km)\n3. Km 30–42: o que sobrar nas pernas!\n4. Não pule NENHUM posto de hidratação\n5. Gels a cada 35–40 min a partir do km 15\n6. Método Galloway se necessário: 9+1 min`,
@@ -1401,7 +1401,7 @@ Dados do atleta (Garmin Connect - luiz62):
 - FC repouso: 49 bpm (excelente), FC máxima estimada: 156 bpm (220–64)
 - BMR: ~1.820 kcal/dia, peso estimado: 68 kg
 - Atividades: corrida, ciclismo, natação, triathlon, duathlon, MTB
-- Dias disponíveis: Ter, Qua, Qui, Sáb, Dom (sábado = treino longo preferido)
+- Dias disponíveis: 1 dia por semana (sábado preferencial)
 - Velocidade de treino Garmin: 3.0 m/s corrida (~5:33/km pace base)
 - Zonas (Karvonen, hrr=107): Z1 103–116 bpm, Z2 116–130 bpm, Z3 130–144 bpm, Z4 144–156 bpm, Z5 >156 bpm
 - Evento alvo: Desafio 64 km (Little the Rez Revoir, Saint John NB, loops de 3.3 km, 13 jun 2026)

@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Treinos">
 <meta name="theme-color" content="#1a56db">
-<link rel="manifest" href="./manifest.json?v=2026-06-26-4">
+<link rel="manifest" href="./manifest.json?v=2026-06-27-1">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%231a56db' width='192' height='192'/><text x='50%' y='50%' font-size='120' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%231a56db' width='180' height='180' rx='40'/><text x='50%' y='50%' font-size='110' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <title>Treinos · Luiz Silva</title>
@@ -466,7 +466,7 @@ body{padding-top:45px}
         <div class="ch-sub" id="pace-sub"></div>
       </div>
       <div class="card">
-        <div class="card-title">❤️ Frequência Cardíaca — últimos 180 dias</div>
+        <div class="card-title">❤️ Frequência Cardíaca — últimos <span class="period-note">180 dias</span></div>
         <div class="ch" style="height:210px"><canvas id="cFC"></canvas></div>
         <div class="ch-sub" id="fc-sub"></div>
       </div>
@@ -476,12 +476,12 @@ body{padding-top:45px}
         <div class="ch-sub" id="vo2-sub"></div>
       </div>
       <div class="card">
-        <div class="card-title">🦵 Cadência — corridas 180 dias</div>
+        <div class="card-title">🦵 Cadência — corridas <span class="period-note">180 dias</span></div>
         <div class="ch" style="height:175px"><canvas id="cCad"></canvas></div>
         <div class="ch-sub" id="cad-sub"></div>
       </div>
       <div class="card" id="rd-card" style="display:none">
-        <div class="card-title">🦾 Running Dynamics — média 180 dias vs ideal</div>
+        <div class="card-title">🦾 Running Dynamics — média <span class="period-note">180 dias</span> vs ideal</div>
         <div id="rd-list"></div>
         <div style="font-size:.65rem;color:var(--muted);margin-top:.6rem;line-height:1.5">Baseado nas últimas corridas com dados de dinâmica. Requer HRM-Run, HRM-Pro ou Running Dynamics Pod.</div>
       </div>
@@ -651,7 +651,7 @@ window.addEventListener('DOMContentLoaded', () => {
 const FB_DB   = 'https://gastos-casa-7f431-default-rtdb.firebaseio.com';
 const FB_KEY  = 'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU';
 const FB_PATH = 'treinos/luiz';
-const APP_VERSION = '2026-06-26-4';
+const APP_VERSION = '2026-06-27-1';
 const SNAPSHOT_KEY = 'treinos_last_snapshot_v1';
 let charts = {}, curTab = 'coach', DATA = null, curEsporte = 'todos';
 const PERIODO = 180; // dias padrão para todas as médias do app
@@ -660,122 +660,32 @@ let curPlanoNivel = 'intermediario';
 const TP_STATE_KEY = 'treinos_programados_state_v2';
 const PLANO_SEMANAL = {
   iniciante: [
-    {dia:'Seg', treino:'Descanso ativo', nota:'Mobilidade + caminhada leve 25-35 min.'},
-    {dia:'Ter', treino:'Rodagem leve', nota:'5-6 km em Z1/Z2 (ritmo confortável).'},
-    {dia:'Qua', treino:'Força', nota:'Treino de base 35-45 min (core, glúteo, posterior).'},
-    {dia:'Qui', treino:'Fartlek curto', nota:'6x (1 min forte + 2 min leve) após aquecimento.'},
-    {dia:'Sex', treino:'Descanso', nota:'Recuperação e hidratação.'},
-    {dia:'Sab', treino:'Rodagem contínua', nota:'6-8 km em ritmo estável.'},
-    {dia:'Dom', treino:'Longão leve', nota:'8-10 km sem forçar, foco em consistência.'}
+    {dia:'Sab', treino:'Rodagem leve', nota:'5-7 km em Z1/Z2, ritmo confortável e sem dor.'}
   ],
   intermediario: [
-    {dia:'Seg', treino:'Recuperação', nota:'Bike leve ou trote 30 min + mobilidade.'},
-    {dia:'Ter', treino:'Intervalado', nota:'5x 1 km forte com 2 min trote de recuperação.'},
-    {dia:'Qua', treino:'Rodagem', nota:'8-10 km em Z2.'},
-    {dia:'Qui', treino:'Fartlek progressivo', nota:'4 blocos de 6 min alternando 2 min forte/2 min moderado/2 min leve.'},
-    {dia:'Sex', treino:'Força + técnica', nota:'Academia 40 min + educativos de corrida.'},
-    {dia:'Sab', treino:'Ritmo / tempo run', nota:'2 km aquecer + 20-30 min em ritmo de prova + desaquecimento.'},
-    {dia:'Dom', treino:'Longão', nota:'12-16 km com final controlado mais forte.'}
+    {dia:'Sab', treino:'Treino único da semana', nota:'8-12 km em Z2 com 10-15 min finais moderados.'}
   ],
   avancado: [
-    {dia:'Seg', treino:'Recuperação ativa', nota:'Trote leve 40 min + mobilidade.'},
-    {dia:'Ter', treino:'Intervalado longo', nota:'6-8x 1 km em ritmo forte com recuperação curta.'},
-    {dia:'Qua', treino:'Rodagem aeróbica', nota:'12-14 km em Z2.'},
-    {dia:'Qui', treino:'Fartlek avançado', nota:'10x 2 min forte / 1 min leve.'},
-    {dia:'Sex', treino:'Força', nota:'Treino funcional e prevenção de lesão (45 min).'},
-    {dia:'Sab', treino:'Tempo run', nota:'30-40 min em ritmo sustentado (limiar).'},
-    {dia:'Dom', treino:'Longão progressivo', nota:'18-24 km com último terço em ritmo de maratona.'}
+    {dia:'Sab', treino:'Treino único longo', nota:'12-18 km progressivo, mantendo controle de FC.'}
   ]
 };
 const PLANO_VARIACOES = {
   iniciante: [
     [
-      {treino:'Descanso ativo',nota:'Mobilidade + caminhada leve 25-35 min.'},
-      {treino:'Recuperação leve',nota:'Alongamento + bike solta 20-30 min.'}
-    ],
-    [
       {treino:'Rodagem leve',nota:'5-6 km em Z1/Z2 (ritmo confortável).'},
-      {treino:'Rodagem contínua',nota:'6 km fácil + 4 acelerações curtas.'}
-    ],
-    [
-      {treino:'Força',nota:'Treino de base 35-45 min (core, glúteo, posterior).'},
-      {treino:'Força funcional',nota:'Circuito de estabilidade + mobilidade 40 min.'}
-    ],
-    [
-      {treino:'Fartlek curto',nota:'6x (1 min forte + 2 min leve) após aquecimento.'},
-      {treino:'Fartlek leve',nota:'8x (45s forte + 75s leve) em terreno plano.'}
-    ],
-    [
-      {treino:'Descanso',nota:'Recuperação e hidratação.'},
-      {treino:'Descanso + mobilidade',nota:'Soltar quadril e panturrilha por 20 min.'}
-    ],
-    [
-      {treino:'Rodagem contínua',nota:'6-8 km em ritmo estável.'},
       {treino:'Rodagem progressiva',nota:'7-8 km começando leve e fechando moderado.'}
-    ],
-    [
-      {treino:'Longão leve',nota:'8-10 km sem forçar, foco em consistência.'},
-      {treino:'Longão controlado',nota:'9-11 km em Z2 mantendo cadência estável.'}
     ]
   ],
   intermediario: [
     [
-      {treino:'Recuperação',nota:'Bike leve ou trote 30 min + mobilidade.'},
-      {treino:'Recuperação ativa',nota:'Trote muito leve 35 min + liberação miofascial.'}
-    ],
-    [
-      {treino:'Intervalado',nota:'5x 1 km forte com 2 min trote de recuperação.'},
-      {treino:'Intervalado em bloco',nota:'3x 2 km forte com 3 min leve entre blocos.'}
-    ],
-    [
-      {treino:'Rodagem',nota:'8-10 km em Z2.'},
-      {treino:'Rodagem técnica',nota:'9 km com 6 educativos na parte final.'}
-    ],
-    [
-      {treino:'Fartlek progressivo',nota:'4 blocos de 6 min alternando 2 min forte/2 min moderado/2 min leve.'},
-      {treino:'Fartlek por tempo',nota:'10x (1 min forte + 1 min leve) após 15 min de aquecimento.'}
-    ],
-    [
-      {treino:'Força + técnica',nota:'Academia 40 min + educativos de corrida.'},
-      {treino:'Força de corrida',nota:'Subidas curtas + core + estabilidade 45 min.'}
-    ],
-    [
-      {treino:'Ritmo / tempo run',nota:'2 km aquecer + 20-30 min em ritmo de prova + desaquecimento.'},
-      {treino:'Ritmo sustentável',nota:'3 km leve + 6 km ritmo controlado + 2 km leve.'}
-    ],
-    [
-      {treino:'Longão',nota:'12-16 km com final controlado mais forte.'},
-      {treino:'Longão com variação',nota:'14-16 km alternando 2 km Z2 / 1 km moderado.'}
+      {treino:'Treino único da semana',nota:'8-12 km em Z2 com 10-15 min finais moderados.'},
+      {treino:'Treino único progressivo',nota:'9-13 km começando leve e fechando forte controlado.'}
     ]
   ],
   avancado: [
     [
-      {treino:'Recuperação ativa',nota:'Trote leve 40 min + mobilidade.'},
-      {treino:'Recuperação longa',nota:'50 min leve com foco em soltura.'}
-    ],
-    [
-      {treino:'Intervalado longo',nota:'6-8x 1 km em ritmo forte com recuperação curta.'},
-      {treino:'Intervalado VO2',nota:'5x 1200 m forte com 2 min de recuperação.'}
-    ],
-    [
-      {treino:'Rodagem aeróbica',nota:'12-14 km em Z2.'},
-      {treino:'Rodagem extensa',nota:'14-16 km mantendo FC estável em Z2.'}
-    ],
-    [
-      {treino:'Fartlek avançado',nota:'10x 2 min forte / 1 min leve.'},
-      {treino:'Fartlek de limiar',nota:'6x 4 min forte / 2 min leve.'}
-    ],
-    [
-      {treino:'Força',nota:'Treino funcional e prevenção de lesão (45 min).'},
-      {treino:'Força avançada',nota:'Pliometria controlada + estabilidade + core.'}
-    ],
-    [
-      {treino:'Tempo run',nota:'30-40 min em ritmo sustentado (limiar).'},
-      {treino:'Tempo fracionado',nota:'2 blocos de 20 min limiar com 5 min leve.'}
-    ],
-    [
-      {treino:'Longão progressivo',nota:'18-24 km com último terço em ritmo de maratona.'},
-      {treino:'Longão específico',nota:'20-24 km com trechos em ritmo de prova.'}
+      {treino:'Treino único longo',nota:'12-18 km progressivo, mantendo controle de FC.'},
+      {treino:'Treino único específico',nota:'14-20 km com bloco em ritmo de prova no meio.'}
     ]
   ]
 };
@@ -819,6 +729,13 @@ function updatePeriodoNotes(){
 function syncPeriodoButtons(){
   document.querySelectorAll('.period-btn').forEach(b=>b.classList.toggle('sf-on', Number(b.dataset.days)===curPeriodo));
   updatePeriodoNotes();
+}
+
+function destroyChart(key){
+  if(charts[key]){
+    charts[key].destroy();
+    charts[key] = null;
+  }
 }
 function setPeriodo(days,btn){
   curPeriodo = days;
@@ -913,7 +830,20 @@ function nivelIndex(nivel){
 function ensureWeeklyPlano(nivel){
   const nowWeek = isoWeekInfo().key;
   if(!tpState.weeks[nowWeek]) tpState.weeks[nowWeek] = {};
-  if(tpState.weeks[nowWeek][nivel]) return {weekKey:nowWeek, data:tpState.weeks[nowWeek][nivel]};
+  if(tpState.weeks[nowWeek][nivel]) {
+    const existing = tpState.weeks[nowWeek][nivel];
+    const targetBase = PLANO_SEMANAL[nivel] || PLANO_SEMANAL.intermediario;
+    if(Array.isArray(existing.plan) && existing.plan.length !== targetBase.length){
+      const first = existing.plan[0] || targetBase[0];
+      const hadAnyDone = existing.done ? Object.values(existing.done).some(Boolean) : false;
+      tpState.weeks[nowWeek][nivel] = {
+        plan: [{dia:targetBase[0].dia, treino:first.treino || targetBase[0].treino, nota:first.nota || targetBase[0].nota}],
+        done: hadAnyDone ? {0:true} : {}
+      };
+      saveTpState();
+    }
+    return {weekKey:nowWeek, data:tpState.weeks[nowWeek][nivel]};
+  }
 
   const prevKey = prevWeekKey(nowWeek);
   const prev = tpState.weeks?.[prevKey]?.[nivel];
@@ -966,7 +896,7 @@ function renderPlanoSemanal(){
   const plano = wk.data.plan || PLANO_SEMANAL[curPlanoNivel] || PLANO_SEMANAL.intermediario;
   const done = wk.data.done || {};
   const doneCount = Object.values(done).filter(Boolean).length;
-  const meta = `<div class="tp-meta">Semana ${wk.weekKey} · concluídos ${doneCount}/7 · quanto mais você confirmar, mais o app varia as sugestões da próxima semana.</div>`;
+  const meta = `<div class="tp-meta">Semana ${wk.weekKey} · concluídos ${doneCount}/${plano.length} · frequência: 1 treino por semana.</div>`;
   el.innerHTML = meta + plano.map((item,idx) => `
     <div class="tp-row">
       <div class="tp-day">${item.dia}</div>
@@ -1347,7 +1277,7 @@ function renderCoachHero({bbHoje,sonoMed,hrvLast,stressMed,kmSemana,treinosSeman
   const hrvScore = hrvLast ? Math.round(clamp((hrvLast-20)/40*100,0,100)) : 0;
   const stressScore = stressMed ? Math.round(clamp(100-stressMed,0,100)) : 0;
   const recoveryScore = Math.round((bbHoje*0.45) + (sonoScore*0.25) + (hrvScore*0.2) + (stressScore*0.1));
-  const consistencyScore = Math.round(clamp((treinosSemana/5)*100,0,100));
+  const consistencyScore = Math.round(clamp((treinosSemana/1)*100,0,100));
   const loadScore = volTrend>0 ? Math.round(clamp(50+volTrend,0,100)) : Math.round(clamp(50+(volTrend*1.3),0,100));
 
   const readyTone = recoveryScore>=75 ? '#22c55e' : recoveryScore>=55 ? '#0ea5e9' : recoveryScore>=40 ? '#f59e0b' : '#ef4444';
@@ -1375,11 +1305,11 @@ function renderCoachHero({bbHoje,sonoMed,hrvLast,stressMed,kmSemana,treinosSeman
     }),
     ringCard({
       title:'Consistência', pct:consistencyScore, val:treinosSemana, unit:'treinos',
-      status:treinosSemana>=5?'Meta semanal completa':treinosSemana>=4?'Ótimo ritmo':treinosSemana>=3?'Boa base':'Abaixo da meta',
-      color:treinosSemana>=5?'#22c55e':treinosSemana>=4?'#0ea5e9':treinosSemana>=3?'#f59e0b':'#ef4444',
-      desc:'Frequência semanal para manter evolução sem picos bruscos.',
+      status:treinosSemana>=1?'Meta semanal completa':'Abaixo da meta',
+      color:treinosSemana>=1?'#22c55e':'#ef4444',
+      desc:'Meta atual do plano: 1 treino por semana.',
       meta:[
-        {value:treinosSemana+'/5', label:'meta'},
+        {value:treinosSemana+'/1', label:'meta'},
         {value:consistencyScore+'%', label:'score'}
       ]
     }),
@@ -1443,6 +1373,7 @@ function render(d){
   const now = new Date();
   document.getElementById('hSub').textContent = `Atualizado às ${pad(now.getHours())}:${pad(now.getMinutes())}`;
   setAppAlert('');
+  syncPeriodoButtons();
   initApiKey();
   loadRaceGoal();
   if(typeof initEventoBtn === 'function') initEventoBtn();
@@ -1668,13 +1599,21 @@ function setCoachEsporte(e,btn){
 let raceGoal = null;
 
 function loadRaceGoal(){
-  const saved = localStorage.getItem('raceGoal');
-  if(saved) raceGoal = JSON.parse(saved);
+  raceGoal = null;
+  try {
+    const saved = localStorage.getItem('raceGoal');
+    if(saved) raceGoal = JSON.parse(saved);
+  } catch(_) {
+    localStorage.removeItem('raceGoal');
+  }
   
   // Carregar valores nos campos
   if(raceGoal){
     document.getElementById('race-goal-dist').value = raceGoal.dist || '';
     document.getElementById('race-goal-date').value = raceGoal.date || '';
+  } else {
+    document.getElementById('race-goal-dist').value = '';
+    document.getElementById('race-goal-date').value = '';
   }
   
   updateRaceGoalUI();
@@ -1684,12 +1623,22 @@ function saveRaceGoal(){
   const dist = document.getElementById('race-goal-dist').value;
   const date = document.getElementById('race-goal-date').value;
   if(!dist || !date){
-    alert('Preencha distância e data da prova');
+    setAppAlert('Preencha distância e data da prova para salvar o objetivo.', 'warn');
     return;
   }
+  setAppAlert('');
   raceGoal = {dist: +dist, date: date};
   localStorage.setItem('raceGoal', JSON.stringify(raceGoal));
+  if(raceGoal.dist === 21.1) {
+    curEvento = 'meia';
+    localStorage.setItem('coachEvento', curEvento);
+  } else if(raceGoal.dist === 42.2) {
+    curEvento = 'maratona';
+    localStorage.setItem('coachEvento', curEvento);
+  }
+  initEventoBtn();
   updateRaceGoalUI();
+  setAppAlert('Objetivo de prova salvo com sucesso.');
   if(DATA){const a=(DATA.atividades||[]).sort((a,b)=>b.data.localeCompare(a.data));renderCoach(a,DATA.meta||{},DATA.bodyBattery||{},DATA.sono||{},DATA.stress||{},DATA.hrv||{},DATA.semanal||{});}
 }
 
@@ -1699,6 +1648,7 @@ function clearRaceGoal(){
   document.getElementById('race-goal-dist').value = '';
   document.getElementById('race-goal-date').value = '';
   updateRaceGoalUI();
+  setAppAlert('Objetivo de prova removido.');
   if(DATA){const a=(DATA.atividades||[]).sort((a,b)=>b.data.localeCompare(a.data));renderCoach(a,DATA.meta||{},DATA.bodyBattery||{},DATA.sono||{},DATA.stress||{},DATA.hrv||{},DATA.semanal||{});}
 }
 
@@ -1981,19 +1931,19 @@ function renderTreinos(ativ,meta,sem){
       { type:'bar', label:'Treinos',
         data: freqVals,
         backgroundColor: freqVals.map((v,i)=>{
-          if(i===freqVals.length-1) return v>=4?'#0e9f6e':'#1a56db';
-          return v>=4?'rgba(14,159,110,.62)':v>=3?'rgba(26,86,219,.42)':'rgba(239,68,68,.4)';
+          if(i===freqVals.length-1) return v>=1?'#0e9f6e':'#1a56db';
+          return v>=1?'rgba(14,159,110,.62)':'rgba(239,68,68,.4)';
         }),
         borderRadius:5, order:2 },
-      { type:'line', label:'Alvo (4×/sem)', data:semKeys.map(()=>4),
+      { type:'line', label:'Alvo (1×/sem)', data:semKeys.map(()=>1),
         borderColor:'rgba(14,159,110,.6)', borderDash:[5,4], borderWidth:1.5,
         pointRadius:0, fill:false, order:1 }
     ], options:{plugins:{tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.raw}`}}}, scales:{y:{...BASE.scales.y,min:0,ticks:{...BASE.scales.y.ticks,stepSize:1}}}}});
     const freqSub = document.getElementById('freq-sub');
     if(freqSub) freqSub.innerHTML =
       `<b>Esta semana:</b> ${freqEsta} treinos`+
-      ` &nbsp;<span class="chip ${freqEsta>=4?'chip-v':freqEsta>=3?'chip-a':'chip-r'}">${freqEsta>=4?'✓ Meta atingida':freqEsta>=3?'Próximo do alvo':'Abaixo do alvo'}</span>`+
-      ` · <b>Média:</b> ${freqMed}x/sem · <b>Alvo:</b> 4×/sem`;
+      ` &nbsp;<span class="chip ${freqEsta>=1?'chip-v':'chip-r'}">${freqEsta>=1?'✓ Meta atingida':'Abaixo do alvo'}</span>`+
+      ` · <b>Média:</b> ${freqMed}x/sem · <b>Alvo:</b> 1×/sem`;
   }
 
   // Ícone por esporte
@@ -2017,6 +1967,11 @@ function renderTreinos(ativ,meta,sem){
 
 // ════════════════ EVOLUÇÃO ════════════════
 function renderEvolucao(ativ){
+  destroyChart('pace');
+  destroyChart('fc');
+  destroyChart('vo2');
+  destroyChart('cad');
+  destroyChart('ef');
   const d0=(new Date(Date.now()-curPeriodo*864e5)).toISOString().slice(0,10);
   const corrida=ativ.filter(a=>(!a.esporte||a.esporte==='corrida')&&a.data>=d0);
   const comPace=corrida.filter(a=>a.pace&&a.distancia>=1).slice().reverse();
@@ -2303,6 +2258,10 @@ function stressAssess(v){ return v<25?['Baixo','sa-verde']:v<50?['Moderado','sa-
 function hrvAssess(v){ return v>=55?['Excelente','sa-verde']:v>=45?['Bom','sa-azul']:v>=35?['Moderado','sa-amarelo']:['Baixo','sa-vermelho']; }
 
 function renderSaude(bb,sono,stress,hrv){
+  destroyChart('bb');
+  destroyChart('sono');
+  destroyChart('stress');
+  destroyChart('hrv');
   const d0=(new Date(Date.now()-curPeriodo*864e5)).toISOString().slice(0,10);
   const bbKeys     = Object.keys(bb).sort().filter(k=>k>=d0);
   const sonoKeys   = Object.keys(sono).sort().filter(k=>k>=d0);
