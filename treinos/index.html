@@ -250,6 +250,7 @@ body{padding-top:45px}
 /* ── OBJETIVO DE PROVA ── */
 .race-goal-card{background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1.5px solid #93c5fd;border-radius:12px;padding:1rem;margin-bottom:.75rem}
 .race-goal-card.set{background:linear-gradient(135deg,#ecfdf5,#d1fae5);border-color:#6ee7b7}
+.race-goal-card.collapsed .race-goal-content,.race-goal-card.collapsed .race-goal-btns{display:none}
 .race-goal-title{font-size:.75rem;font-weight:800;color:#1e40af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:.75rem}
 .race-goal-card.set .race-goal-title{color:#065f46}
 .race-goal-content{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:.6rem}
@@ -270,6 +271,9 @@ body{padding-top:45px}
 .race-goal-btn-clear:hover{background:#e2e8f0}
 .race-goal-meta{font-size:.68rem;color:var(--muted);line-height:1.5;margin-top:.6rem;padding-top:.6rem;border-top:1px solid rgba(255,255,255,.5)}
 .race-goal-card.set .race-goal-meta{border-top-color:rgba(16,185,129,.2)}
+.race-goal-summary-actions{display:flex;gap:.45rem;justify-content:flex-end;margin-top:.65rem;flex-wrap:wrap}
+.race-goal-inline-btn{background:#fff;color:var(--text);border:1px solid var(--border);border-radius:999px;padding:.35rem .8rem;font-size:.72rem;font-weight:700;cursor:pointer;font-family:inherit}
+.race-goal-inline-btn.primary{background:var(--green);border-color:var(--green);color:#fff}
 
 /* ── EMPTY ── */
 .empty{text-align:center;padding:2.5rem 1rem;background:var(--card);border-radius:var(--r);border:1px solid var(--border)}
@@ -1597,6 +1601,7 @@ function setCoachEsporte(e,btn){
 
 // ── Objetivo de Prova ──
 let raceGoal = null;
+let raceGoalExpanded = true;
 
 function loadRaceGoal(){
   raceGoal = null;
@@ -1611,9 +1616,11 @@ function loadRaceGoal(){
   if(raceGoal){
     document.getElementById('race-goal-dist').value = raceGoal.dist || '';
     document.getElementById('race-goal-date').value = raceGoal.date || '';
+    raceGoalExpanded = false;
   } else {
     document.getElementById('race-goal-dist').value = '';
     document.getElementById('race-goal-date').value = '';
+    raceGoalExpanded = true;
   }
   
   updateRaceGoalUI();
@@ -1637,13 +1644,21 @@ function saveRaceGoal(){
     localStorage.setItem('coachEvento', curEvento);
   }
   initEventoBtn();
+  raceGoalExpanded = false;
   updateRaceGoalUI();
   setAppAlert('Objetivo de prova salvo com sucesso.');
   if(DATA){const a=(DATA.atividades||[]).sort((a,b)=>b.data.localeCompare(a.data));renderCoach(a,DATA.meta||{},DATA.bodyBattery||{},DATA.sono||{},DATA.stress||{},DATA.hrv||{},DATA.semanal||{});}
 }
 
+function editRaceGoal(){
+  raceGoalExpanded = true;
+  updateRaceGoalUI();
+  setAppAlert('Edite a distância ou a data e salve novamente.');
+}
+
 function clearRaceGoal(){
   raceGoal = null;
+  raceGoalExpanded = true;
   localStorage.removeItem('raceGoal');
   document.getElementById('race-goal-dist').value = '';
   document.getElementById('race-goal-date').value = '';
@@ -1654,11 +1669,12 @@ function clearRaceGoal(){
 
 function updateRaceGoalUI(){
   const distLbl = {10:'10 km', 21.1:'21,1 km (Meia)', 42.2:'42,2 km (Maratona)'};
+  const card = document.getElementById('race-goal-card');
   if(raceGoal){
     const semana = semanaISO(raceGoal.date);
     const dias = Math.round((new Date(raceGoal.date+'T12:00:00') - new Date())/864e5);
-    const card = document.getElementById('race-goal-card');
     card.classList.add('set');
+    card.classList.toggle('collapsed', !raceGoalExpanded);
     document.getElementById('race-goal-dist').value = raceGoal.dist;
     document.getElementById('race-goal-date').value = raceGoal.date;
     document.getElementById('race-goal-meta').innerHTML = `
@@ -1672,10 +1688,14 @@ function updateRaceGoalUI(){
           <div><b>${semana}</b></div>
           <div>${dias > 0 ? '~' + Math.round(dias/7) + ' semanas' : '—'}</div>
         </div>
+      </div>
+      <div class="race-goal-summary-actions">
+        <button class="race-goal-inline-btn primary" onclick="editRaceGoal()">Editar</button>
+        <button class="race-goal-inline-btn" onclick="clearRaceGoal()">Limpar</button>
       </div>`;
   } else {
-    const card = document.getElementById('race-goal-card');
     card.classList.remove('set');
+    card.classList.remove('collapsed');
     document.getElementById('race-goal-meta').innerHTML = '';
   }
 }
