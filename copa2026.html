@@ -578,7 +578,21 @@ async function loadMata(){
     for(const r of results){
       if(r.status==='fulfilled') (r.value.events||[]).map(parseEvent).forEach(g=>all.push(g));
     }
-    const r16 = all.filter(g => g.stage==='R16').sort((a,b)=>a.date-b.date);
+    let r16 = all.filter(g => g.stage==='R16').sort((a,b)=>a.date-b.date);
+
+    // ESPN sometimes does not tag stage names in early feeds; if that happens,
+    // show the real games in the expected Round-of-16 window instead of placeholders.
+    if(!r16.length && all.length){
+      r16 = all
+        .slice()
+        .sort((a,b)=>a.date-b.date)
+        .slice(0,8)
+        .map(g => ({
+          ...g,
+          detail: g.detail || 'Fase eliminatória'
+        }));
+    }
+
     document.getElementById('ub-mata').textContent = `Atualizado às ${ts()}`;
     el.innerHTML = renderR16(r16);
     mataLoaded = true;
