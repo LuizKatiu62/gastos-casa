@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Treinos">
 <meta name="theme-color" content="#1a56db">
-<link rel="manifest" href="./manifest.json?v=2026-06-27-1">
+<link rel="manifest" href="./manifest.json?v=2026-06-28-1">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%231a56db' width='192' height='192'/><text x='50%' y='50%' font-size='120' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%231a56db' width='180' height='180' rx='40'/><text x='50%' y='50%' font-size='110' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <title>Treinos · Luiz Silva</title>
@@ -128,6 +128,14 @@ body{padding-top:45px}
 .sf-btn{border:1.5px solid var(--border);background:#fff;border-radius:20px;padding:.28rem .7rem;font-size:.72rem;font-weight:700;color:var(--muted);cursor:pointer;font-family:inherit;transition:all .15s}
 .sf-btn.sf-on{background:var(--blue);border-color:var(--blue);color:#fff}
 .tp-levels{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.6rem}
+.tp-levels .sf-btn{white-space:nowrap}
+.tp-types-note{font-size:.72rem;color:var(--text2);line-height:1.5;margin-top:.4rem}
+.tp-type-card{background:linear-gradient(135deg,#eff6ff,#f8fafc);border:1px solid #bfdbfe;border-radius:12px;padding:.85rem;margin-bottom:.65rem}
+.tp-type-title{font-size:.8rem;font-weight:800;color:#1e40af;text-transform:uppercase;letter-spacing:.4px;margin-bottom:.35rem}
+.tp-type-desc{font-size:.78rem;color:var(--text);line-height:1.55}
+.tp-type-chip{display:inline-block;margin-top:.45rem;padding:.2rem .55rem;border-radius:999px;background:#dbeafe;color:#1d4ed8;font-size:.66rem;font-weight:700}
+.tp-alt-list{display:flex;gap:.35rem;flex-wrap:wrap;margin-top:.6rem}
+.tp-alt-chip{border:1px solid var(--border);background:#fff;border-radius:999px;padding:.24rem .55rem;font-size:.68rem;color:var(--text2);font-family:inherit}
 .tp-week{display:flex;flex-direction:column;gap:.45rem}
 .tp-row{display:grid;grid-template-columns:56px 1fr auto;gap:.55rem;align-items:center;background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:.5rem .6rem}
 .tp-day{font-size:.66rem;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--blue)}
@@ -429,12 +437,20 @@ body{padding-top:45px}
         <button class="sf-btn period-btn" data-days="7" onclick="setPeriodo(7,this)">7d</button>
       </div>
       <div class="card">
-        <div class="card-title">🗓️ Treinos Programados (Grupo semanal)</div>
+        <div class="card-title">🗓️ Treinos Programados (escolha o tipo)</div>
         <div id="tp-levels" class="tp-levels">
-          <button class="sf-btn" onclick="setPlanoNivel('iniciante',this)">Iniciante</button>
-          <button class="sf-btn sf-on" onclick="setPlanoNivel('intermediario',this)">Intermediário</button>
-          <button class="sf-btn" onclick="setPlanoNivel('avancado',this)">Avançado</button>
+          <button class="sf-btn sf-on" onclick="setPlanoTipo('intervalado',this)">Intervalado</button>
+          <button class="sf-btn" onclick="setPlanoTipo('fartlek',this)">Fartlek</button>
+          <button class="sf-btn" onclick="setPlanoTipo('tempo',this)">Tempo</button>
+          <button class="sf-btn" onclick="setPlanoTipo('longao',this)">Longão</button>
+          <button class="sf-btn" onclick="setPlanoTipo('rodagem',this)">Rodagem leve</button>
+          <button class="sf-btn" onclick="setPlanoTipo('progressivo',this)">Progressivo</button>
+          <button class="sf-btn" onclick="setPlanoTipo('subidas',this)">Subidas</button>
+          <button class="sf-btn" onclick="setPlanoTipo('recuperacao',this)">Recuperação</button>
+          <button class="sf-btn" onclick="setPlanoTipo('forca',this)">Força</button>
+          <button class="sf-btn" onclick="setPlanoTipo('cross',this)">Cross-train</button>
         </div>
+        <div class="tp-types-note">Escolha o tipo de treino que quer fazer nesta semana. O app guarda sua escolha e sugere a sessão correspondente.</div>
         <div id="tp-list" class="tp-week"></div>
       </div>
       <div class="div-label">Últimos <span class="period-note">180 dias</span></div>
@@ -655,43 +671,24 @@ window.addEventListener('DOMContentLoaded', () => {
 const FB_DB   = 'https://gastos-casa-7f431-default-rtdb.firebaseio.com';
 const FB_KEY  = 'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU';
 const FB_PATH = 'treinos/luiz';
-const APP_VERSION = '2026-06-27-1';
+const APP_VERSION = '2026-06-28-1';
 const SNAPSHOT_KEY = 'treinos_last_snapshot_v1';
 let charts = {}, curTab = 'coach', DATA = null, curEsporte = 'todos';
 const PERIODO = 180; // dias padrão para todas as médias do app
 let curPeriodo = PERIODO;
-let curPlanoNivel = 'intermediario';
+let curPlanoTipo = 'intervalado';
 const TP_STATE_KEY = 'treinos_programados_state_v2';
-const PLANO_SEMANAL = {
-  iniciante: [
-    {dia:'Sab', treino:'Rodagem leve', nota:'5-7 km em Z1/Z2, ritmo confortável e sem dor.'}
-  ],
-  intermediario: [
-    {dia:'Sab', treino:'Treino único da semana', nota:'8-12 km em Z2 com 10-15 min finais moderados.'}
-  ],
-  avancado: [
-    {dia:'Sab', treino:'Treino único longo', nota:'12-18 km progressivo, mantendo controle de FC.'}
-  ]
-};
-const PLANO_VARIACOES = {
-  iniciante: [
-    [
-      {treino:'Rodagem leve',nota:'5-6 km em Z1/Z2 (ritmo confortável).'},
-      {treino:'Rodagem progressiva',nota:'7-8 km começando leve e fechando moderado.'}
-    ]
-  ],
-  intermediario: [
-    [
-      {treino:'Treino único da semana',nota:'8-12 km em Z2 com 10-15 min finais moderados.'},
-      {treino:'Treino único progressivo',nota:'9-13 km começando leve e fechando forte controlado.'}
-    ]
-  ],
-  avancado: [
-    [
-      {treino:'Treino único longo',nota:'12-18 km progressivo, mantendo controle de FC.'},
-      {treino:'Treino único específico',nota:'14-20 km com bloco em ritmo de prova no meio.'}
-    ]
-  ]
+const PLANO_TIPOS = {
+  intervalado:{label:'Intervalado', foco:'Velocidade e limiar', sugestao:'Ex.: 6×800 m forte com 2 min de recuperação.', duracao:'45–70 min', alt:['4×1 km', '10×400 m', '8×2 min']},
+  fartlek:{label:'Fartlek', foco:'Variação de ritmo', sugestao:'Ex.: 10 blocos de 1 min forte / 1 min leve.', duracao:'40–60 min', alt:['Pirâmide 1-2-3-2-1', 'Tempo livre', 'Fartlek por terreno']},
+  tempo:{label:'Tempo', foco:'Ritmo sustentável', sugestao:'Ex.: 20–30 min em ritmo de prova controlado.', duracao:'50–80 min', alt:['3×10 min', '2×15 min', 'Limiar contínuo']},
+  longao:{label:'Longão', foco:'Base e resistência', sugestao:'Ex.: 12–18 km em Z2, sem forçar.', duracao:'80–140 min', alt:['Longão progressivo', 'Longão com gel', 'Longão leve']},
+  rodagem:{label:'Rodagem leve', foco:'Recuperação ativa', sugestao:'Ex.: 5–8 km em Z1/Z2, bem solto.', duracao:'30–55 min', alt:['Trote solto', 'Recuperação ativa', 'Ritmo conversável']},
+  progressivo:{label:'Progressivo', foco:'Controle de ritmo', sugestao:'Ex.: começar leve e terminar moderado/forte.', duracao:'40–75 min', alt:['Negativo split', 'Fartlek progressivo', 'Fechamento forte']},
+  subidas:{label:'Subidas', foco:'Força específica', sugestao:'Ex.: 8×60 s subindo, descendo leve.', duracao:'35–60 min', alt:['Hill repeats', 'Subidas curtas', 'Subidas longas']},
+  recuperacao:{label:'Recuperação', foco:'Soltar o corpo', sugestao:'Ex.: caminhada, bike leve ou trote bem leve.', duracao:'20–45 min', alt:['Mobilidade', 'Bike Z1', 'Nado leve']},
+  forca:{label:'Força', foco:'Estabilidade e prevenção', sugestao:'Ex.: core, glúteo, posterior e panturrilha.', duracao:'30–50 min', alt:['Funcional', 'Mobilidade + core', 'Estabilidade']},
+  cross:{label:'Cross-train', foco:'Cardio sem impacto', sugestao:'Ex.: bike, natação ou elíptico em Z2.', duracao:'30–75 min', alt:['Bike Z2', 'Nado técnico', 'Elíptico']}
 };
 let tpState = loadTpState();
 
@@ -778,10 +775,29 @@ function setEsporte(e,btn){
   if(DATA){const a=(DATA.atividades||[]).sort((a,b)=>b.data.localeCompare(a.data));renderTreinos(a,DATA.meta||{},DATA.semanal||{});}
 }
 
-function setPlanoNivel(nivel,btn){
-  curPlanoNivel = nivel;
+function inferPlanoTipo(txt){
+  const t = (txt||'').toLowerCase();
+  if(t.includes('interval')) return 'intervalado';
+  if(t.includes('fartlek')) return 'fartlek';
+  if(t.includes('tempo') || t.includes('limiar')) return 'tempo';
+  if(t.includes('longão') || t.includes('longo')) return 'longao';
+  if(t.includes('rodagem') || t.includes('fácil') || t.includes('facil')) return 'rodagem';
+  if(t.includes('progress')) return 'progressivo';
+  if(t.includes('subid')) return 'subidas';
+  if(t.includes('recuper')) return 'recuperacao';
+  if(t.includes('força') || t.includes('forca')) return 'forca';
+  if(t.includes('cross') || t.includes('bike') || t.includes('natação') || t.includes('natacao')) return 'cross';
+  return 'intervalado';
+}
+
+function setPlanoTipo(tipo,btn){
+  curPlanoTipo = tipo;
   document.querySelectorAll('#tp-levels .sf-btn').forEach(b=>b.classList.remove('sf-on'));
   if(btn) btn.classList.add('sf-on');
+  const wk = ensureWeeklyPlano(tipo);
+  wk.data.selectedType = tipo;
+  wk.data.done = {};
+  saveTpState();
   renderPlanoSemanal();
 }
 
@@ -832,63 +848,30 @@ function nivelIndex(nivel){
 }
 
 function ensureWeeklyPlano(nivel){
+  const tipo = nivel || curPlanoTipo;
   const nowWeek = isoWeekInfo().key;
   if(!tpState.weeks[nowWeek]) tpState.weeks[nowWeek] = {};
-  if(tpState.weeks[nowWeek][nivel]) {
-    const existing = tpState.weeks[nowWeek][nivel];
-    const targetBase = PLANO_SEMANAL[nivel] || PLANO_SEMANAL.intermediario;
-    if(Array.isArray(existing.plan) && existing.plan.length !== targetBase.length){
-      const first = existing.plan[0] || targetBase[0];
-      const hadAnyDone = existing.done ? Object.values(existing.done).some(Boolean) : false;
-      tpState.weeks[nowWeek][nivel] = {
-        plan: [{dia:targetBase[0].dia, treino:first.treino || targetBase[0].treino, nota:first.nota || targetBase[0].nota}],
-        done: hadAnyDone ? {0:true} : {}
-      };
-      saveTpState();
-    }
-    return {weekKey:nowWeek, data:tpState.weeks[nowWeek][nivel]};
-  }
+  if(tpState.weeks[nowWeek][tipo]) return {weekKey:nowWeek, data:tpState.weeks[nowWeek][tipo]};
 
   const prevKey = prevWeekKey(nowWeek);
-  const prev = tpState.weeks?.[prevKey]?.[nivel];
-  const prevDoneCount = prev && prev.done ? Object.values(prev.done).filter(Boolean).length : 0;
-  const pools = PLANO_VARIACOES[nivel] || [];
-  const base = PLANO_SEMANAL[nivel] || PLANO_SEMANAL.intermediario;
-  const weekNum = Number(nowWeek.split('-W')[1]) || 1;
-  const seed = weekNum + prevDoneCount + nivelIndex(nivel);
+  const prev = tpState.weeks?.[prevKey]?.[tipo];
+  const info = PLANO_TIPOS[tipo] || PLANO_TIPOS.intervalado;
+  const inferido = inferPlanoTipo(prev?.selectedType || prev?.plan?.[0]?.treino || '');
 
-  const plan = base.map((item,idx)=>{
-    const opts = pools[idx] || [item];
-    const pick = (seed + idx) % opts.length;
-    const chosen = opts[pick] || item;
-    return {dia:item.dia, treino:chosen.treino, nota:chosen.nota};
-  });
-
-  if(prev?.plan?.length===plan.length){
-    const sameAll = plan.every((p,idx)=> p.treino===prev.plan[idx]?.treino && p.nota===prev.plan[idx]?.nota);
-    if(sameAll){
-      for(let i=0;i<plan.length;i++){
-        const opts = pools[i] || [plan[i]];
-        if(opts.length>1){
-          const alt = opts[(seed + i + 1) % opts.length] || opts[0];
-          plan[i] = {dia:plan[i].dia, treino:alt.treino, nota:alt.nota};
-          break;
-        }
-      }
-    }
-  }
-
-  tpState.weeks[nowWeek][nivel] = { plan, done:{} };
+  tpState.weeks[nowWeek][tipo] = {
+    selectedType: prev?.selectedType || inferido || tipo,
+    done: {}
+  };
   saveTpState();
-  return {weekKey:nowWeek, data:tpState.weeks[nowWeek][nivel]};
+  return {weekKey:nowWeek, data:tpState.weeks[nowWeek][tipo], info};
 }
 
 function togglePlanoDone(idx){
-  const {weekKey, data} = ensureWeeklyPlano(curPlanoNivel);
+  const {weekKey, data} = ensureWeeklyPlano(curPlanoTipo);
   if(!tpState.weeks[weekKey]) tpState.weeks[weekKey] = {};
-  if(!tpState.weeks[weekKey][curPlanoNivel]) tpState.weeks[weekKey][curPlanoNivel] = data;
-  const cur = !!tpState.weeks[weekKey][curPlanoNivel].done[idx];
-  tpState.weeks[weekKey][curPlanoNivel].done[idx] = !cur;
+  if(!tpState.weeks[weekKey][curPlanoTipo]) tpState.weeks[weekKey][curPlanoTipo] = data;
+  const cur = !!tpState.weeks[weekKey][curPlanoTipo].done[idx];
+  tpState.weeks[weekKey][curPlanoTipo].done[idx] = !cur;
   saveTpState();
   renderPlanoSemanal();
 }
@@ -896,21 +879,34 @@ function togglePlanoDone(idx){
 function renderPlanoSemanal(){
   const el = document.getElementById('tp-list');
   if(!el) return;
-  const wk = ensureWeeklyPlano(curPlanoNivel);
-  const plano = wk.data.plan || PLANO_SEMANAL[curPlanoNivel] || PLANO_SEMANAL.intermediario;
+  const wk = ensureWeeklyPlano(curPlanoTipo);
+  const tipoAtual = wk.data.selectedType || curPlanoTipo || 'intervalado';
+  curPlanoTipo = tipoAtual;
+  document.querySelectorAll('#tp-levels .sf-btn').forEach(b => {
+    b.classList.toggle('sf-on', (b.getAttribute('onclick')||'').includes(`'${tipoAtual}'`));
+  });
   const done = wk.data.done || {};
   const doneCount = Object.values(done).filter(Boolean).length;
-  const meta = `<div class="tp-meta">Semana ${wk.weekKey} · concluídos ${doneCount}/${plano.length} · frequência: 1 treino por semana.</div>`;
-  el.innerHTML = meta + plano.map((item,idx) => `
-    <div class="tp-row">
-      <div class="tp-day">${item.dia}</div>
-      <div>
-        <div class="tp-work">${item.treino}</div>
-        <div class="tp-note">${item.nota}</div>
-      </div>
-      <button class="tp-done ${done[idx]?'on':''}" onclick="togglePlanoDone(${idx})">${done[idx]?'Feito':'Confirmar'}</button>
+  const info = PLANO_TIPOS[tipoAtual] || PLANO_TIPOS.intervalado;
+  const alt = (info.alt || []).map(a => `<span class="tp-alt-chip">${a}</span>`).join('');
+  const confirmText = done[0] ? 'Feito' : 'Confirmar';
+  el.innerHTML = `
+    <div class="tp-meta">Semana ${wk.weekKey} · escolha atual: ${info.label} · concluído ${doneCount}/1</div>
+    <div class="tp-type-card">
+      <div class="tp-type-title">${info.label}</div>
+      <div class="tp-type-desc"><b>Foco:</b> ${info.foco}<br><b>Como fazer:</b> ${info.sugestao}<br><b>Duração:</b> ${info.duracao}</div>
+      <div class="tp-type-chip">Tipo selecionado para esta semana</div>
+      <div class="tp-alt-list">${alt}</div>
     </div>
-  `).join('');
+    <div class="tp-row">
+      <div class="tp-day">Semana</div>
+      <div>
+        <div class="tp-work">${info.label}</div>
+        <div class="tp-note">${info.sugestao}</div>
+      </div>
+      <button class="tp-done ${done[0]?'on':''}" onclick="togglePlanoDone(0)">${confirmText}</button>
+    </div>
+  `;
 }
 
 function setAppAlert(msg, tone='info'){
