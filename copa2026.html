@@ -549,7 +549,15 @@ function koCardHTML(g){
 }
 
 function renderR16(games){
-  const list = games.length ? games : R16_FALLBACK.map(g => ({...g, isLive:false, isDone:false, detail:'Confronto a definir'}));
+  const list = games.length
+    ? games
+    : R16_FALLBACK.map(g => ({
+        ...g,
+        date: new Date(g.date),
+        isLive:false,
+        isDone:false,
+        detail:'Confronto a definir'
+      }));
   return `<div class="ko-wrap">
     <div class="ko-stage-title">Oitavas de Final</div>
     ${list.map(koCardHTML).join('')}
