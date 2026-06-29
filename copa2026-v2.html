@@ -233,8 +233,8 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--white);min-
 }
 .ko-brazil-title{font-size:.68rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#d6f5e7;margin-bottom:.35rem}
 .ko-brazil-note{font-size:.78rem;color:#eafaf1}
-.bracket-scroll{overflow-x:auto;padding-bottom:.2rem}
-.bracket-grid{display:grid;grid-template-columns:repeat(4,minmax(230px,1fr));gap:.7rem;min-width:940px}
+.bracket-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;padding:0 .35rem .25rem 0}
+.bracket-grid{display:grid;gap:.7rem;min-width:max-content}
 .stage-col{display:flex;flex-direction:column;gap:.5rem}
 .stage-hdr{
   font-size:.7rem;font-weight:800;letter-spacing:1.1px;text-transform:uppercase;
@@ -425,6 +425,7 @@ function statusPT(st){
 
 function detectStage(note, detail){
   const txt = `${note||''} ${detail||''}`.toLowerCase();
+  if(/round of 32|16-avos|dezesseis-avos|1\/16/.test(txt)) return 'R32';
   if(/round of 16|oitavas|1\/8|eighth-final/.test(txt)) return 'R16';
   if(/quarterfinal|quartas|1\/4/.test(txt)) return 'QF';
   if(/semifinal|semi-final|semi final/.test(txt)) return 'SF';
@@ -520,8 +521,9 @@ async function fetchStandings(){
 // ── RENDER LIST — renders each card individually so one bad card never kills the rest
 function renderList(games){ return games.map(g=>{ try{return cardHTML(g);}catch(e){return '';} }).join(''); }
 
-const KO_STAGE_ORDER = ['R16','QF','SF','F'];
+const KO_STAGE_ORDER = ['R32','R16','QF','SF','F'];
 const KO_STAGE_LABEL = {
+  R32:'16-avos (Round of 32)',
   R16:'Oitavas de Final',
   QF:'Quartas de Final',
   SF:'Semifinal',
@@ -530,14 +532,17 @@ const KO_STAGE_LABEL = {
 
 function stageByDate(d){
   const t = new Date(d).getTime();
-  const r16s = new Date('2026-07-02T00:00:00').getTime();
-  const r16e = new Date('2026-07-06T23:59:59').getTime();
+  const r32s = new Date('2026-06-28T00:00:00').getTime();
+  const r32e = new Date('2026-07-03T23:59:59').getTime();
+  const r16s = new Date('2026-07-04T00:00:00').getTime();
+  const r16e = new Date('2026-07-07T23:59:59').getTime();
   const qfs  = new Date('2026-07-09T00:00:00').getTime();
   const qfe  = new Date('2026-07-11T23:59:59').getTime();
   const sfs  = new Date('2026-07-14T00:00:00').getTime();
   const sfe  = new Date('2026-07-15T23:59:59').getTime();
   const fs   = new Date('2026-07-19T00:00:00').getTime();
   const fe   = new Date('2026-07-19T23:59:59').getTime();
+  if(t>=r32s && t<=r32e) return 'R32';
   if(t>=r16s && t<=r16e) return 'R16';
   if(t>=qfs && t<=qfe) return 'QF';
   if(t>=sfs && t<=sfe) return 'SF';
@@ -585,7 +590,7 @@ function renderBrazilSpotlight(games){
 }
 
 function renderBracket(games){
-  const byStage = {R16:[],QF:[],SF:[],F:[]};
+  const byStage = {R32:[],R16:[],QF:[],SF:[],F:[]};
   games.forEach(g=>{ if(byStage[g.stage]) byStage[g.stage].push(g); });
   KO_STAGE_ORDER.forEach(k => byStage[k].sort((a,b)=>a.date-b.date));
 
@@ -596,7 +601,7 @@ function renderBracket(games){
     return `<div class="stage-col"><div class="stage-hdr">${KO_STAGE_LABEL[k]}</div>${matches}</div>`;
   }).join('');
 
-  return `<div class="bracket-scroll"><div class="bracket-grid">${cols}</div></div>`;
+  return `<div class="bracket-scroll"><div class="bracket-grid" style="grid-template-columns:repeat(${KO_STAGE_ORDER.length},minmax(220px,1fr));">${cols}</div></div>`;
 }
 
 async function loadMata(){
@@ -604,7 +609,7 @@ async function loadMata(){
   const el = document.getElementById('list-mata');
   el.innerHTML = '<div class="loading"><div class="spin"></div><br>Carregando mata-mata…</div>';
   try {
-    const from = new Date('2026-07-02T00:00:00');
+    const from = new Date('2026-06-28T00:00:00');
     const to   = new Date('2026-07-19T23:59:59');
     const days = [];
     for(let d = new Date(from); d <= to; d.setDate(d.getDate()+1)) days.push(new Date(d));
