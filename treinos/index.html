@@ -1894,13 +1894,13 @@ function renderTreinos(ativ,meta,sem){
   const f7=periodFiltered.filter(a=>a.data>=d7s);
   const km7f=f7.reduce((s,a)=>s+a.distancia,0).toFixed(1);
   const t7f=f7.length;
-  const comPace=periodFiltered.filter(a=>a.pace&&a.distancia>=1);
+  const comPace=periodFiltered.filter(a=>getEsporte(a)==='corrida'&&a.pace&&a.distancia>=1);
   const melhor=comPace.length?s2p(Math.min(...comPace.map(a=>p2s(a.pace)))):'—';
 
   document.getElementById('t-stats').innerHTML=`
     <div class="stat"><div class="sv" style="color:var(--blue)">${km7f}</div><div class="sl">km esta sem.</div></div>
     <div class="stat"><div class="sv" style="color:var(--green)">${t7f}</div><div class="sl">treinos / sem.</div></div>
-    <div class="stat"><div class="sv" style="color:var(--orange)">${melhor}</div><div class="sl">melhor pace</div></div>`;
+    <div class="stat"><div class="sv" style="color:var(--orange)">${melhor}</div><div class="sl">melhor pace corrida</div></div>`;
 
   // Charts — destruir antes de recriar
   if(charts.vol){charts.vol.destroy();charts.vol=null;}
