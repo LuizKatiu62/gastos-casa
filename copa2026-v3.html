@@ -369,6 +369,16 @@ const BASE  = 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world';
 const BASE2 = 'https://site.api.espn.com/apis/v2/sports/soccer/fifa.world';
 const WC_START = new Date('2026-06-11T00:00:00');
 const WC_END   = new Date('2026-07-19T23:59:59');
+const BUILD_ID = '2026-06-29-iphone-refresh';
+
+// Force a fresh URL on iPhone/Safari home-screen caches.
+(() => {
+  const u = new URL(location.href);
+  if (u.searchParams.get('v') !== BUILD_ID) {
+    u.searchParams.set('v', BUILD_ID);
+    location.replace(u.toString());
+  }
+})();
 
 let curTab       = 'hoje';
 let agDate       = today0();
