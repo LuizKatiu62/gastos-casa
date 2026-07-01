@@ -455,6 +455,29 @@ function detectStage(note, detail){
   return 'GR';
 }
 
+function extractShootout(c, home, away, st){
+  const name = (st?.type?.name || '').toUpperCase();
+  const shortDetail = (st?.type?.shortDetail || '').toUpperCase();
+  const isPens = name.includes('PEN') || shortDetail.includes('PEN');
+  if(!isPens) return null;
+
+  const homeId = String(home?.team?.id || home?.id || '');
+  const awayId = String(away?.team?.id || away?.id || '');
+  const details = c?.details || [];
+
+  let homePens = 0;
+  let awayPens = 0;
+  details.forEach(d => {
+    if(!d?.shootout) return;
+    const teamId = String(d?.team?.id || '');
+    const scored = Number(d?.scoreValue || 0);
+    if(teamId === homeId) homePens += scored;
+    if(teamId === awayId) awayPens += scored;
+  });
+
+  return { homePens, awayPens };
+}
+
 // ── PARSE EVENT ───────────────────────────────────────────────────────────────
 function parseEvent(ev){
   const c    = ev.competitions?.[0] || {};
@@ -473,6 +496,7 @@ function parseEvent(ev){
   const ha = (home.team?.abbreviation||'').toUpperCase();
   const aa = (away.team?.abbreviation||'').toUpperCase();
   const channels = (ha==='BRA'||aa==='BRA') ? 'Globo · SporTV' : 'SporTV';
+  const shootout = extractShootout(c, home, away, st);
   return {
     id:ev.id, date:new Date(ev.date||c.date),
     group:grp, venue, channels,
@@ -480,6 +504,7 @@ function parseEvent(ev){
     away:{name:away.team?.displayName||'', abbr:away.team?.abbreviation||'', score:away.score||''},
     status:s.txt, isLive:s.live, isDone:s.done,
     detail:st.type?.shortDetail||'',
+    shootout,
     stage,
   };
 }
@@ -491,8 +516,11 @@ function cardHTML(g){
     scoreBlock = `<div class="sval live">${g.home.score||'0'} · ${g.away.score||'0'}</div>
                   <div class="sstatus live">🔴 ${g.detail||g.status}</div>`;
   } else if(g.isDone){
+    const pens = g.shootout ? `<div class="sstatus">PÊNALTIS: ${g.shootout.homePens} · ${g.shootout.awayPens}</div>` : '';
+    const doneLabel = g.shootout ? '✓ encerrado (pênaltis)' : '✓ encerrado';
     scoreBlock = `<div class="sval">${g.home.score} · ${g.away.score}</div>
-                  <div class="sstatus">✓ encerrado</div>`;
+                  <div class="sstatus">${doneLabel}</div>
+                  ${pens}`;
   } else {
     scoreBlock = `<div class="stime">${fmtTime(g.date)}</div>
                   <div class="sstatus">${g.status||'—'}</div>`;
@@ -581,6 +609,7 @@ function koMatchHTML(g){
   const hs = String(g.home?.score ?? '');
   const as = String(g.away?.score ?? '');
   const bra = isBrazilGame(g);
+  const pensNote = g.shootout ? ` · Pênaltis ${g.shootout.homePens}x${g.shootout.awayPens}` : '';
   return `<div class="ko-match ${bra?'bra-match':''}">
     <div class="ko-meta">
       <div class="ko-date">${fmtDateShort(g.date)} · ${fmtTime(g.date)}</div>
@@ -597,7 +626,7 @@ function koMatchHTML(g){
       <div class="ko-name ${(g.away.abbr||'').toUpperCase()==='BRA'?'bra-team':''}">${g.away.name}</div>
       <div class="ko-score">${as!==''?as:'—'}</div>
     </div>
-    ${g.detail?`<div class="ko-note">${g.detail}</div>`:''}
+    ${(g.detail||pensNote)?`<div class="ko-note">${g.detail||'FT'}${pensNote}</div>`:''}
   </div>`;
 }
 
