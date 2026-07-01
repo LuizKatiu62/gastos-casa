@@ -462,6 +462,23 @@ body{padding-top:45px}
         </div>
         <div id="tp-list" class="tp-week"></div>
       </div>
+      <div class="card">
+        <div class="card-title">🧭 Coach Semanal (1x/semana)</div>
+        <div id="coach-levels" class="tp-levels">
+          <button class="sf-btn sf-on" onclick="setCoachSemanalTipo('intervalado',this)">Intervalado</button>
+          <button class="sf-btn" onclick="setCoachSemanalTipo('fartlek',this)">Fartlek</button>
+          <button class="sf-btn" onclick="setCoachSemanalTipo('tempo',this)">Tempo</button>
+          <button class="sf-btn" onclick="setCoachSemanalTipo('longao',this)">Longão</button>
+          <button class="sf-btn" onclick="setCoachSemanalTipo('rodagem',this)">Rodagem leve</button>
+          <button class="sf-btn" onclick="setCoachSemanalTipo('progressivo',this)">Progressivo</button>
+          <button class="sf-btn" onclick="setCoachSemanalTipo('subidas',this)">Subidas</button>
+          <button class="sf-btn" onclick="setCoachSemanalTipo('recuperacao',this)">Recuperação</button>
+          <button class="sf-btn" onclick="setCoachSemanalTipo('forca',this)">Força</button>
+          <button class="sf-btn" onclick="setCoachSemanalTipo('cross',this)">Cross-train</button>
+        </div>
+        <div class="tp-types-note">Sessão única semanal para orientação de grupo/coaching. Escolha o tipo da semana e marque como concluído.</div>
+        <div id="coach-list" class="tp-week"></div>
+      </div>
       <div class="div-label">Últimos <span class="period-note">180 dias</span></div>
       <div id="t-stats" class="sgrid sg3" style="margin-bottom:.75rem"></div>
       <div class="card">
@@ -686,8 +703,22 @@ let charts = {}, curTab = 'coach', DATA = null, curEsporte = 'todos';
 const PERIODO = 180; // dias padrão para todas as médias do app
 let curPeriodo = PERIODO;
 let curPlanoTipo = 'tri_intermediario';
+let curCoachTipo = 'intervalado';
 const TP_STATE_KEY = 'treinos_programados_state_v3';
 const TRI_CFG_KEY = 'tri_cfg_v1';
+const COACH_STATE_KEY = 'treinos_coach_state_v1';
+const COACH_TIPOS = {
+  intervalado:{label:'Intervalado', foco:'Velocidade e limiar', sugestao:'Ex.: 6×800 m forte com 2 min de recuperação.', duracao:'45–70 min', alt:['4×1 km','10×400 m','8×2 min']},
+  fartlek:{label:'Fartlek', foco:'Variação de ritmo', sugestao:'Ex.: 10 blocos de 1 min forte / 1 min leve.', duracao:'40–60 min', alt:['Pirâmide 1-2-3-2-1','Tempo livre','Fartlek por terreno']},
+  tempo:{label:'Tempo', foco:'Ritmo sustentável', sugestao:'Ex.: 20–30 min em ritmo de prova controlado.', duracao:'50–80 min', alt:['3×10 min','2×15 min','Limiar contínuo']},
+  longao:{label:'Longão', foco:'Base e resistência', sugestao:'Ex.: 12–18 km em Z2, sem forçar.', duracao:'80–140 min', alt:['Longão progressivo','Longão com gel','Longão leve']},
+  rodagem:{label:'Rodagem leve', foco:'Recuperação ativa', sugestao:'Ex.: 5–8 km em Z1/Z2, bem solto.', duracao:'30–55 min', alt:['Trote solto','Recuperação ativa','Ritmo conversável']},
+  progressivo:{label:'Progressivo', foco:'Controle de ritmo', sugestao:'Ex.: começar leve e terminar moderado/forte.', duracao:'40–75 min', alt:['Negativo split','Fartlek progressivo','Fechamento forte']},
+  subidas:{label:'Subidas', foco:'Força específica', sugestao:'Ex.: 8×60 s subindo, descendo leve.', duracao:'35–60 min', alt:['Hill repeats','Subidas curtas','Subidas longas']},
+  recuperacao:{label:'Recuperação', foco:'Soltar o corpo', sugestao:'Ex.: caminhada, bike leve ou trote bem leve.', duracao:'20–45 min', alt:['Mobilidade','Bike Z1','Nado leve']},
+  forca:{label:'Força', foco:'Estabilidade e prevenção', sugestao:'Ex.: core, glúteo, posterior e panturrilha.', duracao:'30–50 min', alt:['Funcional','Mobilidade + core','Estabilidade']},
+  cross:{label:'Cross-train', foco:'Cardio sem impacto', sugestao:'Ex.: bike, natação ou elíptico em Z2.', duracao:'30–75 min', alt:['Bike Z2','Nado técnico','Elíptico']}
+};
 const PLANO_TIPOS = {
   tri_iniciante:{label:'Tri Iniciante', foco:'Base técnica + consistência', runFactor:0.85, bikeFactor:0.9, swimFactor:0.9, gymSessions:2},
   tri_intermediario:{label:'Tri Intermediário', foco:'Progressão equilibrada', runFactor:1.0, bikeFactor:1.0, swimFactor:1.0, gymSessions:2},
@@ -701,6 +732,7 @@ const TRI_TARGETS = {
 };
 let tpState = loadTpState();
 let triCfg = loadTriCfg();
+let coachState = loadCoachState();
 
 if(typeof Chart==='undefined'){
   console.warn('Chart.js não carregou. Continuando sem gráficos.');
@@ -825,6 +857,23 @@ function loadTpState(){
 
 function saveTpState(){
   try{ localStorage.setItem(TP_STATE_KEY, JSON.stringify(tpState)); }catch(_){}
+}
+
+function loadCoachState(){
+  try{
+    const raw = localStorage.getItem(COACH_STATE_KEY);
+    if(!raw) return {weeks:{}};
+    const parsed = JSON.parse(raw);
+    if(!parsed || typeof parsed!=='object') return {weeks:{}};
+    if(!parsed.weeks || typeof parsed.weeks!=='object') parsed.weeks = {};
+    return parsed;
+  }catch(_){
+    return {weeks:{}};
+  }
+}
+
+function saveCoachState(){
+  try{ localStorage.setItem(COACH_STATE_KEY, JSON.stringify(coachState)); }catch(_){ }
 }
 
 function loadTriCfg(){
@@ -956,6 +1005,67 @@ function togglePlanoDone(idx){
   tpState.weeks[weekKey][curPlanoTipo].done[idx] = !cur;
   saveTpState();
   renderPlanoSemanal();
+}
+
+function ensureCoachWeekly(tipo){
+  const t = tipo || curCoachTipo;
+  const weekKey = isoWeekInfo().key;
+  if(!coachState.weeks[weekKey]) coachState.weeks[weekKey] = {};
+  if(!coachState.weeks[weekKey][t]) coachState.weeks[weekKey][t] = {done:{}, selectedType:t};
+  return {weekKey, data:coachState.weeks[weekKey][t]};
+}
+
+function setCoachSemanalTipo(tipo, btn){
+  curCoachTipo = tipo;
+  document.querySelectorAll('#coach-levels .sf-btn').forEach(b=>b.classList.remove('sf-on'));
+  if(btn) btn.classList.add('sf-on');
+  const wk = ensureCoachWeekly(tipo);
+  wk.data.selectedType = tipo;
+  saveCoachState();
+  renderCoachSemanal();
+}
+
+function toggleCoachDone(idx){
+  const {weekKey, data} = ensureCoachWeekly(curCoachTipo);
+  if(!coachState.weeks[weekKey]) coachState.weeks[weekKey] = {};
+  if(!coachState.weeks[weekKey][curCoachTipo]) coachState.weeks[weekKey][curCoachTipo] = data;
+  const cur = !!coachState.weeks[weekKey][curCoachTipo].done[idx];
+  coachState.weeks[weekKey][curCoachTipo].done[idx] = !cur;
+  saveCoachState();
+  renderCoachSemanal();
+}
+
+function renderCoachSemanal(){
+  const el = document.getElementById('coach-list');
+  if(!el) return;
+  const wk = ensureCoachWeekly(curCoachTipo);
+  const tipoAtual = wk.data.selectedType || curCoachTipo || 'intervalado';
+  curCoachTipo = tipoAtual;
+  document.querySelectorAll('#coach-levels .sf-btn').forEach(b => {
+    b.classList.toggle('sf-on', (b.getAttribute('onclick')||'').includes(`'${tipoAtual}'`));
+  });
+  const done = wk.data.done || {};
+  const info = COACH_TIPOS[tipoAtual] || COACH_TIPOS.intervalado;
+  const doneCount = Object.values(done).filter(Boolean).length;
+  const alt = (info.alt||[]).map(a=>`<span class="tp-alt-chip">${a}</span>`).join('');
+
+  el.innerHTML = `
+    <div class="tp-meta">Semana ${wk.weekKey} · sessão única semanal · concluído ${doneCount}/1</div>
+    <div class="tp-type-card">
+      <div class="tp-type-title">${info.label}</div>
+      <div class="tp-type-desc"><b>Foco:</b> ${info.foco}<br><b>Como fazer:</b> ${info.sugestao}<br><b>Duração:</b> ${info.duracao}</div>
+      <div class="tp-type-chip">Formato coach 1x por semana</div>
+      <div class="tp-alt-list">${alt}</div>
+    </div>
+    <div class="tp-row">
+      <div class="tp-day">Semana</div>
+      <div>
+        <div class="tp-work">${info.label}</div>
+        <div class="tp-note">${info.sugestao}</div>
+      </div>
+      <button class="tp-done ${done[0]?'on':''}" onclick="toggleCoachDone(0)">${done[0]?'Feito':'Confirmar'}</button>
+    </div>
+  `;
 }
 
 function calcTriAverages(){
@@ -2213,6 +2323,8 @@ function renderTreinos(ativ,meta,sem){
           <div class="run-pace">${a.pace&&a.esporte!=='academia'?a.pace+' /km':''}</div>
         </div>
       </div>`).join('');
+
+  renderCoachSemanal();
 }
 
 // ════════════════ EVOLUÇÃO ════════════════
