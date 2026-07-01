@@ -130,6 +130,9 @@ body{padding-top:45px}
 .tp-levels{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.6rem}
 .tp-levels .sf-btn{white-space:nowrap}
 .tp-types-note{font-size:.72rem;color:var(--text2);line-height:1.5;margin-top:.4rem}
+.tp-config{display:grid;grid-template-columns:1fr 1fr auto;gap:.45rem;margin-top:.6rem}
+.tp-select{border:1px solid var(--border);border-radius:10px;background:#fff;padding:.42rem .55rem;font-size:.75rem;color:var(--text);font-family:inherit}
+.tp-apply{border:1px solid var(--blue);background:var(--blue);color:#fff;border-radius:10px;padding:.42rem .7rem;font-size:.72rem;font-weight:800;cursor:pointer;font-family:inherit}
 .tp-type-card{background:linear-gradient(135deg,#eff6ff,#f8fafc);border:1px solid #bfdbfe;border-radius:12px;padding:.85rem;margin-bottom:.65rem}
 .tp-type-title{font-size:.8rem;font-weight:800;color:#1e40af;text-transform:uppercase;letter-spacing:.4px;margin-bottom:.35rem}
 .tp-type-desc{font-size:.78rem;color:var(--text);line-height:1.55}
@@ -445,6 +448,18 @@ body{padding-top:45px}
           <button class="sf-btn" onclick="setPlanoTipo('tri_regeneracao',this)">Semana Regenerativa</button>
         </div>
         <div class="tp-types-note">Configuração com critérios de progressão: corrida limitada a <b>+10%</b> por semana, longão até <b>35%</b> do volume semanal e <b>2 sessões de academia</b> para suporte ao triathlon.</div>
+        <div class="tp-config">
+          <select id="tp-target" class="tp-select" onchange="setTriTarget(this.value)">
+            <option value="sprint">🎯 Tri Sprint</option>
+            <option value="olimpico">🎯 Tri Olímpico</option>
+            <option value="703">🎯 Tri 70.3</option>
+          </select>
+          <select id="tp-cycle" class="tp-select" onchange="setTriCycle(Number(this.value))">
+            <option value="8">8 semanas</option>
+            <option value="12">12 semanas</option>
+          </select>
+          <button class="tp-apply" onclick="restartTriCycle()">Reiniciar ciclo</button>
+        </div>
         <div id="tp-list" class="tp-week"></div>
       </div>
       <div class="div-label">Últimos <span class="period-note">180 dias</span></div>
@@ -672,13 +687,20 @@ const PERIODO = 180; // dias padrão para todas as médias do app
 let curPeriodo = PERIODO;
 let curPlanoTipo = 'tri_intermediario';
 const TP_STATE_KEY = 'treinos_programados_state_v3';
+const TRI_CFG_KEY = 'tri_cfg_v1';
 const PLANO_TIPOS = {
   tri_iniciante:{label:'Tri Iniciante', foco:'Base técnica + consistência', runFactor:0.85, bikeFactor:0.9, swimFactor:0.9, gymSessions:2},
   tri_intermediario:{label:'Tri Intermediário', foco:'Progressão equilibrada', runFactor:1.0, bikeFactor:1.0, swimFactor:1.0, gymSessions:2},
   tri_avancado:{label:'Tri Avançado', foco:'Construção específica', runFactor:1.08, bikeFactor:1.1, swimFactor:1.08, gymSessions:2},
   tri_regeneracao:{label:'Semana Regenerativa', foco:'Absorção e recuperação', runFactor:0.72, bikeFactor:0.75, swimFactor:0.8, gymSessions:2}
 };
+const TRI_TARGETS = {
+  sprint:{label:'Sprint', run:18, bike:90, swim:4.5},
+  olimpico:{label:'Olímpico', run:28, bike:140, swim:6.0},
+  '703':{label:'70.3', run:40, bike:220, swim:8.5}
+};
 let tpState = loadTpState();
+let triCfg = loadTriCfg();
 
 if(typeof Chart==='undefined'){
   console.warn('Chart.js não carregou. Continuando sem gráficos.');
@@ -805,6 +827,49 @@ function saveTpState(){
   try{ localStorage.setItem(TP_STATE_KEY, JSON.stringify(tpState)); }catch(_){}
 }
 
+function loadTriCfg(){
+  try{
+    const raw = localStorage.getItem(TRI_CFG_KEY);
+    if(!raw) return {target:'olimpico', cycleWeeks:12};
+    const parsed = JSON.parse(raw);
+    return {
+      target: TRI_TARGETS[parsed?.target] ? parsed.target : 'olimpico',
+      cycleWeeks: parsed?.cycleWeeks===8 ? 8 : 12
+    };
+  }catch(_){
+    return {target:'olimpico', cycleWeeks:12};
+  }
+}
+
+function saveTriCfg(){
+  try{ localStorage.setItem(TRI_CFG_KEY, JSON.stringify(triCfg)); }catch(_){}
+}
+
+function setTriTarget(target){
+  if(!TRI_TARGETS[target]) return;
+  triCfg.target = target;
+  saveTriCfg();
+  restartTriCycle();
+}
+
+function setTriCycle(weeks){
+  triCfg.cycleWeeks = weeks===8 ? 8 : 12;
+  saveTriCfg();
+  restartTriCycle();
+}
+
+function restartTriCycle(){
+  tpState.cycle = {
+    startKey: isoWeekInfo().key,
+    target: triCfg.target,
+    cycleWeeks: triCfg.cycleWeeks
+  };
+  saveTpState();
+  const wk = isoWeekInfo().key;
+  if(tpState.weeks?.[wk]) tpState.weeks[wk] = {};
+  renderPlanoSemanal();
+}
+
 function isoWeekInfo(refDate=new Date()){
   const d = new Date(refDate);
   d.setHours(12,0,0,0);
@@ -830,6 +895,26 @@ function prevWeekKey(weekKey){
   return isoWeekInfo(monday).key;
 }
 
+function weekKeyToMonday(weekKey){
+  const [y,w] = String(weekKey||'').split('-W');
+  const year = Number(y), week = Number(w);
+  if(!year || !week) return new Date();
+  const jan4 = new Date(year,0,4);
+  const janDay = (jan4.getDay()+6)%7;
+  const mondayWeek1 = new Date(jan4);
+  mondayWeek1.setDate(jan4.getDate()-janDay);
+  mondayWeek1.setHours(12,0,0,0);
+  const monday = new Date(mondayWeek1);
+  monday.setDate(mondayWeek1.getDate() + (week-1)*7);
+  return monday;
+}
+
+function diffWeeks(fromKey,toKey){
+  const a = weekKeyToMonday(fromKey).getTime();
+  const b = weekKeyToMonday(toKey).getTime();
+  return Math.max(0, Math.round((b-a)/604800000));
+}
+
 function nivelIndex(nivel){
   return nivel==='iniciante'?1:nivel==='intermediario'?2:3;
 }
@@ -840,11 +925,18 @@ function ensureWeeklyPlano(nivel){
   if(!tpState.weeks[nowWeek]) tpState.weeks[nowWeek] = {};
   if(tpState.weeks[nowWeek][tipo]) return {weekKey:nowWeek, data:tpState.weeks[nowWeek][tipo]};
 
+  if(!tpState.cycle){
+    tpState.cycle = {startKey: nowWeek, target: triCfg.target, cycleWeeks: triCfg.cycleWeeks};
+  }
+
   const prevKey = prevWeekKey(nowWeek);
   const prev = tpState.weeks?.[prevKey]?.[tipo];
   const info = PLANO_TIPOS[tipo] || PLANO_TIPOS.tri_intermediario;
   const avg = calcTriAverages();
-  const built = buildTriWeek(info, avg);
+  const cycleTarget = TRI_TARGETS[tpState.cycle.target] ? tpState.cycle.target : triCfg.target;
+  const cycleWeeks = tpState.cycle.cycleWeeks===8 ? 8 : 12;
+  const weekIndex = diffWeeks(tpState.cycle.startKey, nowWeek) + 1;
+  const built = buildPeriodizedTriWeek(info, avg, weekIndex, cycleWeeks, cycleTarget);
 
   tpState.weeks[nowWeek][tipo] = {
     selectedType: prev?.selectedType || tipo,
@@ -868,7 +960,7 @@ function togglePlanoDone(idx){
 
 function calcTriAverages(){
   const ativ = (DATA?.atividades || []).slice();
-  if(!ativ.length) return {runKm:18,bikeKm:70,swimKm:3,gymPerWeek:2};
+  if(!ativ.length) return {runKm:18,bikeKm:70,swimKm:3,gymPerWeek:2,runPace:390,bikePace:165,swimPace:130,runFc:145,bikeFc:138};
   const d28 = new Date(Date.now()-28*864e5).toISOString().slice(0,10);
   const f = ativ.filter(a => a.data >= d28);
   const byWeek = {};
@@ -882,13 +974,25 @@ function calcTriAverages(){
     if(sp==='academia') byWeek[w].gym += 1;
   });
   const weeks = Object.values(byWeek);
-  if(!weeks.length) return {runKm:18,bikeKm:70,swimKm:3,gymPerWeek:2};
+  if(!weeks.length) return {runKm:18,bikeKm:70,swimKm:3,gymPerWeek:2,runPace:390,bikePace:165,swimPace:130,runFc:145,bikeFc:138};
   const avg = k => weeks.reduce((s,w)=>s+(w[k]||0),0)/weeks.length;
+  const recent = ativ.filter(a => a.data >= d28);
+  const runPaces = recent.filter(a=>getEsporte(a)==='corrida'&&a.pace).map(a=>p2s(a.pace));
+  const bikePaces = recent.filter(a=>getEsporte(a)==='bike'&&a.pace).map(a=>p2s(a.pace));
+  const swimPaces = recent.filter(a=>getEsporte(a)==='natacao'&&a.pace).map(a=>p2s(a.pace));
+  const runFc = recent.filter(a=>getEsporte(a)==='corrida'&&a.fcMed>0).map(a=>a.fcMed);
+  const bikeFc = recent.filter(a=>getEsporte(a)==='bike'&&a.fcMed>0).map(a=>a.fcMed);
+  const avgArr=(arr,fallback)=>arr.length?arr.reduce((s,v)=>s+v,0)/arr.length:fallback;
   return {
     runKm: Math.max(12, +avg('runKm').toFixed(1)),
     bikeKm: Math.max(45, +avg('bikeKm').toFixed(1)),
     swimKm: Math.max(2, +avg('swimKm').toFixed(1)),
-    gymPerWeek: Math.max(1, Math.round(avg('gym')))
+    gymPerWeek: Math.max(1, Math.round(avg('gym'))),
+    runPace: Math.round(avgArr(runPaces,390)),
+    bikePace: Math.round(avgArr(bikePaces,165)),
+    swimPace: Math.round(avgArr(swimPaces,130)),
+    runFc: Math.round(avgArr(runFc,145)),
+    bikeFc: Math.round(avgArr(bikeFc,138))
   };
 }
 
@@ -930,6 +1034,70 @@ function buildTriWeek(profile, avg){
   };
 }
 
+function buildPeriodizedTriWeek(profile, avg, weekIndex, totalWeeks, targetKey){
+  const target = TRI_TARGETS[targetKey] || TRI_TARGETS.olimpico;
+  const wk = Math.min(Math.max(weekIndex,1), totalWeeks);
+  const phaseCut1 = Math.round(totalWeeks*0.45);
+  const phaseCut2 = Math.round(totalWeeks*0.8);
+  const baseToPeak = wk/Math.max(totalWeeks-1,1);
+  const phase = wk<=phaseCut1 ? 'base' : wk<=phaseCut2 ? 'build' : 'taper';
+  const deload = wk%4===0 && wk<totalWeeks-1;
+  const deloadFactor = deload ? 0.78 : 1;
+
+  const runCap = avg.runKm * 1.10;
+  const runRaw = (avg.runKm + (target.run-avg.runKm)*baseToPeak) * profile.runFactor * deloadFactor;
+  const bikeRaw = (avg.bikeKm + (target.bike-avg.bikeKm)*baseToPeak) * profile.bikeFactor * deloadFactor;
+  const swimRaw = (avg.swimKm + (target.swim-avg.swimKm)*baseToPeak) * profile.swimFactor * deloadFactor;
+
+  const clamp=(v,min,max)=>Math.min(max,Math.max(min,v));
+  const runTarget = clamp(+Math.min(runRaw,runCap).toFixed(1), 12, 55);
+  const bikeTarget = clamp(+bikeRaw.toFixed(1), 45, 260);
+  const swimTarget = clamp(+swimRaw.toFixed(1), 2, 10);
+
+  const longRun = clamp(+(runTarget * (phase==='taper'?0.24:0.32)).toFixed(1), 6, 18);
+  const qualityRun = clamp(+(runTarget * (phase==='base'?0.18:0.22)).toFixed(1), 4, 12);
+  const easyRun = Math.max(4, +(runTarget - longRun - qualityRun).toFixed(1));
+  const bikeLong = Math.max(35, Math.round(bikeTarget * (phase==='taper'?0.35:0.45)));
+  const bikeQuality = Math.max(20, Math.round(bikeTarget * 0.28));
+  const bikeEasy = Math.max(16, Math.round(bikeTarget - bikeLong - bikeQuality));
+  const swimTech = Math.max(700, Math.round(swimTarget * 1000 * 0.35));
+  const swimEnd = Math.max(1000, Math.round(swimTarget * 1000 * 0.65));
+  const brickRun = clamp(+(easyRun * 0.45).toFixed(1), 3, 8);
+
+  const runEasyPace = s2p(avg.runPace + 25);
+  const runTempoPace = s2p(Math.max(avg.runPace - 15, 250));
+  const bikeZ2 = s2p(avg.bikePace + 10);
+  const swimCss = s2p(Math.max(avg.swimPace - 5, 95));
+  const runFcZ2 = `${Math.max(120,avg.runFc-8)}-${Math.max(130,avg.runFc+6)} bpm`;
+  const bikeFcZ2 = `${Math.max(110,avg.bikeFc-8)}-${Math.max(120,avg.bikeFc+6)} bpm`;
+
+  const plan = [
+    {day:'Seg', treino:`🏊 Técnica ${swimTech} m + 💪 Academia A`, note:`Drills e técnica. Força A (core, glúteo, posterior).`},
+    {day:'Ter', treino:`🚴 Bike qualidade ${bikeQuality} km`, note:`4×6 min Z3/Z4. Z2 alvo ${bikeFcZ2}.`},
+    {day:'Qua', treino:`🏃 Corrida qualidade ${qualityRun} km`, note:`Tempo run em ${runTempoPace}/km, evitando excesso de volume.`},
+    {day:'Qui', treino:`🏊 Endurance ${swimEnd} m + 💪 Academia B`, note:`Séries longas no ritmo CSS ~${swimCss}/100m + força B.`},
+    {day:'Sex', treino:`🚴 Bike leve ${bikeEasy} km`, note:`Recuperação ativa em Z1/Z2 (${bikeZ2}/km).`},
+    {day:'Sáb', treino:`🚴 Longo ${bikeLong} km + 🏃 Brick ${brickRun} km`, note:`Transição bike→corrida para adaptação específica de prova.`},
+    {day:'Dom', treino:`🏃 Longo Z2 ${longRun} km`, note:`Pace fácil ${runEasyPace}/km · FC alvo ${runFcZ2}.`}
+  ];
+
+  return {
+    plan,
+    metrics:{
+      runKm:runTarget,
+      bikeKm:bikeTarget,
+      swimKm:swimTarget,
+      gym:'2x',
+      week: wk,
+      totalWeeks,
+      phase,
+      deload,
+      target: target.label,
+      criterio:'Progressão controlada, deload automático e corrida limitada a +10%.'
+    }
+  };
+}
+
 function renderPlanoSemanal(){
   const el = document.getElementById('tp-list');
   if(!el) return;
@@ -942,8 +1110,17 @@ function renderPlanoSemanal(){
   const done = wk.data.done || {};
   const doneCount = Object.values(done).filter(Boolean).length;
   const info = PLANO_TIPOS[tipoAtual] || PLANO_TIPOS.tri_intermediario;
-  const plan = wk.data.plan || buildTriWeek(info, calcTriAverages()).plan;
-  const metrics = wk.data.metrics || buildTriWeek(info, calcTriAverages()).metrics;
+  const cycle = tpState.cycle || {startKey:wk.weekKey,target:triCfg.target,cycleWeeks:triCfg.cycleWeeks};
+  const weekIndex = diffWeeks(cycle.startKey, wk.weekKey)+1;
+  const built = buildPeriodizedTriWeek(info, calcTriAverages(), weekIndex, cycle.cycleWeeks, cycle.target);
+  const plan = wk.data.plan || built.plan;
+  const metrics = wk.data.metrics || built.metrics;
+  const phaseLabel = metrics.phase==='base'?'Base':metrics.phase==='build'?'Construção':'Polimento';
+  const phaseChip = metrics.deload ? `<span class="tp-alt-chip">Deload</span>` : '';
+  const targetSel = document.getElementById('tp-target');
+  const cycleSel = document.getElementById('tp-cycle');
+  if(targetSel) targetSel.value = cycle.target || triCfg.target;
+  if(cycleSel) cycleSel.value = String(cycle.cycleWeeks || triCfg.cycleWeeks);
   const rows = plan.map((p,i)=>`
     <div class="tp-row">
       <div class="tp-day">${p.day}</div>
@@ -955,12 +1132,12 @@ function renderPlanoSemanal(){
     </div>
   `).join('');
   el.innerHTML = `
-    <div class="tp-meta">Semana ${wk.weekKey} · perfil: ${info.label} · concluído ${doneCount}/${plan.length}</div>
+    <div class="tp-meta">Semana ${wk.weekKey} · ciclo ${metrics.week}/${metrics.totalWeeks} · alvo ${metrics.target} · perfil ${info.label} · concluído ${doneCount}/${plan.length}</div>
     <div class="tp-type-card">
       <div class="tp-type-title">${info.label}</div>
-      <div class="tp-type-desc"><b>Foco:</b> ${info.foco}<br><b>Corrida:</b> ${metrics.runKm} km/sem · <b>Bike:</b> ${metrics.bikeKm} km/sem · <b>Natação:</b> ${metrics.swimKm} km/sem · <b>Academia:</b> ${metrics.gym}<br><b>Critério:</b> ${metrics.criterio}</div>
+      <div class="tp-type-desc"><b>Foco:</b> ${info.foco}<br><b>Fase:</b> ${phaseLabel}${metrics.deload?' (deload)':''}<br><b>Corrida:</b> ${metrics.runKm} km/sem · <b>Bike:</b> ${metrics.bikeKm} km/sem · <b>Natação:</b> ${metrics.swimKm} km/sem · <b>Academia:</b> ${metrics.gym}<br><b>Critério:</b> ${metrics.criterio}</div>
       <div class="tp-type-chip">Tipo selecionado para esta semana</div>
-      <div class="tp-alt-list"><span class="tp-alt-chip">2 sessões de academia</span><span class="tp-alt-chip">1 sessão brick</span><span class="tp-alt-chip">Controle de progressão</span></div>
+      <div class="tp-alt-list"><span class="tp-alt-chip">2 sessões de academia</span><span class="tp-alt-chip">1 sessão brick</span><span class="tp-alt-chip">Controle de progressão</span>${phaseChip}</div>
     </div>
     ${rows}
   `;
