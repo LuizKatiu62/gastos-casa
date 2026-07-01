@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Treinos">
 <meta name="theme-color" content="#1a56db">
-<link rel="manifest" href="./manifest.json?v=2026-06-28-1">
+<link rel="manifest" href="./manifest.json?v=2026-07-01-1">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%231a56db' width='192' height='192'/><text x='50%' y='50%' font-size='120' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%231a56db' width='180' height='180' rx='40'/><text x='50%' y='50%' font-size='110' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <title>Treinos · Luiz Silva</title>
@@ -15,22 +15,22 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#f0f4f8;--card:#fff;--border:#e2e8f0;
-  --blue:#1a56db;--green:#0e9f6e;--red:#ef4444;
-  --purple:#7c3aed;--orange:#f97316;--gold:#d97706;
-  --text:#1e293b;--muted:#64748b;--r:14px;
+  --bg:#edf3f2;--card:#ffffff;--border:#d8e3e1;
+  --blue:#0f766e;--green:#16a34a;--red:#dc2626;
+  --purple:#155e75;--orange:#ea580c;--gold:#b45309;
+  --text:#0f172a;--text2:#334155;--muted:#5f6f86;--r:16px;
 }
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);padding-bottom:50px}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:radial-gradient(circle at 12% -8%,#d6efe9 0%,#edf3f2 42%,#e7edf3 100%);color:var(--text);padding-bottom:50px}
 
 /* ── HEADER ── */
-.hdr{background:linear-gradient(135deg,#1a56db,#0e9f6e);color:#fff;padding:1.3rem 1rem 1rem;display:flex;align-items:center;justify-content:space-between}
+.hdr{background:linear-gradient(135deg,#0f766e,#0f766e 45%,#155e75);color:#fff;padding:1.3rem 1rem 1rem;display:flex;align-items:center;justify-content:space-between;box-shadow:0 10px 30px rgba(15,118,110,.22)}
 .hdr h1{font-size:1rem;font-weight:900}
 .hdr p{font-size:.68rem;opacity:.72;margin-top:2px}
 .btn-refresh{background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.3);border-radius:20px;padding:.3rem .8rem;font-size:.7rem;font-weight:700;color:#fff;cursor:pointer;font-family:inherit}
 body{padding-top:45px}
 
 /* ── TABS ── */
-.tabs{position:sticky;top:0;z-index:99;background:#fff;border-bottom:2px solid var(--border);display:flex;overflow-x:auto;scrollbar-width:none}
+.tabs{position:sticky;top:0;z-index:99;background:#f7fbfb;border-bottom:2px solid var(--border);display:flex;overflow-x:auto;scrollbar-width:none}
 .tabs::-webkit-scrollbar{display:none}
 .tab{flex-shrink:0;padding:.6rem .9rem;font-size:.7rem;font-weight:800;color:var(--muted);border:none;border-bottom:2.5px solid transparent;background:none;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .2s}
 .tab.on{color:var(--blue);border-bottom-color:var(--blue)}
@@ -45,7 +45,7 @@ body{padding-top:45px}
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* ── CARDS ── */
-.card{background:var(--card);border-radius:var(--r);border:1px solid var(--border);padding:1rem;margin-bottom:.75rem}
+.card{background:var(--card);border-radius:var(--r);border:1px solid var(--border);padding:1rem;margin-bottom:.75rem;box-shadow:0 8px 22px rgba(15,23,42,.05)}
 .card-title{font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:.85rem;display:flex;align-items:center;gap:.4rem}
 
 /* ── STATS ── */
@@ -437,20 +437,14 @@ body{padding-top:45px}
         <button class="sf-btn period-btn" data-days="7" onclick="setPeriodo(7,this)">7d</button>
       </div>
       <div class="card">
-        <div class="card-title">🗓️ Treinos Programados (escolha o tipo)</div>
+        <div class="card-title">🗓️ Plano Semanal Triathlon + Academia</div>
         <div id="tp-levels" class="tp-levels">
-          <button class="sf-btn sf-on" onclick="setPlanoTipo('intervalado',this)">Intervalado</button>
-          <button class="sf-btn" onclick="setPlanoTipo('fartlek',this)">Fartlek</button>
-          <button class="sf-btn" onclick="setPlanoTipo('tempo',this)">Tempo</button>
-          <button class="sf-btn" onclick="setPlanoTipo('longao',this)">Longão</button>
-          <button class="sf-btn" onclick="setPlanoTipo('rodagem',this)">Rodagem leve</button>
-          <button class="sf-btn" onclick="setPlanoTipo('progressivo',this)">Progressivo</button>
-          <button class="sf-btn" onclick="setPlanoTipo('subidas',this)">Subidas</button>
-          <button class="sf-btn" onclick="setPlanoTipo('recuperacao',this)">Recuperação</button>
-          <button class="sf-btn" onclick="setPlanoTipo('forca',this)">Força</button>
-          <button class="sf-btn" onclick="setPlanoTipo('cross',this)">Cross-train</button>
+          <button class="sf-btn sf-on" onclick="setPlanoTipo('tri_iniciante',this)">Tri Iniciante</button>
+          <button class="sf-btn" onclick="setPlanoTipo('tri_intermediario',this)">Tri Intermediário</button>
+          <button class="sf-btn" onclick="setPlanoTipo('tri_avancado',this)">Tri Avançado</button>
+          <button class="sf-btn" onclick="setPlanoTipo('tri_regeneracao',this)">Semana Regenerativa</button>
         </div>
-        <div class="tp-types-note">Escolha o tipo de treino que quer fazer nesta semana. O app guarda sua escolha e sugere a sessão correspondente.</div>
+        <div class="tp-types-note">Configuração com critérios de progressão: corrida limitada a <b>+10%</b> por semana, longão até <b>35%</b> do volume semanal e <b>2 sessões de academia</b> para suporte ao triathlon.</div>
         <div id="tp-list" class="tp-week"></div>
       </div>
       <div class="div-label">Últimos <span class="period-note">180 dias</span></div>
@@ -671,24 +665,18 @@ window.addEventListener('DOMContentLoaded', () => {
 const FB_DB   = 'https://gastos-casa-7f431-default-rtdb.firebaseio.com';
 const FB_KEY  = 'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU';
 const FB_PATH = 'treinos/luiz';
-const APP_VERSION = '2026-06-28-1';
+const APP_VERSION = '2026-07-01-1';
 const SNAPSHOT_KEY = 'treinos_last_snapshot_v1';
 let charts = {}, curTab = 'coach', DATA = null, curEsporte = 'todos';
 const PERIODO = 180; // dias padrão para todas as médias do app
 let curPeriodo = PERIODO;
-let curPlanoTipo = 'intervalado';
-const TP_STATE_KEY = 'treinos_programados_state_v2';
+let curPlanoTipo = 'tri_intermediario';
+const TP_STATE_KEY = 'treinos_programados_state_v3';
 const PLANO_TIPOS = {
-  intervalado:{label:'Intervalado', foco:'Velocidade e limiar', sugestao:'Ex.: 6×800 m forte com 2 min de recuperação.', duracao:'45–70 min', alt:['4×1 km', '10×400 m', '8×2 min']},
-  fartlek:{label:'Fartlek', foco:'Variação de ritmo', sugestao:'Ex.: 10 blocos de 1 min forte / 1 min leve.', duracao:'40–60 min', alt:['Pirâmide 1-2-3-2-1', 'Tempo livre', 'Fartlek por terreno']},
-  tempo:{label:'Tempo', foco:'Ritmo sustentável', sugestao:'Ex.: 20–30 min em ritmo de prova controlado.', duracao:'50–80 min', alt:['3×10 min', '2×15 min', 'Limiar contínuo']},
-  longao:{label:'Longão', foco:'Base e resistência', sugestao:'Ex.: 12–18 km em Z2, sem forçar.', duracao:'80–140 min', alt:['Longão progressivo', 'Longão com gel', 'Longão leve']},
-  rodagem:{label:'Rodagem leve', foco:'Recuperação ativa', sugestao:'Ex.: 5–8 km em Z1/Z2, bem solto.', duracao:'30–55 min', alt:['Trote solto', 'Recuperação ativa', 'Ritmo conversável']},
-  progressivo:{label:'Progressivo', foco:'Controle de ritmo', sugestao:'Ex.: começar leve e terminar moderado/forte.', duracao:'40–75 min', alt:['Negativo split', 'Fartlek progressivo', 'Fechamento forte']},
-  subidas:{label:'Subidas', foco:'Força específica', sugestao:'Ex.: 8×60 s subindo, descendo leve.', duracao:'35–60 min', alt:['Hill repeats', 'Subidas curtas', 'Subidas longas']},
-  recuperacao:{label:'Recuperação', foco:'Soltar o corpo', sugestao:'Ex.: caminhada, bike leve ou trote bem leve.', duracao:'20–45 min', alt:['Mobilidade', 'Bike Z1', 'Nado leve']},
-  forca:{label:'Força', foco:'Estabilidade e prevenção', sugestao:'Ex.: core, glúteo, posterior e panturrilha.', duracao:'30–50 min', alt:['Funcional', 'Mobilidade + core', 'Estabilidade']},
-  cross:{label:'Cross-train', foco:'Cardio sem impacto', sugestao:'Ex.: bike, natação ou elíptico em Z2.', duracao:'30–75 min', alt:['Bike Z2', 'Nado técnico', 'Elíptico']}
+  tri_iniciante:{label:'Tri Iniciante', foco:'Base técnica + consistência', runFactor:0.85, bikeFactor:0.9, swimFactor:0.9, gymSessions:2},
+  tri_intermediario:{label:'Tri Intermediário', foco:'Progressão equilibrada', runFactor:1.0, bikeFactor:1.0, swimFactor:1.0, gymSessions:2},
+  tri_avancado:{label:'Tri Avançado', foco:'Construção específica', runFactor:1.08, bikeFactor:1.1, swimFactor:1.08, gymSessions:2},
+  tri_regeneracao:{label:'Semana Regenerativa', foco:'Absorção e recuperação', runFactor:0.72, bikeFactor:0.75, swimFactor:0.8, gymSessions:2}
 };
 let tpState = loadTpState();
 
@@ -796,7 +784,6 @@ function setPlanoTipo(tipo,btn){
   if(btn) btn.classList.add('sf-on');
   const wk = ensureWeeklyPlano(tipo);
   wk.data.selectedType = tipo;
-  wk.data.done = {};
   saveTpState();
   renderPlanoSemanal();
 }
@@ -855,12 +842,15 @@ function ensureWeeklyPlano(nivel){
 
   const prevKey = prevWeekKey(nowWeek);
   const prev = tpState.weeks?.[prevKey]?.[tipo];
-  const info = PLANO_TIPOS[tipo] || PLANO_TIPOS.intervalado;
-  const inferido = inferPlanoTipo(prev?.selectedType || prev?.plan?.[0]?.treino || '');
+  const info = PLANO_TIPOS[tipo] || PLANO_TIPOS.tri_intermediario;
+  const avg = calcTriAverages();
+  const built = buildTriWeek(info, avg);
 
   tpState.weeks[nowWeek][tipo] = {
-    selectedType: prev?.selectedType || inferido || tipo,
-    done: {}
+    selectedType: prev?.selectedType || tipo,
+    done: prev?.done || {},
+    plan: built.plan,
+    metrics: built.metrics
   };
   saveTpState();
   return {weekKey:nowWeek, data:tpState.weeks[nowWeek][tipo], info};
@@ -876,36 +866,103 @@ function togglePlanoDone(idx){
   renderPlanoSemanal();
 }
 
+function calcTriAverages(){
+  const ativ = (DATA?.atividades || []).slice();
+  if(!ativ.length) return {runKm:18,bikeKm:70,swimKm:3,gymPerWeek:2};
+  const d28 = new Date(Date.now()-28*864e5).toISOString().slice(0,10);
+  const f = ativ.filter(a => a.data >= d28);
+  const byWeek = {};
+  f.forEach(a => {
+    const w = semanaISO(a.data);
+    if(!byWeek[w]) byWeek[w] = {runKm:0,bikeKm:0,swimKm:0,gym:0};
+    const sp = getEsporte(a);
+    if(sp==='corrida') byWeek[w].runKm += +a.distancia || 0;
+    if(sp==='bike') byWeek[w].bikeKm += +a.distancia || 0;
+    if(sp==='natacao') byWeek[w].swimKm += +a.distancia || 0;
+    if(sp==='academia') byWeek[w].gym += 1;
+  });
+  const weeks = Object.values(byWeek);
+  if(!weeks.length) return {runKm:18,bikeKm:70,swimKm:3,gymPerWeek:2};
+  const avg = k => weeks.reduce((s,w)=>s+(w[k]||0),0)/weeks.length;
+  return {
+    runKm: Math.max(12, +avg('runKm').toFixed(1)),
+    bikeKm: Math.max(45, +avg('bikeKm').toFixed(1)),
+    swimKm: Math.max(2, +avg('swimKm').toFixed(1)),
+    gymPerWeek: Math.max(1, Math.round(avg('gym')))
+  };
+}
+
+function buildTriWeek(profile, avg){
+  const clamp=(v,min,max)=>Math.min(max,Math.max(min,v));
+  const runTarget = clamp(+(avg.runKm * profile.runFactor).toFixed(1), 12, 44);
+  const bikeTarget = clamp(+(avg.bikeKm * profile.bikeFactor).toFixed(1), 45, 220);
+  const swimTarget = clamp(+(avg.swimKm * profile.swimFactor).toFixed(1), 2, 9);
+  const longRun = clamp(+(runTarget * 0.32).toFixed(1), 6, 15);
+  const qualityRun = clamp(+(runTarget * 0.22).toFixed(1), 4, 10);
+  const easyRun = Math.max(4, +(runTarget - longRun - qualityRun).toFixed(1));
+  const bikeLong = Math.max(35, Math.round(bikeTarget * 0.45));
+  const bikeQuality = Math.max(22, Math.round(bikeTarget * 0.3));
+  const bikeEasy = Math.max(18, Math.round(bikeTarget - bikeLong - bikeQuality));
+  const swimTech = Math.max(800, Math.round(swimTarget * 1000 * 0.35));
+  const swimEnd = Math.max(1000, Math.round(swimTarget * 1000 * 0.65));
+  const brickRun = clamp(+(easyRun * 0.45).toFixed(1), 3, 6);
+  const gym = profile.gymSessions >= 2 ? '2x' : '1x';
+
+  const plan = [
+    {day:'Seg', treino:`🏊 Técnica ${swimTech} m + 💪 Academia A`, note:'Drills + estabilidade de core, glúteo e posterior. Carga moderada.'},
+    {day:'Ter', treino:`🚴 Bike qualidade ${bikeQuality} km`, note:'4×6 min Z3/Z4 com 3 min leve. Finalizar com mobilidade de quadril.'},
+    {day:'Qua', treino:`🏃 Corrida qualidade ${qualityRun} km`, note:'Ex.: 6×800 m ritmo controlado. Volume calibrado para não passar +10% semanal.'},
+    {day:'Qui', treino:`🏊 Endurance ${swimEnd} m + 💪 Academia B`, note:'Nado contínuo + força de membros superiores e anti-rotação.'},
+    {day:'Sex', treino:`🚴 Bike leve ${bikeEasy} km`, note:'Z1/Z2 solto para recuperar sem perder consistência.'},
+    {day:'Sáb', treino:`🚴 Longo ${bikeLong} km + 🏃 Brick ${brickRun} km`, note:'Transição bike→corrida para adaptação neuromuscular do triathlon.'},
+    {day:'Dom', treino:`🏃 Longo Z2 ${longRun} km`, note:'Longão controlado. Limite de 35% do volume semanal de corrida.'}
+  ];
+
+  return {
+    plan,
+    metrics:{
+      runKm:runTarget,
+      bikeKm:bikeTarget,
+      swimKm:swimTarget,
+      gym,
+      criterio:'Progressão corrida limitada a +10% e longão até 35% do volume semanal.'
+    }
+  };
+}
+
 function renderPlanoSemanal(){
   const el = document.getElementById('tp-list');
   if(!el) return;
   const wk = ensureWeeklyPlano(curPlanoTipo);
-  const tipoAtual = wk.data.selectedType || curPlanoTipo || 'intervalado';
+  const tipoAtual = wk.data.selectedType || curPlanoTipo || 'tri_intermediario';
   curPlanoTipo = tipoAtual;
   document.querySelectorAll('#tp-levels .sf-btn').forEach(b => {
     b.classList.toggle('sf-on', (b.getAttribute('onclick')||'').includes(`'${tipoAtual}'`));
   });
   const done = wk.data.done || {};
   const doneCount = Object.values(done).filter(Boolean).length;
-  const info = PLANO_TIPOS[tipoAtual] || PLANO_TIPOS.intervalado;
-  const alt = (info.alt || []).map(a => `<span class="tp-alt-chip">${a}</span>`).join('');
-  const confirmText = done[0] ? 'Feito' : 'Confirmar';
+  const info = PLANO_TIPOS[tipoAtual] || PLANO_TIPOS.tri_intermediario;
+  const plan = wk.data.plan || buildTriWeek(info, calcTriAverages()).plan;
+  const metrics = wk.data.metrics || buildTriWeek(info, calcTriAverages()).metrics;
+  const rows = plan.map((p,i)=>`
+    <div class="tp-row">
+      <div class="tp-day">${p.day}</div>
+      <div>
+        <div class="tp-work">${p.treino}</div>
+        <div class="tp-note">${p.note}</div>
+      </div>
+      <button class="tp-done ${done[i]?'on':''}" onclick="togglePlanoDone(${i})">${done[i]?'Feito':'Confirmar'}</button>
+    </div>
+  `).join('');
   el.innerHTML = `
-    <div class="tp-meta">Semana ${wk.weekKey} · escolha atual: ${info.label} · concluído ${doneCount}/1</div>
+    <div class="tp-meta">Semana ${wk.weekKey} · perfil: ${info.label} · concluído ${doneCount}/${plan.length}</div>
     <div class="tp-type-card">
       <div class="tp-type-title">${info.label}</div>
-      <div class="tp-type-desc"><b>Foco:</b> ${info.foco}<br><b>Como fazer:</b> ${info.sugestao}<br><b>Duração:</b> ${info.duracao}</div>
+      <div class="tp-type-desc"><b>Foco:</b> ${info.foco}<br><b>Corrida:</b> ${metrics.runKm} km/sem · <b>Bike:</b> ${metrics.bikeKm} km/sem · <b>Natação:</b> ${metrics.swimKm} km/sem · <b>Academia:</b> ${metrics.gym}<br><b>Critério:</b> ${metrics.criterio}</div>
       <div class="tp-type-chip">Tipo selecionado para esta semana</div>
-      <div class="tp-alt-list">${alt}</div>
+      <div class="tp-alt-list"><span class="tp-alt-chip">2 sessões de academia</span><span class="tp-alt-chip">1 sessão brick</span><span class="tp-alt-chip">Controle de progressão</span></div>
     </div>
-    <div class="tp-row">
-      <div class="tp-day">Semana</div>
-      <div>
-        <div class="tp-work">${info.label}</div>
-        <div class="tp-note">${info.sugestao}</div>
-      </div>
-      <button class="tp-done ${done[0]?'on':''}" onclick="togglePlanoDone(0)">${confirmText}</button>
-    </div>
+    ${rows}
   `;
 }
 
