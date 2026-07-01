@@ -6,34 +6,50 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Treinos">
-<meta name="theme-color" content="#1a56db">
-<link rel="manifest" href="./manifest.json?v=2026-07-01-1">
+<meta name="theme-color" content="#0b2239">
+<link rel="manifest" href="./manifest.json?v=2026-07-01-2">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%231a56db' width='192' height='192'/><text x='50%' y='50%' font-size='120' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%231a56db' width='180' height='180' rx='40'/><text x='50%' y='50%' font-size='110' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <title>Treinos · Luiz Silva</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#edf3f2;--card:#ffffff;--border:#d8e3e1;
-  --blue:#0f766e;--green:#16a34a;--red:#dc2626;
-  --purple:#155e75;--orange:#ea580c;--gold:#b45309;
-  --text:#0f172a;--text2:#334155;--muted:#5f6f86;--r:16px;
+  --bg:#e8eef3;--card:#ffffff;--border:#d4deeb;
+  --blue:#145da0;--green:#0f9d7a;--red:#d63a54;
+  --purple:#26547c;--orange:#f18701;--gold:#f2a900;
+  --text:#0b2239;--text2:#1f3a56;--muted:#5f7896;--r:18px;
 }
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:radial-gradient(circle at 12% -8%,#d6efe9 0%,#edf3f2 42%,#e7edf3 100%);color:var(--text);padding-bottom:50px}
+body{
+  font-family:'Sora',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:
+    radial-gradient(circle at 15% -10%, #d7e8ff 0%, transparent 38%),
+    radial-gradient(circle at 90% -5%, #d4f4ee 0%, transparent 30%),
+    linear-gradient(180deg,#edf3f9 0%,#e8eef3 100%);
+  color:var(--text);
+  padding-bottom:50px;
+}
 
 /* ── HEADER ── */
-.hdr{background:linear-gradient(135deg,#0f766e,#0f766e 45%,#155e75);color:#fff;padding:1.3rem 1rem 1rem;display:flex;align-items:center;justify-content:space-between;box-shadow:0 10px 30px rgba(15,118,110,.22)}
-.hdr h1{font-size:1rem;font-weight:900}
-.hdr p{font-size:.68rem;opacity:.72;margin-top:2px}
+.hdr{
+  background:linear-gradient(135deg,#0b2239,#12345a 48%,#145da0);
+  color:#fff;padding:1.35rem 1rem 1rem;display:flex;align-items:center;justify-content:space-between;
+  box-shadow:0 14px 34px rgba(11,34,57,.35);
+  border-bottom-left-radius:22px;border-bottom-right-radius:22px;
+}
+.hdr h1{font-size:1rem;font-weight:800;font-family:'Space Grotesk',sans-serif;letter-spacing:.5px}
+.hdr p{font-size:.68rem;opacity:.78;margin-top:2px}
 .btn-refresh{background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.3);border-radius:20px;padding:.3rem .8rem;font-size:.7rem;font-weight:700;color:#fff;cursor:pointer;font-family:inherit}
 body{padding-top:45px}
 
 /* ── TABS ── */
-.tabs{position:sticky;top:0;z-index:99;background:#f7fbfb;border-bottom:2px solid var(--border);display:flex;overflow-x:auto;scrollbar-width:none}
+.tabs{position:sticky;top:0;z-index:99;background:rgba(245,250,255,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--border);display:flex;overflow-x:auto;scrollbar-width:none;padding:0 .15rem}
 .tabs::-webkit-scrollbar{display:none}
-.tab{flex-shrink:0;padding:.6rem .9rem;font-size:.7rem;font-weight:800;color:var(--muted);border:none;border-bottom:2.5px solid transparent;background:none;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .2s}
-.tab.on{color:var(--blue);border-bottom-color:var(--blue)}
+.tab{flex-shrink:0;padding:.6rem .9rem;font-size:.7rem;font-weight:800;color:var(--muted);border:none;border-bottom:2.5px solid transparent;background:none;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .2s;border-radius:10px 10px 0 0}
+.tab.on{color:#0b2239;background:#e4eefc;border-bottom-color:#145da0}
 
 /* ── WRAP ── */
 .wrap{max-width:700px;margin:0 auto;padding:1rem}
@@ -45,14 +61,15 @@ body{padding-top:45px}
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* ── CARDS ── */
-.card{background:var(--card);border-radius:var(--r);border:1px solid var(--border);padding:1rem;margin-bottom:.75rem;box-shadow:0 8px 22px rgba(15,23,42,.05)}
+.card{background:var(--card);border-radius:var(--r);border:1px solid var(--border);padding:1rem;margin-bottom:.82rem;box-shadow:0 12px 28px rgba(20,60,120,.08);animation:cardIn .35s ease both}
 .card-title{font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:.85rem;display:flex;align-items:center;gap:.4rem}
+@keyframes cardIn{from{transform:translateY(6px);opacity:.2}to{transform:translateY(0);opacity:1}}
 
 /* ── STATS ── */
 .sgrid{display:grid;gap:.55rem;margin-bottom:.75rem}
 .sg3{grid-template-columns:repeat(3,1fr)}
 .sg2{grid-template-columns:1fr 1fr}
-.stat{background:var(--card);border-radius:var(--r);border:1px solid var(--border);padding:.85rem .6rem;text-align:center}
+.stat{background:linear-gradient(180deg,#ffffff,#f6fafe);border-radius:var(--r);border:1px solid var(--border);padding:.85rem .6rem;text-align:center}
 .sv{font-size:1.4rem;font-weight:900;line-height:1}
 .sl{font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-top:3px}
 
@@ -81,7 +98,7 @@ body{padding-top:45px}
 .sugestao-texto{font-size:.88rem;color:#14532d;line-height:1.65;font-weight:500}
 
 /* ── COACH WORKOUT CARD ── */
-.sug-card{border-radius:14px;padding:1rem;margin-bottom:.75rem}
+.sug-card{border-radius:16px;padding:1rem;margin-bottom:.75rem;box-shadow:0 10px 24px rgba(13,61,106,.08)}
 .sug-card-rest{background:linear-gradient(135deg,#fef2f2,#fee2e2);border:1px solid #fca5a5;color:#7f1d1d}
 .sug-card-easy{background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1px solid #86efac;color:#14532d}
 .sug-card-moderate{background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1px solid #93c5fd;color:#1e3a8a}
@@ -125,8 +142,8 @@ body{padding-top:45px}
 
 /* ── SPORT FILTER ── */
 .sf-wrap{display:flex;gap:.4rem;margin-bottom:.75rem;flex-wrap:wrap}
-.sf-btn{border:1.5px solid var(--border);background:#fff;border-radius:20px;padding:.28rem .7rem;font-size:.72rem;font-weight:700;color:var(--muted);cursor:pointer;font-family:inherit;transition:all .15s}
-.sf-btn.sf-on{background:var(--blue);border-color:var(--blue);color:#fff}
+.sf-btn{border:1.5px solid var(--border);background:#fff;border-radius:999px;padding:.28rem .7rem;font-size:.72rem;font-weight:700;color:var(--muted);cursor:pointer;font-family:inherit;transition:all .15s}
+.sf-btn.sf-on{background:linear-gradient(135deg,#145da0,#0f9d7a);border-color:#145da0;color:#fff}
 .tp-levels{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.6rem}
 .tp-levels .sf-btn{white-space:nowrap}
 .tp-types-note{font-size:.72rem;color:var(--text2);line-height:1.5;margin-top:.4rem}
@@ -697,7 +714,7 @@ window.addEventListener('DOMContentLoaded', () => {
 const FB_DB   = 'https://gastos-casa-7f431-default-rtdb.firebaseio.com';
 const FB_KEY  = 'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU';
 const FB_PATH = 'treinos/luiz';
-const APP_VERSION = '2026-07-01-1';
+const APP_VERSION = '2026-07-01-2';
 const SNAPSHOT_KEY = 'treinos_last_snapshot_v1';
 let charts = {}, curTab = 'coach', DATA = null, curEsporte = 'todos';
 const PERIODO = 180; // dias padrão para todas as médias do app
