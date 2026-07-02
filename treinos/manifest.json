@@ -1,7 +1,7 @@
 {
   "name": "Treinos — Luiz",
   "short_name": "Treinos",
-  "start_url": "./index.html?v=2026-07-01-11",
+  "start_url": "./index.html?v=2026-07-01-12",
   "scope": "./",
   "display": "standalone",
   "background_color": "#e8eef3",
