@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Treinos">
 <meta name="theme-color" content="#0b2239">
-<link rel="manifest" href="./manifest.json?v=2026-07-01-6">
+<link rel="manifest" href="./manifest.json?v=2026-07-01-7">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%231a56db' width='192' height='192'/><text x='50%' y='50%' font-size='120' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%231a56db' width='180' height='180' rx='40'/><text x='50%' y='50%' font-size='110' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <title>Treinos · Luiz Silva</title>
@@ -205,6 +205,20 @@ body{padding-top:45px}
 
 /* ── SAÚDE CHARTS ── */
 .sg4{grid-template-columns:repeat(4,1fr)}
+.glance-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.55rem}
+.gcard{background:#fff;border:1px solid var(--border);border-radius:12px;padding:.65rem .6rem;min-height:128px;display:flex;flex-direction:column;justify-content:space-between}
+.ghead{font-size:.62rem;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:#64748b;display:flex;align-items:center;gap:.3rem}
+.gval{font-size:1.3rem;font-weight:900;line-height:1.1;color:#0f172a}
+.gsub{font-size:.64rem;color:#64748b;line-height:1.45}
+.g-spark{height:34px;margin-top:.35rem}
+.g-spark svg{width:100%;height:100%;display:block}
+.g-bars{height:38px;display:flex;align-items:flex-end;gap:3px;margin-top:.35rem}
+.g-bars span{flex:1;min-height:2px;border-radius:2px 2px 0 0;background:#60a5fa}
+.g-ring-wrap{display:flex;justify-content:center;align-items:center;margin:.25rem 0}
+.g-ring{--pct:0;--ring:#1a56db;width:62px;height:62px;border-radius:50%;position:relative;background:conic-gradient(var(--ring) calc(var(--pct)*1%), #e2e8f0 0)}
+.g-ring::before{content:'';position:absolute;inset:6px;border-radius:50%;background:#fff}
+.g-ring-core{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:900;color:#0f172a;z-index:1}
+.g-empty{font-size:.64rem;color:#94a3b8;margin-top:.45rem}
 .stat-assess{font-size:.55rem;font-weight:700;padding:1px 6px;border-radius:5px;margin-top:4px;display:inline-block;letter-spacing:.2px;text-transform:uppercase}
 .sa-verde{background:#ecfdf5;color:#065f46}
 .sa-azul{background:#eff6ff;color:#1e40af}
@@ -323,7 +337,8 @@ body{padding-top:45px}
 .div-label{font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin:.25rem 0 .6rem;padding-top:.5rem;border-top:1px solid var(--border)}
 
 @media(max-width:640px){.ring-grid{grid-template-columns:1fr}}
-@media(max-width:380px){.insight-grid{grid-template-columns:1fr}.chart-row{grid-template-columns:1fr}.sg3{grid-template-columns:repeat(3,1fr)}.sv{font-size:1.15rem}}
+@media(max-width:640px){.glance-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:380px){.insight-grid{grid-template-columns:1fr}.chart-row{grid-template-columns:1fr}.sg3{grid-template-columns:repeat(3,1fr)}.sv{font-size:1.15rem}.glance-grid{grid-template-columns:1fr}}
 
 /* ── PROVAS ── */
 .provas-filter{display:flex;gap:.4rem;margin-bottom:1rem;flex-wrap:wrap}
@@ -578,6 +593,10 @@ body{padding-top:45px}
         <input class="period-slider" type="range" min="7" max="180" step="1" value="180" aria-label="Intervalo em dias" oninput="setPeriodo(Number(this.value))">
       </div>
       <div class="div-label">Últimos <span class="period-note">180 dias</span></div>
+      <div class="card">
+        <div class="card-title">🧩 At a Glance — Garmin Style</div>
+        <div id="saude-glance" class="glance-grid"></div>
+      </div>
       <div id="saude-hero" class="ring-grid"></div>
       <div class="glass-note" id="saude-note" style="display:none"></div>
       <div id="s-stats" class="sgrid sg4" style="margin-bottom:.75rem"></div>
@@ -728,7 +747,7 @@ window.addEventListener('DOMContentLoaded', () => {
 const FB_DB   = 'https://gastos-casa-7f431-default-rtdb.firebaseio.com';
 const FB_KEY  = 'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU';
 const FB_PATH = 'treinos/luiz';
-const APP_VERSION = '2026-07-01-6';
+const APP_VERSION = '2026-07-01-7';
 const SNAPSHOT_KEY = 'treinos_last_snapshot_v1';
 let charts = {}, curTab = 'coach', DATA = null, curEsporte = 'todos';
 const PERIODO = 180; // dias padrão para todas as médias do app
@@ -2788,6 +2807,99 @@ function sonoAssess(v){ return v>=7?['Ótimo','sa-verde']:v>=6?['OK','sa-azul']:
 function stressAssess(v){ return v<25?['Baixo','sa-verde']:v<50?['Moderado','sa-azul']:v<75?['Alto','sa-amarelo']:['Muito alto','sa-vermelho']; }
 function hrvAssess(v){ return v>=55?['Excelente','sa-verde']:v>=45?['Bom','sa-azul']:v>=35?['Moderado','sa-amarelo']:['Baixo','sa-vermelho']; }
 
+function miniSpark(values,color){
+  const vals = (values||[]).filter(v=>Number.isFinite(+v)).map(v=>+v);
+  if(vals.length<2) return '<div class="g-empty">sem histórico suficiente</div>';
+  const w=180,h=34,p=2;
+  const min=Math.min(...vals), max=Math.max(...vals), span=Math.max(1,max-min);
+  const step=(w-p*2)/Math.max(1,vals.length-1);
+  const pts=vals.map((v,i)=>`${(p+i*step).toFixed(1)},${(h-p-((v-min)/span)*(h-p*2)).toFixed(1)}`).join(' ');
+  return `<div class="g-spark"><svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>`;
+}
+
+function miniBars(values,colors){
+  const vals = (values||[]).filter(v=>Number.isFinite(+v)).map(v=>+v);
+  if(!vals.length) return '<div class="g-empty">sem dados</div>';
+  const max=Math.max(1,...vals);
+  return `<div class="g-bars">${vals.map((v,i)=>`<span style="height:${Math.max(8,Math.round(v/max*100))}%;background:${(colors&&colors[i])||'#60a5fa'}"></span>`).join('')}</div>`;
+}
+
+function miniRing(value,max,color){
+  const safeMax=Math.max(1,Number(max)||1);
+  const pct=Math.max(0,Math.min(100,Math.round((Number(value)||0)/safeMax*100)));
+  const lbl=Number.isFinite(+value)?Math.round(+value):'—';
+  return `<div class="g-ring-wrap"><div class="g-ring" style="--pct:${pct};--ring:${color}"><div class="g-ring-core">${lbl}</div></div></div>`;
+}
+
+function renderSaudeGlance({bbKeys,bb,sonoChart,sono,stressKeys,stress,comHRV,hrv,ativ}){
+  const el = document.getElementById('saude-glance');
+  if(!el) return;
+
+  const hrVals = (ativ||[]).filter(a=>a.fcMed>0).slice(-7).map(a=>a.fcMed);
+  const hrAvg = hrVals.length ? Math.round(hrVals.reduce((s,v)=>s+v,0)/hrVals.length) : 0;
+
+  const bbNowKey = bbKeys.length ? bbKeys[bbKeys.length-1] : null;
+  const bbNow = bbNowKey ? (bb[bbNowKey].max||0) : 0;
+  const bbDelta = bbNowKey ? ((bb[bbNowKey].max||0)-(bb[bbNowKey].min||0)) : 0;
+
+  const sonoVals = sonoChart.slice(-7).map(k=>sono[k].duracao||0);
+  const sonoNow = sonoVals.length ? sonoVals[sonoVals.length-1] : 0;
+
+  const vo2Vals = (ativ||[]).filter(a=>a.vo2max>0).slice(-7).map(a=>a.vo2max);
+  const vo2Now = vo2Vals.length ? vo2Vals[vo2Vals.length-1] : 0;
+
+  const stressVals = stressKeys.slice(-7).map(k=>stress[k].avg||0);
+  const stressNow = stressVals.length ? stressVals[stressVals.length-1] : 0;
+
+  const passosVals = (ativ||[]).slice(-7).map(a=>Math.max(0,Math.round((a.calorias||0)*17))); // estimativa quando não há passos dedicados
+  const passosNow = passosVals.length ? passosVals[passosVals.length-1] : 0;
+
+  const hrvVals = comHRV.slice(-7).map(k=> (hrv[k].ontem>0 ? hrv[k].ontem : (hrv[k].semanal||0)) ).filter(v=>v>0);
+  const hrvNow = hrvVals.length ? hrvVals[hrvVals.length-1] : 0;
+
+  el.innerHTML = `
+    <div class="gcard">
+      <div class="ghead">❤️ Heart Rate</div>
+      <div class="gval">${hrAvg||'—'} <span style="font-size:.68rem;font-weight:700;color:#64748b">bpm</span></div>
+      <div class="gsub">Média dos treinos no período</div>
+      ${miniSpark(hrVals,'#ef4444')}
+    </div>
+    <div class="gcard">
+      <div class="ghead">🔋 Body Battery</div>
+      ${miniRing(bbNow,100,'#1a56db')}
+      <div class="gsub">${bbDelta>=0?'+':''}${bbDelta}% carga útil do dia</div>
+    </div>
+    <div class="gcard">
+      <div class="ghead">😴 Sleep Score</div>
+      <div class="gval">${sonoNow?sonoNow.toFixed(1):'—'} <span style="font-size:.68rem;font-weight:700;color:#64748b">h</span></div>
+      ${miniBars(sonoVals,sonoVals.map(v=>v>=7?'#22c55e':v>=6?'#f59e0b':'#ef4444'))}
+      <div class="gsub">Últimos 7 dias</div>
+    </div>
+    <div class="gcard">
+      <div class="ghead">🏃 VO2 Max</div>
+      ${miniRing(vo2Now,65,'#dc2626')}
+      <div class="gsub">Nível ${vo2Now>=50?'superior':vo2Now>=42?'bom':'em evolução'}</div>
+    </div>
+    <div class="gcard">
+      <div class="ghead">😰 Stress</div>
+      ${miniRing(stressNow,100,'#0ea5e9')}
+      ${miniBars(stressVals,stressVals.map(v=>v<25?'#22c55e':v<50?'#3b82f6':v<75?'#f59e0b':'#ef4444'))}
+    </div>
+    <div class="gcard">
+      <div class="ghead">👣 Atividade</div>
+      <div class="gval">${passosNow.toLocaleString('pt-BR')}</div>
+      <div class="gsub">Carga diária estimada</div>
+      ${miniSpark(passosVals,'#2563eb')}
+    </div>
+    <div class="gcard">
+      <div class="ghead">💚 HRV</div>
+      <div class="gval">${hrvNow||'—'} <span style="font-size:.68rem;font-weight:700;color:#64748b">ms</span></div>
+      ${miniSpark(hrvVals,'#16a34a')}
+      <div class="gsub">Tendência da recuperação</div>
+    </div>
+  `;
+}
+
 function renderSaude(bb,sono,stress,hrv){
   destroyChart('bb');
   destroyChart('sono');
@@ -2820,6 +2932,18 @@ function renderSaude(bb,sono,stress,hrv){
   // última noite com sono real para exibir
   const sonoLastKey = sonoReal.length ? sonoReal[sonoReal.length-1] : null;
   const sonoLast    = sonoLastKey ? sono[sonoLastKey] : null;
+
+  renderSaudeGlance({
+    bbKeys,
+    bb,
+    sonoChart:(sonoReal.length ? sonoReal : sonoKeys),
+    sono,
+    stressKeys,
+    stress,
+    comHRV,
+    hrv,
+    ativ:(DATA?.atividades||[]).filter(a=>a.data>=d0).sort((a,b)=>a.data.localeCompare(b.data))
+  });
 
   renderSaudeHero({bbLast,bbMed,sonoLast,sonoMed,stressMed,hrvLast});
 
