@@ -770,51 +770,17 @@ const PLANO_TIPOS = {
   tri_regeneracao:{label:'Semana Regenerativa', foco:'Absorção e recuperação', runFactor:0.72, bikeFactor:0.75, swimFactor:0.8, gymSessions:2}
 };
 const GYM_LIBRARY = {
-  squat:{name:'Agachamento Goblet', muscle:'quadríceps, glúteo e core', sets:'3×10-12', cue:'Desça controlando, mantenha o tronco firme e os joelhos alinhados.', accent:'#2563eb'},
-  rdl:{name:'Levantamento Romeno', muscle:'posterior de coxa e glúteo', sets:'3×8-10', cue:'Empurre o quadril para trás e mantenha a coluna neutra.', accent:'#ea580c'},
-  split:{name:'Afundo Búlgaro', muscle:'glúteo, quadríceps e equilíbrio', sets:'3×8 cada perna', cue:'Controle a descida e não deixe o joelho colapsar para dentro.', accent:'#7c3aed'},
-  hip:{name:'Hip Thrust', muscle:'glúteo máximo e potência', sets:'4×10', cue:'Suba o quadril com pausa de 1s no topo.', accent:'#0ea5e9'},
-  row:{name:'Remada Sentada', muscle:'costas e postura', sets:'3×10-12', cue:'Puxe com os cotovelos e mantenha o peito aberto.', accent:'#16a34a'},
-  pull:{name:'Puxada na Frente', muscle:'dorsal e escápulas', sets:'3×10-12', cue:'Desça a barra até a linha do peito alto sem balançar.', accent:'#dc2626'},
-  press:{name:'Supino com Halteres', muscle:'peito, ombro e tríceps', sets:'3×8-10', cue:'Desça com controle e suba sem travar o cotovelo.', accent:'#db2777'},
-  plank:{name:'Prancha', muscle:'core e anti-rotação', sets:'3×30-45s', cue:'Costelas para baixo, glúteo ativo e pescoço neutro.', accent:'#14b8a6'},
-  carry:{name:'Farmer Carry', muscle:'core, pegada e postura', sets:'4×30-40m', cue:'Caminhe alto e estável, sem tombar para os lados.', accent:'#f59e0b'},
-  calf:{name:'Elevação de Panturrilha', muscle:'panturrilha e tornozelo', sets:'3×15-20', cue:'Suba completo e desça bem devagar.', accent:'#6366f1'}
+  squat:{name:'Agachamento Goblet', muscle:'quadríceps, glúteo e core', sets:'3×10-12', cue:'Desça controlando, mantenha o tronco firme e os joelhos alinhados.', photo:'assets/gym/squat.jpg'},
+  rdl:{name:'Levantamento Romeno', muscle:'posterior de coxa e glúteo', sets:'3×8-10', cue:'Empurre o quadril para trás e mantenha a coluna neutra.', photo:'assets/gym/rdl.png'},
+  split:{name:'Afundo Búlgaro', muscle:'glúteo, quadríceps e equilíbrio', sets:'3×8 cada perna', cue:'Controle a descida e não deixe o joelho colapsar para dentro.', photo:'assets/gym/split.png'},
+  hip:{name:'Hip Thrust', muscle:'glúteo máximo e potência', sets:'4×10', cue:'Suba o quadril com pausa de 1s no topo.', photo:'assets/gym/hip.png'},
+  row:{name:'Remada Sentada', muscle:'costas e postura', sets:'3×10-12', cue:'Puxe com os cotovelos e mantenha o peito aberto.', photo:'assets/gym/row.jpg'},
+  pull:{name:'Puxada na Frente', muscle:'dorsal e escápulas', sets:'3×10-12', cue:'Desça a barra até a linha do peito alto sem balançar.', photo:'assets/gym/pull.jpg'},
+  press:{name:'Supino com Halteres', muscle:'peito, ombro e tríceps', sets:'3×8-10', cue:'Desça com controle e suba sem travar o cotovelo.', photo:'assets/gym/press.jpg'},
+  plank:{name:'Prancha', muscle:'core e anti-rotação', sets:'3×30-45s', cue:'Costelas para baixo, glúteo ativo e pescoço neutro.', photo:'assets/gym/plank.jpg'},
+  carry:{name:'Farmer Carry', muscle:'core, pegada e postura', sets:'4×30-40m', cue:'Caminhe alto e estável, sem tombar para os lados.', photo:'assets/gym/carry.jpg'},
+  calf:{name:'Elevação de Panturrilha', muscle:'panturrilha e tornozelo', sets:'3×15-20', cue:'Suba completo e desça bem devagar.', photo:'assets/gym/calf.jpg'}
 };
-
-function svgExercisePhoto(label, accent){
-  const svg = `
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360">
-    <defs>
-      <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stop-color="#f8fbff"/>
-        <stop offset="100%" stop-color="#dbeafe"/>
-      </linearGradient>
-      <linearGradient id="body" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stop-color="${accent}"/>
-        <stop offset="100%" stop-color="#0f172a"/>
-      </linearGradient>
-    </defs>
-    <rect width="640" height="360" fill="url(#bg)"/>
-    <circle cx="522" cy="72" r="86" fill="${accent}" opacity=".12"/>
-    <circle cx="108" cy="286" r="124" fill="${accent}" opacity=".08"/>
-    <rect x="40" y="270" width="560" height="18" rx="9" fill="#cbd5e1"/>
-    <g transform="translate(320 118)">
-      <circle cx="0" cy="-44" r="24" fill="#0f172a"/>
-      <path d="M-22 -14 C-16 -36, 16 -36, 22 -14 L14 22 L-14 22 Z" fill="url(#body)"/>
-      <path d="M-10 22 L-30 74" stroke="#0f172a" stroke-width="10" stroke-linecap="round"/>
-      <path d="M10 22 L28 74" stroke="#0f172a" stroke-width="10" stroke-linecap="round"/>
-      <path d="M-34 0 L-74 -18" stroke="#0f172a" stroke-width="10" stroke-linecap="round"/>
-      <path d="M34 0 L74 -18" stroke="#0f172a" stroke-width="10" stroke-linecap="round"/>
-      <rect x="-92" y="-52" width="184" height="14" rx="7" fill="${accent}"/>
-      <circle cx="-96" cy="-45" r="16" fill="#1f2937"/>
-      <circle cx="96" cy="-45" r="16" fill="#1f2937"/>
-    </g>
-    <text x="42" y="48" font-family="Arial, sans-serif" font-size="30" font-weight="800" fill="#0f172a">${label}</text>
-    <text x="42" y="84" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="#475569">foto ilustrativa</text>
-  </svg>`;
-  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
-}
 
 function gymSessionCards(sessionId){
   return sessionId==='B'
@@ -835,12 +801,13 @@ function gymSessionCards(sessionId){
 function renderGymExerciseCard(ex){
   const d = GYM_LIBRARY[ex.key];
   if(!d) return '';
-  const src = svgExercisePhoto(d.name, d.accent);
+  const src = d.photo;
+  const fallback = '';
   return `
     <div class="tp-ex">
       <div class="tp-ex-img">
-        <img class="tp-ex-photo" src="${src}" alt="${d.name}" onclick="openGymPhoto(this.src, '${d.name.replace(/'/g,'\\\'')}')" aria-label="Abrir foto de ${d.name}">
-        <span class="tp-ex-badge">foto ilustrativa</span>
+        <img class="tp-ex-photo" src="${src}" alt="${d.name}" decoding="async" ${fallback ? `onerror=\"this.onerror=null;this.src='${fallback}'\"` : ''} onclick="openGymPhoto(this.src, '${d.name.replace(/'/g,'\\\'')}')" aria-label="Abrir foto de ${d.name}">
+        <span class="tp-ex-badge">foto real</span>
       </div>
       <div class="tp-ex-body">
         <div class="tp-ex-name">${d.name}</div>
