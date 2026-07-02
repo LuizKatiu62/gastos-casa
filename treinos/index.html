@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Treinos">
 <meta name="theme-color" content="#0b2239">
-<link rel="manifest" href="./manifest.json?v=2026-07-01-5">
+<link rel="manifest" href="./manifest.json?v=2026-07-01-6">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%231a56db' width='192' height='192'/><text x='50%' y='50%' font-size='120' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%231a56db' width='180' height='180' rx='40'/><text x='50%' y='50%' font-size='110' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <title>Treinos · Luiz Silva</title>
@@ -728,7 +728,7 @@ window.addEventListener('DOMContentLoaded', () => {
 const FB_DB   = 'https://gastos-casa-7f431-default-rtdb.firebaseio.com';
 const FB_KEY  = 'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU';
 const FB_PATH = 'treinos/luiz';
-const APP_VERSION = '2026-07-01-5';
+const APP_VERSION = '2026-07-01-6';
 const SNAPSHOT_KEY = 'treinos_last_snapshot_v1';
 let charts = {}, curTab = 'coach', DATA = null, curEsporte = 'todos';
 const PERIODO = 180; // dias padrão para todas as médias do app
@@ -2388,6 +2388,10 @@ function renderTreinos(ativ,meta,sem){
   const filtrado=curEsporte==='todos'?ativ:ativ.filter(a=>getEsporte(a)===curEsporte);
   const d0=(new Date(Date.now()-curPeriodo*864e5)).toISOString().slice(0,10);
   const periodFiltered = filtrado.filter(a=>a.data>=d0);
+  const periodDaysLabel = `${curPeriodo}d`;
+  const kmPeriodo = +periodFiltered.reduce((s,a)=>s+a.distancia,0).toFixed(1);
+  const treinosPeriodo = periodFiltered.length;
+  const periodoEmSemanas = Math.max(curPeriodo/7,1);
 
   // Recalcular semanal a partir dos dados filtrados
   const semData={};
@@ -2399,17 +2403,13 @@ function renderTreinos(ativ,meta,sem){
   });
   const semKeys=Object.keys(semData).sort().slice(-10);
 
-  // Stats esta semana
-  const d7s=(new Date(Date.now()-7*864e5)).toISOString().slice(0,10);
-  const f7=periodFiltered.filter(a=>a.data>=d7s);
-  const km7f=f7.reduce((s,a)=>s+a.distancia,0).toFixed(1);
-  const t7f=f7.length;
+  // Stats do período selecionado
   const comPace=periodFiltered.filter(a=>getEsporte(a)==='corrida'&&a.pace&&a.distancia>=1);
   const melhor=comPace.length?s2p(Math.min(...comPace.map(a=>p2s(a.pace)))):'—';
 
   document.getElementById('t-stats').innerHTML=`
-    <div class="stat"><div class="sv" style="color:var(--blue)">${km7f}</div><div class="sl">km esta sem.</div></div>
-    <div class="stat"><div class="sv" style="color:var(--green)">${t7f}</div><div class="sl">treinos / sem.</div></div>
+    <div class="stat"><div class="sv" style="color:var(--blue)">${kmPeriodo}</div><div class="sl">km (${periodDaysLabel})</div></div>
+    <div class="stat"><div class="sv" style="color:var(--green)">${treinosPeriodo}</div><div class="sl">treinos (${periodDaysLabel})</div></div>
     <div class="stat"><div class="sv" style="color:var(--orange)">${melhor}</div><div class="sl">melhor pace corrida</div></div>`;
 
   // Charts — destruir antes de recriar
@@ -2423,6 +2423,7 @@ function renderTreinos(ativ,meta,sem){
     const volEsta  = volVals[volVals.length-1];
     const volAnt   = volVals.length>1 ? volVals[volVals.length-2] : 0;
     const volDelta = volAnt>0 ? Math.round((volEsta-volAnt)/volAnt*100) : null;
+    const volMediaPeriodoSem = +(kmPeriodo/periodoEmSemanas).toFixed(1);
 
     charts.vol = mkChart('cVol','bar',semKeys.map(semLbl),volVals,null,{datasets:[
       { type:'bar', label:'Volume (km)',
@@ -2440,9 +2441,9 @@ function renderTreinos(ativ,meta,sem){
     ], options:{plugins:{tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.raw} km`}}}}});
     const volSub = document.getElementById('vol-sub');
     if(volSub) volSub.innerHTML =
-      `<b>Esta semana:</b> ${volEsta} km`+
+      `<b>No período (${periodDaysLabel}):</b> ${kmPeriodo} km`+
       (volDelta!==null ? ` &nbsp;<span class="chip ${volDelta>=0?'chip-v':'chip-r'}">${volDelta>=0?'▲':'▼'} ${Math.abs(volDelta)}% vs ant.</span>` : '')+
-      ` · <b>Média:</b> ${volMed} km/sem · <b>Máx:</b> ${volMax} km`+
+      ` · <b>Média semanal no período:</b> ${volMediaPeriodoSem} km/sem · <b>Pico semanal:</b> ${volMax} km`+
       `<div class="zone-legend">`+
       `<span class="zl-chip zl-v">Verde = acima da média</span>`+
       `<span class="zl-chip zl-b">Azul = semana atual ou regular</span>`+
@@ -2452,6 +2453,8 @@ function renderTreinos(ativ,meta,sem){
     const freqVals = semKeys.map(k=>semData[k].treinos);
     const freqMed  = +(freqVals.reduce((s,v)=>s+v,0)/freqVals.length).toFixed(1);
     const freqEsta = freqVals[freqVals.length-1];
+    const freqPeriodoSem = +(treinosPeriodo/periodoEmSemanas).toFixed(1);
+    const alvoPeriodo = Math.max(1, Math.round(curPeriodo/7));
 
     charts.freq = mkChart('cFreq','bar',semKeys.map(semLbl),freqVals,null,{datasets:[
       { type:'bar', label:'Treinos',
@@ -2467,9 +2470,9 @@ function renderTreinos(ativ,meta,sem){
     ], options:{plugins:{tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.raw}`}}}, scales:{y:{...BASE.scales.y,min:0,ticks:{...BASE.scales.y.ticks,stepSize:1}}}}});
     const freqSub = document.getElementById('freq-sub');
     if(freqSub) freqSub.innerHTML =
-      `<b>Esta semana:</b> ${freqEsta} treinos`+
-      ` &nbsp;<span class="chip ${freqEsta>=1?'chip-v':'chip-r'}">${freqEsta>=1?'✓ Meta atingida':'Abaixo do alvo'}</span>`+
-      ` · <b>Média:</b> ${freqMed}x/sem · <b>Alvo:</b> 1×/sem`;
+      `<b>No período (${periodDaysLabel}):</b> ${treinosPeriodo} treinos`+
+      ` &nbsp;<span class="chip ${treinosPeriodo>=alvoPeriodo?'chip-v':'chip-r'}">${treinosPeriodo>=alvoPeriodo?'✓ Meta no período atingida':'Abaixo da meta no período'}</span>`+
+      ` · <b>Média semanal no período:</b> ${freqPeriodoSem}x/sem · <b>Alvo no período:</b> ${alvoPeriodo} treinos`;
   }
 
   // Ícone por esporte
