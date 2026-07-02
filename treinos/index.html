@@ -714,7 +714,7 @@ window.addEventListener('DOMContentLoaded', () => {
 const FB_DB   = 'https://gastos-casa-7f431-default-rtdb.firebaseio.com';
 const FB_KEY  = 'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU';
 const FB_PATH = 'treinos/luiz';
-const APP_VERSION = '2026-07-01-12';
+const APP_VERSION = '2026-07-02-01';
 const SNAPSHOT_KEY = 'treinos_last_snapshot_v1';
 let charts = {}, curTab = 'coach', DATA = null, curEsporte = 'todos';
 const PERIODO = 180; // dias padrão para todas as médias do app
@@ -745,6 +745,97 @@ const PLANO_TIPOS = {
   tri_avancado:{label:'Tri Avançado', foco:'Construção específica', runFactor:1.08, bikeFactor:1.1, swimFactor:1.08, gymSessions:2},
   tri_regeneracao:{label:'Semana Regenerativa', foco:'Absorção e recuperação', runFactor:0.72, bikeFactor:0.75, swimFactor:0.8, gymSessions:2}
 };
+const GYM_LIBRARY = {
+  squat:{name:'Agachamento Goblet', muscle:'quadríceps, glúteo e core', sets:'3×10-12', cue:'Desça controlando, mantenha o tronco firme e os joelhos alinhados.', accent:'#2563eb'},
+  rdl:{name:'Levantamento Romeno', muscle:'posterior de coxa e glúteo', sets:'3×8-10', cue:'Empurre o quadril para trás e mantenha a coluna neutra.', accent:'#ea580c'},
+  split:{name:'Afundo Búlgaro', muscle:'glúteo, quadríceps e equilíbrio', sets:'3×8 cada perna', cue:'Controle a descida e não deixe o joelho colapsar para dentro.', accent:'#7c3aed'},
+  hip:{name:'Hip Thrust', muscle:'glúteo máximo e potência', sets:'4×10', cue:'Suba o quadril com pausa de 1s no topo.', accent:'#0ea5e9'},
+  row:{name:'Remada Sentada', muscle:'costas e postura', sets:'3×10-12', cue:'Puxe com os cotovelos e mantenha o peito aberto.', accent:'#16a34a'},
+  pull:{name:'Puxada na Frente', muscle:'dorsal e escápulas', sets:'3×10-12', cue:'Desça a barra até a linha do peito alto sem balançar.', accent:'#dc2626'},
+  press:{name:'Supino com Halteres', muscle:'peito, ombro e tríceps', sets:'3×8-10', cue:'Desça com controle e suba sem travar o cotovelo.', accent:'#db2777'},
+  plank:{name:'Prancha', muscle:'core e anti-rotação', sets:'3×30-45s', cue:'Costelas para baixo, glúteo ativo e pescoço neutro.', accent:'#14b8a6'},
+  carry:{name:'Farmer Carry', muscle:'core, pegada e postura', sets:'4×30-40m', cue:'Caminhe alto e estável, sem tombar para os lados.', accent:'#f59e0b'},
+  calf:{name:'Elevação de Panturrilha', muscle:'panturrilha e tornozelo', sets:'3×15-20', cue:'Suba completo e desça bem devagar.', accent:'#6366f1'}
+};
+
+function svgExercisePhoto(label, accent){
+  const svg = `
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360">
+    <defs>
+      <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#f8fbff"/>
+        <stop offset="100%" stop-color="#dbeafe"/>
+      </linearGradient>
+      <linearGradient id="body" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="${accent}"/>
+        <stop offset="100%" stop-color="#0f172a"/>
+      </linearGradient>
+    </defs>
+    <rect width="640" height="360" fill="url(#bg)"/>
+    <circle cx="522" cy="72" r="86" fill="${accent}" opacity=".12"/>
+    <circle cx="108" cy="286" r="124" fill="${accent}" opacity=".08"/>
+    <rect x="40" y="270" width="560" height="18" rx="9" fill="#cbd5e1"/>
+    <g transform="translate(320 118)">
+      <circle cx="0" cy="-44" r="24" fill="#0f172a"/>
+      <path d="M-22 -14 C-16 -36, 16 -36, 22 -14 L14 22 L-14 22 Z" fill="url(#body)"/>
+      <path d="M-10 22 L-30 74" stroke="#0f172a" stroke-width="10" stroke-linecap="round"/>
+      <path d="M10 22 L28 74" stroke="#0f172a" stroke-width="10" stroke-linecap="round"/>
+      <path d="M-34 0 L-74 -18" stroke="#0f172a" stroke-width="10" stroke-linecap="round"/>
+      <path d="M34 0 L74 -18" stroke="#0f172a" stroke-width="10" stroke-linecap="round"/>
+      <rect x="-92" y="-52" width="184" height="14" rx="7" fill="${accent}"/>
+      <circle cx="-96" cy="-45" r="16" fill="#1f2937"/>
+      <circle cx="96" cy="-45" r="16" fill="#1f2937"/>
+    </g>
+    <text x="42" y="48" font-family="Arial, sans-serif" font-size="30" font-weight="800" fill="#0f172a">${label}</text>
+    <text x="42" y="84" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="#475569">foto ilustrativa</text>
+  </svg>`;
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+}
+
+function gymSessionCards(sessionId){
+  return sessionId==='B'
+    ? [
+        {key:'pull', highlight:'costas e postura para nadar melhor'},
+        {key:'row', highlight:'estabilidade escapular e remada'},
+        {key:'press', highlight:'força de empurrar com controle'},
+        {key:'carry', highlight:'core e pegada para o triathlon'}
+      ]
+    : [
+        {key:'squat', highlight:'base de pernas para corrida e bike'},
+        {key:'rdl', highlight:'posterior e proteção do joelho'},
+        {key:'hip', highlight:'glúteo forte para potência'},
+        {key:'plank', highlight:'core para manter postura'}
+      ];
+}
+
+function renderGymExerciseCard(ex){
+  const d = GYM_LIBRARY[ex.key];
+  if(!d) return '';
+  const src = svgExercisePhoto(d.name, d.accent);
+  return `
+    <div class="tp-ex">
+      <div class="tp-ex-img">
+        <img class="tp-ex-photo" src="${src}" alt="${d.name}">
+        <span class="tp-ex-badge">foto ilustrativa</span>
+      </div>
+      <div class="tp-ex-body">
+        <div class="tp-ex-name">${d.name}</div>
+        <div class="tp-ex-sub">${d.muscle}</div>
+        <div class="tp-ex-sets">${d.sets}</div>
+        <div class="tp-ex-why"><b>Como fazer:</b> ${d.cue}<br><b>Foco deste bloco:</b> ${ex.highlight}</div>
+      </div>
+    </div>`;
+}
+
+function buildGymBlock(sessionId){
+  return `
+    <div class="tp-gym-wrap">
+      <div class="tp-gym-title">Academia ${sessionId} · guia didático</div>
+      <div class="tp-gym-grid">
+        ${gymSessionCards(sessionId).map(renderGymExerciseCard).join('')}
+      </div>
+    </div>`;
+}
 const TRI_TARGETS = {
   sprint:{label:'Sprint', run:18, bike:90, swim:4.5},
   olimpico:{label:'Olímpico', run:28, bike:140, swim:6.0},
@@ -1330,6 +1421,8 @@ function renderPlanoSemanal(){
       <div>
         <div class="tp-work">${p.treino}</div>
         <div class="tp-note">${p.note}</div>
+        ${p.treino.includes('Academia A') ? buildGymBlock('A') : ''}
+        ${p.treino.includes('Academia B') ? buildGymBlock('B') : ''}
       </div>
       <button class="tp-done ${done[i]?'on':''}" onclick="togglePlanoDone(${i})">${done[i]?'Feito':'Confirmar'}</button>
     </div>
