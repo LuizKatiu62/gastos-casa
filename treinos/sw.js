@@ -1,4 +1,4 @@
-const CACHE = 'treinos-v67';
+const CACHE = 'treinos-v68';
 const CORE = ['./manifest.json']; // HTML never cached — always fetched fresh
 
 self.addEventListener('install', e => {
