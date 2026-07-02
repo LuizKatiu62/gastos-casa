@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Treinos">
 <meta name="theme-color" content="#0b2239">
-<link rel="manifest" href="./manifest.json?v=2026-07-01-9">
+<link rel="manifest" href="./manifest.json?v=2026-07-01-10">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%231a56db' width='192' height='192'/><text x='50%' y='50%' font-size='120' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%231a56db' width='180' height='180' rx='40'/><text x='50%' y='50%' font-size='110' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <title>Treinos · Luiz Silva</title>
@@ -406,7 +406,6 @@ body{padding-top:45px}
   <button class="tab"    onclick="go('treinos',this)">🏃 Treinos</button>
   <button class="tab"    onclick="go('evolucao',this)">📈 Evolução</button>
   <button class="tab"    onclick="go('saude',this)">❤️ Saúde</button>
-  <button class="tab"    onclick="go('perguntas',this)">💬 Perguntas</button>
   <button class="tab"    onclick="go('provas',this)">🏁 Provas</button>
 </div>
 
@@ -622,53 +621,6 @@ body{padding-top:45px}
       </div>
     </div>
 
-    <!-- ══ COACH IA ══ -->
-    <div class="sec" id="sec-perguntas">
-
-      <!-- API Key -->
-      <div class="apikey-card" id="apikey-section" style="display:none">
-        <div style="font-size:.78rem;font-weight:800;color:#78350f">🔑 Chave API Anthropic</div>
-        <div style="font-size:.75rem;color:#92400e;margin-top:3px;line-height:1.5">Acesse <strong>console.anthropic.com</strong> → API Keys → Create Key. A chave fica salva só no seu celular.</div>
-        <div class="apikey-row">
-          <input type="password" class="apikey-inp" id="apikey-input" placeholder="sk-ant-...">
-          <button class="apikey-btn" onclick="saveApiKey()">Salvar</button>
-        </div>
-      </div>
-
-      <!-- Chat -->
-      <div class="card">
-        <div class="card-title">🏋️ Coach IA — seus dados reais do Garmin</div>
-        <div class="chat-wrap" id="chat-messages">
-          <div class="chat-msg chat-coach">
-            <span class="chat-coach-label">🏋️ Coach</span>
-            Olá Luiz! Tenho acesso aos seus dados reais do Garmin — atividades, body battery, sono, HRV e stress. Pergunte o que quiser sobre seus treinos.
-          </div>
-        </div>
-        <div class="chat-input-row">
-          <textarea class="chat-ta" id="chat-input" placeholder="Pergunte para o coach…" rows="1" onkeydown="chatKey(event)" oninput="autoResize(this)"></textarea>
-          <button class="chat-send" id="chat-send" onclick="sendChat()">Enviar</button>
-        </div>
-      </div>
-
-      <!-- Perguntas rápidas -->
-      <div class="card">
-        <div class="card-title">⚡ Perguntas Rápidas — toque para usar</div>
-        <div class="qr-list">
-          <button class="qr" onclick="fillChat(this)">Qual treino devo fazer hoje considerando minha recuperação atual?</button>
-          <button class="qr" onclick="fillChat(this)">Tô em risco de overtraining? Analisa meu Body Battery e HRV.</button>
-          <button class="qr" onclick="fillChat(this)">Como tá meu volume semanal nos últimos 180 dias? Tô progredindo?</button>
-          <button class="qr" onclick="fillChat(this)">Meu sono tá adequado pra minha carga de treino? O que melhorar?</button>
-          <button class="qr" onclick="fillChat(this)">Analisa minha evolução de pace no último mês.</button>
-          <button class="qr" onclick="fillChat(this)">Meu VO2 max tá evoluindo? O que preciso fazer pra melhorar?</button>
-          <button class="qr" onclick="fillChat(this)">Qual deveria ser meu treino longo essa semana?</button>
-          <button class="qr" onclick="fillChat(this)">Baseado no meu histórico, qual pace realista pra correr 10k?</button>
-          <button class="qr" onclick="fillChat(this)">Sugere ajustes na carga pra próxima semana considerando minha recuperação.</button>
-          <button class="qr" onclick="fillChat(this)">Faz uma análise completa dos meus últimos 180 dias como treinador.</button>
-        </div>
-      </div>
-
-    </div>
-
     <!-- ══ PROVAS ══ -->
     <div class="sec" id="sec-provas">
       <div class="card">
@@ -747,7 +699,7 @@ window.addEventListener('DOMContentLoaded', () => {
 const FB_DB   = 'https://gastos-casa-7f431-default-rtdb.firebaseio.com';
 const FB_KEY  = 'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU';
 const FB_PATH = 'treinos/luiz';
-const APP_VERSION = '2026-07-01-9';
+const APP_VERSION = '2026-07-01-10';
 const SNAPSHOT_KEY = 'treinos_last_snapshot_v1';
 let charts = {}, curTab = 'coach', DATA = null, curEsporte = 'todos';
 const PERIODO = 180; // dias padrão para todas as médias do app
@@ -1902,7 +1854,6 @@ function render(d){
   document.getElementById('hSub').textContent = `Atualizado às ${pad(now.getHours())}:${pad(now.getMinutes())}`;
   setAppAlert('');
   syncPeriodoButtons();
-  initApiKey();
   loadRaceGoal();
   if(typeof initEventoBtn === 'function') initEventoBtn();
 
@@ -3231,16 +3182,22 @@ async function forceUpdateApp(){
 }
 
 function initApiKey(){
-  document.getElementById('apikey-section').style.display = ANTHRO_KEY ? 'none' : 'block';
-  if(ANTHRO_KEY) document.getElementById('apikey-input').value = '';
+  const sec = document.getElementById('apikey-section');
+  if(!sec) return;
+  sec.style.display = ANTHRO_KEY ? 'none' : 'block';
+  const inp = document.getElementById('apikey-input');
+  if(ANTHRO_KEY && inp) inp.value = '';
 }
 
 function saveApiKey(){
-  const v = document.getElementById('apikey-input').value.trim();
+  const inp = document.getElementById('apikey-input');
+  if(!inp) return;
+  const v = inp.value.trim();
   if(!v.startsWith('sk-')){ alert('Cole uma chave válida (começa com sk-ant-…)'); return; }
   ANTHRO_KEY = v;
   localStorage.setItem('anthro_key', v);
-  document.getElementById('apikey-section').style.display = 'none';
+  const sec = document.getElementById('apikey-section');
+  if(sec) sec.style.display = 'none';
 }
 
 function buildContext(){
@@ -3273,13 +3230,16 @@ function buildContext(){
 
 function fillChat(btn){
   const inp = document.getElementById('chat-input');
+  if(!inp) return;
   inp.value = btn.textContent.trim();
   autoResize(inp);
   inp.focus();
-  document.querySelector('.chat-wrap').scrollIntoView({behavior:'smooth',block:'start'});
+  const wrap = document.querySelector('.chat-wrap');
+  if(wrap) wrap.scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 function autoResize(el){
+  if(!el) return;
   el.style.height='auto';
   el.style.height=Math.min(el.scrollHeight,110)+'px';
 }
@@ -3289,12 +3249,15 @@ function chatKey(e){
 }
 
 async function sendChat(){
+  const inp = document.getElementById('chat-input');
+  if(!inp) return;
   if(!ANTHRO_KEY){
-    document.getElementById('apikey-section').style.display='block';
-    document.getElementById('apikey-input').focus();
+    const sec = document.getElementById('apikey-section');
+    const keyInp = document.getElementById('apikey-input');
+    if(sec) sec.style.display='block';
+    if(keyInp) keyInp.focus();
     return;
   }
-  const inp = document.getElementById('chat-input');
   const question = inp.value.trim();
   if(!question) return;
 
@@ -3304,6 +3267,7 @@ async function sendChat(){
   if(chatHistory.length > 20) chatHistory = chatHistory.slice(-20);
 
   const sendBtn = document.getElementById('chat-send');
+  if(!sendBtn) return;
   sendBtn.disabled = true;
   const typing = addMsg('coach', '…', true);
 
@@ -3344,6 +3308,7 @@ ${buildContext()}`;
 
 function addMsg(role, text, isTyping=false){
   const wrap = document.getElementById('chat-messages');
+  if(!wrap) return { remove(){} };
   const div  = document.createElement('div');
   div.className = 'chat-msg chat-'+role+(isTyping?' chat-typing':'');
   if(role==='coach'){
