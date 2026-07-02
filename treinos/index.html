@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Treinos">
 <meta name="theme-color" content="#0b2239">
-<link rel="manifest" href="./manifest.json?v=2026-07-01-8">
+<link rel="manifest" href="./manifest.json?v=2026-07-01-9">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%231a56db' width='192' height='192'/><text x='50%' y='50%' font-size='120' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%231a56db' width='180' height='180' rx='40'/><text x='50%' y='50%' font-size='110' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <title>Treinos · Luiz Silva</title>
@@ -747,7 +747,7 @@ window.addEventListener('DOMContentLoaded', () => {
 const FB_DB   = 'https://gastos-casa-7f431-default-rtdb.firebaseio.com';
 const FB_KEY  = 'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU';
 const FB_PATH = 'treinos/luiz';
-const APP_VERSION = '2026-07-01-8';
+const APP_VERSION = '2026-07-01-9';
 const SNAPSHOT_KEY = 'treinos_last_snapshot_v1';
 let charts = {}, curTab = 'coach', DATA = null, curEsporte = 'todos';
 const PERIODO = 180; // dias padrão para todas as médias do app
@@ -2824,6 +2824,19 @@ function miniBars(values,colors){
   return `<div class="g-bars">${vals.map((v,i)=>`<span style="height:${Math.max(8,Math.round(v/max*100))}%;background:${(colors&&colors[i])||'#60a5fa'}"></span>`).join('')}</div>`;
 }
 
+function bucketAvg(values,buckets=7){
+  const vals=(values||[]).filter(v=>Number.isFinite(+v)).map(v=>+v);
+  if(!vals.length) return [];
+  if(vals.length<=buckets) return vals;
+  const size=Math.ceil(vals.length/buckets);
+  const out=[];
+  for(let i=0;i<vals.length;i+=size){
+    const chunk=vals.slice(i,i+size);
+    out.push(chunk.reduce((s,v)=>s+v,0)/chunk.length);
+  }
+  return out;
+}
+
 function miniRing(value,max,color){
   const safeMax=Math.max(1,Number(max)||1);
   const pct=Math.max(0,Math.min(100,Math.round((Number(value)||0)/safeMax*100)));
@@ -2835,67 +2848,72 @@ function renderSaudeGlance({bbKeys,bb,sonoChart,sono,stressKeys,stress,comHRV,hr
   const el = document.getElementById('saude-glance');
   if(!el) return;
 
-  const hrVals = (ativ||[]).filter(a=>a.fcMed>0).slice(-7).map(a=>a.fcMed);
+  const hrVals = (ativ||[]).filter(a=>a.fcMed>0).map(a=>a.fcMed);
   const hrAvg = hrVals.length ? Math.round(hrVals.reduce((s,v)=>s+v,0)/hrVals.length) : 0;
+  const hrSpark = bucketAvg(hrVals,7);
 
-  const bbNowKey = bbKeys.length ? bbKeys[bbKeys.length-1] : null;
-  const bbNow = bbNowKey ? (bb[bbNowKey].max||0) : 0;
-  const bbDelta = bbNowKey ? ((bb[bbNowKey].max||0)-(bb[bbNowKey].min||0)) : 0;
+  const bbSeries = bbKeys.map(k=>bb[k].max||0).filter(v=>v>0);
+  const bbAvg = bbSeries.length ? Math.round(bbSeries.reduce((s,v)=>s+v,0)/bbSeries.length) : 0;
+  const bbDelta = bbSeries.length>=2 ? Math.round(bbSeries[bbSeries.length-1]-bbSeries[0]) : 0;
 
-  const sonoVals = sonoChart.slice(-7).map(k=>sono[k].duracao||0);
-  const sonoNow = sonoVals.length ? sonoVals[sonoVals.length-1] : 0;
+  const sonoVals = sonoChart.map(k=>sono[k].duracao||0).filter(v=>v>0);
+  const sonoAvg = sonoVals.length ? +(sonoVals.reduce((s,v)=>s+v,0)/sonoVals.length).toFixed(1) : 0;
+  const sonoBars = bucketAvg(sonoVals,7);
 
-  const vo2Vals = (ativ||[]).filter(a=>a.vo2max>0).slice(-7).map(a=>a.vo2max);
-  const vo2Now = vo2Vals.length ? vo2Vals[vo2Vals.length-1] : 0;
+  const vo2Vals = (ativ||[]).filter(a=>a.vo2max>0).map(a=>a.vo2max);
+  const vo2Avg = vo2Vals.length ? Math.round(vo2Vals.reduce((s,v)=>s+v,0)/vo2Vals.length) : 0;
 
-  const stressVals = stressKeys.slice(-7).map(k=>stress[k].avg||0);
-  const stressNow = stressVals.length ? stressVals[stressVals.length-1] : 0;
+  const stressVals = stressKeys.map(k=>stress[k].avg||0).filter(v=>v>0);
+  const stressAvg = stressVals.length ? Math.round(stressVals.reduce((s,v)=>s+v,0)/stressVals.length) : 0;
+  const stressBars = bucketAvg(stressVals,7);
 
-  const passosVals = (ativ||[]).slice(-7).map(a=>Math.max(0,Math.round((a.calorias||0)*17))); // estimativa quando não há passos dedicados
-  const passosNow = passosVals.length ? passosVals[passosVals.length-1] : 0;
+  const passosVals = (ativ||[]).map(a=>Math.max(0,Math.round((a.calorias||0)*17))).filter(v=>v>0); // estimativa quando não há passos dedicados
+  const passosMed = passosVals.length ? Math.round(passosVals.reduce((s,v)=>s+v,0)/passosVals.length) : 0;
+  const passosSpark = bucketAvg(passosVals,7);
 
-  const hrvVals = comHRV.slice(-7).map(k=> (hrv[k].ontem>0 ? hrv[k].ontem : (hrv[k].semanal||0)) ).filter(v=>v>0);
-  const hrvNow = hrvVals.length ? hrvVals[hrvVals.length-1] : 0;
+  const hrvVals = comHRV.map(k=> (hrv[k].ontem>0 ? hrv[k].ontem : (hrv[k].semanal||0)) ).filter(v=>v>0);
+  const hrvMed = hrvVals.length ? Math.round(hrvVals.reduce((s,v)=>s+v,0)/hrvVals.length) : 0;
+  const hrvSpark = bucketAvg(hrvVals,7);
 
   el.innerHTML = `
     <div class="gcard">
       <div class="ghead">❤️ Heart Rate</div>
       <div class="gval">${hrAvg||'—'} <span style="font-size:.68rem;font-weight:700;color:#64748b">bpm</span></div>
       <div class="gsub">Média dos treinos no período</div>
-      ${miniSpark(hrVals,'#ef4444')}
+      ${miniSpark(hrSpark,'#ef4444')}
     </div>
     <div class="gcard">
       <div class="ghead">🔋 Body Battery</div>
-      ${miniRing(bbNow,100,'#1a56db')}
-      <div class="gsub">${bbDelta>=0?'+':''}${bbDelta}% carga útil do dia</div>
+      ${miniRing(bbAvg,100,'#1a56db')}
+      <div class="gsub">${bbDelta>=0?'+':''}${bbDelta}% variação no período</div>
     </div>
     <div class="gcard">
       <div class="ghead">😴 Sleep Score</div>
-      <div class="gval">${sonoNow?sonoNow.toFixed(1):'—'} <span style="font-size:.68rem;font-weight:700;color:#64748b">h</span></div>
-      ${miniBars(sonoVals,sonoVals.map(v=>v>=7?'#22c55e':v>=6?'#f59e0b':'#ef4444'))}
-      <div class="gsub">Últimos 7 dias</div>
+      <div class="gval">${sonoAvg?sonoAvg.toFixed(1):'—'} <span style="font-size:.68rem;font-weight:700;color:#64748b">h</span></div>
+      ${miniBars(sonoBars,sonoBars.map(v=>v>=7?'#22c55e':v>=6?'#f59e0b':'#ef4444'))}
+      <div class="gsub">Média no período selecionado</div>
     </div>
     <div class="gcard">
       <div class="ghead">🏃 VO2 Max</div>
-      ${miniRing(vo2Now,65,'#dc2626')}
-      <div class="gsub">Nível ${vo2Now>=50?'superior':vo2Now>=42?'bom':'em evolução'}</div>
+      ${miniRing(vo2Avg,65,'#dc2626')}
+      <div class="gsub">Nível ${vo2Avg>=50?'superior':vo2Avg>=42?'bom':'em evolução'}</div>
     </div>
     <div class="gcard">
       <div class="ghead">😰 Stress</div>
-      ${miniRing(stressNow,100,'#0ea5e9')}
-      ${miniBars(stressVals,stressVals.map(v=>v<25?'#22c55e':v<50?'#3b82f6':v<75?'#f59e0b':'#ef4444'))}
+      ${miniRing(stressAvg,100,'#0ea5e9')}
+      ${miniBars(stressBars,stressBars.map(v=>v<25?'#22c55e':v<50?'#3b82f6':v<75?'#f59e0b':'#ef4444'))}
     </div>
     <div class="gcard">
       <div class="ghead">👣 Atividade</div>
-      <div class="gval">${passosNow.toLocaleString('pt-BR')}</div>
-      <div class="gsub">Carga diária estimada</div>
-      ${miniSpark(passosVals,'#2563eb')}
+      <div class="gval">${passosMed.toLocaleString('pt-BR')}</div>
+      <div class="gsub">Média diária estimada no período</div>
+      ${miniSpark(passosSpark,'#2563eb')}
     </div>
     <div class="gcard">
       <div class="ghead">💚 HRV</div>
-      <div class="gval">${hrvNow||'—'} <span style="font-size:.68rem;font-weight:700;color:#64748b">ms</span></div>
-      ${miniSpark(hrvVals,'#16a34a')}
-      <div class="gsub">Tendência da recuperação</div>
+      <div class="gval">${hrvMed||'—'} <span style="font-size:.68rem;font-weight:700;color:#64748b">ms</span></div>
+      ${miniSpark(hrvSpark,'#16a34a')}
+      <div class="gsub">Média e tendência no período</div>
     </div>
   `;
 }
