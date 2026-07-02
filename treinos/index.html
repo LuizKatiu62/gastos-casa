@@ -1420,14 +1420,14 @@ function renderPlanoSemanal(){
   const cycleSel = document.getElementById('tp-cycle');
   if(targetSel) targetSel.value = cycle.target || triCfg.target;
   if(cycleSel) cycleSel.value = String(cycle.cycleWeeks || triCfg.cycleWeeks);
+  const gymA = plan.some(p=>p.treino.includes('Academia A')) ? buildGymBlock('A') : '';
+  const gymB = plan.some(p=>p.treino.includes('Academia B')) ? buildGymBlock('B') : '';
   const rows = plan.map((p,i)=>`
     <div class="tp-row">
       <div class="tp-day">${p.day}</div>
       <div>
         <div class="tp-work">${p.treino}</div>
         <div class="tp-note">${p.note}</div>
-        ${p.treino.includes('Academia A') ? buildGymBlock('A') : ''}
-        ${p.treino.includes('Academia B') ? buildGymBlock('B') : ''}
       </div>
       <button class="tp-done ${done[i]?'on':''}" onclick="togglePlanoDone(${i})">${done[i]?'Feito':'Confirmar'}</button>
     </div>
@@ -1440,6 +1440,8 @@ function renderPlanoSemanal(){
       <div class="tp-type-chip">Tipo selecionado para esta semana</div>
       <div class="tp-alt-list"><span class="tp-alt-chip">2 sessões de academia</span><span class="tp-alt-chip">1 sessão brick</span><span class="tp-alt-chip">Controle de progressão</span>${phaseChip}</div>
     </div>
+    ${gymA}
+    ${gymB}
     ${rows}
   `;
 }
