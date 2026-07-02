@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Treinos">
 <meta name="theme-color" content="#0b2239">
-<link rel="manifest" href="./manifest.json?v=2026-07-01-10">
+<link rel="manifest" href="./manifest.json?v=2026-07-01-11">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%231a56db' width='192' height='192'/><text x='50%' y='50%' font-size='120' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%231a56db' width='180' height='180' rx='40'/><text x='50%' y='50%' font-size='110' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <title>Treinos · Luiz Silva</title>
@@ -699,7 +699,7 @@ window.addEventListener('DOMContentLoaded', () => {
 const FB_DB   = 'https://gastos-casa-7f431-default-rtdb.firebaseio.com';
 const FB_KEY  = 'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU';
 const FB_PATH = 'treinos/luiz';
-const APP_VERSION = '2026-07-01-10';
+const APP_VERSION = '2026-07-01-11';
 const SNAPSHOT_KEY = 'treinos_last_snapshot_v1';
 let charts = {}, curTab = 'coach', DATA = null, curEsporte = 'todos';
 const PERIODO = 180; // dias padrão para todas as médias do app
@@ -3352,6 +3352,119 @@ const PROVAS_DATA = [
   {nome:"Chicago Marathon",local:"Chicago, IL",data:"2026-10-11",dists:[42.2],regiao:"usa",url:"https://www.chicagomarathon.com"},
   {nome:"New York City Marathon",local:"New York, NY",data:"2026-11-01",dists:[42.2],regiao:"usa",url:"https://www.nyrr.org/tcsnycmarathon"},
 ];
+
+const RUNNB_RAW = [
+  ["Jul 1, 2026","SUBWAY Restaurants Canada Day 10 Miler and Grand Bay Guardian 5K","Grand Bay- Westfield, NB","https://secure.runnb.ca/event/subway-restaurants-canada-day-10-miler-and-grand-bay-guardian-5k/494578/"],
+  ["Jul 5, 2026","Shediac Lobster Festival: Claw Run / La course des pinces","Shediac, NB","https://secure.runnb.ca/event/shediac-lobster-festival-claw-run-la-course-des-pinces/494635/"],
+  ["Jul 11, 2026","Course a pied bon coeur","Saint-Quentin, NB","https://secure.runnb.ca/event/course-a-pied-bon-coeur/494541/"],
+  ["Jul 12, 2026","July Run for Renee 5k","Quispamsis, NB","https://secure.runnb.ca/event/july-run-for-renee-5k/494666/"],
+  ["Jul 12, 2026","465e Demi-marathon de l'Acadie","Tracadie-Sheila, NB","https://secure.runnb.ca/event/465e-demi-marathon-de-lacadie/1004878/"],
+  ["Jul 18, 2026","La Course du Festival des Peches et Aquaculture X Gym LeShed","Shippagan, NB","https://secure.runnb.ca/event/la-course-du-festival-des-peches-et-aquaculture-x-gym-leshed-depart-8h00am-environ/494701/"],
+  ["Jul 19, 2026","Dr Paula Keating 5k","Miramichi, NB","https://secure.runnb.ca/event/dr-paula-keating-5k/494644/"],
+  ["Aug 1, 2026","Tim Hortons Joe McGuire Memorial 5K and 10K","Woodstock, NB","https://secure.runnb.ca/event/tim-hortons-joe-mcguire-memorial-5k-and-10k/1004812/"],
+  ["Jul 31 - Aug 2, 2026","New Brunswick Marathon Presented by Saint John LNG","Grand Bay-Westfield, NB","https://secure.runnb.ca/event/new-brunswick-marathon-presented-by-saint-john-lng/494583/"],
+  ["Aug 2, 2026","La Course au Homard | Lobster Run","Pigeon Hill, NB","https://secure.runnb.ca/event/la-course-au-homard-lobster-run/1004836/"],
+  ["Aug 2, 2026","466e Demi-marathon de l'Acadie","Tracadie-Sheila, NB","https://secure.runnb.ca/event/466e-demi-marathon-de-lacadie/1004843/"],
+  ["Aug 2, 2026","Bridge to Bridge Run","Hartland, NB","https://secure.runnb.ca/event/bridge-to-bridge-run/1004875/"],
+  ["Aug 9, 2026","Raymond Cassie Miramichi Mile Race","Miramichi, NB","https://secure.runnb.ca/event/raymond-cassie-miramichi-mile-race/494645/"],
+  ["Aug 9, 2026","COURSE CARAQUET - Trail Running","Caraquet, NB","https://secure.runnb.ca/event/course-caraquet-trail-running/1004835/"],
+  ["Aug 15, 2026","GMRC Ice Cream Run","Riverview, NB","https://secure.runnb.ca/event/gmrc-ice-cream-run/494672/"],
+  ["Aug 16, 2026","Sylvio Bourque Miramichi Mile Race","Miramichi, NB","https://secure.runnb.ca/event/sylvio-bourque-miramichi-mile-race/494646/"],
+  ["Aug 16, 2026","August Run for Renee 5k","Quispamsis, NB","https://secure.runnb.ca/event/august-run-for-renee-5k/494667/"],
+  ["Aug 23, 2026","Worry Pas Relay 2026","Moncton, NB","https://secure.runnb.ca/event/worry-pas-relay-2026/494677/"],
+  ["Sep 6, 2026","Demi-Marathon Saint-Francois","Saint-Francois, NB","https://secure.runnb.ca/event/demi-marathon-saint-francois/494553/"],
+  ["Sep 6, 2026","467e Demi-marathon de l'Acadie","Tracadie-Sheila, NB","https://secure.runnb.ca/event/467e-demi-marathon-de-lacadie/1004844/"],
+  ["Sep 12, 2026","Trail Run Chaleur","Bathurst, NB","https://secure.runnb.ca/event/trail-run-chaleur/1004874/"],
+  ["Sep 13, 2026","Fredericton Mile by Run with the REDS","Fredericton, NB","https://secure.runnb.ca/event/fredericton-mile-by-run-with-the-reds/494590/"],
+  ["Sep 13, 2026","Miramichi River Runners 5k","Miramichi, NB","https://secure.runnb.ca/event/miramichi-river-runners-5k/494647/"],
+  ["Sep 13, 2026","Hampton 5 Miler","Hampton, NB","https://secure.runnb.ca/event/hampton-5-miler/494662/"],
+  ["Sep 19, 2026","La Boucle Belle-Baie","Belle-Baie, NB","https://secure.runnb.ca/event/la-boucle-belle-baie/1004818/"],
+  ["Sep 20, 2026","September Run for Renee 5k","Quispamsis, NB","https://secure.runnb.ca/event/september-run-for-renee-5k/494668/"],
+  ["Sep 20, 2026","10km de Tracadie presented by Les Amis de Zero Excuse Sports Inc.","Tracadie, NB","https://secure.runnb.ca/event/10km-de-tracadie-presented-by-les-amis-de-zero-excuse-sports-inc/1004813/"],
+  ["Sep 26, 2026","Miramichi Cross Country 5km (Saturday)","Miramichi, NB","https://secure.runnb.ca/event/miramichi-cross-country-5km-saturday/494648/"],
+  ["Sep 26, 2026","27th Annual Fundy Trail Cancer Walk and Run","St Martins, NB","https://secure.runnb.ca/event/27th-annual-fundy-trail-cancer-walk-and-run/494687/"],
+  ["Sep 27, 2026","Fredericton Fall Classic","Fredericton, NB","https://secure.runnb.ca/event/fredericton-fall-classic/494683/"],
+  ["Oct 4, 2026","Miramichi River Runners 5k","Miramichi, NB","https://secure.runnb.ca/event/miramichi-river-runners-5k/494649/"],
+  ["Oct 4, 2026","Legs for Literacy - presented by Medavie","Moncton, NB","https://secure.runnb.ca/event/legs-for-literacy-presented-by-medavie/494684/"],
+  ["Oct 4, 2026","468e Demi-marathon de l'Acadie","Tracadie-Sheila, NB","https://secure.runnb.ca/event/468e-demi-marathon-de-lacadie/1004845/"],
+  ["Oct 12, 2026","Trails-Giving 5k Run/Walk","Dieppe, NB","https://secure.runnb.ca/event/trails-giving-5k-run-walk/1004885/"],
+  ["Oct 17, 2026","Norm Brown Cross Country 5km (Saturday)","Miramichi, NB","https://secure.runnb.ca/event/norm-brown-cross-country-5km-saturday/494650/"],
+  ["Oct 25, 2026","October Run for Renee 5k","Quispamsis, NB","https://secure.runnb.ca/event/october-run-for-renee-5k/494669/"],
+  ["Nov 1, 2026","469e Demi-marathon de l'Acadie","Tracadie-Sheila, NB","https://secure.runnb.ca/event/469e-demi-marathon-de-lacadie/1004846/"],
+  ["Nov 8, 2026","Miramichi Arlene Donaher 5k","Miramichi, NB","https://secure.runnb.ca/event/miramichi-arlene-donaher-5k/494651/"],
+  ["Dec 6, 2026","470e Demi-marathon de l'Acadie","Tracadie-Sheila, NB","https://secure.runnb.ca/event/470e-demi-marathon-de-lacadie/1004847/"],
+  ["Jan 1 - Dec 31, 2026","Circle NB Challenge 2026","Virtual, NB","https://secure.runnb.ca/event/circle-nb-challenge-2026/494655/"]
+];
+
+const PHILLY_RAW = [
+  ["Fri 7/3/26","2026 July 4th Virtual Run - Philadelphia","Philadelphia, PA","5K | Virtual Event","https://runsignup.com/Race/PA/Philadelphia/JulyThVirtualRunPhiladelphia"],
+  ["Sat 7/11/26","Slurpee Run 2026","Philadelphia, PA","","https://runsignup.com/Race/PA/Philadelphia/SlurpeeRun"],
+  ["Sat 7/11/26","Stampone O'Brien Dilsheimer Holloway Women's Philadelphia Triathlon","Philadelphia, PA","","https://runsignup.com/Race/PA/Philadelphia/WomensPhillyTri"],
+  ["Sat 7/25/26","Souper Bowl 5K","Philadelphia, PA","3.1 Miles","https://runsignup.com/Race/PA/Philadelphia/SouperBowl5K"],
+  ["Sun 7/26/26","39th Annual The Ben to the Shore Bike Tour","Philadelphia, PA","65 Miles | 30 Miles | 10 Miles","https://runsignup.com/Race/PA/Philadelphia/TheBentotheShore"],
+  ["Thu 1/1/26","USA 250K","Philadelphia, PA","250K | Virtual Event","https://runsignup.com/Race/PA/Philadelphia/USA250K"],
+  ["Sun 2/1/26","Race Through Pennsylvania 1M, 5K, 10K, 13.1, 26.2","Philadelphia, PA","1 Mile | 5K | 10K | 13.1 Miles | 26.2 Miles","https://runsignup.com/Race/PA/Philadelphia/RaceThroughPennsylvaniaM5K10KNowOnly"],
+  ["Fri 2/20/26","Team Philly Race Training 2026","Philadelphia, PA","","https://runsignup.com/Race/PA/Philadelphia/TeamPhilly"],
+  ["Sat 8/1/26","THE FNR 10K - Philly","Philadelphia, PA","10K | 5K | 2K","https://runsignup.com/Race/PA/Philadelphia/TheFNRWestPhilly10k"]
+];
+
+function toIsoExternalDate(raw){
+  if(!raw) return '';
+  const s = String(raw).trim();
+  const mon = {Jan:1,Feb:2,Mar:3,Apr:4,May:5,Jun:6,Jul:7,Aug:8,Sep:9,Oct:10,Nov:11,Dec:12};
+  let m = s.match(/^([A-Za-z]{3})\s+(\d{1,2})\s*-\s*[A-Za-z]{3}\s+\d{1,2},\s*(\d{4})$/);
+  if(m) return `${m[3]}-${String(mon[m[1]]).padStart(2,'0')}-${String(m[2]).padStart(2,'0')}`;
+  m = s.match(/^([A-Za-z]{3})\s+(\d{1,2}),\s*(\d{4})$/);
+  if(m) return `${m[3]}-${String(mon[m[1]]).padStart(2,'0')}-${String(m[2]).padStart(2,'0')}`;
+  m = s.match(/^[A-Za-z]{3}\s+(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if(m){
+    const yy = Number(m[3]);
+    const yyyy = yy < 100 ? 2000 + yy : yy;
+    return `${yyyy}-${String(m[1]).padStart(2,'0')}-${String(m[2]).padStart(2,'0')}`;
+  }
+  return '';
+}
+
+function inferDistsFromText(nome, extra=''){
+  const t = `${nome||''} ${extra||''}`.toLowerCase();
+  const out = [];
+  if(/42\.2|26\.2|\bmarathon\b/.test(t) && !/half marathon/.test(t)) out.push(42.2);
+  if(/21\.1|13\.1|half|demi-marathon/.test(t)) out.push(21.1);
+  if(/\b10k\b|10\s?km/.test(t)) out.push(10);
+  if(/\b5k\b|5\s?km/.test(t)) out.push(5);
+  return out.length ? [...new Set(out)] : [5,10];
+}
+
+function normalizeProvaKey(p){
+  const n = (p.nome||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'');
+  return `${p.data}|${n}`;
+}
+
+const RUNNB_EVENTS = RUNNB_RAW.map(([date,name,local,url])=>({
+  nome:name,
+  local,
+  data:toIsoExternalDate(date),
+  dists:inferDistsFromText(name),
+  regiao:'atlantic',
+  url
+})).filter(p=>p.data);
+
+const PHILLY_EVENTS = PHILLY_RAW.map(([date,name,local,dinfo,url])=>({
+  nome:name,
+  local,
+  data:toIsoExternalDate(date),
+  dists:inferDistsFromText(name,dinfo),
+  regiao:'usa',
+  url
+})).filter(p=>p.data);
+
+const PROVAS_ALL = (()=>{
+  const all = [...PROVAS_DATA, ...RUNNB_EVENTS, ...PHILLY_EVENTS];
+  const map = new Map();
+  all.forEach(p=>map.set(normalizeProvaKey(p), p));
+  return [...map.values()];
+})();
+
 const REGIAO_LBL={atlantic:"🌊 Atlantic Canada",quebec:"⚜️ Québec",ontario:"🍁 Ontario",usa:"🇺🇸 Estados Unidos"};
 let curProvaDist='todas';
 let curProvaRegiao='todas';
@@ -3372,7 +3485,7 @@ function filterProvasRegiao(regiao,btn){
 
 function renderProvas(){
   const hoje=new Date().toISOString().slice(0,10);
-  let lista=PROVAS_DATA;
+  let lista=PROVAS_ALL;
   
   // Filtrar por distância
   if(curProvaDist!=='todas'){
@@ -3392,7 +3505,7 @@ function renderProvas(){
   
     // Se há um objetivo de prova, procurar por provas que correspondem
     if(raceGoal){
-      provaObjetivo=PROVAS_DATA.find(p=>p.data===raceGoal.date && p.dists.includes(raceGoal.dist));
+      provaObjetivo=PROVAS_ALL.find(p=>p.data===raceGoal.date && p.dists.includes(raceGoal.dist));
     }
   
   regioes.forEach(reg=>{
