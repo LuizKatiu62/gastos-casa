@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Treinos">
 <meta name="theme-color" content="#0b2239">
-<link rel="manifest" href="./manifest.json?v=2026-07-01-2">
+<link rel="manifest" href="./manifest.json?v=2026-07-01-4">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%231a56db' width='192' height='192'/><text x='50%' y='50%' font-size='120' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%231a56db' width='180' height='180' rx='40'/><text x='50%' y='50%' font-size='110' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <title>Treinos · Luiz Silva</title>
@@ -144,6 +144,16 @@ body{padding-top:45px}
 .sf-wrap{display:flex;gap:.4rem;margin-bottom:.75rem;flex-wrap:wrap}
 .sf-btn{border:1.5px solid var(--border);background:#fff;border-radius:999px;padding:.28rem .7rem;font-size:.72rem;font-weight:700;color:var(--muted);cursor:pointer;font-family:inherit;transition:all .15s}
 .sf-btn.sf-on{background:linear-gradient(135deg,#145da0,#0f9d7a);border-color:#145da0;color:#fff}
+.period-wrap{margin-bottom:.75rem;background:linear-gradient(180deg,#ffffff,#f8fbff);border:1px solid var(--border);border-radius:12px;padding:.55rem .65rem}
+.period-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:.35rem}
+.period-label{font-size:.68rem;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}
+.period-current{font-size:.75rem;font-weight:900;color:var(--blue)}
+.period-slider{width:100%;accent-color:#145da0;cursor:pointer}
+.mode-switch{display:flex;gap:.45rem;align-items:center;margin:-.15rem 0 .75rem}
+.mode-pill{flex:1;border:1.5px solid var(--border);background:#fff;border-radius:12px;padding:.45rem .6rem;font-size:.72rem;font-weight:800;color:var(--muted);cursor:pointer;font-family:inherit;text-align:center;transition:.16s}
+.mode-pill.on{background:linear-gradient(135deg,#0b2239,#145da0);border-color:#145da0;color:#fff}
+.mode-block{display:block}
+.mode-hidden{display:none!important}
 .tp-levels{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.6rem}
 .tp-levels .sf-btn{white-space:nowrap}
 .tp-types-note{font-size:.72rem;color:var(--text2);line-height:1.5;margin-top:.4rem}
@@ -449,14 +459,18 @@ body{padding-top:45px}
         <button class="sf-btn" onclick="setEsporte('natacao',this)">🏊 Natação</button>
         <button class="sf-btn" onclick="setEsporte('academia',this)">💪 Academia</button>
       </div>
-      <div class="period-wrap">
-        <span class="period-label">Intervalo</span>
-        <button class="sf-btn sf-on period-btn" data-days="180" onclick="setPeriodo(180,this)">180d</button>
-        <button class="sf-btn period-btn" data-days="90" onclick="setPeriodo(90,this)">90d</button>
-        <button class="sf-btn period-btn" data-days="30" onclick="setPeriodo(30,this)">30d</button>
-        <button class="sf-btn period-btn" data-days="7" onclick="setPeriodo(7,this)">7d</button>
+      <div class="mode-switch" id="treinos-mode-switch">
+        <button class="mode-pill on" data-mode="atleta" onclick="setTreinosMode('atleta',this)">🏁 Modo Atleta</button>
+        <button class="mode-pill" data-mode="coach" onclick="setTreinosMode('coach',this)">🧭 Modo Coach</button>
       </div>
-      <div class="card">
+      <div class="period-wrap">
+        <div class="period-head">
+          <span class="period-label">Intervalo</span>
+          <span class="period-current">180d</span>
+        </div>
+        <input class="period-slider" type="range" min="7" max="180" step="1" value="180" aria-label="Intervalo em dias" oninput="setPeriodo(Number(this.value))">
+      </div>
+      <div class="card mode-block" id="treino-card-atleta">
         <div class="card-title">🗓️ Plano Semanal Triathlon + Academia</div>
         <div id="tp-levels" class="tp-levels">
           <button class="sf-btn sf-on" onclick="setPlanoTipo('tri_iniciante',this)">Tri Iniciante</button>
@@ -479,7 +493,7 @@ body{padding-top:45px}
         </div>
         <div id="tp-list" class="tp-week"></div>
       </div>
-      <div class="card">
+      <div class="card mode-block" id="treino-card-coach">
         <div class="card-title">🧭 Coach Semanal (1x/semana)</div>
         <div id="coach-levels" class="tp-levels">
           <button class="sf-btn sf-on" onclick="setCoachSemanalTipo('intervalado',this)">Intervalado</button>
@@ -514,11 +528,11 @@ body{padding-top:45px}
     <!-- ══ EVOLUÇÃO ══ -->
     <div class="sec" id="sec-evolucao">
       <div class="period-wrap">
-        <span class="period-label">Intervalo</span>
-        <button class="sf-btn sf-on period-btn" data-days="180" onclick="setPeriodo(180,this)">180d</button>
-        <button class="sf-btn period-btn" data-days="90" onclick="setPeriodo(90,this)">90d</button>
-        <button class="sf-btn period-btn" data-days="30" onclick="setPeriodo(30,this)">30d</button>
-        <button class="sf-btn period-btn" data-days="7" onclick="setPeriodo(7,this)">7d</button>
+        <div class="period-head">
+          <span class="period-label">Intervalo</span>
+          <span class="period-current">180d</span>
+        </div>
+        <input class="period-slider" type="range" min="7" max="180" step="1" value="180" aria-label="Intervalo em dias" oninput="setPeriodo(Number(this.value))">
       </div>
       <div class="div-label">Últimos <span class="period-note">180 dias</span></div>
       <div id="evo-hero" class="ring-grid"></div>
@@ -557,11 +571,11 @@ body{padding-top:45px}
     <!-- ══ SAÚDE ══ -->
     <div class="sec" id="sec-saude">
       <div class="period-wrap">
-        <span class="period-label">Intervalo</span>
-        <button class="sf-btn sf-on period-btn" data-days="180" onclick="setPeriodo(180,this)">180d</button>
-        <button class="sf-btn period-btn" data-days="90" onclick="setPeriodo(90,this)">90d</button>
-        <button class="sf-btn period-btn" data-days="30" onclick="setPeriodo(30,this)">30d</button>
-        <button class="sf-btn period-btn" data-days="7" onclick="setPeriodo(7,this)">7d</button>
+        <div class="period-head">
+          <span class="period-label">Intervalo</span>
+          <span class="period-current">180d</span>
+        </div>
+        <input class="period-slider" type="range" min="7" max="180" step="1" value="180" aria-label="Intervalo em dias" oninput="setPeriodo(Number(this.value))">
       </div>
       <div class="div-label">Últimos <span class="period-note">180 dias</span></div>
       <div id="saude-hero" class="ring-grid"></div>
@@ -714,13 +728,16 @@ window.addEventListener('DOMContentLoaded', () => {
 const FB_DB   = 'https://gastos-casa-7f431-default-rtdb.firebaseio.com';
 const FB_KEY  = 'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU';
 const FB_PATH = 'treinos/luiz';
-const APP_VERSION = '2026-07-01-2';
+const APP_VERSION = '2026-07-01-4';
 const SNAPSHOT_KEY = 'treinos_last_snapshot_v1';
 let charts = {}, curTab = 'coach', DATA = null, curEsporte = 'todos';
 const PERIODO = 180; // dias padrão para todas as médias do app
+const PERIOD_MIN_DAYS = 7;
+const PERIOD_MAX_DAYS = 180;
 let curPeriodo = PERIODO;
 let curPlanoTipo = 'tri_intermediario';
 let curCoachTipo = 'intervalado';
+let curTreinosMode = localStorage.getItem('treinos_mode_v1') || 'atleta';
 const TP_STATE_KEY = 'treinos_programados_state_v3';
 const TRI_CFG_KEY = 'tri_cfg_v1';
 const COACH_STATE_KEY = 'treinos_coach_state_v1';
@@ -782,12 +799,17 @@ async function ensureChartJs(){
   return false;
 }
 
-function formatPeriodo(d){return d===180?'180 dias':d===90?'90 dias':d===30?'30 dias':'7 dias';}
+function formatPeriodo(d){return `${d} dias`;}
 function updatePeriodoNotes(){
   document.querySelectorAll('.period-note').forEach(el=>el.textContent=formatPeriodo(curPeriodo));
 }
 function syncPeriodoButtons(){
-  document.querySelectorAll('.period-btn').forEach(b=>b.classList.toggle('sf-on', Number(b.dataset.days)===curPeriodo));
+  const safeDays = Math.max(PERIOD_MIN_DAYS, Math.min(PERIOD_MAX_DAYS, Number(curPeriodo) || PERIODO));
+  curPeriodo = safeDays;
+  document.querySelectorAll('.period-slider').forEach(sl=>{
+    if(Number(sl.value)!==safeDays) sl.value = String(safeDays);
+  });
+  document.querySelectorAll('.period-current').forEach(el=>el.textContent=`${safeDays}d`);
   updatePeriodoNotes();
 }
 
@@ -798,7 +820,7 @@ function destroyChart(key){
   }
 }
 function setPeriodo(days,btn){
-  curPeriodo = days;
+  curPeriodo = Math.max(PERIOD_MIN_DAYS, Math.min(PERIOD_MAX_DAYS, Number(days) || PERIODO));
   syncPeriodoButtons();
   if(DATA){
     const atividades=(DATA.atividades||[]).sort((a,b)=>b.data.localeCompare(a.data));
@@ -832,6 +854,26 @@ function setEsporte(e,btn){
   document.querySelectorAll('#sec-treinos .sf-wrap .sf-btn').forEach(b=>b.classList.remove('sf-on'));
   btn.classList.add('sf-on');
   if(DATA){const a=(DATA.atividades||[]).sort((a,b)=>b.data.localeCompare(a.data));renderTreinos(a,DATA.meta||{},DATA.semanal||{});}
+}
+
+function applyTreinosMode(){
+  const atletaCard = document.getElementById('treino-card-atleta');
+  const coachCard = document.getElementById('treino-card-coach');
+  if(atletaCard) atletaCard.classList.toggle('mode-hidden', curTreinosMode!=='atleta');
+  if(coachCard) coachCard.classList.toggle('mode-hidden', curTreinosMode!=='coach');
+  document.querySelectorAll('#treinos-mode-switch .mode-pill').forEach(b=>{
+    b.classList.toggle('on', b.dataset.mode===curTreinosMode);
+  });
+}
+
+function setTreinosMode(mode, btn){
+  curTreinosMode = mode==='coach' ? 'coach' : 'atleta';
+  try{ localStorage.setItem('treinos_mode_v1', curTreinosMode); }catch(_){ }
+  if(btn){
+    document.querySelectorAll('#treinos-mode-switch .mode-pill').forEach(b=>b.classList.remove('on'));
+    btn.classList.add('on');
+  }
+  applyTreinosMode();
 }
 
 function inferPlanoTipo(txt){
@@ -1123,6 +1165,52 @@ function calcTriAverages(){
   };
 }
 
+function calcGarminSignals(){
+  const bb = DATA?.bodyBattery || {};
+  const sono = DATA?.sono || {};
+  const hrv = DATA?.hrv || {};
+  const ativ = (DATA?.atividades || []).slice();
+
+  const d14 = new Date(Date.now()-14*864e5).toISOString().slice(0,10);
+  const d7 = new Date(Date.now()-7*864e5).toISOString().slice(0,10);
+  const recent14 = ativ.filter(a=>a.data>=d14);
+  const recent7 = ativ.filter(a=>a.data>=d7);
+  const prev7 = ativ.filter(a=>a.data<d7 && a.data>=d14);
+
+  const km = arr => arr.reduce((s,a)=>s+(+a.distancia||0),0);
+  const km7 = km(recent7);
+  const kmPrev7 = km(prev7);
+  const volTrend = kmPrev7>0 ? (km7-kmPrev7)/kmPrev7 : 0;
+
+  const bbKeys = Object.keys(bb).sort().slice(-3);
+  const bbAvg3 = bbKeys.length ? bbKeys.reduce((s,k)=>s+(bb[k].max||0),0)/bbKeys.length : 60;
+  const sonoKeys = Object.keys(sono).sort().filter(k=>k>=d7 && (sono[k].duracao||0)>=2);
+  const sonoAvg7 = sonoKeys.length ? sonoKeys.reduce((s,k)=>s+(sono[k].duracao||0),0)/sonoKeys.length : 6.5;
+  const hrvVal = k => (hrv[k]?.ontem||0)>0 ? hrv[k].ontem : (hrv[k]?.semanal||0);
+  const hrvKeys = Object.keys(hrv).sort().slice(-7).filter(k=>hrvVal(k)>0);
+  const hrvAvg = hrvKeys.length ? hrvKeys.reduce((s,k)=>s+hrvVal(k),0)/hrvKeys.length : 45;
+
+  const vo2 = recent14.filter(a=>a.vo2max>0).map(a=>a.vo2max);
+  const vo2Now = vo2.length ? vo2[vo2.length-1] : 42;
+
+  let guard = 1;
+  if(volTrend > 0.2) guard *= 0.9;
+  if(bbAvg3 < 45) guard *= 0.88;
+  if(sonoAvg7 < 6.2) guard *= 0.92;
+  if(hrvAvg < 38) guard *= 0.94;
+  guard = Math.max(0.75, Math.min(1.06, guard));
+
+  return {
+    km7: +km7.toFixed(1),
+    volTrend,
+    bbAvg3: Math.round(bbAvg3),
+    sonoAvg7:+sonoAvg7.toFixed(1),
+    hrvAvg: Math.round(hrvAvg),
+    vo2Now: +vo2Now,
+    guard
+  };
+}
+
 function buildTriWeek(profile, avg){
   const clamp=(v,min,max)=>Math.min(max,Math.max(min,v));
   const runTarget = clamp(+(avg.runKm * profile.runFactor).toFixed(1), 12, 44);
@@ -1163,6 +1251,7 @@ function buildTriWeek(profile, avg){
 
 function buildPeriodizedTriWeek(profile, avg, weekIndex, totalWeeks, targetKey){
   const target = TRI_TARGETS[targetKey] || TRI_TARGETS.olimpico;
+  const g = calcGarminSignals();
   const wk = Math.min(Math.max(weekIndex,1), totalWeeks);
   const phaseCut1 = Math.round(totalWeeks*0.45);
   const phaseCut2 = Math.round(totalWeeks*0.8);
@@ -1172,9 +1261,9 @@ function buildPeriodizedTriWeek(profile, avg, weekIndex, totalWeeks, targetKey){
   const deloadFactor = deload ? 0.78 : 1;
 
   const runCap = avg.runKm * 1.10;
-  const runRaw = (avg.runKm + (target.run-avg.runKm)*baseToPeak) * profile.runFactor * deloadFactor;
-  const bikeRaw = (avg.bikeKm + (target.bike-avg.bikeKm)*baseToPeak) * profile.bikeFactor * deloadFactor;
-  const swimRaw = (avg.swimKm + (target.swim-avg.swimKm)*baseToPeak) * profile.swimFactor * deloadFactor;
+  const runRaw = (avg.runKm + (target.run-avg.runKm)*baseToPeak) * profile.runFactor * deloadFactor * g.guard;
+  const bikeRaw = (avg.bikeKm + (target.bike-avg.bikeKm)*baseToPeak) * profile.bikeFactor * deloadFactor * g.guard;
+  const swimRaw = (avg.swimKm + (target.swim-avg.swimKm)*baseToPeak) * profile.swimFactor * deloadFactor * g.guard;
 
   const clamp=(v,min,max)=>Math.min(max,Math.max(min,v));
   const runTarget = clamp(+Math.min(runRaw,runCap).toFixed(1), 12, 55);
@@ -1220,7 +1309,8 @@ function buildPeriodizedTriWeek(profile, avg, weekIndex, totalWeeks, targetKey){
       phase,
       deload,
       target: target.label,
-      criterio:'Progressão controlada, deload automático e corrida limitada a +10%.'
+      criterio:'Baseado na sua performance Garmin: volume recente, FC/pace, Body Battery, sono e HRV.',
+      garmin:`Garmin → BB3d ${g.bbAvg3}% · Sono7d ${g.sonoAvg7}h · HRV ${g.hrvAvg} · VO2 ${g.vo2Now} · tendência ${(g.volTrend*100).toFixed(0)}%`
     }
   };
 }
@@ -1262,7 +1352,7 @@ function renderPlanoSemanal(){
     <div class="tp-meta">Semana ${wk.weekKey} · ciclo ${metrics.week}/${metrics.totalWeeks} · alvo ${metrics.target} · perfil ${info.label} · concluído ${doneCount}/${plan.length}</div>
     <div class="tp-type-card">
       <div class="tp-type-title">${info.label}</div>
-      <div class="tp-type-desc"><b>Foco:</b> ${info.foco}<br><b>Fase:</b> ${phaseLabel}${metrics.deload?' (deload)':''}<br><b>Corrida:</b> ${metrics.runKm} km/sem · <b>Bike:</b> ${metrics.bikeKm} km/sem · <b>Natação:</b> ${metrics.swimKm} km/sem · <b>Academia:</b> ${metrics.gym}<br><b>Critério:</b> ${metrics.criterio}</div>
+      <div class="tp-type-desc"><b>Foco:</b> ${info.foco}<br><b>Fase:</b> ${phaseLabel}${metrics.deload?' (deload)':''}<br><b>Corrida:</b> ${metrics.runKm} km/sem · <b>Bike:</b> ${metrics.bikeKm} km/sem · <b>Natação:</b> ${metrics.swimKm} km/sem · <b>Academia:</b> ${metrics.gym}<br><b>Critério:</b> ${metrics.criterio}<br><b>Sinais usados:</b> ${metrics.garmin}</div>
       <div class="tp-type-chip">Tipo selecionado para esta semana</div>
       <div class="tp-alt-list"><span class="tp-alt-chip">2 sessões de academia</span><span class="tp-alt-chip">1 sessão brick</span><span class="tp-alt-chip">Controle de progressão</span>${phaseChip}</div>
     </div>
@@ -2235,6 +2325,7 @@ function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
 
 // ════════════════ TREINOS ════════════════
 function renderTreinos(ativ,meta,sem){
+  applyTreinosMode();
   renderPlanoSemanal();
   const filtrado=curEsporte==='todos'?ativ:ativ.filter(a=>getEsporte(a)===curEsporte);
   const d0=(new Date(Date.now()-curPeriodo*864e5)).toISOString().slice(0,10);
