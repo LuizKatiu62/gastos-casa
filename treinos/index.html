@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Treinos">
 <meta name="theme-color" content="#0b2239">
-<link rel="manifest" href="./manifest.json?v=2026-07-01-4">
+<link rel="manifest" href="./manifest.json?v=2026-07-01-5">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%231a56db' width='192' height='192'/><text x='50%' y='50%' font-size='120' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%231a56db' width='180' height='180' rx='40'/><text x='50%' y='50%' font-size='110' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <title>Treinos · Luiz Silva</title>
@@ -728,7 +728,7 @@ window.addEventListener('DOMContentLoaded', () => {
 const FB_DB   = 'https://gastos-casa-7f431-default-rtdb.firebaseio.com';
 const FB_KEY  = 'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU';
 const FB_PATH = 'treinos/luiz';
-const APP_VERSION = '2026-07-01-4';
+const APP_VERSION = '2026-07-01-5';
 const SNAPSHOT_KEY = 'treinos_last_snapshot_v1';
 let charts = {}, curTab = 'coach', DATA = null, curEsporte = 'todos';
 const PERIODO = 180; // dias padrão para todas as médias do app
@@ -1786,6 +1786,63 @@ function renderCoachHero({bbHoje,sonoMed,hrvLast,stressMed,kmSemana,treinosSeman
     </div>`;
 }
 
+const BAR_VALUE_LABELS_PLUGIN = {
+  id:'barValueLabels',
+  afterDatasetsDraw(chart){
+    const ctx = chart.ctx;
+    const isHorizontal = chart.options?.indexAxis === 'y';
+    const fmt = (v)=>{
+      const n = Number(v);
+      if(!Number.isFinite(n)) return '';
+      const r = Math.round(n*10)/10;
+      return Number.isInteger(r) ? String(r.toFixed(0)) : r.toFixed(1);
+    };
+
+    chart.data.datasets.forEach((ds, datasetIndex)=>{
+      const meta = chart.getDatasetMeta(datasetIndex);
+      if(!meta || meta.hidden || meta.type !== 'bar') return;
+
+      ctx.save();
+      ctx.font = '700 10px Poppins, sans-serif';
+      ctx.fillStyle = '#0f172a';
+      ctx.textAlign = 'center';
+
+      meta.data.forEach((bar, i)=>{
+        const parsed = meta.controller?.getParsed(i);
+        const value = isHorizontal ? parsed?.x : parsed?.y;
+        if(value === null || value === undefined || !Number.isFinite(Number(value))) return;
+
+        const label = fmt(value);
+        if(!label) return;
+
+        const p = bar.getProps(['x','y','base','width','height'], true);
+        const stacked = !!ds.stack;
+
+        if(isHorizontal){
+          ctx.textBaseline = 'middle';
+          const x = Number(value) >= 0 ? p.x + 10 : p.x - 10;
+          ctx.fillText(label, x, p.y);
+          return;
+        }
+
+        if(stacked){
+          const h = Math.abs((p.base ?? p.y) - p.y);
+          if(h < 12) return;
+          ctx.textBaseline = 'middle';
+          ctx.fillText(label, p.x, p.y + ((p.base ?? p.y) - p.y)/2);
+          return;
+        }
+
+        ctx.textBaseline = Number(value) >= 0 ? 'bottom' : 'top';
+        const y = Number(value) >= 0 ? Math.max(8, p.y - 4) : p.y + 12;
+        ctx.fillText(label, p.x, y);
+      });
+
+      ctx.restore();
+    });
+  }
+};
+
 const BASE={responsive:true,maintainAspectRatio:false,
   plugins:{
     legend:{display:true,position:'bottom',labels:{font:{size:10},boxWidth:12,padding:10,usePointStyle:true}},
@@ -1799,6 +1856,7 @@ function mkChart(id,type,labels,data,color,opts={}){
   const el=document.getElementById(id); if(!el)return;
   const datasets = opts.datasets ? opts.datasets : [{label:opts.label||'',data,backgroundColor:color,...(opts.dataset||{})}];
   return new Chart(el,{type,data:{labels,datasets},
+    plugins:[BAR_VALUE_LABELS_PLUGIN],
     options:{
       ...BASE,
       ...opts.options,
