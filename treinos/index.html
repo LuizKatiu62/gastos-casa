@@ -601,9 +601,9 @@ body{padding-top:45px}
         <div class="ch-sub" id="cad-sub"></div>
       </div>
       <div class="card" id="rd-card" style="display:none">
-        <div class="card-title">🦾 Running Dynamics — média <span class="period-note">180 dias</span> vs ideal</div>
+        <div class="card-title">🦾 Running Dynamics — média recente vs ideal</div>
         <div id="rd-list"></div>
-        <div style="font-size:.65rem;color:var(--muted);margin-top:.6rem;line-height:1.5">Baseado nas últimas corridas com dados de dinâmica. Requer HRM-Run, HRM-Pro ou Running Dynamics Pod.</div>
+        <div id="rd-foot" style="font-size:.65rem;color:var(--muted);margin-top:.6rem;line-height:1.5">Baseado nas últimas corridas com dados de dinâmica. Requer HRM-Run, HRM-Pro ou Running Dynamics Pod.</div>
       </div>
       <div class="card" id="ef-card" style="display:none">
         <div class="card-title">⚡ Efeito de Treino (últimos 10 treinos)</div>
@@ -2806,8 +2806,12 @@ function renderEvolucao(ativ){
 
 // ════════════════ RUNNING DYNAMICS ════════════════
 function renderRunningDynamics(corrida){
-  // corrida já vem filtrada por 30 dias pelo renderEvolucao
-  const acts = corrida.filter(a => a.oscilacao > 0 || a.contatoSolo > 0 || a.razaoVertical > 0 || a.cadencia > 0);
+  const actsBase = corrida
+    .filter(a => a.oscilacao > 0 || a.contatoSolo > 0 || a.razaoVertical > 0 || a.cadencia > 0)
+    .sort((a,b)=>b.data.localeCompare(a.data));
+  const d45 = localISODate(new Date(Date.now()-45*864e5));
+  const actsRecent = actsBase.filter(a => a.data >= d45);
+  const acts = actsRecent.length >= 3 ? actsRecent : actsBase.slice(0, Math.min(12, actsBase.length));
   const card = document.getElementById('rd-card');
   if(acts.length < 1){ card.style.display='none'; return; }
   card.style.display='block';
@@ -2819,7 +2823,8 @@ function renderRunningDynamics(corrida){
   const mGCT  = Math.round(avg(acts,'contatoSolo'));
   const mVR   = avg(acts,'razaoVertical');
   const mBal  = avg(acts,'balanco');
-  const mPass = avg(acts,'passada');
+  const mPassRaw = avg(acts,'passada');
+  const mPass = mPassRaw > 10 ? +(mPassRaw/100).toFixed(2) : +mPassRaw.toFixed(2);
 
   // metric(nome, valor, unidade, min_escala, max_escala, ideal_ini, ideal_fim, lowerIsBetter, dica)
   function metric(nome, val, unit, scMin, scMax, idLow, idHigh, lowerIsBetter, dica){
@@ -2875,6 +2880,14 @@ function renderRunningDynamics(corrida){
       <div class="rd-vals"><span class="rd-real" style="color:var(--blue)">${mPass}</span><span class="rd-unit">m</span></div>
       <div style="font-size:.65rem;color:var(--muted);margin-top:.2rem">Varia com o pace. Aumenta naturalmente com o treino.</div></div>` : '',
   ].join('');
+
+  const latest = acts[0]?.data;
+  const oldest = acts[acts.length-1]?.data;
+  const foot = document.getElementById('rd-foot');
+  if(foot){
+    const faixa = latest && oldest ? `${fd(oldest)} a ${fd(latest)}` : 'corridas recentes';
+    foot.textContent = `Reavaliado com ${acts.length} corridas (${faixa}) com dados de dinâmica. Requer HRM-Run, HRM-Pro ou Running Dynamics Pod.`;
+  }
 }
 
 // ════════════════ SAÚDE ════════════════
