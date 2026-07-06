@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Treinos">
 <meta name="theme-color" content="#0b2239">
-<link rel="manifest" href="./manifest.json?v=2026-07-06-07">
+<link rel="manifest" href="./manifest.json?v=2026-07-06-08">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%231a56db' width='192' height='192'/><text x='50%' y='50%' font-size='120' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%231a56db' width='180' height='180' rx='40'/><text x='50%' y='50%' font-size='110' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <title>Treinos · Luiz Silva</title>
@@ -753,7 +753,7 @@ window.addEventListener('DOMContentLoaded', () => {
 const FB_DB   = 'https://gastos-casa-7f431-default-rtdb.firebaseio.com';
 const FB_KEY  = 'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU';
 const FB_PATH = 'treinos/luiz';
-const APP_VERSION = '2026-07-06-07';
+const APP_VERSION = '2026-07-06-08';
 const SNAPSHOT_KEY = 'treinos_last_snapshot_v1';
 const TRAINING_KICKOFF_DATE = '2026-07-07';
 let charts = {}, curTab = 'treinos', DATA = null, curEsporte = 'todos';
@@ -942,6 +942,94 @@ function applyTimeWindowAndRisk(plan=[], weekendIntense=true){
       : `${weekdayPrefix} ${noteRaw}`.trim();
     return {...item, note};
   });
+}
+
+function dayToOffset(day=''){
+  const key = String(day||'').trim().toLowerCase().slice(0,3);
+  const map = {seg:0, ter:1, qua:2, qui:3, sex:4, sab:5, sáb:5, dom:6};
+  return Number.isInteger(map[key]) ? map[key] : 0;
+}
+
+function isoDateFromWeekDay(weekKey, day){
+  const monday = weekKeyToMonday(weekKey);
+  const d = new Date(monday);
+  d.setDate(monday.getDate() + dayToOffset(day));
+  return localISODate(d);
+}
+
+function motraTimeForDay(day=''){
+  const key = String(day||'').trim().toLowerCase().slice(0,3);
+  if(key==='sab' || key==='sáb' || key==='dom') return '09:00';
+  return '17:30';
+}
+
+function gymSessionLabel(sessionId=''){
+  return sessionId==='UPPER' ? 'Força Costas e Postura' : 'Força Pernas e Core';
+}
+
+function gymSessionMotraText(sessionId=''){
+  return gymSessionCards(sessionId).map((ex, idx) => {
+    const d = GYM_LIBRARY[ex.key];
+    if(!d) return '';
+    return `${idx+1}. ${d.name} — ${d.sets} · ${d.cue}`;
+  }).filter(Boolean).join('\n');
+}
+
+function buildMotraGymQueue(plan=[], weekKey=''){
+  return (Array.isArray(plan)?plan:[]).map(item => {
+    const sessionId = detectGymSessionId(item?.treino||'');
+    if(!sessionId) return null;
+    const day = String(item?.day||'').trim();
+    const dateIso = isoDateFromWeekDay(weekKey, day);
+    const time = motraTimeForDay(day);
+    const sessionLabel = gymSessionLabel(sessionId);
+    const body = gymSessionMotraText(sessionId);
+    const title = `Motra · ${sessionLabel}`;
+    const payload = `${title}\nData: ${dateIso}\nHora: ${time}\nDia: ${day}\n\nExercícios:\n${body}`;
+    return {day, dateIso, time, sessionId, sessionLabel, payload};
+  }).filter(Boolean);
+}
+
+let motraGymQueue = [];
+
+async function copyTextToClipboard(text=''){
+  const val = String(text||'').trim();
+  if(!val) return false;
+  try{
+    if(navigator.clipboard?.writeText){
+      await navigator.clipboard.writeText(val);
+      return true;
+    }
+  }catch(_){ }
+  const ta = document.createElement('textarea');
+  ta.value = val;
+  ta.setAttribute('readonly','readonly');
+  ta.style.position = 'fixed';
+  ta.style.left = '-9999px';
+  document.body.appendChild(ta);
+  ta.select();
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch(_) { ok = false; }
+  document.body.removeChild(ta);
+  return ok;
+}
+
+async function copyMotraGymItem(idx){
+  const item = motraGymQueue[idx];
+  if(!item) return;
+  const ok = await copyTextToClipboard(item.payload);
+  setAppAlert(ok
+    ? `Treino de academia copiado para o Motra: ${item.day} ${item.dateIso} às ${item.time}.`
+    : 'Não consegui copiar automaticamente. Copie manualmente o texto exibido.', ok ? 'info' : 'warn');
+}
+
+async function copyMotraGymAll(){
+  if(!motraGymQueue.length) return;
+  const txt = motraGymQueue.map((item,idx)=>`# ${idx+1}\n${item.payload}`).join('\n\n');
+  const ok = await copyTextToClipboard(txt);
+  setAppAlert(ok
+    ? `Pacote Motra copiado com ${motraGymQueue.length} treino(s) de academia da semana.`
+    : 'Não consegui copiar o pacote Motra automaticamente.', ok ? 'info' : 'warn');
 }
 
 function openGymPhoto(src, title){
@@ -2631,10 +2719,32 @@ function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
 
   const gymWrap = document.getElementById('coach-gym-guide');
   if(gymWrap){
+    motraGymQueue = buildMotraGymQueue(plan, wk.weekKey);
     const sessions = [...new Set(plan.map(p=>detectGymSessionId(p.treino)).filter(Boolean))];
+    const motraHtml = motraGymQueue.length ? `
+      <div class="card-title" style="margin-top:.8rem">📲 Motra — Academia Automática da Semana</div>
+      <div class="tp-type-card" style="margin-bottom:.75rem">
+        <div class="tp-type-desc"><b>Integração prática:</b> o app já organiza os treinos de academia nos dias correspondentes. Use os botões para copiar e colar no Motra.</div>
+        <div class="tp-alt-list" style="margin-top:.45rem">
+          <button class="sf-btn sf-on" onclick="copyMotraGymAll()">Copiar pacote completo Motra</button>
+        </div>
+        <div style="display:grid;gap:.5rem;margin-top:.6rem">
+          ${motraGymQueue.map((item,idx)=>`
+            <div class="tp-row" style="margin:0">
+              <div class="tp-day">${item.day}</div>
+              <div>
+                <div class="tp-work">${item.sessionLabel}</div>
+                <div class="tp-note">Data ${item.dateIso} · horário sugerido ${item.time}</div>
+              </div>
+              <button class="tp-done" onclick="copyMotraGymItem(${idx})">Copiar para Motra</button>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    ` : '';
     gymWrap.innerHTML = sessions.length
-      ? `<div class="card-title" style="margin-top:.8rem">📸 Como Executar a Força — Fotos Reais</div>${sessions.map(buildGymBlock).join('')}`
-      : '';
+      ? `${motraHtml}<div class="card-title" style="margin-top:.8rem">📸 Como Executar a Força — Fotos Reais</div>${sessions.map(buildGymBlock).join('')}`
+      : motraHtml;
   }
 
   renderIndices(ativ, bb, sono, hrv);
