@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Treinos">
 <meta name="theme-color" content="#0b2239">
-<link rel="manifest" href="./manifest.json?v=2026-07-06-08">
+<link rel="manifest" href="./manifest.json?v=2026-07-06-09">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%231a56db' width='192' height='192'/><text x='50%' y='50%' font-size='120' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%231a56db' width='180' height='180' rx='40'/><text x='50%' y='50%' font-size='110' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <title>Treinos · Luiz Silva</title>
@@ -753,7 +753,7 @@ window.addEventListener('DOMContentLoaded', () => {
 const FB_DB   = 'https://gastos-casa-7f431-default-rtdb.firebaseio.com';
 const FB_KEY  = 'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU';
 const FB_PATH = 'treinos/luiz';
-const APP_VERSION = '2026-07-06-08';
+const APP_VERSION = '2026-07-06-09';
 const SNAPSHOT_KEY = 'treinos_last_snapshot_v1';
 const TRAINING_KICKOFF_DATE = '2026-07-07';
 let charts = {}, curTab = 'treinos', DATA = null, curEsporte = 'todos';
@@ -1014,22 +1014,61 @@ async function copyTextToClipboard(text=''){
   return ok;
 }
 
-async function copyMotraGymItem(idx){
+async function copyMotraGymItem(idx, showAlert=true){
   const item = motraGymQueue[idx];
-  if(!item) return;
+  if(!item) return false;
   const ok = await copyTextToClipboard(item.payload);
-  setAppAlert(ok
-    ? `Treino de academia copiado para o Motra: ${item.day} ${item.dateIso} às ${item.time}.`
-    : 'Não consegui copiar automaticamente. Copie manualmente o texto exibido.', ok ? 'info' : 'warn');
+  if(showAlert){
+    setAppAlert(ok
+      ? `Treino de academia copiado para o Motra: ${item.day} ${item.dateIso} às ${item.time}.`
+      : 'Não consegui copiar automaticamente. Copie manualmente o texto exibido.', ok ? 'info' : 'warn');
+  }
+  return ok;
 }
 
-async function copyMotraGymAll(){
-  if(!motraGymQueue.length) return;
+async function copyMotraGymAll(showAlert=true){
+  if(!motraGymQueue.length) return false;
   const txt = motraGymQueue.map((item,idx)=>`# ${idx+1}\n${item.payload}`).join('\n\n');
   const ok = await copyTextToClipboard(txt);
+  if(showAlert){
+    setAppAlert(ok
+      ? `Pacote Motra copiado com ${motraGymQueue.length} treino(s) de academia da semana.`
+      : 'Não consegui copiar o pacote Motra automaticamente.', ok ? 'info' : 'warn');
+  }
+  return ok;
+}
+
+function openMotraApp(){
+  const deepLink = 'motra://';
+  const webLink = 'https://www.motra.app/';
+  let fallbackDone = false;
+  const fallback = () => {
+    if(fallbackDone) return;
+    fallbackDone = true;
+    window.open(webLink, '_blank', 'noopener');
+  };
+  try{
+    window.location.href = deepLink;
+    setTimeout(fallback, 900);
+  }catch(_){
+    fallback();
+  }
+}
+
+async function openMotraWithItem(idx){
+  const ok = await copyMotraGymItem(idx, false);
+  openMotraApp();
   setAppAlert(ok
-    ? `Pacote Motra copiado com ${motraGymQueue.length} treino(s) de academia da semana.`
-    : 'Não consegui copiar o pacote Motra automaticamente.', ok ? 'info' : 'warn');
+    ? 'Treino copiado e Motra aberto. No Motra, use colar para finalizar.'
+    : 'Motra aberto. Não consegui copiar automaticamente; faça a cópia manual no bloco.', ok ? 'info' : 'warn');
+}
+
+async function openMotraWithAll(){
+  const ok = await copyMotraGymAll(false);
+  openMotraApp();
+  setAppAlert(ok
+    ? `Pacote semanal copiado e Motra aberto (${motraGymQueue.length} treinos).`
+    : 'Motra aberto. Não consegui copiar automaticamente o pacote semanal.', ok ? 'info' : 'warn');
 }
 
 function openGymPhoto(src, title){
@@ -2727,6 +2766,8 @@ function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
         <div class="tp-type-desc"><b>Integração prática:</b> o app já organiza os treinos de academia nos dias correspondentes. Use os botões para copiar e colar no Motra.</div>
         <div class="tp-alt-list" style="margin-top:.45rem">
           <button class="sf-btn sf-on" onclick="copyMotraGymAll()">Copiar pacote completo Motra</button>
+          <button class="sf-btn" onclick="openMotraApp()">Abrir Motra</button>
+          <button class="sf-btn" onclick="openMotraWithAll()">Abrir Motra + copiar pacote</button>
         </div>
         <div style="display:grid;gap:.5rem;margin-top:.6rem">
           ${motraGymQueue.map((item,idx)=>`
@@ -2736,7 +2777,10 @@ function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
                 <div class="tp-work">${item.sessionLabel}</div>
                 <div class="tp-note">Data ${item.dateIso} · horário sugerido ${item.time}</div>
               </div>
-              <button class="tp-done" onclick="copyMotraGymItem(${idx})">Copiar para Motra</button>
+              <div style="display:flex;gap:.45rem;flex-wrap:wrap;justify-content:flex-end">
+                <button class="tp-done" onclick="copyMotraGymItem(${idx})">Copiar para Motra</button>
+                <button class="tp-done" onclick="openMotraWithItem(${idx})">Abrir + colar</button>
+              </div>
             </div>
           `).join('')}
         </div>
