@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Treinos">
 <meta name="theme-color" content="#0b2239">
-<link rel="manifest" href="./manifest.json?v=2026-07-06-03">
+<link rel="manifest" href="./manifest.json?v=2026-07-06-04">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%231a56db' width='192' height='192'/><text x='50%' y='50%' font-size='120' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%231a56db' width='180' height='180' rx='40'/><text x='50%' y='50%' font-size='110' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <title>Treinos · Luiz Silva</title>
@@ -503,6 +503,7 @@ body{padding-top:45px}
             <tbody id="coach-sheet-body"></tbody>
           </table>
         </div>
+        <div id="coach-gym-guide"></div>
       </div>
     </div>
 
@@ -752,7 +753,7 @@ window.addEventListener('DOMContentLoaded', () => {
 const FB_DB   = 'https://gastos-casa-7f431-default-rtdb.firebaseio.com';
 const FB_KEY  = 'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU';
 const FB_PATH = 'treinos/luiz';
-const APP_VERSION = '2026-07-06-03';
+const APP_VERSION = '2026-07-06-04';
 const SNAPSHOT_KEY = 'treinos_last_snapshot_v1';
 let charts = {}, curTab = 'treinos', DATA = null, curEsporte = 'todos';
 const PERIODO = 180; // dias padrão para todas as médias do app
@@ -802,7 +803,7 @@ const GYM_LIBRARY = {
 };
 
 function gymSessionCards(sessionId){
-  return sessionId==='B'
+  return sessionId==='UPPER'
     ? [
         {key:'pull', highlight:'costas e postura para nadar melhor'},
         {key:'row', highlight:'estabilidade escapular e remada'},
@@ -811,8 +812,8 @@ function gymSessionCards(sessionId){
       ]
     : [
         {key:'squat', highlight:'base de pernas para corrida e bike'},
-        {key:'rdl', highlight:'posterior e proteção do joelho'},
-        {key:'hip', highlight:'glúteo forte para potência'},
+        {key:'calf', highlight:'tornozelo e impulsão para corrida'},
+        {key:'carry', highlight:'estabilidade global e postura'},
         {key:'plank', highlight:'core para manter postura'}
       ];
 }
@@ -838,9 +839,10 @@ function renderGymExerciseCard(ex){
 }
 
 function buildGymBlock(sessionId){
+  const lbl = sessionId==='UPPER' ? 'Força Costas e Postura' : 'Força Pernas e Core';
   return `
     <div class="tp-gym-wrap">
-      <div class="tp-gym-title">Academia ${sessionId} · guia didático</div>
+      <div class="tp-gym-title">${lbl} · guia didático com fotos reais</div>
       <div class="tp-gym-grid">
         ${gymSessionCards(sessionId).map(renderGymExerciseCard).join('')}
       </div>
@@ -849,20 +851,42 @@ function buildGymBlock(sessionId){
 
 function gymDayPreview(p){
   if(!p || !p.treino) return '';
-  const key = p.treino.includes('Academia A') ? 'squat'
-    : p.treino.includes('Academia B') ? 'pull'
+  const key = p.treino.includes('Força Pernas e Core') || p.treino.includes('Academia A') ? 'squat'
+    : p.treino.includes('Força Costas e Postura') || p.treino.includes('Academia B') ? 'pull'
     : null;
   if(!key) return '';
   const d = GYM_LIBRARY[key];
   if(!d) return '';
+  const sessLbl = p.treino.includes('Força Pernas e Core') || p.treino.includes('Academia A') ? 'Força Pernas e Core' : 'Força Costas e Postura';
   return `
     <div class="tp-row-media">
       <img class="tp-row-thumb" src="${d.photo}" alt="${d.name}">
       <div class="tp-row-media-txt">
         <b>${d.name}</b>
-        Foto real do exercício da sessão ${p.treino.includes('Academia A') ? 'A' : 'B'}.
+        Foto real do exercício da sessão ${sessLbl}.
       </div>
     </div>`;
+}
+
+function detectGymSessionId(treino=''){
+  const t = String(treino||'').toLowerCase();
+  if(t.includes('força pernas e core') || t.includes('academia a')) return 'LEGS';
+  if(t.includes('força costas e postura') || t.includes('academia b')) return 'UPPER';
+  return '';
+}
+
+function normalizeTreinoLabels(txt=''){
+  return String(txt||'')
+    .replace(/Academia\s*A/gi, 'Força Pernas e Core')
+    .replace(/Academia\s*B/gi, 'Força Costas e Postura');
+}
+
+function normalizePlanLabels(plan=[]){
+  return (plan||[]).map(p => ({
+    ...p,
+    treino: normalizeTreinoLabels(p?.treino||''),
+    note: normalizeTreinoLabels(p?.note||'')
+  }));
 }
 
 function openGymPhoto(src, title){
@@ -1192,7 +1216,15 @@ function ensureWeeklyPlano(nivel){
   const tipo = nivel || curPlanoTipo;
   const nowWeek = isoWeekInfo().key;
   if(!tpState.weeks[nowWeek]) tpState.weeks[nowWeek] = {};
-  if(tpState.weeks[nowWeek][tipo]) return {weekKey:nowWeek, data:tpState.weeks[nowWeek][tipo]};
+  if(tpState.weeks[nowWeek][tipo]){
+    const saved = tpState.weeks[nowWeek][tipo];
+    const normalized = normalizePlanLabels(saved.plan || []);
+    if(JSON.stringify(saved.plan||[]) !== JSON.stringify(normalized)){
+      saved.plan = normalized;
+      saveTpState();
+    }
+    return {weekKey:nowWeek, data:saved};
+  }
 
   if(!tpState.cycle){
     tpState.cycle = {startKey: nowWeek, target: triCfg.target, cycleWeeks: triCfg.cycleWeeks, objective: triCfg.objective || 'triathlon'};
@@ -1211,7 +1243,7 @@ function ensureWeeklyPlano(nivel){
   tpState.weeks[nowWeek][tipo] = {
     selectedType: prev?.selectedType || tipo,
     done: prev?.done || {},
-    plan: built.plan,
+    plan: normalizePlanLabels(built.plan),
     metrics: built.metrics
   };
   saveTpState();
@@ -1453,18 +1485,18 @@ function buildPeriodizedTriWeek(profile, avg, weekIndex, totalWeeks, targetKey, 
   const bikeFcZ2 = `${Math.max(110,avg.bikeFc-8)}-${Math.max(120,avg.bikeFc+6)} bpm`;
 
   const planTri = swimBeginner ? [
-    {day:'Seg', treino:`🏊 Adaptação ${swimTech} m + 💪 Academia A`, note:`Natação iniciante: respiração bilateral, flutuação e técnica básica. Sem séries longas.`},
+    {day:'Seg', treino:`🏊 Adaptação ${swimTech} m + 💪 Força Pernas e Core`, note:`Natação iniciante: respiração bilateral, flutuação e técnica básica. Sem séries longas.`},
     {day:'Ter', treino:`🚴 Bike qualidade ${bikeQuality} km`, note:`Blocos curtos em Z2/Z3. Evitar picos longos de intensidade. FC alvo ${bikeFcZ2}.`},
     {day:'Qua', treino:`🏃 Corrida qualidade ${qualityRun} km`, note:`Tempo run controlado em ${runTempoPace}/km, priorizando constância.`},
-    {day:'Qui', treino:`🏊 Técnica leve ${swimEnd} m + 💪 Academia B`, note:`Educativos curtos e pausas livres. Objetivo é confiança na água, não volume.`},
+    {day:'Qui', treino:`🏊 Técnica leve ${swimEnd} m + 💪 Força Costas e Postura`, note:`Educativos curtos e pausas livres. Objetivo é confiança na água, não volume.`},
     {day:'Sex', treino:`🛌 Descanso total`, note:`Dia obrigatório de recuperação (mobilidade leve opcional 15-20 min).`},
     {day:'Sáb', treino:`🚴 Longo ${bikeLong} km + 🏃 Brick ${brickRun} km`, note:`Transição curta bike→corrida, sem forçar ritmo.`},
     {day:'Dom', treino:`🏃 Longo Z2 ${longRun} km`, note:`Pace fácil ${runEasyPace}/km · FC alvo ${runFcZ2}.`}
   ] : [
-    {day:'Seg', treino:`🏊 Técnica ${swimTech} m + 💪 Academia A`, note:`Drills e técnica. Força A (core, glúteo, posterior).`},
+    {day:'Seg', treino:`🏊 Técnica ${swimTech} m + 💪 Força Pernas e Core`, note:`Drills e técnica. Força de base para corrida e bike.`},
     {day:'Ter', treino:`🚴 Bike qualidade ${bikeQuality} km`, note:`4×6 min Z3/Z4. Z2 alvo ${bikeFcZ2}.`},
     {day:'Qua', treino:`🏃 Corrida qualidade ${qualityRun} km`, note:`Tempo run em ${runTempoPace}/km, evitando excesso de volume.`},
-    {day:'Qui', treino:`🏊 Endurance ${swimEnd} m + 💪 Academia B`, note:`Nado contínuo controlado ~${swimCss}/100m + força B.`},
+    {day:'Qui', treino:`🏊 Endurance ${swimEnd} m + 💪 Força Costas e Postura`, note:`Nado contínuo controlado ~${swimCss}/100m + força de suporte para natação.`},
     {day:'Sex', treino:`🛌 Descanso total`, note:`Dia obrigatório de recuperação (mobilidade leve opcional 15-20 min).`},
     {day:'Sáb', treino:`🚴 Longo ${bikeLong} km + 🏃 Brick ${brickRun} km`, note:`Transição bike→corrida para adaptação específica de prova.`},
     {day:'Dom', treino:`🏃 Longo Z2 ${longRun} km`, note:`Pace fácil ${runEasyPace}/km · FC alvo ${runFcZ2}.`}
@@ -1496,13 +1528,13 @@ function buildPeriodizedTriWeek(profile, avg, weekIndex, totalWeeks, targetKey, 
     const ultraBackToBack = objective==='ultra' ? Math.max(10, +(runLong*0.42).toFixed(1)) : 0;
 
     plan = [
-      {day:'Seg', treino:`🏃 Rodagem leve ${runRec} km + 💪 Academia A`, note:`Corrida leve de recuperação + força funcional.`},
+      {day:'Seg', treino:`🏃 Rodagem leve ${runRec} km + 💪 Força Pernas e Core`, note:`Corrida leve de recuperação + força funcional.`},
       {day:'Ter', treino:`🏃 Qualidade ${runQuality} km`, note:`Blocos em ritmo controlado (${paceQual}/km), sem entrar em exaustão.`},
       {day:'Qua', treino:`🚴 Cross ${crossBike} km`, note:`Cross-training para preservar articulações e manter base aeróbica.`},
       {day:'Qui', treino:`🏃 Rodagem Z2 ${runEasy} km`, note:`Base aeróbica em ritmo confortável.`},
       {day:'Sex', treino:`🛌 Descanso total`, note:`Recuperação obrigatória para absorver carga semanal.`},
       {day:'Sáb', treino: objective==='ultra' ? `🏃 Longo 1 ${runLong} km` : `🏃 Longo ${runLong} km`, note: objective==='ultra' ? `Primeiro longo do bloco (ultra), ritmo fácil ${paceLong}/km.` : `Longo principal em ritmo fácil ${paceLong}/km.`},
-      {day:'Dom', treino: objective==='ultra' ? `🏃 Longo 2 ${ultraBackToBack} km + 🏊 Técnica ${swimEasy} m` : `🏊 Técnica ${swimEasy} m + 💪 Academia B`, note: objective==='ultra' ? `Back-to-back leve para resistência específica de ultra.` : `Natação técnica opcional e força de suporte para corrida.`}
+      {day:'Dom', treino: objective==='ultra' ? `🏃 Longo 2 ${ultraBackToBack} km + 🏊 Técnica ${swimEasy} m` : `🏊 Técnica ${swimEasy} m + 💪 Força Costas e Postura`, note: objective==='ultra' ? `Back-to-back leve para resistência específica de ultra.` : `Natação técnica opcional e força de suporte para corrida.`}
     ];
 
     objectiveLabel = runCfg.label;
@@ -2437,14 +2469,14 @@ function updateRaceGoalUI(){
 }
 
 function parseCoachPlanRow(item){
-  const clean = (txt)=>String(txt||'').replace(/[🏃🚴🏊💪🎯⚡📏]/g,'').replace(/\s+/g,' ').trim();
+  const clean = (txt)=>normalizeTreinoLabels(String(txt||'')).replace(/[🏃🚴🏊💪🎯⚡📏]/g,'').replace(/\s+/g,' ').trim();
   const row = {corrida:'', natacao:'', bike:'', academia:''};
-  const treinoTxt = String(item?.treino||'').toLowerCase();
+  const treinoTxt = normalizeTreinoLabels(String(item?.treino||'')).toLowerCase();
   if(treinoTxt.includes('descanso')){
     row.corrida = clean(item?.treino||'Descanso total');
     return row;
   }
-  const parts = String(item?.treino||'').split('+').map(p=>p.trim()).filter(Boolean);
+  const parts = normalizeTreinoLabels(String(item?.treino||'')).split('+').map(p=>p.trim()).filter(Boolean);
   parts.forEach(part=>{
     const p = part.toLowerCase();
     const isBikeLike = p.includes('bike') || p.includes('cross');
@@ -2452,7 +2484,7 @@ function parseCoachPlanRow(item){
     if(isRunLike) row.corrida = clean(part);
     if(p.includes('técnica') || p.includes('tecnica') || p.includes('endurance')) row.natacao = clean(part);
     if(isBikeLike) row.bike = clean(part);
-    if(p.includes('academia')) row.academia = clean(part);
+    if(p.includes('academia') || p.includes('força pernas e core') || p.includes('forca pernas e core') || p.includes('força costas e postura') || p.includes('forca costas e postura')) row.academia = clean(part);
   });
   if(!row.corrida && !row.natacao && !row.bike && !row.academia){
     row.corrida = clean(item?.treino||'');
@@ -2515,6 +2547,14 @@ function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
       <td><button class="coach-status-btn ${done[i]?'on':''}" onclick="togglePlanoDone(${i})">${done[i]?'Feito':'Confirmar'}</button></td>
     </tr>`;
   }).join('');
+
+  const gymWrap = document.getElementById('coach-gym-guide');
+  if(gymWrap){
+    const sessions = [...new Set(plan.map(p=>detectGymSessionId(p.treino)).filter(Boolean))];
+    gymWrap.innerHTML = sessions.length
+      ? `<div class="card-title" style="margin-top:.8rem">📸 Como Executar a Força — Fotos Reais</div>${sessions.map(buildGymBlock).join('')}`
+      : '';
+  }
 
   renderIndices(ativ, bb, sono, hrv);
 }
