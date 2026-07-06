@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Treinos">
 <meta name="theme-color" content="#0b2239">
-<link rel="manifest" href="./manifest.json?v=2026-07-06-05">
+<link rel="manifest" href="./manifest.json?v=2026-07-06-06">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%231a56db' width='192' height='192'/><text x='50%' y='50%' font-size='120' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%231a56db' width='180' height='180' rx='40'/><text x='50%' y='50%' font-size='110' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <title>Treinos · Luiz Silva</title>
@@ -753,7 +753,7 @@ window.addEventListener('DOMContentLoaded', () => {
 const FB_DB   = 'https://gastos-casa-7f431-default-rtdb.firebaseio.com';
 const FB_KEY  = 'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU';
 const FB_PATH = 'treinos/luiz';
-const APP_VERSION = '2026-07-06-05';
+const APP_VERSION = '2026-07-06-06';
 const SNAPSHOT_KEY = 'treinos_last_snapshot_v1';
 const TRAINING_KICKOFF_DATE = '2026-07-07';
 let charts = {}, curTab = 'treinos', DATA = null, curEsporte = 'todos';
@@ -906,6 +906,28 @@ function applySwimFirstKickoff(plan=[], weekKey=''){
     note: 'Início em 07/07: natação técnica + força específica de costas e postura para evoluir na água.'
   };
   return updated;
+}
+
+function applyTimeWindowAndRisk(plan=[], weekendIntense=true){
+  const list = Array.isArray(plan) ? plan : [];
+  return list.map(item => {
+    const day = String(item?.day||'').toLowerCase();
+    const isWeekend = day.startsWith('sáb') || day.startsWith('sab') || day.startsWith('dom');
+    const weekdayPrefix = '🕠 Dias úteis: treino somente após 17:30.';
+    const weekendPrefix = '🕘 Fim de semana: janela livre para treinos-chave.';
+    const weekendLoad = weekendIntense
+      ? 'Índices Garmin liberam sessão mais intensa.'
+      : 'Índices Garmin em alerta: carga reduzida para evitar overtraining.';
+    const noteRaw = String(item?.note||'')
+      .replace(/^🕠 Dias úteis: treino somente após 17:30\.\s*/,'')
+      .replace(/^🕘 Fim de semana: janela livre para treinos-chave\.\s*/,'')
+      .replace(/^Índices Garmin liberam sessão mais intensa\.\s*/,'')
+      .replace(/^Índices Garmin em alerta: carga reduzida para evitar overtraining\.\s*/,'');
+    const note = isWeekend
+      ? `${weekendPrefix} ${weekendLoad} ${noteRaw}`.trim()
+      : `${weekdayPrefix} ${noteRaw}`.trim();
+    return {...item, note};
+  });
 }
 
 function openGymPhoto(src, title){
@@ -1239,8 +1261,11 @@ function ensureWeeklyPlano(nivel){
     const saved = tpState.weeks[nowWeek][tipo];
     const normalized = normalizePlanLabels(saved.plan || []);
     const kickoffAdjusted = applySwimFirstKickoff(normalized, nowWeek);
-    if(JSON.stringify(saved.plan||[]) !== JSON.stringify(kickoffAdjusted)){
-      saved.plan = kickoffAdjusted;
+    const g = calcGarminSignals();
+    const weekendIntense = !(g.guard <= 0.9 || g.bbAvg3 < 45 || g.sonoAvg7 < 6.2 || g.hrvAvg < 38 || g.volTrend > 0.18);
+    const scheduleAdjusted = applyTimeWindowAndRisk(kickoffAdjusted, weekendIntense);
+    if(JSON.stringify(saved.plan||[]) !== JSON.stringify(scheduleAdjusted)){
+      saved.plan = scheduleAdjusted;
       saveTpState();
     }
     return {weekKey:nowWeek, data:saved};
@@ -1263,7 +1288,10 @@ function ensureWeeklyPlano(nivel){
   tpState.weeks[nowWeek][tipo] = {
     selectedType: prev?.selectedType || tipo,
     done: prev?.done || {},
-    plan: applySwimFirstKickoff(normalizePlanLabels(built.plan), nowWeek),
+    plan: applyTimeWindowAndRisk(
+      applySwimFirstKickoff(normalizePlanLabels(built.plan), nowWeek),
+      !(built?.metrics?.overtrainingRisk)
+    ),
     metrics: built.metrics
   };
   saveTpState();
@@ -1476,6 +1504,8 @@ function buildPeriodizedTriWeek(profile, avg, weekIndex, totalWeeks, targetKey, 
   const deloadFactor = deload ? 0.78 : 1;
   const ageGuard = ATHLETE_AGE >= 60 ? 0.9 : 1;
   const swimBeginner = profile?.label === 'Tri Iniciante' || avg.swimKm < 3;
+  const overtrainingRisk = g.guard <= 0.9 || g.bbAvg3 < 45 || g.sonoAvg7 < 6.2 || g.hrvAvg < 38 || g.volTrend > 0.18;
+  const weekendIntense = !overtrainingRisk;
 
   const runCap = avg.runKm * 1.10;
   const runRaw = (avg.runKm + (target.run-avg.runKm)*baseToPeak) * profile.runFactor * deloadFactor * g.guard * ageGuard;
@@ -1493,9 +1523,12 @@ function buildPeriodizedTriWeek(profile, avg, weekIndex, totalWeeks, targetKey, 
   const bikeLong = Math.max(35, Math.round(bikeTarget * (phase==='taper'?0.35:0.45)));
   const bikeQuality = Math.max(20, Math.round(bikeTarget * 0.28));
   const bikeEasy = Math.max(16, Math.round(bikeTarget - bikeLong - bikeQuality));
+  const bikeLongWknd = weekendIntense ? bikeLong : Math.max(24, Math.round(bikeLong * 0.72));
   const swimTech = swimBeginner ? Math.max(300, Math.round(swimTarget * 1000 * 0.25)) : Math.max(700, Math.round(swimTarget * 1000 * 0.35));
   const swimEnd = swimBeginner ? Math.max(400, Math.round(swimTarget * 1000 * 0.35)) : Math.max(1000, Math.round(swimTarget * 1000 * 0.65));
   const brickRun = clamp(+(easyRun * (ATHLETE_AGE >= 60 ? 0.3 : 0.45)).toFixed(1), 2, 8);
+  const brickRunWknd = weekendIntense ? brickRun : Math.max(2, +(brickRun * 0.7).toFixed(1));
+  const longRunWknd = weekendIntense ? longRun : Math.max(6, +(longRun * 0.72).toFixed(1));
 
   const runEasyPace = s2p(avg.runPace + 25);
   const runTempoPace = s2p(Math.max(avg.runPace - 15, 250));
@@ -1510,16 +1543,16 @@ function buildPeriodizedTriWeek(profile, avg, weekIndex, totalWeeks, targetKey, 
     {day:'Qua', treino:`🏃 Corrida qualidade ${qualityRun} km`, note:`Tempo run controlado em ${runTempoPace}/km, priorizando constância.`},
     {day:'Qui', treino:`🏊 Técnica leve ${swimEnd} m + 💪 Força Costas e Postura`, note:`Educativos curtos e pausas livres. Objetivo é confiança na água, não volume.`},
     {day:'Sex', treino:`🛌 Descanso total`, note:`Dia obrigatório de recuperação (mobilidade leve opcional 15-20 min).`},
-    {day:'Sáb', treino:`🚴 Longo ${bikeLong} km + 🏃 Brick ${brickRun} km`, note:`Transição curta bike→corrida, sem forçar ritmo.`},
-    {day:'Dom', treino:`🏃 Longo Z2 ${longRun} km`, note:`Pace fácil ${runEasyPace}/km · FC alvo ${runFcZ2}.`}
+    {day:'Sáb', treino:`🚴 Longo ${bikeLongWknd} km + 🏃 Brick ${brickRunWknd} km`, note: weekendIntense ? `Transição curta bike→corrida, sem forçar ritmo.` : `Final de semana ajustado para recuperação ativa: volume reduzido no bike+brick.`},
+    {day:'Dom', treino:`🏃 Longo Z2 ${longRunWknd} km`, note: weekendIntense ? `Pace fácil ${runEasyPace}/km · FC alvo ${runFcZ2}.` : `Longo reduzido para absorver carga, mantendo base aeróbica sem excesso.`}
   ] : [
     {day:'Seg', treino:`🏊 Técnica ${swimTech} m + 💪 Força Pernas e Core`, note:`Drills e técnica. Força de base para corrida e bike.`},
     {day:'Ter', treino:`🚴 Bike qualidade ${bikeQuality} km`, note:`4×6 min Z3/Z4. Z2 alvo ${bikeFcZ2}.`},
     {day:'Qua', treino:`🏃 Corrida qualidade ${qualityRun} km`, note:`Tempo run em ${runTempoPace}/km, evitando excesso de volume.`},
     {day:'Qui', treino:`🏊 Endurance ${swimEnd} m + 💪 Força Costas e Postura`, note:`Nado contínuo controlado ~${swimCss}/100m + força de suporte para natação.`},
     {day:'Sex', treino:`🛌 Descanso total`, note:`Dia obrigatório de recuperação (mobilidade leve opcional 15-20 min).`},
-    {day:'Sáb', treino:`🚴 Longo ${bikeLong} km + 🏃 Brick ${brickRun} km`, note:`Transição bike→corrida para adaptação específica de prova.`},
-    {day:'Dom', treino:`🏃 Longo Z2 ${longRun} km`, note:`Pace fácil ${runEasyPace}/km · FC alvo ${runFcZ2}.`}
+    {day:'Sáb', treino:`🚴 Longo ${bikeLongWknd} km + 🏃 Brick ${brickRunWknd} km`, note: weekendIntense ? `Transição bike→corrida para adaptação específica de prova.` : `Índices em alerta: bike+brick com volume reduzido para evitar overtraining.`},
+    {day:'Dom', treino:`🏃 Longo Z2 ${longRunWknd} km`, note: weekendIntense ? `Pace fácil ${runEasyPace}/km · FC alvo ${runFcZ2}.` : `Longo em versão conservadora para priorizar recuperação e consistência.`}
   ];
 
   const runObjectiveBase = {
@@ -1545,7 +1578,9 @@ function buildPeriodizedTriWeek(profile, avg, weekIndex, totalWeeks, targetKey, 
     const swimEasy = Math.max(250, Math.round(avg.swimKm * 1000 * 0.12));
     const paceLong = s2p(avg.runPace + (objective==='ultra' ? 40 : 30));
     const paceQual = s2p(Math.max(avg.runPace - (objective==='run10k'?20:10), 260));
+    const runLongWknd = weekendIntense ? runLong : Math.max(8, +(runLong*0.75).toFixed(1));
     const ultraBackToBack = objective==='ultra' ? Math.max(10, +(runLong*0.42).toFixed(1)) : 0;
+    const ultraBackToBackWknd = objective==='ultra' ? (weekendIntense ? ultraBackToBack : Math.max(8, +(ultraBackToBack*0.72).toFixed(1))) : 0;
 
     plan = [
       {day:'Seg', treino:`🏃 Rodagem leve ${runRec} km + 💪 Força Pernas e Core`, note:`Corrida leve de recuperação + força funcional.`},
@@ -1553,8 +1588,8 @@ function buildPeriodizedTriWeek(profile, avg, weekIndex, totalWeeks, targetKey, 
       {day:'Qua', treino:`🚴 Cross ${crossBike} km`, note:`Cross-training para preservar articulações e manter base aeróbica.`},
       {day:'Qui', treino:`🏃 Rodagem Z2 ${runEasy} km`, note:`Base aeróbica em ritmo confortável.`},
       {day:'Sex', treino:`🛌 Descanso total`, note:`Recuperação obrigatória para absorver carga semanal.`},
-      {day:'Sáb', treino: objective==='ultra' ? `🏃 Longo 1 ${runLong} km` : `🏃 Longo ${runLong} km`, note: objective==='ultra' ? `Primeiro longo do bloco (ultra), ritmo fácil ${paceLong}/km.` : `Longo principal em ritmo fácil ${paceLong}/km.`},
-      {day:'Dom', treino: objective==='ultra' ? `🏃 Longo 2 ${ultraBackToBack} km + 🏊 Técnica ${swimEasy} m` : `🏊 Técnica ${swimEasy} m + 💪 Força Costas e Postura`, note: objective==='ultra' ? `Back-to-back leve para resistência específica de ultra.` : `Natação técnica opcional e força de suporte para corrida.`}
+      {day:'Sáb', treino: objective==='ultra' ? `🏃 Longo 1 ${runLongWknd} km` : `🏃 Longo ${runLongWknd} km`, note: weekendIntense ? (objective==='ultra' ? `Primeiro longo do bloco (ultra), ritmo fácil ${paceLong}/km.` : `Longo principal em ritmo fácil ${paceLong}/km.`) : `Longo de sábado reduzido para preservar recuperação e evitar sobrecarga.`},
+      {day:'Dom', treino: objective==='ultra' ? `🏃 Longo 2 ${ultraBackToBackWknd} km + 🏊 Técnica ${swimEasy} m` : `🏊 Técnica ${swimEasy} m + 💪 Força Costas e Postura`, note: weekendIntense ? (objective==='ultra' ? `Back-to-back leve para resistência específica de ultra.` : `Natação técnica opcional e força de suporte para corrida.`) : `Domingo em modo conservador: técnica e controle de carga pelos sinais Garmin.`}
     ];
 
     objectiveLabel = runCfg.label;
@@ -1563,6 +1598,7 @@ function buildPeriodizedTriWeek(profile, avg, weekIndex, totalWeeks, targetKey, 
   }
 
   plan = applySwimFirstKickoff(plan, weekKey);
+  plan = applyTimeWindowAndRisk(plan, weekendIntense);
 
   return {
     plan,
@@ -1578,10 +1614,11 @@ function buildPeriodizedTriWeek(profile, avg, weekIndex, totalWeeks, targetKey, 
       totalWeeks,
       phase,
       deload,
+      overtrainingRisk,
       target: objectiveLabel,
       criterio: runCfg
-        ? `Plano específico para ${runCfg.label}, com 1 dia de descanso fixo e ajuste conservador para 64 anos.`
-        : 'Baseado na sua performance Garmin, com ajuste conservador para 64 anos, natação iniciante e 1 dia fixo de descanso semanal.',
+        ? `Plano específico para ${runCfg.label}, com 1 dia de descanso fixo, dias úteis após 17:30 e ajuste anti-overtraining pelos sinais Garmin.`
+        : 'Baseado na sua performance Garmin, com dias úteis após 17:30, ajuste conservador para 64 anos, natação iniciante e proteção anti-overtraining.',
       garmin:`Garmin → BB3d ${g.bbAvg3}% · Sono7d ${g.sonoAvg7}h · HRV ${g.hrvAvg} · VO2 ${g.vo2Now} · tendência ${(g.volTrend*100).toFixed(0)}%`
     }
   };
@@ -2512,13 +2549,21 @@ function parseCoachPlanRow(item){
     row.corrida = clean(item?.treino||'');
   }
   const note = String(item?.note||'').trim();
+  let noteAttached = false;
   const addNote = (k, token) => {
-    if(note.toLowerCase().includes(token) && row[k]) row[k] += `<div class="coach-cell-note">${note}</div>`;
+    if(note.toLowerCase().includes(token) && row[k]){
+      row[k] += `<div class="coach-cell-note">${note}</div>`;
+      noteAttached = true;
+    }
   };
   addNote('corrida','pace');
   addNote('natacao','css');
   addNote('bike','z');
   addNote('academia','força');
+  if(note && !noteAttached){
+    const fallbackKey = row.corrida ? 'corrida' : row.natacao ? 'natacao' : row.bike ? 'bike' : 'academia';
+    if(fallbackKey && row[fallbackKey]) row[fallbackKey] += `<div class="coach-cell-note">${note}</div>`;
+  }
   return row;
 }
 
