@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Treinos">
 <meta name="theme-color" content="#0b2239">
-<link rel="manifest" href="./manifest.json?v=2026-07-06-04">
+<link rel="manifest" href="./manifest.json?v=2026-07-06-05">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%231a56db' width='192' height='192'/><text x='50%' y='50%' font-size='120' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%231a56db' width='180' height='180' rx='40'/><text x='50%' y='50%' font-size='110' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <title>Treinos · Luiz Silva</title>
@@ -753,8 +753,9 @@ window.addEventListener('DOMContentLoaded', () => {
 const FB_DB   = 'https://gastos-casa-7f431-default-rtdb.firebaseio.com';
 const FB_KEY  = 'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU';
 const FB_PATH = 'treinos/luiz';
-const APP_VERSION = '2026-07-06-04';
+const APP_VERSION = '2026-07-06-05';
 const SNAPSHOT_KEY = 'treinos_last_snapshot_v1';
+const TRAINING_KICKOFF_DATE = '2026-07-07';
 let charts = {}, curTab = 'treinos', DATA = null, curEsporte = 'todos';
 const PERIODO = 180; // dias padrão para todas as médias do app
 const PERIOD_MIN_DAYS = 7;
@@ -887,6 +888,24 @@ function normalizePlanLabels(plan=[]){
     treino: normalizeTreinoLabels(p?.treino||''),
     note: normalizeTreinoLabels(p?.note||'')
   }));
+}
+
+function applySwimFirstKickoff(plan=[], weekKey=''){
+  const list = Array.isArray(plan) ? plan : [];
+  if(!list.length) return list;
+  const kickoffWeek = semanaISO(TRAINING_KICKOFF_DATE);
+  if(weekKey !== kickoffWeek) return list;
+
+  const terIdx = list.findIndex(p => String(p?.day||'').toLowerCase().startsWith('ter'));
+  if(terIdx < 0) return list;
+
+  const updated = list.map(p => ({...p}));
+  updated[terIdx] = {
+    ...updated[terIdx],
+    treino: '🏊 Técnica leve 400 m + 💪 Força Costas e Postura',
+    note: 'Início em 07/07: natação técnica + força específica de costas e postura para evoluir na água.'
+  };
+  return updated;
 }
 
 function openGymPhoto(src, title){
@@ -1219,8 +1238,9 @@ function ensureWeeklyPlano(nivel){
   if(tpState.weeks[nowWeek][tipo]){
     const saved = tpState.weeks[nowWeek][tipo];
     const normalized = normalizePlanLabels(saved.plan || []);
-    if(JSON.stringify(saved.plan||[]) !== JSON.stringify(normalized)){
-      saved.plan = normalized;
+    const kickoffAdjusted = applySwimFirstKickoff(normalized, nowWeek);
+    if(JSON.stringify(saved.plan||[]) !== JSON.stringify(kickoffAdjusted)){
+      saved.plan = kickoffAdjusted;
       saveTpState();
     }
     return {weekKey:nowWeek, data:saved};
@@ -1238,12 +1258,12 @@ function ensureWeeklyPlano(nivel){
   const cycleObjective = ['triathlon','run10k','half','marathon','ultra'].includes(tpState.cycle.objective) ? tpState.cycle.objective : (triCfg.objective || 'triathlon');
   const cycleWeeks = tpState.cycle.cycleWeeks===8 ? 8 : 12;
   const weekIndex = diffWeeks(tpState.cycle.startKey, nowWeek) + 1;
-  const built = buildPeriodizedTriWeek(info, avg, weekIndex, cycleWeeks, cycleTarget, cycleObjective);
+  const built = buildPeriodizedTriWeek(info, avg, weekIndex, cycleWeeks, cycleTarget, cycleObjective, nowWeek);
 
   tpState.weeks[nowWeek][tipo] = {
     selectedType: prev?.selectedType || tipo,
     done: prev?.done || {},
-    plan: normalizePlanLabels(built.plan),
+    plan: applySwimFirstKickoff(normalizePlanLabels(built.plan), nowWeek),
     metrics: built.metrics
   };
   saveTpState();
@@ -1443,7 +1463,7 @@ function buildTriWeek(profile, avg){
   };
 }
 
-function buildPeriodizedTriWeek(profile, avg, weekIndex, totalWeeks, targetKey, objective='triathlon'){
+function buildPeriodizedTriWeek(profile, avg, weekIndex, totalWeeks, targetKey, objective='triathlon', weekKey=''){
   const target = TRI_TARGETS[targetKey] || TRI_TARGETS.olimpico;
   const g = calcGarminSignals();
   const ATHLETE_AGE = 64;
@@ -1542,6 +1562,8 @@ function buildPeriodizedTriWeek(profile, avg, weekIndex, totalWeeks, targetKey, 
     bikeMetric = +crossBike.toFixed(1);
   }
 
+  plan = applySwimFirstKickoff(plan, weekKey);
+
   return {
     plan,
     metrics:{
@@ -1580,7 +1602,7 @@ function renderPlanoSemanal(){
   const cycle = tpState.cycle || {startKey:wk.weekKey,target:triCfg.target,cycleWeeks:triCfg.cycleWeeks,objective:triCfg.objective||'triathlon'};
   const weekIndex = diffWeeks(cycle.startKey, wk.weekKey)+1;
   const objective = ['triathlon','run10k','half','marathon','ultra'].includes(cycle.objective) ? cycle.objective : (triCfg.objective || 'triathlon');
-  const built = buildPeriodizedTriWeek(info, calcTriAverages(), weekIndex, cycle.cycleWeeks, cycle.target, objective);
+  const built = buildPeriodizedTriWeek(info, calcTriAverages(), weekIndex, cycle.cycleWeeks, cycle.target, objective, wk.weekKey);
   const plan = wk.data.plan || built.plan;
   const metrics = wk.data.metrics || built.metrics;
   const phaseLabel = metrics.phase==='base'?'Base':metrics.phase==='build'?'Construção':'Polimento';
@@ -2516,7 +2538,7 @@ function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
   const info = PLANO_TIPOS[tipoAtual] || PLANO_TIPOS.tri_intermediario;
   const weekIndex = diffWeeks(cycle.startKey, wk.weekKey) + 1;
   const objective = ['triathlon','run10k','half','marathon','ultra'].includes(cycle.objective) ? cycle.objective : (triCfg.objective || 'triathlon');
-  const built = buildPeriodizedTriWeek(info, calcTriAverages(), weekIndex, cycle.cycleWeeks, cycle.target, objective);
+  const built = buildPeriodizedTriWeek(info, calcTriAverages(), weekIndex, cycle.cycleWeeks, cycle.target, objective, wk.weekKey);
   const plan = wk.data.plan || built.plan;
   const metrics = wk.data.metrics || built.metrics;
 
