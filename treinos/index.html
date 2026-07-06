@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Treinos">
 <meta name="theme-color" content="#0b2239">
-<link rel="manifest" href="./manifest.json?v=2026-07-06-02">
+<link rel="manifest" href="./manifest.json?v=2026-07-06-03">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%231a56db' width='192' height='192'/><text x='50%' y='50%' font-size='120' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%231a56db' width='180' height='180' rx='40'/><text x='50%' y='50%' font-size='110' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <title>Treinos · Luiz Silva</title>
@@ -469,6 +469,13 @@ body{padding-top:45px}
           <button class="sf-btn" onclick="setPlanoTipo('tri_regeneracao',this)">Semana Regenerativa</button>
         </div>
         <div class="tp-config" style="margin-top:.6rem">
+          <select id="coach-objective" class="tp-select" onchange="setCoachObjective(this.value)">
+            <option value="triathlon">🏊🚴🏃 Triathlon</option>
+            <option value="run10k">🏃 10 km</option>
+            <option value="half">🏃 Meia Maratona</option>
+            <option value="marathon">🏃 Maratona</option>
+            <option value="ultra">⛰️ Ultra Maratona</option>
+          </select>
           <select id="coach-target" class="tp-select" onchange="setTriTarget(this.value)">
             <option value="sprint">🎯 Tri Sprint</option>
             <option value="olimpico">🎯 Tri Olímpico</option>
@@ -540,27 +547,8 @@ body{padding-top:45px}
         <input class="period-slider" type="range" min="7" max="180" step="1" value="180" aria-label="Intervalo em dias" oninput="setPeriodo(Number(this.value))">
       </div>
       <div class="card mode-block" id="treino-card-atleta">
-        <div class="card-title">🗓️ Plano Semanal Triathlon + Academia</div>
-        <div id="tp-levels" class="tp-levels">
-          <button class="sf-btn sf-on" onclick="setPlanoTipo('tri_iniciante',this)">Tri Iniciante</button>
-          <button class="sf-btn" onclick="setPlanoTipo('tri_intermediario',this)">Tri Intermediário</button>
-          <button class="sf-btn" onclick="setPlanoTipo('tri_avancado',this)">Tri Avançado</button>
-          <button class="sf-btn" onclick="setPlanoTipo('tri_regeneracao',this)">Semana Regenerativa</button>
-        </div>
-        <div class="tp-types-note">Configuração com critérios de progressão: corrida limitada a <b>+10%</b> por semana, longão até <b>35%</b> do volume semanal e <b>2 sessões de academia</b> para suporte ao triathlon.</div>
-        <div class="tp-config">
-          <select id="tp-target" class="tp-select" onchange="setTriTarget(this.value)">
-            <option value="sprint">🎯 Tri Sprint</option>
-            <option value="olimpico">🎯 Tri Olímpico</option>
-            <option value="703">🎯 Tri 70.3</option>
-          </select>
-          <select id="tp-cycle" class="tp-select" onchange="setTriCycle(Number(this.value))">
-            <option value="8">8 semanas</option>
-            <option value="12">12 semanas</option>
-          </select>
-          <button class="tp-apply" onclick="restartTriCycle()">Reiniciar ciclo</button>
-        </div>
-        <div id="tp-list" class="tp-week"></div>
+        <div class="card-title">🏁 Modo Atleta — Acompanhamento Real</div>
+        <div class="tp-types-note">Aqui você acompanha o que já fez: volume, frequência, evolução e histórico de treinos. O planejamento da semana fica na aba <b>Coach</b>.</div>
       </div>
       <div class="card mode-block" id="treino-card-coach">
         <div class="card-title">🧭 Coach Semanal (1x/semana)</div>
@@ -764,7 +752,7 @@ window.addEventListener('DOMContentLoaded', () => {
 const FB_DB   = 'https://gastos-casa-7f431-default-rtdb.firebaseio.com';
 const FB_KEY  = 'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU';
 const FB_PATH = 'treinos/luiz';
-const APP_VERSION = '2026-07-06-02';
+const APP_VERSION = '2026-07-06-03';
 const SNAPSHOT_KEY = 'treinos_last_snapshot_v1';
 let charts = {}, curTab = 'treinos', DATA = null, curEsporte = 'todos';
 const PERIODO = 180; // dias padrão para todas as médias do app
@@ -1085,14 +1073,15 @@ function saveCoachState(){
 function loadTriCfg(){
   try{
     const raw = localStorage.getItem(TRI_CFG_KEY);
-    if(!raw) return {target:'olimpico', cycleWeeks:12};
+    if(!raw) return {target:'olimpico', cycleWeeks:12, objective:'triathlon'};
     const parsed = JSON.parse(raw);
     return {
       target: TRI_TARGETS[parsed?.target] ? parsed.target : 'olimpico',
-      cycleWeeks: parsed?.cycleWeeks===8 ? 8 : 12
+      cycleWeeks: parsed?.cycleWeeks===8 ? 8 : 12,
+      objective: ['triathlon','run10k','half','marathon','ultra'].includes(parsed?.objective) ? parsed.objective : 'triathlon'
     };
   }catch(_){
-    return {target:'olimpico', cycleWeeks:12};
+    return {target:'olimpico', cycleWeeks:12, objective:'triathlon'};
   }
 }
 
@@ -1107,6 +1096,25 @@ function setTriTarget(target){
   restartTriCycle();
 }
 
+function setCoachObjective(objective){
+  const valid = ['triathlon','run10k','half','marathon','ultra'];
+  triCfg.objective = valid.includes(objective) ? objective : 'triathlon';
+  saveTriCfg();
+  syncCoachObjectiveUi();
+  restartTriCycle();
+}
+
+function syncCoachObjectiveUi(){
+  const objSel = document.getElementById('coach-objective');
+  const triSel = document.getElementById('coach-target');
+  if(objSel) objSel.value = triCfg.objective || 'triathlon';
+  if(triSel){
+    const isTri = (triCfg.objective || 'triathlon') === 'triathlon';
+    triSel.style.display = isTri ? '' : 'none';
+    triSel.disabled = !isTri;
+  }
+}
+
 function setTriCycle(weeks){
   triCfg.cycleWeeks = weeks===8 ? 8 : 12;
   saveTriCfg();
@@ -1117,11 +1125,13 @@ function restartTriCycle(){
   tpState.cycle = {
     startKey: isoWeekInfo().key,
     target: triCfg.target,
-    cycleWeeks: triCfg.cycleWeeks
+    cycleWeeks: triCfg.cycleWeeks,
+    objective: triCfg.objective || 'triathlon'
   };
   saveTpState();
   const wk = isoWeekInfo().key;
   if(tpState.weeks?.[wk]) tpState.weeks[wk] = {};
+  syncCoachObjectiveUi();
   renderPlanoSemanal();
   if(DATA){
     const a=(DATA.atividades||[]).sort((x,y)=>y.data.localeCompare(x.data));
@@ -1185,7 +1195,7 @@ function ensureWeeklyPlano(nivel){
   if(tpState.weeks[nowWeek][tipo]) return {weekKey:nowWeek, data:tpState.weeks[nowWeek][tipo]};
 
   if(!tpState.cycle){
-    tpState.cycle = {startKey: nowWeek, target: triCfg.target, cycleWeeks: triCfg.cycleWeeks};
+    tpState.cycle = {startKey: nowWeek, target: triCfg.target, cycleWeeks: triCfg.cycleWeeks, objective: triCfg.objective || 'triathlon'};
   }
 
   const prevKey = prevWeekKey(nowWeek);
@@ -1193,9 +1203,10 @@ function ensureWeeklyPlano(nivel){
   const info = PLANO_TIPOS[tipo] || PLANO_TIPOS.tri_intermediario;
   const avg = calcTriAverages();
   const cycleTarget = TRI_TARGETS[tpState.cycle.target] ? tpState.cycle.target : triCfg.target;
+  const cycleObjective = ['triathlon','run10k','half','marathon','ultra'].includes(tpState.cycle.objective) ? tpState.cycle.objective : (triCfg.objective || 'triathlon');
   const cycleWeeks = tpState.cycle.cycleWeeks===8 ? 8 : 12;
   const weekIndex = diffWeeks(tpState.cycle.startKey, nowWeek) + 1;
-  const built = buildPeriodizedTriWeek(info, avg, weekIndex, cycleWeeks, cycleTarget);
+  const built = buildPeriodizedTriWeek(info, avg, weekIndex, cycleWeeks, cycleTarget, cycleObjective);
 
   tpState.weeks[nowWeek][tipo] = {
     selectedType: prev?.selectedType || tipo,
@@ -1400,7 +1411,7 @@ function buildTriWeek(profile, avg){
   };
 }
 
-function buildPeriodizedTriWeek(profile, avg, weekIndex, totalWeeks, targetKey){
+function buildPeriodizedTriWeek(profile, avg, weekIndex, totalWeeks, targetKey, objective='triathlon'){
   const target = TRI_TARGETS[targetKey] || TRI_TARGETS.olimpico;
   const g = calcGarminSignals();
   const ATHLETE_AGE = 64;
@@ -1441,7 +1452,7 @@ function buildPeriodizedTriWeek(profile, avg, weekIndex, totalWeeks, targetKey){
   const runFcZ2 = `${Math.max(120,avg.runFc-8)}-${Math.max(130,avg.runFc+6)} bpm`;
   const bikeFcZ2 = `${Math.max(110,avg.bikeFc-8)}-${Math.max(120,avg.bikeFc+6)} bpm`;
 
-  const plan = swimBeginner ? [
+  const planTri = swimBeginner ? [
     {day:'Seg', treino:`🏊 Adaptação ${swimTech} m + 💪 Academia A`, note:`Natação iniciante: respiração bilateral, flutuação e técnica básica. Sem séries longas.`},
     {day:'Ter', treino:`🚴 Bike qualidade ${bikeQuality} km`, note:`Blocos curtos em Z2/Z3. Evitar picos longos de intensidade. FC alvo ${bikeFcZ2}.`},
     {day:'Qua', treino:`🏃 Corrida qualidade ${qualityRun} km`, note:`Tempo run controlado em ${runTempoPace}/km, priorizando constância.`},
@@ -1459,19 +1470,64 @@ function buildPeriodizedTriWeek(profile, avg, weekIndex, totalWeeks, targetKey){
     {day:'Dom', treino:`🏃 Longo Z2 ${longRun} km`, note:`Pace fácil ${runEasyPace}/km · FC alvo ${runFcZ2}.`}
   ];
 
+  const runObjectiveBase = {
+    run10k: {label:'10 km', weekly: 24, longPct:0.26, qualityPct:0.22, longMax:14},
+    half: {label:'Meia Maratona', weekly: 34, longPct:0.33, qualityPct:0.2, longMax:22},
+    marathon: {label:'Maratona', weekly: 44, longPct:0.38, qualityPct:0.16, longMax:30},
+    ultra: {label:'Ultra Maratona', weekly: 54, longPct:0.42, qualityPct:0.12, longMax:36}
+  };
+  const runCfg = runObjectiveBase[objective];
+  let plan = planTri;
+  let objectiveLabel = target.label;
+  let swimMetric = swimTarget;
+  let bikeMetric = bikeTarget;
+
+  if(runCfg){
+    const runGoalRaw = (avg.runKm + (runCfg.weekly-avg.runKm)*baseToPeak) * profile.runFactor * deloadFactor * g.guard * ageGuard;
+    const runGoal = clamp(+Math.min(runGoalRaw, avg.runKm * 1.1).toFixed(1), 16, runCfg.weekly + 8);
+    const runLong = clamp(+(runGoal*runCfg.longPct).toFixed(1), 8, runCfg.longMax);
+    const runQuality = clamp(+(runGoal*runCfg.qualityPct).toFixed(1), 4, objective==='ultra'?8:10);
+    const runEasy = Math.max(5, +(runGoal-runLong-runQuality).toFixed(1));
+    const runRec = Math.max(4, +(runEasy*0.45).toFixed(1));
+    const crossBike = Math.max(12, Math.round(avg.bikeKm * 0.22 * ageGuard));
+    const swimEasy = Math.max(250, Math.round(avg.swimKm * 1000 * 0.12));
+    const paceLong = s2p(avg.runPace + (objective==='ultra' ? 40 : 30));
+    const paceQual = s2p(Math.max(avg.runPace - (objective==='run10k'?20:10), 260));
+    const ultraBackToBack = objective==='ultra' ? Math.max(10, +(runLong*0.42).toFixed(1)) : 0;
+
+    plan = [
+      {day:'Seg', treino:`🏃 Rodagem leve ${runRec} km + 💪 Academia A`, note:`Corrida leve de recuperação + força funcional.`},
+      {day:'Ter', treino:`🏃 Qualidade ${runQuality} km`, note:`Blocos em ritmo controlado (${paceQual}/km), sem entrar em exaustão.`},
+      {day:'Qua', treino:`🚴 Cross ${crossBike} km`, note:`Cross-training para preservar articulações e manter base aeróbica.`},
+      {day:'Qui', treino:`🏃 Rodagem Z2 ${runEasy} km`, note:`Base aeróbica em ritmo confortável.`},
+      {day:'Sex', treino:`🛌 Descanso total`, note:`Recuperação obrigatória para absorver carga semanal.`},
+      {day:'Sáb', treino: objective==='ultra' ? `🏃 Longo 1 ${runLong} km` : `🏃 Longo ${runLong} km`, note: objective==='ultra' ? `Primeiro longo do bloco (ultra), ritmo fácil ${paceLong}/km.` : `Longo principal em ritmo fácil ${paceLong}/km.`},
+      {day:'Dom', treino: objective==='ultra' ? `🏃 Longo 2 ${ultraBackToBack} km + 🏊 Técnica ${swimEasy} m` : `🏊 Técnica ${swimEasy} m + 💪 Academia B`, note: objective==='ultra' ? `Back-to-back leve para resistência específica de ultra.` : `Natação técnica opcional e força de suporte para corrida.`}
+    ];
+
+    objectiveLabel = runCfg.label;
+    swimMetric = +(swimEasy/1000).toFixed(2);
+    bikeMetric = +crossBike.toFixed(1);
+  }
+
   return {
     plan,
     metrics:{
-      runKm:runTarget,
-      bikeKm:bikeTarget,
-      swimKm:swimTarget,
+      runKm:runCfg ? +(plan.reduce((s,p)=>{
+        const m = String(p.treino).match(/(\d+(?:\.\d+)?)\s*km/);
+        return s + (m ? Number(m[1]) : 0);
+      },0)).toFixed(1) : runTarget,
+      bikeKm:bikeMetric,
+      swimKm:swimMetric,
       gym:'2x',
       week: wk,
       totalWeeks,
       phase,
       deload,
-      target: target.label,
-      criterio:'Baseado na sua performance Garmin, com ajuste conservador para 64 anos, natação iniciante e 1 dia fixo de descanso semanal.',
+      target: objectiveLabel,
+      criterio: runCfg
+        ? `Plano específico para ${runCfg.label}, com 1 dia de descanso fixo e ajuste conservador para 64 anos.`
+        : 'Baseado na sua performance Garmin, com ajuste conservador para 64 anos, natação iniciante e 1 dia fixo de descanso semanal.',
       garmin:`Garmin → BB3d ${g.bbAvg3}% · Sono7d ${g.sonoAvg7}h · HRV ${g.hrvAvg} · VO2 ${g.vo2Now} · tendência ${(g.volTrend*100).toFixed(0)}%`
     }
   };
@@ -1489,9 +1545,10 @@ function renderPlanoSemanal(){
   const done = wk.data.done || {};
   const doneCount = Object.values(done).filter(Boolean).length;
   const info = PLANO_TIPOS[tipoAtual] || PLANO_TIPOS.tri_intermediario;
-  const cycle = tpState.cycle || {startKey:wk.weekKey,target:triCfg.target,cycleWeeks:triCfg.cycleWeeks};
+  const cycle = tpState.cycle || {startKey:wk.weekKey,target:triCfg.target,cycleWeeks:triCfg.cycleWeeks,objective:triCfg.objective||'triathlon'};
   const weekIndex = diffWeeks(cycle.startKey, wk.weekKey)+1;
-  const built = buildPeriodizedTriWeek(info, calcTriAverages(), weekIndex, cycle.cycleWeeks, cycle.target);
+  const objective = ['triathlon','run10k','half','marathon','ultra'].includes(cycle.objective) ? cycle.objective : (triCfg.objective || 'triathlon');
+  const built = buildPeriodizedTriWeek(info, calcTriAverages(), weekIndex, cycle.cycleWeeks, cycle.target, objective);
   const plan = wk.data.plan || built.plan;
   const metrics = wk.data.metrics || built.metrics;
   const phaseLabel = metrics.phase==='base'?'Base':metrics.phase==='build'?'Construção':'Polimento';
@@ -1500,6 +1557,7 @@ function renderPlanoSemanal(){
   const cycleSel = document.getElementById('tp-cycle');
   if(targetSel) targetSel.value = cycle.target || triCfg.target;
   if(cycleSel) cycleSel.value = String(cycle.cycleWeeks || triCfg.cycleWeeks);
+  syncCoachObjectiveUi();
   const rows = plan.map((p,i)=>`
     <div class="tp-row ${(p.treino.includes('Academia A') || p.treino.includes('Academia B')) ? 'tp-row-photo' : ''}">
       <div class="tp-day">${p.day}</div>
@@ -2389,11 +2447,16 @@ function parseCoachPlanRow(item){
   const parts = String(item?.treino||'').split('+').map(p=>p.trim()).filter(Boolean);
   parts.forEach(part=>{
     const p = part.toLowerCase();
-    if(p.includes('corrida') || p.includes('brick')) row.corrida = clean(part);
+    const isBikeLike = p.includes('bike') || p.includes('cross');
+    const isRunLike = p.includes('corrida') || p.includes('brick') || p.includes('rodagem') || p.includes('qualidade') || (p.includes('longo') && !isBikeLike);
+    if(isRunLike) row.corrida = clean(part);
     if(p.includes('técnica') || p.includes('tecnica') || p.includes('endurance')) row.natacao = clean(part);
-    if(p.includes('bike') || p.includes('longo')) row.bike = clean(part);
+    if(isBikeLike) row.bike = clean(part);
     if(p.includes('academia')) row.academia = clean(part);
   });
+  if(!row.corrida && !row.natacao && !row.bike && !row.academia){
+    row.corrida = clean(item?.treino||'');
+  }
   const note = String(item?.note||'').trim();
   const addNote = (k, token) => {
     if(note.toLowerCase().includes(token) && row[k]) row[k] += `<div class="coach-cell-note">${note}</div>`;
@@ -2417,17 +2480,21 @@ function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
   });
 
   const done = wk.data.done || {};
-  const cycle = tpState.cycle || {startKey:wk.weekKey,target:triCfg.target,cycleWeeks:triCfg.cycleWeeks};
+  const cycle = tpState.cycle || {startKey:wk.weekKey,target:triCfg.target,cycleWeeks:triCfg.cycleWeeks,objective:triCfg.objective||'triathlon'};
   const info = PLANO_TIPOS[tipoAtual] || PLANO_TIPOS.tri_intermediario;
   const weekIndex = diffWeeks(cycle.startKey, wk.weekKey) + 1;
-  const built = buildPeriodizedTriWeek(info, calcTriAverages(), weekIndex, cycle.cycleWeeks, cycle.target);
+  const objective = ['triathlon','run10k','half','marathon','ultra'].includes(cycle.objective) ? cycle.objective : (triCfg.objective || 'triathlon');
+  const built = buildPeriodizedTriWeek(info, calcTriAverages(), weekIndex, cycle.cycleWeeks, cycle.target, objective);
   const plan = wk.data.plan || built.plan;
   const metrics = wk.data.metrics || built.metrics;
 
   const targetSel = document.getElementById('coach-target');
   const cycleSel = document.getElementById('coach-cycle');
+  const objSel = document.getElementById('coach-objective');
+  if(objSel) objSel.value = objective;
   if(targetSel) targetSel.value = cycle.target || triCfg.target;
   if(cycleSel) cycleSel.value = String(cycle.cycleWeeks || triCfg.cycleWeeks);
+  syncCoachObjectiveUi();
 
   const phaseLabel = metrics.phase==='base' ? 'Base' : metrics.phase==='build' ? 'Construção' : 'Polimento';
   const doneCount = Object.values(done).filter(Boolean).length;
