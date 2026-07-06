@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Treinos">
 <meta name="theme-color" content="#0b2239">
-<link rel="manifest" href="./manifest.json?v=2026-07-06-09">
+<link rel="manifest" href="./manifest.json?v=2026-07-06-10">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%231a56db' width='192' height='192'/><text x='50%' y='50%' font-size='120' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%231a56db' width='180' height='180' rx='40'/><text x='50%' y='50%' font-size='110' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <title>Treinos · Luiz Silva</title>
@@ -753,7 +753,7 @@ window.addEventListener('DOMContentLoaded', () => {
 const FB_DB   = 'https://gastos-casa-7f431-default-rtdb.firebaseio.com';
 const FB_KEY  = 'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU';
 const FB_PATH = 'treinos/luiz';
-const APP_VERSION = '2026-07-06-09';
+const APP_VERSION = '2026-07-06-10';
 const SNAPSHOT_KEY = 'treinos_last_snapshot_v1';
 const TRAINING_KICKOFF_DATE = '2026-07-07';
 let charts = {}, curTab = 'treinos', DATA = null, curEsporte = 'todos';
@@ -976,6 +976,7 @@ function gymSessionMotraText(sessionId=''){
 }
 
 function buildMotraGymQueue(plan=[], weekKey=''){
+  const weekState = (motraState?.weeks?.[weekKey] && typeof motraState.weeks[weekKey]==='object') ? motraState.weeks[weekKey] : {};
   return (Array.isArray(plan)?plan:[]).map(item => {
     const sessionId = detectGymSessionId(item?.treino||'');
     if(!sessionId) return null;
@@ -986,11 +987,75 @@ function buildMotraGymQueue(plan=[], weekKey=''){
     const body = gymSessionMotraText(sessionId);
     const title = `Motra · ${sessionLabel}`;
     const payload = `${title}\nData: ${dateIso}\nHora: ${time}\nDia: ${day}\n\nExercícios:\n${body}`;
-    return {day, dateIso, time, sessionId, sessionLabel, payload};
+    const queueKey = `${dateIso}__${sessionId}`;
+    return {day, dateIso, time, sessionId, sessionLabel, payload, weekKey, queueKey, launched: !!weekState[queueKey]};
   }).filter(Boolean);
 }
 
 let motraGymQueue = [];
+const MOTRA_STATE_KEY = 'motra_gym_state_v1';
+let motraState = loadMotraState();
+
+function loadMotraState(){
+  try{
+    const raw = localStorage.getItem(MOTRA_STATE_KEY);
+    if(!raw) return {weeks:{}};
+    const parsed = JSON.parse(raw);
+    if(!parsed || typeof parsed!=='object') return {weeks:{}};
+    if(!parsed.weeks || typeof parsed.weeks!=='object') parsed.weeks = {};
+    return parsed;
+  }catch(_){
+    return {weeks:{}};
+  }
+}
+
+function saveMotraState(){
+  try{ localStorage.setItem(MOTRA_STATE_KEY, JSON.stringify(motraState)); }catch(_){ }
+}
+
+function ensureMotraWeekState(weekKey=''){
+  if(!motraState.weeks || typeof motraState.weeks!=='object') motraState.weeks = {};
+  if(!motraState.weeks[weekKey] || typeof motraState.weeks[weekKey]!=='object') motraState.weeks[weekKey] = {};
+  return motraState.weeks[weekKey];
+}
+
+function refreshCoachFromData(){
+  if(!DATA) return;
+  const a = (DATA.atividades||[]).sort((x,y)=>y.data.localeCompare(x.data));
+  renderCoach(a, DATA.meta||{}, DATA.bodyBattery||{}, DATA.sono||{}, DATA.stress||{}, DATA.hrv||{}, DATA.semanal||{});
+}
+
+function setMotraLaunchStatus(item, launched){
+  if(!item?.weekKey || !item?.queueKey) return;
+  const week = ensureMotraWeekState(item.weekKey);
+  if(launched) week[item.queueKey] = true;
+  else delete week[item.queueKey];
+  item.launched = !!launched;
+  saveMotraState();
+}
+
+function markMotraGymItem(idx, launched=true, showAlert=true){
+  const item = motraGymQueue[idx];
+  if(!item) return;
+  setMotraLaunchStatus(item, launched);
+  if(showAlert){
+    setAppAlert(launched
+      ? `Treino marcado como lançado no Motra: ${item.day} ${item.dateIso}.`
+      : `Treino reaberto como pendente no Motra: ${item.day} ${item.dateIso}.`, 'info');
+  }
+  refreshCoachFromData();
+}
+
+function markMotraGymAll(launched=true, showAlert=true){
+  if(!motraGymQueue.length) return;
+  motraGymQueue.forEach(item => setMotraLaunchStatus(item, launched));
+  if(showAlert){
+    setAppAlert(launched
+      ? `Todos os treinos de academia da semana foram marcados como lançados no Motra.`
+      : `Status da semana resetado para pendente no Motra.`, 'info');
+  }
+  refreshCoachFromData();
+}
 
 async function copyTextToClipboard(text=''){
   const val = String(text||'').trim();
@@ -1058,6 +1123,7 @@ function openMotraApp(){
 async function openMotraWithItem(idx){
   const ok = await copyMotraGymItem(idx, false);
   openMotraApp();
+  if(ok) markMotraGymItem(idx, true, false);
   setAppAlert(ok
     ? 'Treino copiado e Motra aberto. No Motra, use colar para finalizar.'
     : 'Motra aberto. Não consegui copiar automaticamente; faça a cópia manual no bloco.', ok ? 'info' : 'warn');
@@ -1066,6 +1132,7 @@ async function openMotraWithItem(idx){
 async function openMotraWithAll(){
   const ok = await copyMotraGymAll(false);
   openMotraApp();
+  if(ok) markMotraGymAll(true, false);
   setAppAlert(ok
     ? `Pacote semanal copiado e Motra aberto (${motraGymQueue.length} treinos).`
     : 'Motra aberto. Não consegui copiar automaticamente o pacote semanal.', ok ? 'info' : 'warn');
@@ -2760,14 +2827,18 @@ function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
   if(gymWrap){
     motraGymQueue = buildMotraGymQueue(plan, wk.weekKey);
     const sessions = [...new Set(plan.map(p=>detectGymSessionId(p.treino)).filter(Boolean))];
+    const sentCount = motraGymQueue.filter(i=>i.launched).length;
+    const totalCount = motraGymQueue.length;
     const motraHtml = motraGymQueue.length ? `
       <div class="card-title" style="margin-top:.8rem">📲 Motra — Academia Automática da Semana</div>
       <div class="tp-type-card" style="margin-bottom:.75rem">
-        <div class="tp-type-desc"><b>Integração prática:</b> o app já organiza os treinos de academia nos dias correspondentes. Use os botões para copiar e colar no Motra.</div>
+        <div class="tp-type-desc"><b>Integração prática:</b> o app já organiza os treinos de academia nos dias correspondentes. Use os botões para copiar, abrir e marcar lançamento no Motra.<br><b>Progresso Motra:</b> ${sentCount}/${totalCount} lançado(s).</div>
         <div class="tp-alt-list" style="margin-top:.45rem">
           <button class="sf-btn sf-on" onclick="copyMotraGymAll()">Copiar pacote completo Motra</button>
           <button class="sf-btn" onclick="openMotraApp()">Abrir Motra</button>
           <button class="sf-btn" onclick="openMotraWithAll()">Abrir Motra + copiar pacote</button>
+          <button class="sf-btn" onclick="markMotraGymAll(true)">Marcar todos como lançados</button>
+          <button class="sf-btn" onclick="markMotraGymAll(false)">Reabrir todos</button>
         </div>
         <div style="display:grid;gap:.5rem;margin-top:.6rem">
           ${motraGymQueue.map((item,idx)=>`
@@ -2775,11 +2846,12 @@ function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
               <div class="tp-day">${item.day}</div>
               <div>
                 <div class="tp-work">${item.sessionLabel}</div>
-                <div class="tp-note">Data ${item.dateIso} · horário sugerido ${item.time}</div>
+                <div class="tp-note">Data ${item.dateIso} · horário sugerido ${item.time} · <b>${item.launched?'Lançado':'Pendente'}</b></div>
               </div>
               <div style="display:flex;gap:.45rem;flex-wrap:wrap;justify-content:flex-end">
                 <button class="tp-done" onclick="copyMotraGymItem(${idx})">Copiar para Motra</button>
                 <button class="tp-done" onclick="openMotraWithItem(${idx})">Abrir + colar</button>
+                <button class="tp-done ${item.launched?'on':''}" onclick="markMotraGymItem(${idx}, ${item.launched?'false':'true'})">${item.launched?'Reabrir':'Marcar lançado'}</button>
               </div>
             </div>
           `).join('')}
