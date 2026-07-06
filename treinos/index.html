@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Treinos">
 <meta name="theme-color" content="#0b2239">
-<link rel="manifest" href="./manifest.json?v=2026-07-05-01">
+<link rel="manifest" href="./manifest.json?v=2026-07-06-01">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%231a56db' width='192' height='192'/><text x='50%' y='50%' font-size='120' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%231a56db' width='180' height='180' rx='40'/><text x='50%' y='50%' font-size='110' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <title>Treinos · Luiz Silva</title>
@@ -203,6 +203,18 @@ body{padding-top:45px}
 .tp-photo-modal-title{font-size:.88rem;font-weight:900;color:var(--text);line-height:1.3}
 .tp-photo-modal-close{border:1px solid #bfdbfe;background:#fff;color:#1e3a8a;border-radius:999px;padding:.35rem .7rem;font-size:.82rem;font-weight:900;cursor:pointer;font-family:inherit}
 .tp-photo-modal-img{display:block;width:100%;height:auto;max-height:78vh;object-fit:contain;background:#eff6ff}
+
+.coach-sheet-wrap{overflow:auto;border:1px solid var(--border);border-radius:12px;background:#fff}
+.coach-sheet-table{width:100%;min-width:760px;border-collapse:separate;border-spacing:0}
+.coach-sheet-table thead th{font-size:.64rem;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);background:#f8fafc;padding:.55rem .5rem;border-bottom:1px solid var(--border);text-align:left}
+.coach-sheet-table tbody td{padding:.55rem .5rem;border-bottom:1px solid #eef2f7;vertical-align:top;font-size:.73rem;color:var(--text)}
+.coach-sheet-table tbody tr:last-child td{border-bottom:none}
+.coach-sheet-day{font-size:.64rem;font-weight:900;text-transform:uppercase;letter-spacing:.45px;color:var(--blue)}
+.coach-cell-main{font-weight:700;color:var(--text);line-height:1.4}
+.coach-cell-note{font-size:.64rem;color:var(--muted);line-height:1.4;margin-top:2px}
+.coach-empty{color:#94a3b8;font-size:.68rem}
+.coach-status-btn{border:1px solid #bfdbfe;background:#eff6ff;color:#1e40af;border-radius:999px;padding:.22rem .6rem;font-size:.62rem;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap}
+.coach-status-btn.on{border-color:#22c55e;background:#ecfdf5;color:#166534}
 
 /* ── CHARTS ── */
 .ch{position:relative;height:175px}
@@ -431,8 +443,9 @@ body{padding-top:45px}
 </div>
 
 <div class="tabs">
-  <button class="tab" onclick="go('coach',this)">🏋️ Coach</button>
+  <button class="tab" onclick="go('coach',this)">📋 Coach</button>
   <button class="tab on" onclick="go('treinos',this)">🏃 Treinos</button>
+  <button class="tab" onclick="go('indices',this)">📑 Índices</button>
   <button class="tab"    onclick="go('evolucao',this)">📈 Evolução</button>
   <button class="tab"    onclick="go('saude',this)">❤️ Saúde</button>
   <button class="tab"    onclick="go('provas',this)">🏁 Provas</button>
@@ -446,51 +459,64 @@ body{padding-top:45px}
 
     <!-- ══ COACH ══ -->
     <div class="sec" id="sec-coach">
-      <div class="cef-wrap">
-        <button class="cef-btn cef-on" onclick="setCoachEsporte('corrida',this)">🏃 Corrida</button>
-        <button class="cef-btn" onclick="setCoachEsporte('bike',this)">🚴 Bike</button>
-        <button class="cef-btn" onclick="setCoachEsporte('natacao',this)">🏊 Natação</button>
-        <button class="cef-btn" onclick="setCoachEsporte('academia',this)">💪 Academia</button>
-        <button class="cef-btn" onclick="setCoachEsporte('todos',this)">📊 Todos</button>
-      </div>
-      <!-- Objetivo de Prova -->
-      <div class="race-goal-card" id="race-goal-card">
-        <div class="race-goal-title">🎯 Objetivo de Prova</div>
-        <div class="race-goal-content">
-          <div class="race-goal-field">
-            <label>Distância</label>
-            <select id="race-goal-dist">
-              <option value="">— Nenhuma</option>
-              <option value="10">10 km</option>
-              <option value="21.1">21,1 km — Meia</option>
-              <option value="42.2">42,2 km — Maratona</option>
-            </select>
-          </div>
-          <div class="race-goal-field">
-            <label>Data da Prova</label>
-            <input type="date" id="race-goal-date">
-          </div>
+      <div class="card">
+        <div class="card-title">📋 Planilha Semanal — Coach Profissional</div>
+        <div class="tp-types-note">Plano semanal com <b>Corrida</b>, <b>Natação</b>, <b>Bike</b> e <b>Academia</b>, ajustado automaticamente pela sua performance recente do Garmin.</div>
+        <div id="coach-plan-levels" class="tp-levels" style="margin-top:.55rem">
+          <button class="sf-btn sf-on" onclick="setPlanoTipo('tri_iniciante',this)">Tri Iniciante</button>
+          <button class="sf-btn" onclick="setPlanoTipo('tri_intermediario',this)">Tri Intermediário</button>
+          <button class="sf-btn" onclick="setPlanoTipo('tri_avancado',this)">Tri Avançado</button>
+          <button class="sf-btn" onclick="setPlanoTipo('tri_regeneracao',this)">Semana Regenerativa</button>
         </div>
-        <div class="race-goal-btns">
-          <button class="race-goal-btn-save" onclick="saveRaceGoal()">💾 Salvar Objetivo</button>
-          <button class="race-goal-btn-clear" onclick="clearRaceGoal()">Limpar</button>
+        <div class="tp-config" style="margin-top:.6rem">
+          <select id="coach-target" class="tp-select" onchange="setTriTarget(this.value)">
+            <option value="sprint">🎯 Tri Sprint</option>
+            <option value="olimpico">🎯 Tri Olímpico</option>
+            <option value="703">🎯 Tri 70.3</option>
+          </select>
+          <select id="coach-cycle" class="tp-select" onchange="setTriCycle(Number(this.value))">
+            <option value="8">8 semanas</option>
+            <option value="12">12 semanas</option>
+          </select>
+          <button class="tp-apply" onclick="restartTriCycle()">Reiniciar ciclo</button>
         </div>
-        <div class="race-goal-meta" id="race-goal-meta"></div>
+        <div id="coach-sheet-meta" class="tp-meta" style="margin-top:.55rem"></div>
+        <div class="coach-sheet-wrap">
+          <table class="coach-sheet-table" aria-label="Planilha semanal de treinos">
+            <thead>
+              <tr>
+                <th>Dia</th>
+                <th>Corrida</th>
+                <th>Natação</th>
+                <th>Bike</th>
+                <th>Academia</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="coach-sheet-body"></tbody>
+          </table>
+        </div>
       </div>
-      <div class="ev-wrap" id="ev-wrap">
-        <button class="ev-btn" id="ev-btn-meia"     onclick="setEvento('meia',this)">🏃 Meia-Maratona</button>
-        <button class="ev-btn" id="ev-btn-maratona" onclick="setEvento('maratona',this)">🏃 Maratona</button>
-        <button class="ev-btn" id="ev-btn-ultra"    onclick="setEvento('ultra',this)">⛰️ Ultra-Maratona</button>
-        <button class="ev-btn" id="ev-btn-duathlon" onclick="setEvento('duathlon',this)">🚴🏃 Duathlon</button>
-        <button class="ev-btn" id="ev-btn-triathlon" onclick="setEvento('triathlon',this)">🏊🚴🏃 Triathlon</button>
+    </div>
+
+    <!-- ══ ÍNDICES ══ -->
+    <div class="sec" id="sec-indices">
+      <div class="period-wrap">
+        <div class="period-head">
+          <span class="period-label">Intervalo</span>
+          <span class="period-current">180d</span>
+        </div>
+        <input class="period-slider" type="range" min="7" max="180" step="1" value="180" aria-label="Intervalo em dias" oninput="setPeriodo(Number(this.value))">
       </div>
-      <div id="coach-hero" class="ring-grid"></div>
-      <div class="glass-note" id="coach-note" style="display:none"></div>
-      <div id="coach-status"></div>
-      <div id="coach-sugestao"></div>
-      <div id="coach-insights" class="insight-grid"></div>
-      <div id="coach-stats-hero"></div>
-      <div id="coach-sport-stats"></div>
+      <div class="card">
+        <div class="card-title">📑 Índices de Performance — Base Garmin</div>
+        <div id="indices-grid" class="sgrid sg3"></div>
+        <div id="indices-sub" class="ch-sub"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">📊 Volumes Semanais por Modalidade</div>
+        <div id="indices-vol" class="sgrid sg2"></div>
+      </div>
     </div>
 
     <!-- ══ TREINOS ══ -->
@@ -738,7 +764,7 @@ window.addEventListener('DOMContentLoaded', () => {
 const FB_DB   = 'https://gastos-casa-7f431-default-rtdb.firebaseio.com';
 const FB_KEY  = 'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU';
 const FB_PATH = 'treinos/luiz';
-const APP_VERSION = '2026-07-05-01';
+const APP_VERSION = '2026-07-06-01';
 const SNAPSHOT_KEY = 'treinos_last_snapshot_v1';
 let charts = {}, curTab = 'treinos', DATA = null, curEsporte = 'todos';
 const PERIODO = 180; // dias padrão para todas as médias do app
@@ -941,6 +967,7 @@ function setPeriodo(days,btn){
   if(DATA){
     const atividades=(DATA.atividades||[]).sort((a,b)=>b.data.localeCompare(a.data));
     renderTreinos(atividades,DATA.meta||{},DATA.semanal||{});
+    renderIndices(atividades,DATA.bodyBattery||{},DATA.sono||{},DATA.hrv||{});
     renderEvolucao(atividades);
     renderSaude(DATA.bodyBattery||{},DATA.sono||{},DATA.stress||{},DATA.hrv||{});
   }
@@ -1009,12 +1036,16 @@ function inferPlanoTipo(txt){
 
 function setPlanoTipo(tipo,btn){
   curPlanoTipo = tipo;
-  document.querySelectorAll('#tp-levels .sf-btn').forEach(b=>b.classList.remove('sf-on'));
+  document.querySelectorAll('#tp-levels .sf-btn, #coach-plan-levels .sf-btn').forEach(b=>b.classList.remove('sf-on'));
   if(btn) btn.classList.add('sf-on');
   const wk = ensureWeeklyPlano(tipo);
   wk.data.selectedType = tipo;
   saveTpState();
   renderPlanoSemanal();
+  if(DATA){
+    const a=(DATA.atividades||[]).sort((x,y)=>y.data.localeCompare(x.data));
+    renderCoach(a,DATA.meta||{},DATA.bodyBattery||{},DATA.sono||{},DATA.stress||{},DATA.hrv||{},DATA.semanal||{});
+  }
 }
 
 function loadTpState(){
@@ -1092,6 +1123,10 @@ function restartTriCycle(){
   const wk = isoWeekInfo().key;
   if(tpState.weeks?.[wk]) tpState.weeks[wk] = {};
   renderPlanoSemanal();
+  if(DATA){
+    const a=(DATA.atividades||[]).sort((x,y)=>y.data.localeCompare(x.data));
+    renderCoach(a,DATA.meta||{},DATA.bodyBattery||{},DATA.sono||{},DATA.stress||{},DATA.hrv||{},DATA.semanal||{});
+  }
 }
 
 function isoWeekInfo(refDate=new Date()){
@@ -2004,6 +2039,7 @@ function render(d){
 
   renderCoach(ativ,meta,bb,sono,stress,hrv,sem);
   renderTreinos(ativ,meta,sem);
+  renderIndices(ativ,bb,sono,hrv);
   renderEvolucao(ativ);
   renderSaude(bb,sono,stress,hrv);
 }
@@ -2231,24 +2267,28 @@ function loadRaceGoal(){
   } catch(_) {
     localStorage.removeItem('raceGoal');
   }
-  
-  // Carregar valores nos campos
+
+  const distEl = document.getElementById('race-goal-dist');
+  const dateEl = document.getElementById('race-goal-date');
   if(raceGoal){
-    document.getElementById('race-goal-dist').value = raceGoal.dist || '';
-    document.getElementById('race-goal-date').value = raceGoal.date || '';
+    if(distEl) distEl.value = raceGoal.dist || '';
+    if(dateEl) dateEl.value = raceGoal.date || '';
     raceGoalExpanded = false;
   } else {
-    document.getElementById('race-goal-dist').value = '';
-    document.getElementById('race-goal-date').value = '';
+    if(distEl) distEl.value = '';
+    if(dateEl) dateEl.value = '';
     raceGoalExpanded = true;
   }
-  
+
   updateRaceGoalUI();
 }
 
 function saveRaceGoal(){
-  const dist = document.getElementById('race-goal-dist').value;
-  const date = document.getElementById('race-goal-date').value;
+  const distEl = document.getElementById('race-goal-dist');
+  const dateEl = document.getElementById('race-goal-date');
+  if(!distEl || !dateEl) return;
+  const dist = distEl.value;
+  const date = dateEl.value;
   if(!dist || !date){
     setAppAlert('Preencha distância e data da prova para salvar o objetivo.', 'warn');
     return;
@@ -2280,8 +2320,10 @@ function clearRaceGoal(){
   raceGoal = null;
   raceGoalExpanded = true;
   localStorage.removeItem('raceGoal');
-  document.getElementById('race-goal-dist').value = '';
-  document.getElementById('race-goal-date').value = '';
+  const distEl = document.getElementById('race-goal-dist');
+  const dateEl = document.getElementById('race-goal-date');
+  if(distEl) distEl.value = '';
+  if(dateEl) dateEl.value = '';
   updateRaceGoalUI();
   setAppAlert('Objetivo de prova removido.');
   if(DATA){const a=(DATA.atividades||[]).sort((a,b)=>b.data.localeCompare(a.data));renderCoach(a,DATA.meta||{},DATA.bodyBattery||{},DATA.sono||{},DATA.stress||{},DATA.hrv||{},DATA.semanal||{});}
@@ -2290,14 +2332,18 @@ function clearRaceGoal(){
 function updateRaceGoalUI(){
   const distLbl = {10:'10 km', 21.1:'21,1 km (Meia)', 42.2:'42,2 km (Maratona)'};
   const card = document.getElementById('race-goal-card');
+  if(!card) return;
   if(raceGoal){
     const semana = semanaISO(raceGoal.date);
     const dias = Math.round((new Date(raceGoal.date+'T12:00:00') - new Date())/864e5);
     card.classList.add('set');
     card.classList.toggle('collapsed', !raceGoalExpanded);
-    document.getElementById('race-goal-dist').value = raceGoal.dist;
-    document.getElementById('race-goal-date').value = raceGoal.date;
-    document.getElementById('race-goal-meta').innerHTML = `
+    const distEl = document.getElementById('race-goal-dist');
+    const dateEl = document.getElementById('race-goal-date');
+    const metaEl = document.getElementById('race-goal-meta');
+    if(distEl) distEl.value = raceGoal.dist;
+    if(dateEl) dateEl.value = raceGoal.date;
+    if(metaEl) metaEl.innerHTML = `
       <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem">
         <div>
           <div class="race-goal-dist">${distLbl[raceGoal.dist]}</div>
@@ -2316,184 +2362,150 @@ function updateRaceGoalUI(){
   } else {
     card.classList.remove('set');
     card.classList.remove('collapsed');
-    document.getElementById('race-goal-meta').innerHTML = '';
+    const metaEl = document.getElementById('race-goal-meta');
+    if(metaEl) metaEl.innerHTML = '';
   }
 }
 
+function parseCoachPlanRow(item){
+  const clean = (txt)=>String(txt||'').replace(/[🏃🚴🏊💪🎯⚡📏]/g,'').replace(/\s+/g,' ').trim();
+  const row = {corrida:'', natacao:'', bike:'', academia:''};
+  const parts = String(item?.treino||'').split('+').map(p=>p.trim()).filter(Boolean);
+  parts.forEach(part=>{
+    const p = part.toLowerCase();
+    if(p.includes('corrida') || p.includes('brick')) row.corrida = clean(part);
+    if(p.includes('técnica') || p.includes('tecnica') || p.includes('endurance')) row.natacao = clean(part);
+    if(p.includes('bike') || p.includes('longo')) row.bike = clean(part);
+    if(p.includes('academia')) row.academia = clean(part);
+  });
+  const note = String(item?.note||'').trim();
+  const addNote = (k, token) => {
+    if(note.toLowerCase().includes(token) && row[k]) row[k] += `<div class="coach-cell-note">${note}</div>`;
+  };
+  addNote('corrida','pace');
+  addNote('natacao','css');
+  addNote('bike','z');
+  addNote('academia','força');
+  return row;
+}
+
 function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
-  const hoje=localISODate();
-  const d7=localISODate(new Date(Date.now()-7*864e5));
-  const d14=localISODate(new Date(Date.now()-14*864e5));
-  const d30=localISODate(new Date(Date.now()-30*864e5));
+  const body = document.getElementById('coach-sheet-body');
+  if(!body) return;
 
-  // Saúde (sempre global)
-  const bbHoje=bb[hoje]?.max||bb[Object.keys(bb).sort().slice(-1)[0]]?.max||0;
-  const sonoKeys=Object.keys(sono).sort().slice(-7);
-  const sonoReal7=sonoKeys.filter(k=>sono[k].duracao>=2);
-  const mediaSOno=sonoReal7.length?+(sonoReal7.reduce((s,k)=>s+sono[k].duracao,0)/sonoReal7.length).toFixed(1):0;
-  const stressKeys=Object.keys(stress).sort().slice(-7);
-  const stressMed7=stressKeys.length?Math.round(stressKeys.reduce((s,k)=>s+(stress[k].avg||0),0)/stressKeys.length):0;
-  const hrvKeys=Object.keys(hrv).sort().slice(-7);
-  const hrvVal=k=>hrv[k].ontem>0?hrv[k].ontem:(hrv[k].semanal||0);
-  const hrvCom=hrvKeys.filter(k=>hrvVal(k)>0);
-  const hrvLast=hrvCom.length?hrvVal(hrvCom[hrvCom.length-1]):0;
-
-  // Atividades filtradas por esporte
-  const filtrado=curCoachEsporte==='todos'?ativ:ativ.filter(a=>getEsporte(a)===curCoachEsporte);
-  const f7=filtrado.filter(a=>a.data>=d7);
-  const f30=filtrado.filter(a=>a.data>=d30);
-  const km30f=f30.reduce((s,a)=>s+a.distancia,0);
-
-  // Volume semanal calculado das atividades filtradas
-  const semData={};
-  filtrado.forEach(a=>{const s=semanaISO(a.data);if(!semData[s])semData[s]={km:0};semData[s].km=+(semData[s].km+a.distancia).toFixed(2);});
-  const sks=Object.keys(semData).sort();
-  const kmEsta=sks.length?semData[sks[sks.length-1]].km:0;
-  const kmAnt=sks.length>1?semData[sks[sks.length-2]].km:0;
-  const volTrend=kmAnt>0?((kmEsta-kmAnt)/kmAnt*100):0;
-
-  // Status (baseado em BB + sono — sempre global)
-  const diasSemTreino=ativ.length?Math.round((Date.now()-new Date(ativ[0].data+'T12:00:00').getTime())/864e5):99;
-  const paceBaseArr=ativ.filter(a=>getEsporte(a)==='corrida'&&a.data>=d7&&a.pace&&a.distancia>=1);
-  const paceBase=paceBaseArr.length?paceBaseArr.reduce((s,a)=>s+p2s(a.pace),0)/paceBaseArr.length:0;
-  const readiness=getReadiness(bbHoje,mediaSOno,volTrend,diasSemTreino);
-  let status,statusClass;
-  if(bbHoje<25){status='😴 Descanse hoje';statusClass='status-descanso';}
-  else if(bbHoje<45||mediaSOno<6){status='⚠️ Treino Leve';statusClass='status-atencao';}
-  else if(volTrend>20){status='📈 Cuidado com a carga';statusClass='status-atencao';}
-  else if(bbHoje>=75&&diasSemTreino>=1){status='🚀 Ótimo dia pra treinar!';statusClass='status-otimo';}
-  else{status='✅ Dia bom pra treinar';statusClass='status-bom';}
-
-  renderCoachHero({
-    bbHoje,
-    sonoMed:mediaSOno,
-    hrvLast,
-    stressMed:stressMed7,
-    kmSemana:kmEsta,
-    treinosSemana:f7.length,
-    volTrend,
-    readiness
+  const wk = ensureWeeklyPlano(curPlanoTipo);
+  const tipoAtual = wk.data.selectedType || curPlanoTipo || 'tri_intermediario';
+  curPlanoTipo = tipoAtual;
+  document.querySelectorAll('#coach-plan-levels .sf-btn').forEach(b => {
+    b.classList.toggle('sf-on', (b.getAttribute('onclick')||'').includes(`'${tipoAtual}'`));
   });
 
-  document.getElementById('coach-status').innerHTML=`
-    <div class="status-badge ${statusClass}">
-      <div class="status-ico">${bbHoje>=75?'🚀':bbHoje>=45?'✅':bbHoje>=25?'⚠️':'😴'}</div>
-      <div><div class="status-title">${status}</div><div class="status-sub">Hoje, ${fd(hoje)}</div></div>
-    </div>`;
-  document.getElementById('coach-sugestao').innerHTML=renderSugestaoCard(curCoachEsporte,readiness,paceBase,bbHoje,mediaSOno,curEvento);
+  const done = wk.data.done || {};
+  const cycle = tpState.cycle || {startKey:wk.weekKey,target:triCfg.target,cycleWeeks:triCfg.cycleWeeks};
+  const info = PLANO_TIPOS[tipoAtual] || PLANO_TIPOS.tri_intermediario;
+  const weekIndex = diffWeeks(cycle.startKey, wk.weekKey) + 1;
+  const built = buildPeriodizedTriWeek(info, calcTriAverages(), weekIndex, cycle.cycleWeeks, cycle.target);
+  const plan = wk.data.plan || built.plan;
+  const metrics = wk.data.metrics || built.metrics;
 
-  // ── Insights por esporte ──
-  let ins='';
+  const targetSel = document.getElementById('coach-target');
+  const cycleSel = document.getElementById('coach-cycle');
+  if(targetSel) targetSel.value = cycle.target || triCfg.target;
+  if(cycleSel) cycleSel.value = String(cycle.cycleWeeks || triCfg.cycleWeeks);
 
-  if(curCoachEsporte==='corrida'){
-    const cor=ativ.filter(a=>getEsporte(a)==='corrida');
-    const comP=cor.filter(a=>a.pace&&a.distancia>=1);
-    const p7=comP.filter(a=>a.data>=d7), p14=comP.filter(a=>a.data>=d14&&a.data<d7);
-    const pace7=p7.length?p7.reduce((s,a)=>s+p2s(a.pace),0)/p7.length:0;
-    const pace14=p14.length?p14.reduce((s,a)=>s+p2s(a.pace),0)/p14.length:0;
-    const pTrend=pace7&&pace14?pace14-pace7:0;
-    const melhor=comP.filter(a=>a.data>=d30).length?s2p(Math.min(...comP.filter(a=>a.data>=d30).map(a=>p2s(a.pace)))):'—';
-    const vo2=cor.filter(a=>a.vo2max>0)[0]?.vo2max||0;
-    const fc30=cor.filter(a=>a.fcMed>0&&a.data>=d30);
-    const fcM=fc30.length?Math.round(fc30.reduce((s,a)=>s+a.fcMed,0)/fc30.length):0;
-    const cad30=cor.filter(a=>a.cadencia>0&&a.data>=d30);
-    const cadM=cad30.length?Math.round(cad30.reduce((s,a)=>s+a.cadencia,0)/cad30.length):0;
-    ins=`
-      <div class="insight i-blue"><div class="insight-ico">🏃</div><div class="insight-titulo">km corrida / sem.</div><div class="insight-val" style="color:var(--blue)">${kmEsta.toFixed(1)}</div><div class="insight-sub">${volTrend>=0?'▲':'▼'} ${Math.abs(volTrend).toFixed(0)}% vs sem. ant.</div></div>
-      <div class="insight i-green"><div class="insight-ico">⏱️</div><div class="insight-titulo">Pace corrida (7d)</div><div class="insight-val" style="color:var(--green)">${pace7?s2p(pace7):'—'}</div><div class="insight-sub">${pTrend>5?'▲ Melhorou '+s2p(pTrend):pTrend<-5?'▼ Caiu '+s2p(-pTrend):'Estável'}</div></div>
-      <div class="insight i-orange"><div class="insight-ico">⚡</div><div class="insight-titulo">Melhor pace (30d)</div><div class="insight-val" style="color:var(--orange)">${melhor}</div><div class="insight-sub">${km30f.toFixed(1)} km corrida / 30d</div></div>
-      <div class="insight i-red"><div class="insight-ico">❤️</div><div class="insight-titulo">FC corrida (30d)</div><div class="insight-val" style="color:var(--red)">${fcM||'—'} bpm</div><div class="insight-sub">${fc30.length} corridas com dados</div></div>
-      <div class="insight i-gold"><div class="insight-ico">🔬</div><div class="insight-titulo">VO2 Max</div><div class="insight-val" style="color:var(--gold)">${vo2||'—'}</div><div class="insight-sub">${vo2>=55?'Excelente':vo2>=50?'Muito bom':vo2>=45?'Bom':vo2>0?'Regular':'Sem dados'}</div></div>
-      <div class="insight i-purple"><div class="insight-ico">🦵</div><div class="insight-titulo">Cadência corrida (30d)</div><div class="insight-val" style="color:var(--purple)">${cadM||'—'} spm</div><div class="insight-sub">${cadM>=170?'✅ Ótima':cadM>=160?'⚠️ Boa':cadM>0?'⚠️ Melhorar':'—'}</div></div>`;
-
-  } else if(curCoachEsporte==='bike'){
-    const fc30=filtrado.filter(a=>a.fcMed>0&&a.data>=d30);
-    const fcM=fc30.length?Math.round(fc30.reduce((s,a)=>s+a.fcMed,0)/fc30.length):0;
-    const comP=filtrado.filter(a=>a.pace&&a.distancia>=1&&a.data>=d30);
-    const paceM=comP.length?comP.reduce((s,a)=>s+p2s(a.pace),0)/comP.length:0;
-    const cal30=f30.reduce((s,a)=>s+(a.calorias||0),0);
-    ins=`
-      <div class="insight i-blue"><div class="insight-ico">🚴</div><div class="insight-titulo">km bike / sem.</div><div class="insight-val" style="color:var(--blue)">${kmEsta.toFixed(1)}</div><div class="insight-sub">${volTrend>=0?'▲':'▼'} ${Math.abs(volTrend).toFixed(0)}% vs sem. ant.</div></div>
-      <div class="insight i-green"><div class="insight-ico">⏱️</div><div class="insight-titulo">Pace bike (30d)</div><div class="insight-val" style="color:var(--green)">${paceM?s2p(paceM):'—'}</div><div class="insight-sub">${comP.length} pedaladas</div></div>
-      <div class="insight i-orange"><div class="insight-ico">📏</div><div class="insight-titulo">km bike / 30d</div><div class="insight-val" style="color:var(--orange)">${km30f.toFixed(1)}</div><div class="insight-sub">${f7.length} pedaladas esta sem.</div></div>
-      <div class="insight i-red"><div class="insight-ico">❤️</div><div class="insight-titulo">FC bike (30d)</div><div class="insight-val" style="color:var(--red)">${fcM||'—'} bpm</div><div class="insight-sub">${fc30.length} pedaladas c/ FC</div></div>
-      <div class="insight i-gold"><div class="insight-ico">🔥</div><div class="insight-titulo">Calorias bike (30d)</div><div class="insight-val" style="color:var(--gold)">${cal30}</div><div class="insight-sub">kcal em ${f30.length} treinos</div></div>
-      <div class="insight i-purple"><div class="insight-ico">📅</div><div class="insight-titulo">Sessões bike / 30d</div><div class="insight-val" style="color:var(--purple)">${f30.length}</div><div class="insight-sub">${km30f.toFixed(1)} km total</div></div>`;
-
-  } else if(curCoachEsporte==='natacao'){
-    const fc30=filtrado.filter(a=>a.fcMed>0&&a.data>=d30);
-    const fcM=fc30.length?Math.round(fc30.reduce((s,a)=>s+a.fcMed,0)/fc30.length):0;
-    const comP=filtrado.filter(a=>a.pace&&a.data>=d30);
-    const paceM=comP.length?comP.reduce((s,a)=>s+p2s(a.pace),0)/comP.length:0;
-    const cal30=f30.reduce((s,a)=>s+(a.calorias||0),0);
-    ins=`
-      <div class="insight i-blue"><div class="insight-ico">🏊</div><div class="insight-titulo">m natação / sem.</div><div class="insight-val" style="color:var(--blue)">${(kmEsta*1000).toFixed(0)}</div><div class="insight-sub">${volTrend>=0?'▲':'▼'} ${Math.abs(volTrend).toFixed(0)}% vs sem. ant.</div></div>
-      <div class="insight i-green"><div class="insight-ico">⏱️</div><div class="insight-titulo">Pace natação (30d)</div><div class="insight-val" style="color:var(--green)">${paceM?s2p(paceM):'—'}</div><div class="insight-sub">${comP.length} sessões</div></div>
-      <div class="insight i-orange"><div class="insight-ico">📏</div><div class="insight-titulo">Total / 30d</div><div class="insight-val" style="color:var(--orange)">${(km30f*1000).toFixed(0)} m</div><div class="insight-sub">${km30f.toFixed(2)} km</div></div>
-      <div class="insight i-red"><div class="insight-ico">❤️</div><div class="insight-titulo">FC natação (30d)</div><div class="insight-val" style="color:var(--red)">${fcM||'—'} bpm</div><div class="insight-sub">${fc30.length} sessões c/ FC</div></div>
-      <div class="insight i-purple"><div class="insight-ico">📅</div><div class="insight-titulo">Sessões / 30d</div><div class="insight-val" style="color:var(--purple)">${f30.length}</div><div class="insight-sub">${f7.length} esta semana</div></div>
-      <div class="insight i-gold"><div class="insight-ico">🔥</div><div class="insight-titulo">Calorias (30d)</div><div class="insight-val" style="color:var(--gold)">${cal30}</div><div class="insight-sub">kcal queimadas</div></div>`;
-
-  } else if(curCoachEsporte==='academia'){
-    const fc30=filtrado.filter(a=>a.fcMed>0&&a.data>=d30);
-    const fcM=fc30.length?Math.round(fc30.reduce((s,a)=>s+a.fcMed,0)/fc30.length):0;
-    const cal30=f30.reduce((s,a)=>s+(a.calorias||0),0);
-    ins=`
-      <div class="insight i-purple"><div class="insight-ico">💪</div><div class="insight-titulo">Sessões / semana</div><div class="insight-val" style="color:var(--purple)">${f7.length}</div><div class="insight-sub">${volTrend>=0?'▲':'▼'} ${Math.abs(volTrend).toFixed(0)}% vs sem. ant.</div></div>
-      <div class="insight i-blue"><div class="insight-ico">📅</div><div class="insight-titulo">Sessões / 30d</div><div class="insight-val" style="color:var(--blue)">${f30.length}</div><div class="insight-sub">${(f30.length/4.3).toFixed(1)}x/semana média</div></div>
-      <div class="insight i-red"><div class="insight-ico">❤️</div><div class="insight-titulo">FC academia (30d)</div><div class="insight-val" style="color:var(--red)">${fcM||'—'} bpm</div><div class="insight-sub">${fc30.length} sessões c/ FC</div></div>
-      <div class="insight i-gold"><div class="insight-ico">🔥</div><div class="insight-titulo">Calorias (30d)</div><div class="insight-val" style="color:var(--gold)">${cal30}</div><div class="insight-sub">kcal em ${f30.length} treinos</div></div>
-      <div class="insight i-orange"><div class="insight-ico">⚡</div><div class="insight-titulo">Cal/sessão</div><div class="insight-val" style="color:var(--orange)">${f30.length?Math.round(cal30/f30.length):'—'}</div><div class="insight-sub">média por treino</div></div>
-      <div class="insight i-green"><div class="insight-ico">📈</div><div class="insight-titulo">Frequência</div><div class="insight-val" style="color:var(--green)">${f7.length>=3?'✅ Boa':f7.length>=2?'⚠️ Ok':'❌ Baixa'}</div><div class="insight-sub">${f7.length}x esta semana</div></div>`;
-
-  } else { // todos
-    const rec7=ativ.filter(a=>a.data>=d7&&a.pace&&a.distancia>=1&&getEsporte(a)==='corrida');
-    const rec14=ativ.filter(a=>a.data>=d14&&a.data<d7&&a.pace&&a.distancia>=1&&getEsporte(a)==='corrida');
-    const pace7=rec7.length?rec7.reduce((s,a)=>s+p2s(a.pace),0)/rec7.length:0;
-    const pace14=rec14.length?rec14.reduce((s,a)=>s+p2s(a.pace),0)/rec14.length:0;
-    const pTrend=pace7&&pace14?pace14-pace7:0;
-    const fc7=ativ.filter(a=>a.data>=d7&&a.fcMed);
-    const mediaFC=fc7.length?Math.round(fc7.reduce((s,a)=>s+a.fcMed,0)/fc7.length):0;
-    const lastVO2=ativ.filter(a=>a.vo2max>0)[0]?.vo2max||0;
-    ins=`
-      <div class="insight i-blue"><div class="insight-ico">📊</div><div class="insight-titulo">Volume total / sem.</div><div class="insight-val" style="color:var(--blue)">${kmEsta.toFixed(1)} km</div><div class="insight-sub">${volTrend>=0?'▲':'▼'} ${Math.abs(volTrend).toFixed(0)}% vs sem. ant.</div></div>
-      <div class="insight i-green"><div class="insight-ico">⏱️</div><div class="insight-titulo">Pace corrida (7d)</div><div class="insight-val" style="color:var(--green)">${pace7?s2p(pace7):'—'}</div><div class="insight-sub">${pTrend>5?'▲ Melhorou '+s2p(pTrend):pTrend<-5?'▼ Caiu '+s2p(-pTrend):'Estável'}</div></div>
-      <div class="insight i-orange"><div class="insight-ico">🔋</div><div class="insight-titulo">Body Battery</div><div class="insight-val" style="color:var(--orange)">${bbHoje||'—'}%</div><div class="insight-sub">${bbHoje>=75?'Excelente':bbHoje>=50?'Boa':bbHoje>=25?'Moderada':'Baixa'}</div></div>
-      <div class="insight i-purple"><div class="insight-ico">😴</div><div class="insight-titulo">Sono médio</div><div class="insight-val" style="color:var(--purple)">${mediaSOno?mediaSOno.toFixed(1)+'h':'—'}</div><div class="insight-sub">${mediaSOno>=7?'✅ Adequado':mediaSOno>=6?'⚠️ Abaixo':'⚠️ Insuficiente'}</div></div>
-      <div class="insight i-red"><div class="insight-ico">❤️</div><div class="insight-titulo">FC geral (7d)</div><div class="insight-val" style="color:var(--red)">${mediaFC||'—'} bpm</div><div class="insight-sub">${fc7.length} treinos esta semana</div></div>
-      <div class="insight i-gold"><div class="insight-ico">🔬</div><div class="insight-titulo">VO2 Max</div><div class="insight-val" style="color:var(--gold)">${lastVO2||'—'}</div><div class="insight-sub">${lastVO2>=55?'Excelente':lastVO2>=50?'Muito bom':lastVO2>=45?'Bom':lastVO2>0?'Regular':'Sem dados'}</div></div>`;
+  const phaseLabel = metrics.phase==='base' ? 'Base' : metrics.phase==='build' ? 'Construção' : 'Polimento';
+  const doneCount = Object.values(done).filter(Boolean).length;
+  const metaEl = document.getElementById('coach-sheet-meta');
+  if(metaEl){
+    metaEl.innerHTML = `Semana ${wk.weekKey} · ciclo ${metrics.week}/${metrics.totalWeeks} · ${phaseLabel}${metrics.deload?' · deload':''} · alvo ${metrics.target} · concluído ${doneCount}/${plan.length}`;
   }
 
-  document.getElementById('coach-insights').innerHTML=ins;
+  body.innerHTML = plan.map((p,i)=>{
+    const cols = parseCoachPlanRow(p);
+    const cell = (v)=>v ? `<div class="coach-cell-main">${v}</div>` : `<span class="coach-empty">—</span>`;
+    return `<tr>
+      <td class="coach-sheet-day">${p.day}</td>
+      <td>${cell(cols.corrida)}</td>
+      <td>${cell(cols.natacao)}</td>
+      <td>${cell(cols.bike)}</td>
+      <td>${cell(cols.academia)}</td>
+      <td><button class="coach-status-btn ${done[i]?'on':''}" onclick="togglePlanoDone(${i})">${done[i]?'Feito':'Confirmar'}</button></td>
+    </tr>`;
+  }).join('');
 
-  // Stats hero
-  const sportLabel={corrida:'🏃 Corrida',bike:'🚴 Bike',natacao:'🏊 Natação',academia:'💪 Academia',todos:'Geral'};
-  document.getElementById('coach-stats-hero').innerHTML=`
-    <div class="div-label">Resumo — últimos 180 dias · ${sportLabel[curCoachEsporte]}</div>
-    <div class="sgrid sg3">
-      <div class="stat"><div class="sv" style="color:var(--blue)">${curCoachEsporte==='academia'?f30.length:km30f.toFixed(1)}</div><div class="sl">${curCoachEsporte==='academia'?'sessões':'km'} / 30d</div></div>
-      <div class="stat"><div class="sv" style="color:var(--green)">${f30.length}</div><div class="sl">treinos / mês</div></div>
-      <div class="stat"><div class="sv" style="color:var(--muted);font-size:1rem">${f7.length}</div><div class="sl">treinos / sem.</div></div>
-    </div>`;
+  renderIndices(ativ, bb, sono, hrv);
+}
 
-  // Sport breakdown (só no modo todos)
-  if(curCoachEsporte==='todos'){
-    const td30=localISODate(new Date(Date.now()-180*864e5));
-    const kc=ativ.filter(a=>getEsporte(a)==='corrida'&&a.data>=td30).reduce((s,a)=>s+a.distancia,0).toFixed(1);
-    const kb=ativ.filter(a=>getEsporte(a)==='bike'&&a.data>=td30).reduce((s,a)=>s+a.distancia,0).toFixed(1);
-    const kn=ativ.filter(a=>getEsporte(a)==='natacao'&&a.data>=td30).reduce((s,a)=>s+a.distancia,0).toFixed(1);
-    const sa=ativ.filter(a=>getEsporte(a)==='academia'&&a.data>=td30).length;
-    document.getElementById('coach-sport-stats').innerHTML=`
-      <div class="div-label">180 dias — por esporte</div>
-      <div class="sgrid" style="grid-template-columns:repeat(4,1fr);gap:.45rem">
-        <div class="stat"><div class="sv" style="color:var(--blue);font-size:1.1rem">${kc}</div><div class="sl">🏃 corrida</div></div>
-        <div class="stat"><div class="sv" style="color:var(--orange);font-size:1.1rem">${kb}</div><div class="sl">🚴 bike</div></div>
-        <div class="stat"><div class="sv" style="color:#0ea5e9;font-size:1.1rem">${kn}</div><div class="sl">🏊 natação</div></div>
-        <div class="stat"><div class="sv" style="color:var(--purple);font-size:1.1rem">${sa}</div><div class="sl">💪 academia</div></div>
-      </div>`;
-  } else {
-    document.getElementById('coach-sport-stats').innerHTML='';
-  }
+function renderIndices(ativ, bb, sono, hrv){
+  const grid = document.getElementById('indices-grid');
+  const vol = document.getElementById('indices-vol');
+  const sub = document.getElementById('indices-sub');
+  if(!grid || !vol || !sub) return;
+
+  const d0 = localISODate(new Date(Date.now()-curPeriodo*864e5));
+  const d7 = localISODate(new Date(Date.now()-7*864e5));
+  const d14 = localISODate(new Date(Date.now()-14*864e5));
+  const d30 = localISODate(new Date(Date.now()-30*864e5));
+  const recent = (ativ||[]).filter(a=>a.data>=d0);
+
+  const corrida = recent.filter(a=>getEsporte(a)==='corrida');
+  const corrida7 = corrida.filter(a=>a.data>=d7);
+  const corrida14prev = corrida.filter(a=>a.data>=d14 && a.data<d7);
+  const corrida30 = corrida.filter(a=>a.data>=d30);
+  const pace7vals = corrida7.filter(a=>a.pace&&a.distancia>=1).map(a=>p2s(a.pace));
+  const pace14vals = corrida14prev.filter(a=>a.pace&&a.distancia>=1).map(a=>p2s(a.pace));
+  const pace7 = pace7vals.length ? pace7vals.reduce((s,v)=>s+v,0)/pace7vals.length : 0;
+  const pace14 = pace14vals.length ? pace14vals.reduce((s,v)=>s+v,0)/pace14vals.length : 0;
+  const paceTrend = (pace7 && pace14) ? (pace14 - pace7) : 0;
+
+  const best30 = corrida30.filter(a=>a.pace&&a.distancia>=1).map(a=>p2s(a.pace));
+  const bestPace30 = best30.length ? s2p(Math.min(...best30)) : '—';
+  const vo2 = corrida.filter(a=>a.vo2max>0)[0]?.vo2max || 0;
+  const cad30vals = corrida30.filter(a=>a.cadencia>0).map(a=>a.cadencia);
+  const cad30 = cad30vals.length ? Math.round(cad30vals.reduce((s,v)=>s+v,0)/cad30vals.length) : 0;
+
+  const wk = {};
+  recent.forEach(a=>{
+    const k = semanaISO(a.data);
+    if(!wk[k]) wk[k] = {corrida:0,bike:0,natacao:0,academia:0};
+    const sp = getEsporte(a);
+    if(sp==='academia') wk[k].academia += 1;
+    else wk[k][sp] += +a.distancia || 0;
+  });
+  const keys = Object.keys(wk).sort();
+  const cur = keys.length ? wk[keys[keys.length-1]] : {corrida:0,bike:0,natacao:0,academia:0};
+  const prev = keys.length>1 ? wk[keys[keys.length-2]] : {corrida:0,bike:0,natacao:0,academia:0};
+  const runTrend = prev.corrida>0 ? ((cur.corrida-prev.corrida)/prev.corrida)*100 : 0;
+
+  const hoje = localISODate();
+  const bbHoje = bb[hoje]?.max || bb[Object.keys(bb).sort().slice(-1)[0]]?.max || 0;
+  const sonoKeys = Object.keys(sono).sort().slice(-7);
+  const sonoReal = sonoKeys.filter(k=>(sono[k].duracao||0)>=2);
+  const sonoMed = sonoReal.length ? +(sonoReal.reduce((s,k)=>s+(sono[k].duracao||0),0)/sonoReal.length).toFixed(1) : 0;
+  const hrvKeys = Object.keys(hrv).sort().slice(-7);
+  const hrvVals = hrvKeys.map(k=>hrv[k].ontem>0?hrv[k].ontem:(hrv[k].semanal||0)).filter(v=>v>0);
+  const hrvMed = hrvVals.length ? Math.round(hrvVals.reduce((s,v)=>s+v,0)/hrvVals.length) : 0;
+
+  grid.innerHTML = `
+    <div class="stat"><div class="sv" style="color:var(--blue)">${cur.corrida.toFixed(1)}</div><div class="sl">km corrida / sem</div></div>
+    <div class="stat"><div class="sv" style="color:var(--green)">${pace7?s2p(pace7):'—'}</div><div class="sl">pace corrida (7d)</div></div>
+    <div class="stat"><div class="sv" style="color:var(--orange)">${bestPace30}</div><div class="sl">melhor pace (30d)</div></div>
+    <div class="stat"><div class="sv" style="color:var(--gold)">${vo2||'—'}</div><div class="sl">VO2 Max</div></div>
+    <div class="stat"><div class="sv" style="color:var(--purple)">${cad30||'—'}</div><div class="sl">cadência (30d)</div></div>
+    <div class="stat"><div class="sv" style="color:var(--orange)">${bbHoje||'—'}%</div><div class="sl">body battery hoje</div></div>
+    <div class="stat"><div class="sv" style="color:var(--purple)">${sonoMed||'—'}h</div><div class="sl">sono médio (7d)</div></div>
+    <div class="stat"><div class="sv" style="color:var(--green)">${hrvMed||'—'}</div><div class="sl">HRV médio (7d)</div></div>
+    <div class="stat"><div class="sv" style="color:var(--red)">${recent.length}</div><div class="sl">treinos no período</div></div>`;
+
+  vol.innerHTML = `
+    <div class="stat"><div class="sv" style="color:var(--blue)">${cur.corrida.toFixed(1)}</div><div class="sl">🏃 corrida km/sem</div></div>
+    <div class="stat"><div class="sv" style="color:var(--orange)">${cur.bike.toFixed(1)}</div><div class="sl">🚴 bike km/sem</div></div>
+    <div class="stat"><div class="sv" style="color:#0ea5e9">${(cur.natacao*1000).toFixed(0)}</div><div class="sl">🏊 natação m/sem</div></div>
+    <div class="stat"><div class="sv" style="color:var(--purple)">${cur.academia}</div><div class="sl">💪 academia sessões/sem</div></div>`;
+
+  sub.innerHTML = `<b>Tendência corrida:</b> ${runTrend>=0?'▲':'▼'} ${Math.abs(runTrend).toFixed(0)}% vs semana anterior`+
+    ` · <b>Pace:</b> ${paceTrend>5?'melhorando':paceTrend<-5?'piorando':'estável'}`+
+    ` · <b>Base:</b> últimos ${curPeriodo} dias com dados do Garmin.`;
 }
 
 // ════════════════ TREINOS ════════════════
