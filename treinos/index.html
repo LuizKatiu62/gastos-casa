@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Treinos">
 <meta name="theme-color" content="#0b2239">
-<link rel="manifest" href="./manifest.json?v=2026-07-06-01">
+<link rel="manifest" href="./manifest.json?v=2026-07-06-02">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%231a56db' width='192' height='192'/><text x='50%' y='50%' font-size='120' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%231a56db' width='180' height='180' rx='40'/><text x='50%' y='50%' font-size='110' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <title>Treinos · Luiz Silva</title>
@@ -764,7 +764,7 @@ window.addEventListener('DOMContentLoaded', () => {
 const FB_DB   = 'https://gastos-casa-7f431-default-rtdb.firebaseio.com';
 const FB_KEY  = 'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU';
 const FB_PATH = 'treinos/luiz';
-const APP_VERSION = '2026-07-06-01';
+const APP_VERSION = '2026-07-06-02';
 const SNAPSHOT_KEY = 'treinos_last_snapshot_v1';
 let charts = {}, curTab = 'treinos', DATA = null, curEsporte = 'todos';
 const PERIODO = 180; // dias padrão para todas as médias do app
@@ -1403,6 +1403,7 @@ function buildTriWeek(profile, avg){
 function buildPeriodizedTriWeek(profile, avg, weekIndex, totalWeeks, targetKey){
   const target = TRI_TARGETS[targetKey] || TRI_TARGETS.olimpico;
   const g = calcGarminSignals();
+  const ATHLETE_AGE = 64;
   const wk = Math.min(Math.max(weekIndex,1), totalWeeks);
   const phaseCut1 = Math.round(totalWeeks*0.45);
   const phaseCut2 = Math.round(totalWeeks*0.8);
@@ -1410,11 +1411,13 @@ function buildPeriodizedTriWeek(profile, avg, weekIndex, totalWeeks, targetKey){
   const phase = wk<=phaseCut1 ? 'base' : wk<=phaseCut2 ? 'build' : 'taper';
   const deload = wk%4===0 && wk<totalWeeks-1;
   const deloadFactor = deload ? 0.78 : 1;
+  const ageGuard = ATHLETE_AGE >= 60 ? 0.9 : 1;
+  const swimBeginner = profile?.label === 'Tri Iniciante' || avg.swimKm < 3;
 
   const runCap = avg.runKm * 1.10;
-  const runRaw = (avg.runKm + (target.run-avg.runKm)*baseToPeak) * profile.runFactor * deloadFactor * g.guard;
-  const bikeRaw = (avg.bikeKm + (target.bike-avg.bikeKm)*baseToPeak) * profile.bikeFactor * deloadFactor * g.guard;
-  const swimRaw = (avg.swimKm + (target.swim-avg.swimKm)*baseToPeak) * profile.swimFactor * deloadFactor * g.guard;
+  const runRaw = (avg.runKm + (target.run-avg.runKm)*baseToPeak) * profile.runFactor * deloadFactor * g.guard * ageGuard;
+  const bikeRaw = (avg.bikeKm + (target.bike-avg.bikeKm)*baseToPeak) * profile.bikeFactor * deloadFactor * g.guard * ageGuard;
+  const swimRaw = (avg.swimKm + (target.swim-avg.swimKm)*baseToPeak) * profile.swimFactor * deloadFactor * g.guard * (swimBeginner ? 0.7 : ageGuard);
 
   const clamp=(v,min,max)=>Math.min(max,Math.max(min,v));
   const runTarget = clamp(+Math.min(runRaw,runCap).toFixed(1), 12, 55);
@@ -1427,9 +1430,9 @@ function buildPeriodizedTriWeek(profile, avg, weekIndex, totalWeeks, targetKey){
   const bikeLong = Math.max(35, Math.round(bikeTarget * (phase==='taper'?0.35:0.45)));
   const bikeQuality = Math.max(20, Math.round(bikeTarget * 0.28));
   const bikeEasy = Math.max(16, Math.round(bikeTarget - bikeLong - bikeQuality));
-  const swimTech = Math.max(700, Math.round(swimTarget * 1000 * 0.35));
-  const swimEnd = Math.max(1000, Math.round(swimTarget * 1000 * 0.65));
-  const brickRun = clamp(+(easyRun * 0.45).toFixed(1), 3, 8);
+  const swimTech = swimBeginner ? Math.max(300, Math.round(swimTarget * 1000 * 0.25)) : Math.max(700, Math.round(swimTarget * 1000 * 0.35));
+  const swimEnd = swimBeginner ? Math.max(400, Math.round(swimTarget * 1000 * 0.35)) : Math.max(1000, Math.round(swimTarget * 1000 * 0.65));
+  const brickRun = clamp(+(easyRun * (ATHLETE_AGE >= 60 ? 0.3 : 0.45)).toFixed(1), 2, 8);
 
   const runEasyPace = s2p(avg.runPace + 25);
   const runTempoPace = s2p(Math.max(avg.runPace - 15, 250));
@@ -1438,12 +1441,20 @@ function buildPeriodizedTriWeek(profile, avg, weekIndex, totalWeeks, targetKey){
   const runFcZ2 = `${Math.max(120,avg.runFc-8)}-${Math.max(130,avg.runFc+6)} bpm`;
   const bikeFcZ2 = `${Math.max(110,avg.bikeFc-8)}-${Math.max(120,avg.bikeFc+6)} bpm`;
 
-  const plan = [
+  const plan = swimBeginner ? [
+    {day:'Seg', treino:`🏊 Adaptação ${swimTech} m + 💪 Academia A`, note:`Natação iniciante: respiração bilateral, flutuação e técnica básica. Sem séries longas.`},
+    {day:'Ter', treino:`🚴 Bike qualidade ${bikeQuality} km`, note:`Blocos curtos em Z2/Z3. Evitar picos longos de intensidade. FC alvo ${bikeFcZ2}.`},
+    {day:'Qua', treino:`🏃 Corrida qualidade ${qualityRun} km`, note:`Tempo run controlado em ${runTempoPace}/km, priorizando constância.`},
+    {day:'Qui', treino:`🏊 Técnica leve ${swimEnd} m + 💪 Academia B`, note:`Educativos curtos e pausas livres. Objetivo é confiança na água, não volume.`},
+    {day:'Sex', treino:`🛌 Descanso total`, note:`Dia obrigatório de recuperação (mobilidade leve opcional 15-20 min).`},
+    {day:'Sáb', treino:`🚴 Longo ${bikeLong} km + 🏃 Brick ${brickRun} km`, note:`Transição curta bike→corrida, sem forçar ritmo.`},
+    {day:'Dom', treino:`🏃 Longo Z2 ${longRun} km`, note:`Pace fácil ${runEasyPace}/km · FC alvo ${runFcZ2}.`}
+  ] : [
     {day:'Seg', treino:`🏊 Técnica ${swimTech} m + 💪 Academia A`, note:`Drills e técnica. Força A (core, glúteo, posterior).`},
     {day:'Ter', treino:`🚴 Bike qualidade ${bikeQuality} km`, note:`4×6 min Z3/Z4. Z2 alvo ${bikeFcZ2}.`},
     {day:'Qua', treino:`🏃 Corrida qualidade ${qualityRun} km`, note:`Tempo run em ${runTempoPace}/km, evitando excesso de volume.`},
-    {day:'Qui', treino:`🏊 Endurance ${swimEnd} m + 💪 Academia B`, note:`Séries longas no ritmo CSS ~${swimCss}/100m + força B.`},
-    {day:'Sex', treino:`🚴 Bike leve ${bikeEasy} km`, note:`Recuperação ativa em Z1/Z2 (${bikeZ2}/km).`},
+    {day:'Qui', treino:`🏊 Endurance ${swimEnd} m + 💪 Academia B`, note:`Nado contínuo controlado ~${swimCss}/100m + força B.`},
+    {day:'Sex', treino:`🛌 Descanso total`, note:`Dia obrigatório de recuperação (mobilidade leve opcional 15-20 min).`},
     {day:'Sáb', treino:`🚴 Longo ${bikeLong} km + 🏃 Brick ${brickRun} km`, note:`Transição bike→corrida para adaptação específica de prova.`},
     {day:'Dom', treino:`🏃 Longo Z2 ${longRun} km`, note:`Pace fácil ${runEasyPace}/km · FC alvo ${runFcZ2}.`}
   ];
@@ -1460,7 +1471,7 @@ function buildPeriodizedTriWeek(profile, avg, weekIndex, totalWeeks, targetKey){
       phase,
       deload,
       target: target.label,
-      criterio:'Baseado na sua performance Garmin: volume recente, FC/pace, Body Battery, sono e HRV.',
+      criterio:'Baseado na sua performance Garmin, com ajuste conservador para 64 anos, natação iniciante e 1 dia fixo de descanso semanal.',
       garmin:`Garmin → BB3d ${g.bbAvg3}% · Sono7d ${g.sonoAvg7}h · HRV ${g.hrvAvg} · VO2 ${g.vo2Now} · tendência ${(g.volTrend*100).toFixed(0)}%`
     }
   };
@@ -2370,6 +2381,11 @@ function updateRaceGoalUI(){
 function parseCoachPlanRow(item){
   const clean = (txt)=>String(txt||'').replace(/[🏃🚴🏊💪🎯⚡📏]/g,'').replace(/\s+/g,' ').trim();
   const row = {corrida:'', natacao:'', bike:'', academia:''};
+  const treinoTxt = String(item?.treino||'').toLowerCase();
+  if(treinoTxt.includes('descanso')){
+    row.corrida = clean(item?.treino||'Descanso total');
+    return row;
+  }
   const parts = String(item?.treino||'').split('+').map(p=>p.trim()).filter(Boolean);
   parts.forEach(part=>{
     const p = part.toLowerCase();
@@ -3388,7 +3404,7 @@ function buildContext(){
   const strMed   = strKeys.length ? Math.round(strKeys.reduce((s,k)=>s+stre[k].avg,0)/strKeys.length) : 0;
 
   return [
-    `Atleta: Luiz Silva, 63 anos, triatleta (corrida, bike, natação, musculação).`,
+    `Atleta: Luiz Silva, 64 anos, triatleta (corrida, bike, natação, musculação).`,
     `Data: ${hoje}`,
     `Totais: ${meta.totalKm??'?'} km acumulados | ${meta.km30dias??'?'} km / 30d | ${meta.treinos30dias??'?'} treinos / mês | ${meta.km7dias??'?'} km esta semana`,
     `Saúde hoje: Body Battery ${bbHoje}% | Sono médio 7d: ${sonoMed}h | HRV médio 7d: ${hrvMed}ms | Stress médio 7d: ${strMed}/100`,
