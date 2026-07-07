@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Treinos">
 <meta name="theme-color" content="#0b2239">
-<link rel="manifest" href="./manifest.json?v=2026-07-06-12">
+<link rel="manifest" href="./manifest.json?v=2026-07-06-13">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%231a56db' width='192' height='192'/><text x='50%' y='50%' font-size='120' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%231a56db' width='180' height='180' rx='40'/><text x='50%' y='50%' font-size='110' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <title>Treinos · Luiz Silva</title>
@@ -753,7 +753,7 @@ window.addEventListener('DOMContentLoaded', () => {
 const FB_DB   = 'https://gastos-casa-7f431-default-rtdb.firebaseio.com';
 const FB_KEY  = 'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU';
 const FB_PATH = 'treinos/luiz';
-const APP_VERSION = '2026-07-06-12';
+const APP_VERSION = '2026-07-06-13';
 const SNAPSHOT_KEY = 'treinos_last_snapshot_v1';
 const TRAINING_KICKOFF_DATE = '2026-07-07';
 let charts = {}, curTab = 'treinos', DATA = null, curEsporte = 'todos';
@@ -1106,17 +1106,34 @@ async function copyMotraGymAll(showAlert=true){
 function openMotraApp(){
   const deepLink = 'motra://';
   const webLink = 'https://www.motra.app/';
-  let fallbackDone = false;
+  let usedFallback = false;
+  let pageHidden = false;
+  const onVisibility = () => {
+    pageHidden = document.visibilityState === 'hidden';
+  };
+  document.addEventListener('visibilitychange', onVisibility, {once:true});
+
   const fallback = () => {
-    if(fallbackDone) return;
-    fallbackDone = true;
+    if(usedFallback || pageHidden) return;
+    usedFallback = true;
     window.open(webLink, '_blank', 'noopener');
   };
+
   try{
-    window.location.href = deepLink;
-    setTimeout(fallback, 900);
+    const opened = window.open(deepLink, '_blank');
+    if(!opened){
+      // iOS/Safari may block window.open for custom schemes; use hidden iframe as a safe fallback.
+      const frame = document.createElement('iframe');
+      frame.style.display = 'none';
+      frame.src = deepLink;
+      document.body.appendChild(frame);
+      setTimeout(()=>{ try{ frame.remove(); }catch(_){} }, 1200);
+    }
+    setTimeout(fallback, 1100);
   }catch(_){
     fallback();
+  } finally {
+    setTimeout(()=>document.removeEventListener('visibilitychange', onVisibility), 1500);
   }
 }
 
