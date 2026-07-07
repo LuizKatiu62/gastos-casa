@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Treinos">
 <meta name="theme-color" content="#0b2239">
-<link rel="manifest" href="./manifest.json?v=2026-07-06-15">
+<link rel="manifest" href="./manifest.json?v=2026-07-06-16">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%231a56db' width='192' height='192'/><text x='50%' y='50%' font-size='120' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%231a56db' width='180' height='180' rx='40'/><text x='50%' y='50%' font-size='110' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <title>Treinos · Luiz Silva</title>
@@ -753,7 +753,7 @@ window.addEventListener('DOMContentLoaded', () => {
 const FB_DB   = 'https://gastos-casa-7f431-default-rtdb.firebaseio.com';
 const FB_KEY  = 'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU';
 const FB_PATH = 'treinos/luiz';
-const APP_VERSION = '2026-07-06-15';
+const APP_VERSION = '2026-07-06-16';
 const SNAPSHOT_KEY = 'treinos_last_snapshot_v1';
 const TRAINING_KICKOFF_DATE = '2026-07-07';
 let charts = {}, curTab = 'treinos', DATA = null, curEsporte = 'todos';
@@ -993,6 +993,37 @@ function buildMotraGymQueue(plan=[], weekKey=''){
   }).filter(Boolean);
 }
 
+function buildMotraGeneratePrompt(item){
+  if(!item) return '';
+  return [
+    'Create a strength workout in Portuguese with the exact structure below.',
+    'Do not add or remove exercises. Keep sets/reps exactly as written.',
+    `Workout title: ${item.sessionLabel}`,
+    `Date reference: ${item.dateIso} (${item.day})`,
+    `Suggested time: ${item.time}`,
+    'Exercises:',
+    gymSessionMotraText(item.sessionId),
+    'Output objective: ready-to-save workout with ordered blocks and exact set/rep targets.'
+  ].join('\n');
+}
+
+function buildMotraWeeklyGeneratePrompt(){
+  if(!motraGymQueue.length) return '';
+  const blocks = motraGymQueue.map((item, idx)=>[
+    `Workout ${idx+1}: ${item.sessionLabel}`,
+    `Date: ${item.dateIso} (${item.day}) · Time: ${item.time}`,
+    gymSessionMotraText(item.sessionId)
+  ].join('\n')).join('\n\n');
+
+  return [
+    'Create multiple strength workouts in Portuguese from the weekly plan below.',
+    'One workout per day listed. Keep exercises and sets/reps exactly as written.',
+    'Do not invent extra exercises. Keep safe progression for a 64-year-old athlete.',
+    blocks,
+    'Output objective: each workout ready to save separately inside the app.'
+  ].join('\n\n');
+}
+
 let motraGymQueue = [];
 const MOTRA_STATE_KEY = 'motra_gym_state_v1';
 let motraState = loadMotraState();
@@ -1104,6 +1135,31 @@ async function copyMotraGymAll(showAlert=true){
   return ok;
 }
 
+async function copyMotraGenerateItem(idx, showAlert=true){
+  const item = motraGymQueue[idx];
+  if(!item) return false;
+  const prompt = buildMotraGeneratePrompt(item);
+  const ok = await copyTextToClipboard(prompt);
+  if(showAlert){
+    setAppAlert(ok
+      ? `Prompt copiado para Generate Workout: ${item.day} ${item.dateIso}.`
+      : 'Não consegui copiar o prompt do Generate Workout.', ok ? 'info' : 'warn');
+  }
+  return ok;
+}
+
+async function copyMotraGenerateAll(showAlert=true){
+  if(!motraGymQueue.length) return false;
+  const prompt = buildMotraWeeklyGeneratePrompt();
+  const ok = await copyTextToClipboard(prompt);
+  if(showAlert){
+    setAppAlert(ok
+      ? 'Prompt semanal copiado para Generate Workout no Motra.'
+      : 'Não consegui copiar o prompt semanal para Generate Workout.', ok ? 'info' : 'warn');
+  }
+  return ok;
+}
+
 function openMotraApp(){
   const deepLink = 'motra://';
   const webLink = 'https://www.motra.app/';
@@ -1147,6 +1203,22 @@ async function openMotraWithItem(idx){
     : 'Motra aberto. Não consegui copiar automaticamente; faça a cópia manual no bloco.', ok ? 'info' : 'warn');
 }
 
+async function openMotraGenerateItem(idx){
+  const ok = await copyMotraGenerateItem(idx, false);
+  openMotraApp();
+  setAppAlert(ok
+    ? 'Prompt do dia copiado. No Motra: Generate Workout -> colar -> gerar.'
+    : 'Motra aberto. Não consegui copiar o prompt do dia.', ok ? 'info' : 'warn');
+}
+
+async function openMotraGenerateAll(){
+  const ok = await copyMotraGenerateAll(false);
+  openMotraApp();
+  setAppAlert(ok
+    ? 'Prompt semanal copiado. No Motra: Generate Workout -> colar -> gerar.'
+    : 'Motra aberto. Não consegui copiar o prompt semanal.', ok ? 'info' : 'warn');
+}
+
 async function openMotraWithAll(){
   const ok = await copyMotraGymAll(false);
   openMotraApp();
@@ -1166,7 +1238,7 @@ async function openMotraNoFutureDayMode(){
 }
 
 function showMotraDayModeHelp(){
-  setAppAlert('Para aparecer no DIA no Motra: use "Abrir + colar" em cada linha, abra o treino do dia e cole em observações. Se surgir Start/Template, volte e cole no treino do dia (não na importação).', 'info');
+  setAppAlert('Fluxo recomendado: use Generate Workout no Motra. Toque em "Generate (dia)" ou "Generate semanal", depois no Motra abra Generate Workout e cole o prompt.', 'info');
 }
 
 function openGymPhoto(src, title){
@@ -2865,14 +2937,16 @@ function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
       <div class="tp-type-card" style="margin-bottom:.75rem">
         <div class="tp-type-desc"><b>Integração prática:</b> o app já organiza os treinos de academia nos dias correspondentes. Use os botões para copiar, abrir e marcar lançamento no Motra.<br><b>Progresso Motra:</b> ${sentCount}/${totalCount} lançado(s).</div>
         <div style="margin-top:.55rem;border:1px solid #dbeafe;background:#eff6ff;border-radius:10px;padding:.55rem .65rem;font-size:.74rem;line-height:1.55;color:#1e3a8a">
-          <b>Para aparecer no dia no calendário do Motra:</b> use <b>Abrir + colar</b> em cada linha (dia a dia).<br>
-          <b>Modo template:</b> cria um bloco único e pode não entrar automaticamente no dia.
+          <b>Modo mais automático:</b> use <b>Generate Workout</b> no Motra com prompt pronto deste card.<br>
+          Isso evita montar exercício por exercício no Empty Workout.
         </div>
         <div class="tp-alt-list" style="margin-top:.45rem">
-          <button class="sf-btn sf-on" style="font-weight:700;min-height:44px;padding:.72rem 1rem;box-shadow:0 8px 22px rgba(30,58,138,.16)" onclick="showMotraDayModeHelp()">Quero aparecer no dia (recomendado)</button>
-          <button class="sf-btn" onclick="copyMotraGymAll()">Copiar pacote completo Motra</button>
+          <button class="sf-btn sf-on" style="font-weight:700;min-height:44px;padding:.72rem 1rem;box-shadow:0 8px 22px rgba(30,58,138,.16)" onclick="openMotraGenerateAll()">Generate semanal (recomendado)</button>
+          <button class="sf-btn" onclick="copyMotraGenerateAll()">Copiar prompt semanal (Generate)</button>
+          <button class="sf-btn" onclick="showMotraDayModeHelp()">Como usar no Motra</button>
+          <button class="sf-btn" onclick="copyMotraGymAll()">Copiar pacote texto Motra</button>
           <button class="sf-btn" onclick="openMotraApp()">Abrir Motra</button>
-          <button class="sf-btn" onclick="openMotraWithAll()">Abrir Motra + copiar pacote</button>
+          <button class="sf-btn" onclick="openMotraWithAll()">Abrir Motra + copiar texto</button>
           <button class="sf-btn" onclick="openMotraNoFutureDayMode()">Modo template (sem dia futuro)</button>
           <button class="sf-btn" onclick="markMotraGymAll(true)">Marcar todos como lançados</button>
           <button class="sf-btn" onclick="markMotraGymAll(false)">Reabrir todos</button>
@@ -2886,6 +2960,7 @@ function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
                 <div class="tp-note">Data ${item.dateIso} · horário sugerido ${item.time} · <b>${item.launched?'Lançado':'Pendente'}</b></div>
               </div>
               <div style="display:flex;gap:.45rem;flex-wrap:wrap;justify-content:flex-end">
+                <button class="tp-done" onclick="openMotraGenerateItem(${idx})">Generate (dia)</button>
                 <button class="tp-done" onclick="copyMotraGymItem(${idx})">Copiar para Motra</button>
                 <button class="tp-done" onclick="openMotraWithItem(${idx})">Abrir + colar</button>
                 <button class="tp-done ${item.launched?'on':''}" onclick="markMotraGymItem(${idx}, ${item.launched?'false':'true'})">${item.launched?'Reabrir':'Marcar lançado'}</button>
