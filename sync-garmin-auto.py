@@ -143,8 +143,22 @@ def safe_get(api, fn, *args, delay=0.4):
         return None
 
 
+def env_int(name, default, min_v=1, max_v=365):
+    raw = (os.environ.get(name, "") or "").strip()
+    if not raw:
+        return default
+    try:
+        v = int(raw)
+    except Exception:
+        return default
+    return max(min_v, min(max_v, v))
+
+
 def main():
     log("━━━ Iniciando sync automático ━━━")
+
+    dias_saude = env_int("DIAS_SAUDE", DIAS_SAUDE, 1, 365)
+    log(f"Janela de saúde usada no sync: {dias_saude} dia(s)")
 
     senha_env = os.environ.get("GARMIN_PASSWORD", "")
 
@@ -203,13 +217,13 @@ def main():
         semanal[s]["km"]      = round(semanal[s]["km"] + t["distancia"], 2)
         semanal[s]["treinos"] += 1
 
-    log(f"Buscando dados de saúde ({DIAS_SAUDE} dias)...")
+    log(f"Buscando dados de saúde ({dias_saude} dias)...")
     bodyBattery = {}
     stress      = {}
     sono        = {}
     hrv         = {}
 
-    for i in range(DIAS_SAUDE):
+    for i in range(dias_saude):
         d = (hoje - timedelta(days=i)).strftime("%Y-%m-%d")
 
         # Body Battery + Stress — uma chamada só

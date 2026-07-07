@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: '0 * * * *'   # toda hora
   workflow_dispatch:        # botão manual no GitHub
+    inputs:
+      health_days:
+        description: "Dias de saúde para sync manual (ex.: 21 rápido, 180 completo)"
+        required: false
+        default: "21"
 
 jobs:
   sync:
@@ -26,3 +31,4 @@ jobs:
         run: python sync-garmin-auto.py
         env:
           GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
+          DIAS_SAUDE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.health_days || '180' }}
