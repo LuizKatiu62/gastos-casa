@@ -580,7 +580,69 @@ body{padding-top:45px}
         <div class="ch" style="height:165px"><canvas id="cFreq"></canvas></div>
         <div class="ch-sub" id="freq-sub"></div>
       </div>
-      <div class="card"><div class="card-title">🏃 Últimos Treinos</div><div class="run-list" id="run-list"></div></div>
+      <div class="card">
+        <div class="card-title" style="display:flex;align-items:center;justify-content:space-between">
+          🏃 Últimos Treinos
+          <button onclick="abrirManual()" style="background:var(--blue);color:#fff;border:none;border-radius:8px;padding:.3rem .75rem;font-size:.75rem;font-weight:700;cursor:pointer">➕ Manual</button>
+        </div>
+        <div class="run-list" id="run-list"></div>
+      </div>
+    </div>
+
+    <!-- ══ MODAL MANUAL ══ -->
+    <div id="manual-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9000;align-items:flex-end;justify-content:center">
+      <div style="background:var(--card);border-radius:20px 20px 0 0;padding:1.25rem;width:100%;max-width:480px;max-height:90vh;overflow-y:auto">
+        <div style="font-weight:800;font-size:1rem;margin-bottom:1rem">➕ Adicionar Treino Manual</div>
+        <div style="display:grid;gap:.75rem">
+          <div>
+            <label style="font-size:.72rem;font-weight:700;color:var(--muted);display:block;margin-bottom:.25rem">Data</label>
+            <input id="m-data" type="date" style="width:100%;padding:.5rem .75rem;border:1px solid var(--border);border-radius:8px;font-size:.85rem;background:var(--card);color:var(--text);box-sizing:border-box">
+          </div>
+          <div>
+            <label style="font-size:.72rem;font-weight:700;color:var(--muted);display:block;margin-bottom:.25rem">Modalidade</label>
+            <select id="m-esporte" onchange="onManualEsporteChange()" style="width:100%;padding:.5rem .75rem;border:1px solid var(--border);border-radius:8px;font-size:.85rem;background:var(--card);color:var(--text)">
+              <option value="academia">💪 Academia / Musculação</option>
+              <option value="corrida">🏃 Corrida</option>
+              <option value="natacao">🏊 Natação</option>
+              <option value="bike">🚴 Bike</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:.72rem;font-weight:700;color:var(--muted);display:block;margin-bottom:.25rem">Tipo</label>
+            <select id="m-tipo" style="width:100%;padding:.5rem .75rem;border:1px solid var(--border);border-radius:8px;font-size:.85rem;background:var(--card);color:var(--text)">
+              <option value="musculacao">💪 Musculação</option>
+            </select>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+            <div>
+              <label style="font-size:.72rem;font-weight:700;color:var(--muted);display:block;margin-bottom:.25rem">Duração (h:mm:ss)</label>
+              <input id="m-dur" type="text" placeholder="0:45:00" style="width:100%;padding:.5rem .75rem;border:1px solid var(--border);border-radius:8px;font-size:.85rem;background:var(--card);color:var(--text);box-sizing:border-box">
+            </div>
+            <div>
+              <label style="font-size:.72rem;font-weight:700;color:var(--muted);display:block;margin-bottom:.25rem">Distância (km)</label>
+              <input id="m-dist" type="number" step="0.01" placeholder="0" style="width:100%;padding:.5rem .75rem;border:1px solid var(--border);border-radius:8px;font-size:.85rem;background:var(--card);color:var(--text);box-sizing:border-box">
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+            <div>
+              <label style="font-size:.72rem;font-weight:700;color:var(--muted);display:block;margin-bottom:.25rem">FC Média (bpm)</label>
+              <input id="m-fc" type="number" placeholder="0" style="width:100%;padding:.5rem .75rem;border:1px solid var(--border);border-radius:8px;font-size:.85rem;background:var(--card);color:var(--text);box-sizing:border-box">
+            </div>
+            <div>
+              <label style="font-size:.72rem;font-weight:700;color:var(--muted);display:block;margin-bottom:.25rem">Calorias</label>
+              <input id="m-cal" type="number" placeholder="0" style="width:100%;padding:.5rem .75rem;border:1px solid var(--border);border-radius:8px;font-size:.85rem;background:var(--card);color:var(--text);box-sizing:border-box">
+            </div>
+          </div>
+          <div>
+            <label style="font-size:.72rem;font-weight:700;color:var(--muted);display:block;margin-bottom:.25rem">Notas</label>
+            <input id="m-notas" type="text" placeholder="ex: Treino de força Motra" style="width:100%;padding:.5rem .75rem;border:1px solid var(--border);border-radius:8px;font-size:.85rem;background:var(--card);color:var(--text);box-sizing:border-box">
+          </div>
+        </div>
+        <div style="display:flex;gap:.75rem;margin-top:1rem">
+          <button onclick="fecharManual()" style="flex:1;padding:.65rem;border:1px solid var(--border);border-radius:10px;background:transparent;color:var(--text);font-size:.85rem;cursor:pointer">Cancelar</button>
+          <button onclick="salvarManual()" style="flex:2;padding:.65rem;border:none;border-radius:10px;background:var(--blue);color:#fff;font-size:.85rem;font-weight:700;cursor:pointer">Salvar Treino</button>
+        </div>
+      </div>
     </div>
 
     <!-- ══ EVOLUÇÃO ══ -->
@@ -757,6 +819,77 @@ const APP_VERSION = '2026-07-07-02';
 const SNAPSHOT_KEY = 'treinos_last_snapshot_v1';
 const TRAINING_KICKOFF_DATE = '2026-07-07';
 let charts = {}, curTab = 'treinos', DATA = null, curEsporte = 'todos';
+
+// ─── TREINOS MANUAIS ───
+const MANUAIS_KEY = 'treinos_manuais_v1';
+const MANUAL_TIPOS = {
+  academia: [{v:'musculacao',l:'💪 Musculação'},{v:'cardio',l:'❤️ Cardio'}],
+  corrida:  [{v:'facil',l:'🏃 Fácil'},{v:'intervalado',l:'⚡ Intervalo'},{v:'trilha',l:'⛰️ Trilha'},{v:'esteira',l:'🏃 Esteira'},{v:'virtual',l:'💻 Virtual'}],
+  natacao:  [{v:'natacao',l:'🏊 Natação Piscina'},{v:'natacao_ar',l:'🏊 Águas Abertas'}],
+  bike:     [{v:'bike',l:'🚴 Bike'},{v:'bike_indoor',l:'🚴 Bike Indoor'},{v:'bike_trilha',l:'🚵 MTB'}],
+};
+function loadManuais(){ try{ return JSON.parse(localStorage.getItem(MANUAIS_KEY)||'[]'); }catch(e){ return []; } }
+function saveManuais(list){ try{ localStorage.setItem(MANUAIS_KEY, JSON.stringify(list)); }catch(e){} }
+function mergeAtividades(garminAtiv){
+  const manuais = loadManuais();
+  const garminIds = new Set((garminAtiv||[]).map(a=>a.id));
+  const novasM = manuais.filter(a=>!garminIds.has(a.id));
+  return [...(garminAtiv||[]), ...novasM].sort((a,b)=>b.data.localeCompare(a.data));
+}
+function localISOToday(){
+  const d=new Date(), pad=n=>String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+function abrirManual(){
+  document.getElementById('m-data').value = localISOToday();
+  document.getElementById('m-esporte').value = 'academia';
+  document.getElementById('m-dur').value = '';
+  document.getElementById('m-dist').value = '';
+  document.getElementById('m-fc').value = '';
+  document.getElementById('m-cal').value = '';
+  document.getElementById('m-notas').value = '';
+  onManualEsporteChange();
+  const modal = document.getElementById('manual-modal');
+  modal.style.display = 'flex';
+}
+function fecharManual(){
+  document.getElementById('manual-modal').style.display = 'none';
+}
+function onManualEsporteChange(){
+  const esp = document.getElementById('m-esporte').value;
+  const sel = document.getElementById('m-tipo');
+  const opts = MANUAL_TIPOS[esp] || MANUAL_TIPOS.academia;
+  sel.innerHTML = opts.map(o=>`<option value="${o.v}">${o.l}</option>`).join('');
+}
+function salvarManual(){
+  const data  = document.getElementById('m-data').value;
+  if(!data){ setAppAlert('Informe a data do treino.','warn'); return; }
+  const esp   = document.getElementById('m-esporte').value;
+  const tipo  = document.getElementById('m-tipo').value;
+  const dur   = document.getElementById('m-dur').value.trim();
+  const dist  = parseFloat(document.getElementById('m-dist').value)||0;
+  const fc    = parseInt(document.getElementById('m-fc').value)||0;
+  const cal   = parseInt(document.getElementById('m-cal').value)||0;
+  const notas = document.getElementById('m-notas').value.trim();
+  const id    = 'manual-' + Date.now();
+  const ativ  = {id, data, esporte:esp, tipo, distancia:dist, duracao:dur||'', pace:'',
+                 fcMed:fc, fcMax:0, calorias:cal, cadencia:0, elevGain:0,
+                 oscilacao:0, contatoSolo:0, razaoVertical:0, passada:0,
+                 balanco:0, efAerobico:0, efAnaerobico:0, vo2max:0,
+                 notas:notas||'Treino manual', garminId:'', _manual:true};
+  const list = loadManuais();
+  list.push(ativ);
+  saveManuais(list);
+  fecharManual();
+  setAppAlert('Treino salvo! ✓', 'info');
+  if(DATA){ DATA.atividades = mergeAtividades(DATA.atividades); render(DATA); }
+}
+function excluirManual(id){
+  const list = loadManuais().filter(a=>a.id!==id);
+  saveManuais(list);
+  if(DATA){ DATA.atividades = mergeAtividades(DATA.atividades.filter(a=>a.id!==id)); render(DATA); }
+}
+
 const PERIODO = 180; // dias padrão para todas as médias do app
 const PERIOD_MIN_DAYS = 7;
 const PERIOD_MAX_DAYS = 180;
@@ -2512,6 +2645,7 @@ function mkChart(id,type,labels,data,color,opts={}){
 // ── RENDER ──
 function render(d){
   window.__APP_BOOT_OK = true;
+  d.atividades = mergeAtividades(d.atividades);
   const ativ=(d.atividades||[]).sort((a,b)=>b.data.localeCompare(a.data));
   const meta=d.meta||{};
   const sem=d.semanal||{};
@@ -3169,15 +3303,16 @@ function renderTreinos(ativ,meta,sem){
   // Lista de atividades
   document.getElementById('run-list').innerHTML=
     periodFiltered.slice(0,20).map(a=>`
-      <div class="run">
+      <div class="run" style="${a._manual?'border-left:3px solid var(--blue);padding-left:.5rem':''}">
         <div class="run-ico" style="${icoStyle(getEsporte(a))}">${TIPO_ICO[a.tipo]||'🏃'}</div>
         <div class="run-info">
-          <div class="run-name">${dow(a.data)}, ${fd(a.data)}<span class="badge b-${a.tipo||'facil'}">${TIPO_LBL[a.tipo]||'Corrida'}</span></div>
-          <div class="run-meta">${a.duracao||''}${a.fcMed?' · ❤️ '+a.fcMed+' bpm':''}${a.calorias?' · 🔥 '+a.calorias+' kcal':''}${a.elevGain>0?' · ↑'+a.elevGain+'m':''}</div>
+          <div class="run-name">${dow(a.data)}, ${fd(a.data)}<span class="badge b-${a.tipo||'facil'}">${TIPO_LBL[a.tipo]||'Corrida'}</span>${a._manual?'<span class="badge" style="background:#dbeafe;color:#1e40af;margin-left:.25rem">Manual</span>':''}</div>
+          <div class="run-meta">${a.notas?a.notas+' · ':''}${a.duracao||''}${a.fcMed?' · ❤️ '+a.fcMed+' bpm':''}${a.calorias?' · 🔥 '+a.calorias+' kcal':''}</div>
         </div>
-        <div class="run-right">
+        <div class="run-right" style="display:flex;flex-direction:column;align-items:flex-end;gap:.25rem">
           <div class="run-km">${a.distancia>0?a.distancia+' km':a.duracao}</div>
           <div class="run-pace">${a.pace&&a.esporte!=='academia'?a.pace+' /km':''}</div>
+          ${a._manual?`<button onclick="excluirManual('${a.id}')" style="font-size:.6rem;padding:.15rem .4rem;border:1px solid #fca5a5;background:#fef2f2;color:#dc2626;border-radius:5px;cursor:pointer">🗑</button>`:''}
         </div>
       </div>`).join('');
 
