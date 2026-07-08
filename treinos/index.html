@@ -1637,6 +1637,7 @@ function togglePlanoDone(idx){
   tpState.weeks[weekKey][curPlanoTipo].done[idx] = !cur;
   saveTpState();
   renderPlanoSemanal();
+  refreshCoachFromData();
 }
 
 function ensureCoachWeekly(tipo){
