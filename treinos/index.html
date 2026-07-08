@@ -413,6 +413,10 @@ body{padding-top:45px}
 .prova-footer{display:flex;align-items:center;justify-content:space-between;margin-top:.5rem;gap:.5rem;flex-wrap:wrap}
 .prova-data{font-size:.75rem;font-weight:700;color:var(--blue)}
 .prova-usa .prova-data{color:#dc2626}
+.prova-treinar-btn{display:block;width:100%;margin-top:.55rem;padding:.45rem .75rem;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:.75rem;font-weight:800;cursor:pointer;font-family:inherit;text-align:center;transition:opacity .15s}
+.prova-treinar-btn:hover{opacity:.88}
+.prova-treinar-btn.ativo{background:#10b981}
+.prova-usa .prova-treinar-btn{background:#dc2626}
 .prova-dists{display:flex;gap:.3rem;flex-wrap:wrap}
 .prova-dist{font-size:.62rem;font-weight:700;background:#eff6ff;color:var(--blue);border-radius:10px;padding:2px 7px;cursor:pointer}
 .prova-usa .prova-dist{background:#fef2f2;color:#dc2626}
@@ -441,7 +445,7 @@ body{padding-top:45px}
   <div>
     <h1>🏃 Treinos · Luiz Silva</h1>
     <p id="hSub">Carregando…</p>
-    <div id="ver-badge" style="font-size:.55rem;color:rgba(255,255,255,.55);font-family:monospace;margin-top:.1rem">v2026-07-08-02</div>
+    <div id="ver-badge" style="font-size:.55rem;color:rgba(255,255,255,.55);font-family:monospace;margin-top:.1rem">v2026-07-08-03</div>
   </div>
   <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.3rem">
     <button class="btn-refresh" id="btn-garmin" onclick="syncGarmin()">⚡ Sync Garmin</button>
@@ -495,7 +499,6 @@ body{padding-top:45px}
             <option value="8">8 sem</option>
             <option value="12">12 sem</option>
           </select>
-          <button class="tp-apply" onclick="restartTriCycle()">↺ Reiniciar</button>
         </div>
         <!-- Nível de intensidade (secundário) -->
         <div id="coach-plan-levels" class="tp-levels" style="margin-top:.45rem">
@@ -818,7 +821,7 @@ window.addEventListener('DOMContentLoaded', () => {
 const FB_DB   = 'https://gastos-casa-7f431-default-rtdb.firebaseio.com';
 const FB_KEY  = 'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU';
 const FB_PATH = 'treinos/luiz';
-const APP_VERSION = '2026-07-08-02';
+const APP_VERSION = '2026-07-08-03';
 const SNAPSHOT_KEY = 'treinos_last_snapshot_v1';
 const TRAINING_KICKOFF_DATE = '2026-07-07';
 let charts = {}, curTab = 'treinos', DATA = null, curEsporte = 'todos';
@@ -4529,6 +4532,11 @@ function renderProvas(){
       const diasTxt=passada?'realizada':dias===0?'🔥 hoje!':dias+' dias';
       const btnInsc=p.url?`<a href="${p.url}" target="_blank" style="display:inline-block;background:${isUSA?'#dc2626':'var(--blue)'};color:#fff;border-radius:8px;padding:4px 12px;font-size:.65rem;font-weight:800;text-decoration:none;flex-shrink:0">Inscrever →</a>`:'';
       const destaque=(proximaProva&&p.nome===proximaProva.nome)||(provaObjetivo&&p.nome===provaObjetivo.nome)?' prova-destaque':'';
+      const mainDist=[...p.dists].sort((a,b)=>b-a)[0];
+      const podeTrainar=!passada&&[5,10,21.1,42.2].includes(mainDist);
+      const distsStr=p.dists.join(',');
+      const nomeEsc=p.nome.replace(/'/g,"\\'");
+      const btnTreinar=podeTrainar?`<button class="prova-treinar-btn" onclick="setCoachFromProva('${nomeEsc}','${p.data}',[${distsStr}])">🎯 Treinar para esta prova</button>`:'';
       html+=`<div class="prova-card${isUSA?' prova-usa':''}${passada?' prova-passada':''}${destaque}">
         <div class="prova-nome">${p.nome}${isUSA?'<span class="prova-usa-tag">USA</span>':''}${destaque?'<span class="prova-icon">📍</span>':''}</div>
         <div class="prova-local">${p.local}</div>
@@ -4537,6 +4545,7 @@ function renderProvas(){
           <div class="prova-dists">${p.dists.map(d=>`<span class="prova-dist" onclick="usarDistCalc(${d})">${d}km</span>`).join('')}</div>
         </div>
         ${btnInsc}
+        ${btnTreinar}
       </div>`;
     });
   });
@@ -4562,6 +4571,48 @@ function usarDistCalc(dist){
   else if(dist===42.2)sel.value='42.2';
   document.getElementById('calc-time').focus();
   document.querySelector('#sec-provas .card').scrollIntoView({behavior:'smooth'});
+}
+
+function setCoachFromProva(nome, data, dists){
+  // Determina distância principal (maior da lista)
+  const mainDist = [...dists].sort((a,b)=>b-a)[0];
+  const objMap = {5:'run10k', 10:'run10k', 21.1:'half', 42.2:'marathon'};
+  const objective = objMap[mainDist] || 'run10k';
+
+  // Calcula semanas até a prova
+  const raceMs = new Date(data+'T12:00:00') - new Date();
+  const weeksLeft = Math.max(1, Math.round(raceMs / (7*24*3600*1000)));
+  const cycleWeeks = weeksLeft >= 12 ? 12 : 8;
+
+  // Atualiza configuração do coach
+  triCfg.objective = objective;
+  triCfg.cycleWeeks = cycleWeeks;
+  saveTriCfg();
+
+  // Reinicia ciclo a partir de hoje
+  const nowWeek = isoWeekInfo().key;
+  tpState.cycle = {startKey:nowWeek, target:triCfg.target, cycleWeeks:cycleWeeks, objective:objective};
+  if(tpState.weeks?.[nowWeek]) tpState.weeks[nowWeek] = {};
+  saveTpState();
+
+  syncCoachObjectiveUi();
+
+  // Marca botão visualmente
+  document.querySelectorAll('.prova-treinar-btn').forEach(b=>b.classList.remove('ativo'));
+  event.currentTarget.classList.add('ativo');
+  event.currentTarget.textContent = '✓ Prova selecionada';
+
+  // Navega para aba Coach
+  const coachTab = document.querySelector('.tab[onclick*="coach"]');
+  if(coachTab) go('coach', coachTab);
+
+  const objLabel = {run10k:'10 km', half:'Meia Maratona', marathon:'Maratona'}[objective] || objective;
+  setAppAlert(`🎯 <b>${nome}</b> selecionada — plano ${objLabel} · ${weeksLeft} semana${weeksLeft!==1?'s':''} restante${weeksLeft!==1?'s':''}. Coach atualizado!`);
+
+  if(DATA){
+    const a=(DATA.atividades||[]).sort((a,b)=>b.data.localeCompare(a.data));
+    renderCoach(a,DATA.meta||{},DATA.bodyBattery||{},DATA.sono||{},DATA.stress||{},DATA.hrv||{},DATA.semanal||{});
+  }
 }
 
 function calcPace(){
