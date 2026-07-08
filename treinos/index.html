@@ -1934,14 +1934,22 @@ function buildTriWeek(profile, avg){
   const brickRun = clamp(+(easyRun * 0.45).toFixed(1), 3, 6);
   const gym = profile.gymSessions >= 2 ? '2x' : '1x';
 
+  const rEasy = s2p(avg.runPace + 25);
+  const rZ1   = s2p(avg.runPace + 50);
+  const rTempo= s2p(Math.max(avg.runPace - 15, 250));
+  const rFcZ1 = `${Math.max(110,avg.runFc-18)}-${Math.max(120,avg.runFc-8)} bpm`;
+  const rFcZ2 = `${Math.max(122,avg.runFc-7)}-${Math.max(135,avg.runFc+7)} bpm`;
+  const rFcZ3 = `${Math.max(138,avg.runFc+8)}-${Math.max(152,avg.runFc+20)} bpm`;
+  const rTeto = Math.max(158, avg.runFc+24);
+  const bFcZ2 = `${Math.max(110,avg.bikeFc-8)}-${Math.max(120,avg.bikeFc+6)} bpm`;
   const plan = [
-    {day:'Seg', treino:`🏊 Técnica ${swimTech} m + 💪 Academia A`, note:'Drills + estabilidade de core, glúteo e posterior. Carga moderada.'},
-    {day:'Ter', treino:`🚴 Bike qualidade ${bikeQuality} km`, note:'4×6 min Z3/Z4 com 3 min leve. Finalizar com mobilidade de quadril.'},
-    {day:'Qua', treino:`🏃 Corrida qualidade ${qualityRun} km`, note:'Ex.: 6×800 m ritmo controlado. Volume calibrado para não passar +10% semanal.'},
-    {day:'Qui', treino:`🏊 Endurance ${swimEnd} m + 💪 Academia B`, note:'Nado contínuo + força de membros superiores e anti-rotação.'},
-    {day:'Sex', treino:`🚴 Bike leve ${bikeEasy} km`, note:'Z1/Z2 solto para recuperar sem perder consistência.'},
-    {day:'Sáb', treino:`🚴 Longo ${bikeLong} km + 🏃 Brick ${brickRun} km`, note:'Transição bike→corrida para adaptação neuromuscular do triathlon.'},
-    {day:'Dom', treino:`🏃 Longo Z2 ${longRun} km`, note:'Longão controlado. Limite de 35% do volume semanal de corrida.'}
+    {day:'Seg', treino:`🏊 Técnica ${swimTech} m + 💪 Academia A`, note:`Natação: drills de braçada, respiração bilateral. Força: agachamento goblet 3×10, RDL 3×8, hip thrust 4×10, prancha 3×40s.`},
+    {day:'Ter', treino:`🚴 Bike qualidade ${bikeQuality} km`, note:`Aquec 10' Z1 → 4×6 min Z3/Z4 (FC ${bFcZ2}) c/ 3 min Z1 entre → 10' despec. Cadência 88-95 rpm.`},
+    {day:'Qua', treino:`🏃 Corrida Tempo Z3 — ${qualityRun} km`, note:`Aquec 10' Z1 (${rZ1}/km · FC ${rFcZ1}) → 20' Tempo Z3 (${rTempo}/km · FC ${rFcZ3}) → 10' recup. Teto: ${rTeto} bpm.`},
+    {day:'Qui', treino:`🏊 Endurance ${swimEnd} m + 💪 Academia B`, note:`Natação: nado contínuo com boa técnica. Força: remada 3×10, puxada frente 3×10, supino halteres 3×8, elevação panturrilha 3×15.`},
+    {day:'Sex', treino:`🚴 Bike leve ${bikeEasy} km`, note:`Z1/Z2 solto. FC ${bFcZ2}. Recuperação ativa — não force o pace. Hidratação em dia.`},
+    {day:'Sáb', treino:`🚴 Longo ${bikeLong} km + 🏃 Brick ${brickRun} km`, note:`Bike: Z2 estável (FC ${bFcZ2}). Transition < 90s. Brick: ritmo natural — alvo ${rEasy}/km, sem checar pace nos primeiros 5 min.`},
+    {day:'Dom', treino:`🏃 Longo Z2 — ${longRun} km`, note:`100% conversacional. Pace ${rEasy}/km · FC ${rFcZ2}. Gel a cada 45 min se >1h. Caminhada 1 min se FC sair de Z2.`}
   ];
 
   return {
@@ -1995,29 +2003,34 @@ function buildPeriodizedTriWeek(profile, avg, weekIndex, totalWeeks, targetKey, 
   const brickRunWknd = weekendIntense ? brickRun : Math.max(2, +(brickRun * 0.7).toFixed(1));
   const longRunWknd = weekendIntense ? longRun : Math.max(6, +(longRun * 0.72).toFixed(1));
 
+  const runZ1Pace   = s2p(avg.runPace + 50);
   const runEasyPace = s2p(avg.runPace + 25);
-  const runTempoPace = s2p(Math.max(avg.runPace - 15, 250));
+  const runTempoPace= s2p(Math.max(avg.runPace - 15, 250));
+  const runInterPace= s2p(Math.max(avg.runPace - 30, 230));
   const bikeZ2 = s2p(avg.bikePace + 10);
   const swimCss = s2p(Math.max(avg.swimPace - 5, 95));
-  const runFcZ2 = `${Math.max(120,avg.runFc-8)}-${Math.max(130,avg.runFc+6)} bpm`;
+  const runFcZ1 = `${Math.max(110,avg.runFc-18)}-${Math.max(120,avg.runFc-8)} bpm`;
+  const runFcZ2 = `${Math.max(122,avg.runFc-7)}-${Math.max(135,avg.runFc+7)} bpm`;
+  const runFcZ3 = `${Math.max(138,avg.runFc+8)}-${Math.max(152,avg.runFc+20)} bpm`;
+  const runFcTeto= Math.max(158, avg.runFc+24);
   const bikeFcZ2 = `${Math.max(110,avg.bikeFc-8)}-${Math.max(120,avg.bikeFc+6)} bpm`;
 
   const planTri = swimBeginner ? [
-    {day:'Seg', treino:`🏊 Adaptação ${swimTech} m + 💪 Força Pernas e Core`, note:`Natação iniciante: respiração bilateral, flutuação e técnica básica. Sem séries longas.`},
-    {day:'Ter', treino:`🚴 Bike qualidade ${bikeQuality} km`, note:`Blocos curtos em Z2/Z3. Evitar picos longos de intensidade. FC alvo ${bikeFcZ2}.`},
-    {day:'Qua', treino:`🏃 Corrida qualidade ${qualityRun} km`, note:`Tempo run controlado em ${runTempoPace}/km, priorizando constância.`},
-    {day:'Qui', treino:`🏊 Técnica leve ${swimEnd} m + 💪 Força Costas e Postura`, note:`Educativos curtos e pausas livres. Objetivo é confiança na água, não volume.`},
-    {day:'Sex', treino:`🛌 Descanso total`, note:`Dia obrigatório de recuperação (mobilidade leve opcional 15-20 min).`},
-    {day:'Sáb', treino:`🚴 Longo ${bikeLongWknd} km + 🏃 Brick ${brickRunWknd} km`, note: weekendIntense ? `Transição curta bike→corrida, sem forçar ritmo.` : `Final de semana ajustado para recuperação ativa: volume reduzido no bike+brick.`},
-    {day:'Dom', treino:`🏃 Longo Z2 ${longRunWknd} km`, note: weekendIntense ? `Pace fácil ${runEasyPace}/km · FC alvo ${runFcZ2}.` : `Longo reduzido para absorver carga, mantendo base aeróbica sem excesso.`}
+    {day:'Seg', treino:`🏊 Adaptação ${swimTech} m + 💪 Força Pernas e Core`, note:`Natação: respiração bilateral, flutuação e técnica. Sem séries longas. Força: agachamento goblet 3×12, afundo búlgaro 3×8, prancha 3×30s.`},
+    {day:'Ter', treino:`🚴 Bike qualidade ${bikeQuality} km`, note:`Aquec 10' Z1 → 3×8 min Z3 (FC ${bikeFcZ2}) c/ 3 min Z1 entre → 10' despec. Cadência 85-95 rpm. Teto FC: ${runFcTeto} bpm.`},
+    {day:'Qua', treino:`🏃 Corrida Tempo Z3 — ${qualityRun} km`, note:`Aquec 10' fácil (${runZ1Pace}/km · FC ${runFcZ1}) → 20' Tempo Z3 (${runTempoPace}/km · FC ${runFcZ3}) → 10' recup Z1. Teto: ${runFcTeto} bpm. Se FC subir acima do teto, reduza o pace.`},
+    {day:'Qui', treino:`🏊 Técnica leve ${swimEnd} m + 💪 Força Costas e Postura`, note:`Natação: educativos curtos, foco em confiança na água. Força: remada sentada 3×10, puxada frente 3×10, supino halteres 3×8.`},
+    {day:'Sex', treino:`🛌 Descanso total`, note:`Recuperação obrigatória. Mobilidade leve 15 min (quadril, posterior de coxa, panturrilha) se quiser se mover.`},
+    {day:'Sáb', treino:`🚴 Longo ${bikeLongWknd} km + 🏃 Brick ${brickRunWknd} km`, note: weekendIntense ? `Bike: Z2 constante (FC ${bikeFcZ2}). Transition < 90s. Brick: saias correndo no ritmo que o corpo pede, sem checar pace — foco em sensação.` : `Volume reduzido para recuperação. Bike Z1/Z2 tranquilo + brick curtinho de adaptação.`},
+    {day:'Dom', treino:`🏃 Longo Z2 — ${longRunWknd} km`, note: weekendIntense ? `100% Z2 conversacional. Pace ${runEasyPace}/km · FC ${runFcZ2}. Se FC sair de Z2, caminhe 1 min. Hidrate a cada 20 min.` : `Longo conservador. Pace ${runZ1Pace}–${runEasyPace}/km · FC ${runFcZ1}. Prioridade: absorver a carga sem somar fadiga.`}
   ] : [
-    {day:'Seg', treino:`🏊 Técnica ${swimTech} m + 💪 Força Pernas e Core`, note:`Drills e técnica. Força de base para corrida e bike.`},
-    {day:'Ter', treino:`🚴 Bike qualidade ${bikeQuality} km`, note:`4×6 min Z3/Z4. Z2 alvo ${bikeFcZ2}.`},
-    {day:'Qua', treino:`🏃 Corrida qualidade ${qualityRun} km`, note:`Tempo run em ${runTempoPace}/km, evitando excesso de volume.`},
-    {day:'Qui', treino:`🏊 Endurance ${swimEnd} m + 💪 Força Costas e Postura`, note:`Nado contínuo controlado ~${swimCss}/100m + força de suporte para natação.`},
-    {day:'Sex', treino:`🛌 Descanso total`, note:`Dia obrigatório de recuperação (mobilidade leve opcional 15-20 min).`},
-    {day:'Sáb', treino:`🚴 Longo ${bikeLongWknd} km + 🏃 Brick ${brickRunWknd} km`, note: weekendIntense ? `Transição bike→corrida para adaptação específica de prova.` : `Índices em alerta: bike+brick com volume reduzido para evitar overtraining.`},
-    {day:'Dom', treino:`🏃 Longo Z2 ${longRunWknd} km`, note: weekendIntense ? `Pace fácil ${runEasyPace}/km · FC alvo ${runFcZ2}.` : `Longo em versão conservadora para priorizar recuperação e consistência.`}
+    {day:'Seg', treino:`🏊 Técnica ${swimTech} m + 💪 Força Pernas e Core`, note:`Natação: drills + técnica de braçada. Força: agachamento goblet 3×10, RDL 3×8, hip thrust 4×10, farmer carry 4×30m.`},
+    {day:'Ter', treino:`🚴 Bike qualidade ${bikeQuality} km`, note:`Aquec 10' Z1 → 4×6 min Z3/Z4 (FC ${bikeFcZ2}) c/ 3' Z1 entre → 10' despec. Cadência 88-95 rpm. Teto FC: ${runFcTeto} bpm.`},
+    {day:'Qua', treino:`🏃 Corrida Tempo Z3 — ${qualityRun} km`, note:`Aquec 10' fácil (${runZ1Pace}/km · FC ${runFcZ1}) → 20' Tempo Z3 (${runTempoPace}/km · FC ${runFcZ3}) → 10' recup Z1. Teto: ${runFcTeto} bpm. Constância de pace > velocidade.`},
+    {day:'Qui', treino:`🏊 Endurance ${swimEnd} m + 💪 Força Costas e Postura`, note:`Natação: nado contínuo ~${swimCss}/100m, mantendo técnica. Força: remada 3×12, puxada frente 3×10, press halteres 3×8, prancha 3×40s.`},
+    {day:'Sex', treino:`🛌 Descanso total`, note:`Recuperação obrigatória. Mobilidade leve 15-20 min: mobilização do quadril, alongamento do IT-band e panturrilha.`},
+    {day:'Sáb', treino:`🚴 Longo ${bikeLongWknd} km + 🏃 Brick ${brickRunWknd} km`, note: weekendIntense ? `Bike: Z2 estável (FC ${bikeFcZ2}), pace ${bikeZ2}/km. Transition < 90s. Brick: saída em ritmo natural — não olhe o pace por 5 min, depois alvo ${runEasyPace}/km.` : `Sinais Garmin em alerta. Volume reduzido — bike Z1/Z2 fácil + brick de adaptação sem pressão de ritmo.`},
+    {day:'Dom', treino:`🏃 Longo Z2 — ${longRunWknd} km`, note: weekendIntense ? `100% conversacional Z2. Pace alvo ${runEasyPace}/km · FC ${runFcZ2}. Gel a cada 45 min se >1h. Se FC subir de Z2, caminhe até controlar.` : `Longo na versão conservadora. Pace ${runZ1Pace}–${runEasyPace}/km · FC ${runFcZ1}. Recuperação > performance hoje.`}
   ];
 
   const runObjectiveBase = {
@@ -2047,14 +2060,15 @@ function buildPeriodizedTriWeek(profile, avg, weekIndex, totalWeeks, targetKey, 
     const ultraBackToBack = objective==='ultra' ? Math.max(10, +(runLong*0.42).toFixed(1)) : 0;
     const ultraBackToBackWknd = objective==='ultra' ? (weekendIntense ? ultraBackToBack : Math.max(8, +(ultraBackToBack*0.72).toFixed(1))) : 0;
 
+    const qualLabel = objective==='run10k' ? `3×1 km Z3/Z4 (${paceQual}/km · FC ${runFcZ3}) c/ 2 min Z1 entre. Aquec 10' Z1 (${runZ1Pace}/km) + 10' despec.` : `Aquec 10' Z1 → 20–25' Tempo Z3 (${paceQual}/km · FC ${runFcZ3}) → 10' recup Z1. Teto: ${runFcTeto} bpm.`;
     plan = [
-      {day:'Seg', treino:`🏃 Rodagem leve ${runRec} km + 💪 Força Pernas e Core`, note:`Corrida leve de recuperação + força funcional.`},
-      {day:'Ter', treino:`🏃 Qualidade ${runQuality} km`, note:`Blocos em ritmo controlado (${paceQual}/km), sem entrar em exaustão.`},
-      {day:'Qua', treino:`🚴 Cross ${crossBike} km`, note:`Cross-training para preservar articulações e manter base aeróbica.`},
-      {day:'Qui', treino:`🏃 Rodagem Z2 ${runEasy} km`, note:`Base aeróbica em ritmo confortável.`},
-      {day:'Sex', treino:`🛌 Descanso total`, note:`Recuperação obrigatória para absorver carga semanal.`},
-      {day:'Sáb', treino: objective==='ultra' ? `🏃 Longo 1 ${runLongWknd} km` : `🏃 Longo ${runLongWknd} km`, note: weekendIntense ? (objective==='ultra' ? `Primeiro longo do bloco (ultra), ritmo fácil ${paceLong}/km.` : `Longo principal em ritmo fácil ${paceLong}/km.`) : `Longo de sábado reduzido para preservar recuperação e evitar sobrecarga.`},
-      {day:'Dom', treino: objective==='ultra' ? `🏃 Longo 2 ${ultraBackToBackWknd} km + 🏊 Técnica ${swimEasy} m` : `🏊 Técnica ${swimEasy} m + 💪 Força Costas e Postura`, note: weekendIntense ? (objective==='ultra' ? `Back-to-back leve para resistência específica de ultra.` : `Natação técnica opcional e força de suporte para corrida.`) : `Domingo em modo conservador: técnica e controle de carga pelos sinais Garmin.`}
+      {day:'Seg', treino:`🏃 Rodagem Regenerativa ${runRec} km`, note:`Z1 puro. Pace ${runZ1Pace}/km · FC ${runFcZ1}. Se FC sobe de Z1, caminhe. Objetivo: ativar circulação, não gerar carga.`},
+      {day:'Ter', treino:`🏃 Qualidade Z3 — ${runQuality} km`, note:qualLabel+` Constância de pace > velocidade. Teto absoluto: ${runFcTeto} bpm.`},
+      {day:'Qua', treino:`🚴 Cross ${crossBike} km`, note:`Bike Z1/Z2 (FC ${bikeFcZ2}). Preserva articulações e mantém base aeróbica sem impacto. Pace de recuperação.`},
+      {day:'Qui', treino:`🏃 Rodagem Z2 — ${runEasy} km`, note:`Base aeróbica conversacional Z2. Pace ${runEasyPace}/km · FC ${runFcZ2}. Você deve conseguir falar frases completas sem ofegar.`},
+      {day:'Sex', treino:`🛌 Descanso total`, note:`Recuperação obrigatória. Mobilidade 15 min: quadril, IT-band, panturrilha. Sem corrida.`},
+      {day:'Sáb', treino: objective==='ultra' ? `🏃 Longo 1 — ${runLongWknd} km` : `🏃 Longo — ${runLongWknd} km`, note: weekendIntense ? (objective==='ultra' ? `Primeiro longo do bloco ultra. Pace ${paceLong}/km · FC ${runFcZ2}. Gel a cada 45 min. Hidratação constante.` : `Longo principal. Pace ${paceLong}/km · FC ${runFcZ2}. 100% conversacional. Gel a cada 45 min se >1h.`) : `Longo reduzido. Sinais Garmin em alerta — pace ${runZ1Pace}/km · FC ${runFcZ1}. Prioridade: absorver a carga sem somar fadiga.`},
+      {day:'Dom', treino: objective==='ultra' ? `🏃 Longo 2 — ${ultraBackToBackWknd} km + 🏊 Técnica ${swimEasy} m` : `🏊 Técnica ${swimEasy} m + 💪 Força Costas e Postura`, note: weekendIntense ? (objective==='ultra' ? `Back-to-back leve para resistência específica. Pace ${runZ1Pace}/km · FC ${runFcZ1}. Não force — foco em tempo em pés.` : `Natação técnica: drills e educativos, sem volume. Força: remada 3×10, puxada 3×10, press halteres 3×8.`) : `Domingo conservador. Técnica sem carga e força de suporte. Deixe o corpo recuperar.`}
     ];
 
     objectiveLabel = runCfg.label;
@@ -3088,36 +3102,18 @@ function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
     const sentCount = motraGymQueue.filter(i=>i.launched).length;
     const totalCount = motraGymQueue.length;
     const motraHtml = motraGymQueue.length ? `
-      <div class="card-title" style="margin-top:.8rem">📲 Motra — Academia Automática da Semana</div>
+      <div class="card-title" style="margin-top:.8rem">📲 Motra — Treinos de Academia</div>
       <div class="tp-type-card" style="margin-bottom:.75rem">
-        <div class="tp-type-desc"><b>Integração prática:</b> o app já organiza os treinos de academia nos dias correspondentes em formato de template para o Motra.<br><b>Progresso Motra:</b> ${sentCount}/${totalCount} template(s) marcados.</div>
-        <div style="margin-top:.55rem;border:1px solid #dbeafe;background:#eff6ff;border-radius:10px;padding:.55rem .65rem;font-size:.74rem;line-height:1.55;color:#1e3a8a">
-          <b>Modo recomendado:</b> gerar templates no Motra agora e só aplicar no dia do treino.<br>
-          Isso evita montar exercício por exercício no Empty Workout.
-        </div>
-        <div class="tp-alt-list" style="margin-top:.45rem">
-          <button class="sf-btn sf-on" style="font-weight:800;min-height:46px;padding:.78rem 1.05rem;box-shadow:0 10px 24px rgba(30,58,138,.2)" onclick="motraDoNow()">Fazer agora (copiar prompt)</button>
-          <button class="sf-btn" onclick="openMotraGenerateEntry()">Abrir Generate Workout</button>
-          <button class="sf-btn" onclick="openMotraGenerateAll()">Gerar template da semana</button>
-          <button class="sf-btn" onclick="copyMotraGenerateAll()">Copiar prompt semanal</button>
-          <button class="sf-btn" onclick="showMotraDayModeHelp()">Como usar no Motra</button>
-          <button class="sf-btn" onclick="openMotraGenerateItem(0)">Gerar template do próximo treino</button>
-          <button class="sf-btn" onclick="markMotraGymAll(true)">Marcar templates como salvos</button>
-          <button class="sf-btn" onclick="markMotraGymAll(false)">Reabrir todos</button>
-        </div>
-        <div style="display:grid;gap:.5rem;margin-top:.6rem">
+        <button class="sf-btn sf-on" style="width:100%;font-weight:800;min-height:48px;font-size:.88rem;box-shadow:0 8px 20px rgba(30,58,138,.18)" onclick="motraDoNow()">Fazer agora (copiar prompt)</button>
+        <div style="display:grid;gap:.4rem;margin-top:.65rem">
           ${motraGymQueue.map((item,idx)=>`
-            <div class="tp-row" style="margin:0">
-              <div class="tp-day">${item.day}</div>
-              <div>
-                <div class="tp-work">${item.sessionLabel}</div>
-                <div class="tp-note">Data ${item.dateIso} · horário sugerido ${item.time} · <b>${item.launched?'Lançado':'Pendente'}</b></div>
+            <div style="display:flex;align-items:center;gap:.6rem;padding:.45rem .5rem;border:1px solid var(--border);border-radius:9px;background:var(--bg)">
+              <div style="font-size:.68rem;font-weight:900;text-transform:uppercase;letter-spacing:.4px;color:var(--blue);min-width:28px">${item.day}</div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:.76rem;font-weight:700;color:var(--text)">${item.sessionLabel}</div>
+                <div style="font-size:.62rem;color:var(--muted)">${item.dateIso} · ${item.time}</div>
               </div>
-              <div style="display:flex;gap:.45rem;flex-wrap:wrap;justify-content:flex-end">
-                <button class="tp-done" onclick="openMotraGenerateItem(${idx})">Gerar template (dia)</button>
-                <button class="tp-done" onclick="copyMotraGenerateItem(${idx})">Copiar prompt (dia)</button>
-                <button class="tp-done ${item.launched?'on':''}" onclick="markMotraGymItem(${idx}, ${item.launched?'false':'true'})">${item.launched?'Reabrir':'Template salvo'}</button>
-              </div>
+              <button class="coach-status-btn ${item.launched?'on':''}" onclick="markMotraGymItem(${idx}, ${item.launched?'false':'true'})" style="white-space:nowrap">${item.launched?'✓ Salvo':'Salvar'}</button>
             </div>
           `).join('')}
         </div>
