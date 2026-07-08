@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Plano Natação · Luiz · 12 Meses ao Triathlon</title>
+  <style>
+/* ── TOKENS ── */
+:root {
+  --deep:     #0D2B42;
+  --lane:     #1A6B9A;
+  --shimmer:  #4DB6E8;
+  --foam:     #EBF6FC;
+  --surface:  #FFFFFF;
+  --text:     #14293C;
+  --sub:      #4A6B82;
+  --border:   #CCDDE9;
+  --gold:     #D4871A;
+  --gold-bg:  #FDF4E6;
+  --red:      #C0392B;
+  --green:    #1A7A52;
+  --card-bg:  #FFFFFF;
+  --card-sh:  0 1px 4px rgba(13,43,66,.09);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --deep:     #4DB6E8;
+    --lane:     #3A9EC8;
+    --shimmer:  #6CC6EE;
+    --foam:     #0C1E2E;
+    --surface:  #071522;
+    --text:     #D2EAF7;
+    --sub:      #7AAEC6;
+    --border:   #1C3A52;
+    --gold:     #E8A030;
+    --gold-bg:  #1C1400;
+    --red:      #E05050;
+    --green:    #30C878;
+    --card-bg:  #0D1E2E;
+    --card-sh:  0 1px 6px rgba(0,0,0,.4);
+  }
+}
+
+/* ── RESET ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  background: var(--surface);
+  color: var(--text);
+  line-height: 1.6;
+  font-size: 15px;
+}
+
+/* ── BACK BAR ── */
+.back-bar {
+  background: #071826;
+  padding: .55rem 1.5rem;
+  display: flex;
+  align-items: center;
+}
+.back-bar a {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  color: rgba(255,255,255,.65);
+  font-size: .72rem;
+  font-weight: 700;
+  text-decoration: none;
+  letter-spacing: .04em;
+}
+.back-bar a:hover { color: #fff; }
+
+/* ── HEADER ── */
+.hero {
+  background: var(--deep);
+  color: #fff;
+  padding: 3rem 1.5rem 2.5rem;
+  position: relative;
+  overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent 38px,
+    rgba(77,182,232,.12) 38px,
+    rgba(77,182,232,.12) 40px
+  );
+  pointer-events: none;
+}
+.hero-inner { position: relative; max-width: 700px; margin: 0 auto; }
+.hero-eyebrow {
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--shimmer);
+  margin-bottom: .75rem;
+}
+.hero h1 {
+  font-size: clamp(1.8rem, 5vw, 2.6rem);
+  font-weight: 900;
+  line-height: 1.1;
+  text-wrap: balance;
+  color: #fff;
+  margin-bottom: .6rem;
+}
+.hero-sub {
+  font-size: 1rem;
+  color: rgba(255,255,255,.72);
+  max-width: 520px;
+  line-height: 1.5;
+}
+.hero-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .45rem;
+  margin-top: 1.2rem;
+}
+.hero-pill {
+  background: rgba(77,182,232,.18);
+  border: 1px solid rgba(77,182,232,.35);
+  color: #d2eaf7;
+  border-radius: 999px;
+  padding: .28rem .75rem;
+  font-size: .74rem;
+  font-weight: 600;
+  letter-spacing: .02em;
+}
+
+/* ── LANE ROPE DIVIDER ── */
+.lane-rope {
+  height: 12px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--shimmer) 0, var(--shimmer) 18px,
+    var(--lane) 18px, var(--lane) 36px
+  );
+  opacity: .35;
+}
+
+/* ── MAIN CONTENT ── */
+.wrap { max-width: 700px; margin: 0 auto; padding: 0 1.25rem 4rem; }
+
+/* ── PROFILE BOX ── */
+.profile {
+  background: var(--foam);
+  border: 1px solid var(--border);
+  border-left: 5px solid var(--shimmer);
+  border-radius: 10px;
+  padding: 1.25rem 1.4rem;
+  margin: 1.75rem 0;
+}
+.profile-title {
+  font-size: .7rem;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--lane);
+  margin-bottom: .8rem;
+}
+.profile-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .55rem .9rem;
+}
+.profile-item { font-size: .85rem; color: var(--sub); }
+.profile-item b { color: var(--text); }
+
+/* ── PHASE SECTIONS ── */
+.phase { margin-top: 2.5rem; }
+.phase-hdr {
+  display: flex;
+  align-items: baseline;
+  gap: .9rem;
+  margin-bottom: 1rem;
+  padding-bottom: .65rem;
+  border-bottom: 2px solid var(--border);
+}
+.phase-num {
+  font-size: 2.2rem;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--shimmer);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+  letter-spacing: -.02em;
+}
+.phase-info { flex: 1; }
+.phase-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.2;
+}
+.phase-months {
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--sub);
+  margin-top: .2rem;
+}
+.phase-target {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: .65rem .9rem;
+  margin-bottom: 1rem;
+  font-size: .82rem;
+  color: var(--sub);
+}
+.phase-target b { color: var(--text); }
+.phase-target .ico { font-size: 1rem; }
+
+/* ── WEEKLY PLAN TABLE ── */
+.week-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .82rem;
+  margin-bottom: 1.2rem;
+}
+.week-table th {
+  text-align: left;
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--sub);
+  padding: .45rem .6rem;
+  border-bottom: 2px solid var(--border);
+}
+.week-table td {
+  padding: .5rem .6rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+  color: var(--text);
+  line-height: 1.4;
+}
+.week-table tr:last-child td { border-bottom: none; }
+.day-lbl {
+  font-weight: 800;
+  font-size: .72rem;
+  letter-spacing: .06em;
+  color: var(--lane);
+  white-space: nowrap;
+}
+.sess-type {
+  display: inline-block;
+  border-radius: 5px;
+  padding: .1rem .45rem;
+  font-size: .65rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  margin-bottom: .25rem;
+}
+.t-tecnica { background: rgba(77,182,232,.15); color: var(--lane); }
+.t-volume  { background: rgba(26,122,82,.12);  color: var(--green); }
+.t-forca   { background: rgba(212,135,26,.15); color: var(--gold); }
+.t-descanso{ background: var(--border); color: var(--sub); }
+
+/* ── DRILL CARDS ── */
+.drills-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: .85rem;
+  margin-top: 1rem;
+}
+.drill-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem 1.1rem;
+  box-shadow: var(--card-sh);
+}
+.drill-name {
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--shimmer);
+  margin-bottom: .35rem;
+}
+.drill-title {
+  font-size: .95rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: .5rem;
+}
+.drill-visual {
+  background: var(--foam);
+  border-radius: 7px;
+  padding: .7rem .8rem;
+  margin-bottom: .65rem;
+  font-size: .78rem;
+  color: var(--sub);
+  line-height: 1.5;
+  font-style: italic;
+  border-left: 3px solid var(--shimmer);
+}
+.drill-steps {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+}
+.drill-steps li {
+  display: grid;
+  grid-template-columns: 1.2rem 1fr;
+  gap: .4rem;
+  font-size: .81rem;
+  color: var(--text);
+  line-height: 1.4;
+}
+.drill-steps li::before {
+  content: attr(data-n);
+  font-weight: 800;
+  color: var(--shimmer);
+  font-variant-numeric: tabular-nums;
+  font-size: .75rem;
+  margin-top: .12rem;
+}
+.drill-search {
+  margin-top: .7rem;
+  padding: .45rem .65rem;
+  background: var(--gold-bg);
+  border-radius: 6px;
+  font-size: .72rem;
+  color: var(--gold);
+  display: flex;
+  gap: .4rem;
+  align-items: flex-start;
+}
+.drill-search::before { content: '▶'; flex-shrink: 0; }
+.drill-search a { color: inherit; font-weight: 700; text-decoration: underline; text-decoration-color: rgba(212,135,26,.5); text-underline-offset: 2px; }
+.drill-search a:hover { text-decoration-color: var(--gold); opacity: .85; }
+
+/* ── OPEN WATER BOX ── */
+.ow-box {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-top: 1.2rem;
+}
+.ow-hdr {
+  background: #071826;
+  padding: .75rem 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+}
+.ow-hdr-title {
+  font-weight: 800;
+  font-size: .9rem;
+  color: #fff;
+}
+.ow-body { padding: 1rem 1.1rem; display: flex; flex-direction: column; gap: .6rem; }
+.ow-step {
+  display: grid;
+  grid-template-columns: 2.2rem 1fr;
+  gap: .6rem;
+  align-items: start;
+}
+.ow-step-num {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: rgba(77,182,232,.14);
+  border: 1.5px solid var(--shimmer);
+  color: var(--shimmer);
+  font-weight: 900;
+  font-size: .78rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ow-step-text { font-size: .83rem; color: var(--text); line-height: 1.45; }
+.ow-step-text b { color: var(--text); }
+
+/* ── MEDO SECTION ── */
+.medo-card {
+  background: var(--gold-bg);
+  border: 1px solid rgba(212,135,26,.3);
+  border-left: 4px solid var(--gold);
+  border-radius: 8px;
+  padding: 1rem 1.2rem;
+  margin-top: 1rem;
+  font-size: .83rem;
+  line-height: 1.55;
+  color: var(--text);
+}
+.medo-card b { color: var(--gold); }
+
+/* ── TECHNIQUE REFERENCE ── */
+.tech-section { margin-top: 2.5rem; }
+.section-label {
+  font-size: .7rem;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--shimmer);
+  margin-bottom: .5rem;
+  padding-bottom: .4rem;
+  border-bottom: 1px solid var(--border);
+}
+.section-title {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 1.2rem;
+  text-wrap: balance;
+}
+
+/* ── VOLUME CHART ── */
+.vol-bar-wrap { display: flex; flex-direction: column; gap: .6rem; margin-top: .9rem; }
+.vol-row { display: grid; grid-template-columns: 5.5rem 1fr 3.5rem; gap: .6rem; align-items: center; font-size: .8rem; }
+.vol-lbl { color: var(--sub); font-weight: 600; text-align: right; }
+.vol-bar-bg { background: var(--foam); border-radius: 4px; height: 8px; overflow: hidden; border: 1px solid var(--border); }
+.vol-bar { height: 100%; border-radius: 4px; background: var(--shimmer); }
+.vol-val { color: var(--text); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* ── FOOTER ── */
+footer {
+  max-width: 700px;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 2.5rem;
+  font-size: .75rem;
+  color: var(--sub);
+  border-top: 1px solid var(--border);
+  line-height: 1.6;
+}
+footer b { color: var(--text); }
+
+/* ── UTILITY ── */
+.mt-sm { margin-top: .6rem; }
+.mt-md { margin-top: 1rem; }
+.mt-lg { margin-top: 1.5rem; }
+.text-sm { font-size: .82rem; color: var(--sub); line-height: 1.5; }
+.table-scroll { overflow-x: auto; }
+  </style>
+</head>
+<body>
+
+<!-- BACK BAR -->
+<div class="back-bar">
+  <a href="./index.html">← App de Treinos</a>
+</div>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="hero-inner">
+    <div class="hero-eyebrow">Plano Personalizado de Natação</div>
+    <h1>12 Meses ao<br>Primeiro Triathlon</h1>
+    <p class="hero-sub">Plano progressivo de crawl para atleta de 64 anos com excelente base física, sem técnica de nado ainda, com meta de completar um triathlon em 1 ano.</p>
+    <div class="hero-pills">
+      <span class="hero-pill">64 anos</span>
+      <span class="hero-pill">Iniciante no Crawl</span>
+      <span class="hero-pill">3 sessões/semana</span>
+      <span class="hero-pill">Meta: Sprint ou Olímpico</span>
+      <span class="hero-pill">Medo de Águas Abertas — Gerenciável</span>
+    </div>
+  </div>
+</header>
+<div class="lane-rope"></div>
+
+<div class="wrap">
+
+  <!-- PERFIL -->
+  <div class="profile">
+    <div class="profile-title">Seu Ponto de Partida</div>
+    <div class="profile-grid">
+      <div class="profile-item"><b>Condição física:</b> Excelente (corrida e bike)</div>
+      <div class="profile-item"><b>Pulmão:</b> Ótima capacidade aeróbica</div>
+      <div class="profile-item"><b>Natação atual:</b> Aulas básicas, sem crawl</div>
+      <div class="profile-item"><b>Piscina:</b> Confortável, medo controlado</div>
+      <div class="profile-item"><b>Águas abertas:</b> Medo — a trabalhar</div>
+      <div class="profile-item"><b>Vantagem:</b> Resistência cardiovascular já existe</div>
+    </div>
+    <p class="text-sm mt-sm">O seu nível aeróbico já é de atleta. O desafio é puramente técnico: aprender a deslizar pela água, não lutar contra ela.</p>
+  </div>
+
+  <!-- VOLUME PROGRESSÃO -->
+  <div class="tech-section">
+    <div class="section-label">Progressão de Volume</div>
+    <div class="vol-bar-wrap">
+      <div class="vol-row"><span class="vol-lbl">Mês 1–2</span><div class="vol-bar-bg"><div class="vol-bar" style="width:22%"></div></div><span class="vol-val">~1.2 km/sess</span></div>
+      <div class="vol-row"><span class="vol-lbl">Mês 3–4</span><div class="vol-bar-bg"><div class="vol-bar" style="width:38%"></div></div><span class="vol-val">~2 km/sess</span></div>
+      <div class="vol-row"><span class="vol-lbl">Mês 5–6</span><div class="vol-bar-bg"><div class="vol-bar" style="width:55%"></div></div><span class="vol-val">~2.5 km/sess</span></div>
+      <div class="vol-row"><span class="vol-lbl">Mês 7–8</span><div class="vol-bar-bg"><div class="vol-bar" style="width:68%"></div></div><span class="vol-val">~3 km/sess</span></div>
+      <div class="vol-row"><span class="vol-lbl">Mês 9–10</span><div class="vol-bar-bg"><div class="vol-bar" style="width:82%"></div></div><span class="vol-val">~3.5 km/sess</span></div>
+      <div class="vol-row"><span class="vol-lbl">Mês 11–12</span><div class="vol-bar-bg"><div class="vol-bar" style="width:100%"></div></div><span class="vol-val">~4 km/sess</span></div>
+    </div>
+  </div>
+
+  <!-- ════ FASE 1 ════ -->
+  <div class="phase">
+    <div class="phase-hdr">
+      <div class="phase-num">01</div>
+      <div class="phase-info">
+        <div class="phase-title">Fundamentos do Crawl</div>
+        <div class="phase-months">Meses 1 – 2 · 3 sessões/semana · 45–50 min</div>
+      </div>
+    </div>
+    <div class="phase-target"><span class="ico">🎯</span> <span><b>Meta:</b> Nadar 200 m de crawl sem parar, com respiração regular</span></div>
+
+    <div class="table-scroll">
+    <table class="week-table">
+      <thead><tr><th>Dia</th><th>Sessão</th><th>Conteúdo</th><th>Volume</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="day-lbl">Seg</span></td>
+          <td><span class="sess-type t-tecnica">Técnica</span></td>
+          <td>Posição de seta · Batida de pernas com prancha · 6-3-6 sem respiração</td>
+          <td style="font-variant-numeric:tabular-nums;white-space:nowrap">1.000 m</td>
+        </tr>
+        <tr>
+          <td><span class="day-lbl">Qua</span></td>
+          <td><span class="sess-type t-tecnica">Técnica</span></td>
+          <td>Braçada com um braço só · Entrada da mão · Respiração a cada 2 braçadas</td>
+          <td>1.200 m</td>
+        </tr>
+        <tr>
+          <td><span class="day-lbl">Sex</span></td>
+          <td><span class="sess-type t-volume">Volume</span></td>
+          <td>Combinação técnica + nado crawl livre · 4×50 m com descanso</td>
+          <td>1.400 m</td>
+        </tr>
+        <tr>
+          <td><span class="day-lbl">Dom</span></td>
+          <td><span class="sess-type t-descanso">Descanso</span></td>
+          <td>Recuperação total ou caminhada leve</td>
+          <td>—</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+
+    <div class="section-label mt-md">Exercícios Principais</div>
+    <div class="drills-grid">
+      <div class="drill-card">
+        <div class="drill-name">Exercício 01</div>
+        <div class="drill-title">Posição de Seta (Streamline)</div>
+        <div class="drill-visual">Empurre a parede, braços sobre a cabeça, bíceps tocando as orelhas, dedos apontando para frente. Deslize 5 metros como um torpedo.</div>
+        <ul class="drill-steps">
+          <li data-n="1">Braços junto à cabeça, cotovelos esticados, mãos sobrepostas</li>
+          <li data-n="2">Bíceps cobrindo as orelhas — NÃO levante a cabeça</li>
+          <li data-n="3">Core contraído, glúteos levemente contraídos</li>
+          <li data-n="4">Olhar para o fundo da piscina, pescoço neutro</li>
+          <li data-n="5">Empurre a parede e deslize o máximo que conseguir</li>
+        </ul>
+        <div class="drill-search"><a href="https://www.youtube.com/results?search_query=streamline+position+swimming" target="_blank">streamline position swimming</a> · <a href="https://www.youtube.com/results?search_query=posi%C3%A7%C3%A3o+de+seta+nata%C3%A7%C3%A3o" target="_blank">posição de seta natação</a></div>
+      </div>
+
+      <div class="drill-card">
+        <div class="drill-name">Exercício 02</div>
+        <div class="drill-title">Batida de Pernas com Prancha</div>
+        <div class="drill-visual">Segure a prancha com os braços esticados. Pernas: movimento pequeño e rápido vindo do quadril, não do joelho. Tornozelos soltos.</div>
+        <ul class="drill-steps">
+          <li data-n="1">Segure a prancha relaxado, ombros submersos</li>
+          <li data-n="2">Bata as pernas alternadas: movimento vem do quadril</li>
+          <li data-n="3">Joelhos ligeiramente dobrados, nunca rígidos</li>
+          <li data-n="4">Pés ligeiramente voltados para dentro (pombinho)</li>
+          <li data-n="5">Batidas PEQUENAS — 30 cm de amplitude máxima</li>
+        </ul>
+        <div class="drill-search"><a href="https://www.youtube.com/results?search_query=flutter+kick+with+kickboard" target="_blank">flutter kick with kickboard</a> · <a href="https://www.youtube.com/results?search_query=batida+de+pernas+crawl+prancha" target="_blank">batida de pernas crawl prancha</a></div>
+      </div>
+
+      <div class="drill-card">
+        <div class="drill-name">Exercício 03</div>
+        <div class="drill-title">6-3-6 (Rotação Corporal)</div>
+        <div class="drill-visual">6 batidas de pernas deitado de lado → 3 braçadas → 6 batidas de pernas no outro lado. Treina a rotação natural do corpo no crawl.</div>
+        <ul class="drill-steps">
+          <li data-n="1">Inicie deitado de lado: braço de baixo esticado, braço de cima na coxa</li>
+          <li data-n="2">Bata as pernas 6 vezes mantendo essa posição lateral</li>
+          <li data-n="3">Dê 3 braçadas completas de crawl</li>
+          <li data-n="4">Retorne à posição lateral — mas no lado oposto</li>
+          <li data-n="5">Repita. Sinta seu corpo girar, não rolar</li>
+        </ul>
+        <div class="drill-search"><a href="https://www.youtube.com/results?search_query=6-3-6+drill+freestyle" target="_blank">6-3-6 drill freestyle</a> · <a href="https://www.youtube.com/results?search_query=exerc%C3%ADcio+6-3-6+nata%C3%A7%C3%A3o" target="_blank">exercício 6-3-6 natação</a></div>
+      </div>
+
+      <div class="drill-card">
+        <div class="drill-name">Exercício 04</div>
+        <div class="drill-title">Respiração: A Técnica Correta</div>
+        <div class="drill-visual">Um olho dentro d'água, um fora. Gire junto com o corpo — não levante a cabeça. Expire devagar embaixo d'água. Inspire rápido durante a rotação.</div>
+        <ul class="drill-steps">
+          <li data-n="1">Expire lentamente pelo nariz (ou boca) EMBAIXO da água</li>
+          <li data-n="2">Ao girar o corpo para respirar, a boca raspa a superfície</li>
+          <li data-n="3">1 olho sempre na água — "olho espião"</li>
+          <li data-n="4">Inspire rápido (0,5 segundo) — não seja guloso</li>
+          <li data-n="5">Comece respirando a cada 2 braçadas (mesmo lado)</li>
+        </ul>
+        <div class="drill-search"><a href="https://www.youtube.com/results?search_query=freestyle+breathing+technique" target="_blank">freestyle breathing technique</a> · <a href="https://www.youtube.com/results?search_query=respira%C3%A7%C3%A3o+crawl+passo+a+passo" target="_blank">respiração crawl passo a passo</a></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ FASE 2 ════ -->
+  <div class="phase">
+    <div class="phase-hdr">
+      <div class="phase-num">02</div>
+      <div class="phase-info">
+        <div class="phase-title">Construindo a Braçada Completa</div>
+        <div class="phase-months">Meses 3 – 4 · 3 sessões/semana · 50–60 min</div>
+      </div>
+    </div>
+    <div class="phase-target"><span class="ico">🎯</span> <span><b>Meta:</b> 400 m de crawl contínuo · Respiração bilateral (a cada 3 braçadas)</span></div>
+
+    <div class="table-scroll">
+    <table class="week-table">
+      <thead><tr><th>Dia</th><th>Sessão</th><th>Conteúdo</th><th>Volume</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="day-lbl">Seg</span></td>
+          <td><span class="sess-type t-tecnica">Técnica</span></td>
+          <td>Pegada alta (cotovelo alto) · Braço à frente (Catch-Up) · 8×25 m foco na entrada da mão</td>
+          <td>1.500 m</td>
+        </tr>
+        <tr>
+          <td><span class="day-lbl">Qua</span></td>
+          <td><span class="sess-type t-tecnica">Técnica</span></td>
+          <td>Punho fechado · Dedos arrastando na água · Respiração bilateral x3</td>
+          <td>1.800 m</td>
+        </tr>
+        <tr>
+          <td><span class="day-lbl">Sex</span></td>
+          <td><span class="sess-type t-volume">Volume</span></td>
+          <td>6×100 m com 30 s de descanso · Foco: manter técnica até o fim</td>
+          <td>2.000 m</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+
+    <div class="section-label mt-md">Exercícios Principais</div>
+    <div class="drills-grid">
+      <div class="drill-card">
+        <div class="drill-name">Exercício 05</div>
+        <div class="drill-title">Cotovelo Alto na Captura</div>
+        <div class="drill-visual">Depois que a mão entra na água, dobre o cotovelo ANTES de puxar. O antebraço fica vertical — como abraçar um barril. Isto é onde a propulsão começa.</div>
+        <ul class="drill-steps">
+          <li data-n="1">Mão entra na água à largura do ombro, dedos levemente inclinados</li>
+          <li data-n="2">Estenda o braço para frente (não para baixo)</li>
+          <li data-n="3">Dobre o cotovelo para fora e para cima — cotovelo NUNCA aponta para o fundo</li>
+          <li data-n="4">Antebraço fica vertical, apontando para trás</li>
+          <li data-n="5">Agora puxe: puxe água para trás, não para baixo</li>
+        </ul>
+        <div class="drill-search"><a href="https://www.youtube.com/results?search_query=high+elbow+catch+freestyle" target="_blank">high elbow catch freestyle</a> · <a href="https://www.youtube.com/results?search_query=captura+cotovelo+alto+crawl" target="_blank">captura cotovelo alto crawl</a></div>
+      </div>
+
+      <div class="drill-card">
+        <div class="drill-name">Exercício 06</div>
+        <div class="drill-title">Braço à Frente (Catch-Up)</div>
+        <div class="drill-visual">O braço de trás espera o braço da frente "chegar" antes de iniciar a puxada. Treina coordenação e força você a deslizar — não correr.</div>
+        <ul class="drill-steps">
+          <li data-n="1">Nade crawl normal, mas com uma regra:</li>
+          <li data-n="2">Braço A não puxa até Braço B tocar o Braço A na frente</li>
+          <li data-n="3">Cada braçada tem uma pausa: sinta o deslize</li>
+          <li data-n="4">Use palmares (paddles) para sentir mais resistência</li>
+          <li data-n="5">25 m com 20 s descanso, 8 repetições</li>
+        </ul>
+        <div class="drill-search"><a href="https://www.youtube.com/results?search_query=catch-up+drill+freestyle+swimming" target="_blank">catch-up drill freestyle</a> · <a href="https://www.youtube.com/results?search_query=exerc%C3%ADcio+catch-up+nata%C3%A7%C3%A3o" target="_blank">exercício catch-up natação</a></div>
+      </div>
+
+      <div class="drill-card">
+        <div class="drill-name">Exercício 07</div>
+        <div class="drill-title">Punho Fechado (Fist Drill)</div>
+        <div class="drill-visual">Nade com os punhos fechados. Forçará você a usar o antebraço inteiro para capturar a água — quando abrir a mão, sentirá MUITO mais pressão. Revela a captura correta.</div>
+        <ul class="drill-steps">
+          <li data-n="1">Feche os punhos completamente</li>
+          <li data-n="2">Nade 25 m assim — parece difícil, é normal</li>
+          <li data-n="3">Nade os próximos 25 m com mão aberta</li>
+          <li data-n="4">Sinta a diferença — a mão vai "agarrar" muito mais</li>
+          <li data-n="5">Alterne: 25 fechado + 25 aberto, 4 vezes</li>
+        </ul>
+        <div class="drill-search"><a href="https://www.youtube.com/results?search_query=fist+drill+swimming" target="_blank">fist drill swimming</a> · <a href="https://www.youtube.com/results?search_query=nata%C3%A7%C3%A3o+punho+fechado" target="_blank">natação punho fechado</a></div>
+      </div>
+
+      <div class="drill-card">
+        <div class="drill-name">Exercício 08</div>
+        <div class="drill-title">Dedos Arrastando na Água</div>
+        <div class="drill-visual">Na recuperação (braço saindo d'água), arraste as pontas dos dedos na superfície da água. Garante cotovelo alto na recuperação e ombro relaxado.</div>
+        <ul class="drill-steps">
+          <li data-n="1">Após a puxada, deixe o cotovelo subir primeiro</li>
+          <li data-n="2">Arraste suavemente as pontas dos dedos na superfície</li>
+          <li data-n="3">Cotovelo deve estar ACIMA do pulso durante toda a recuperação</li>
+          <li data-n="4">Mão entra relaxada, não rígida</li>
+          <li data-n="5">6×50 m com foco neste único detalhe</li>
+        </ul>
+        <div class="drill-search"><a href="https://www.youtube.com/results?search_query=fingertip+drag+drill" target="_blank">fingertip drag drill</a> · <a href="https://www.youtube.com/results?search_query=dedos+arrastando+nata%C3%A7%C3%A3o+crawl" target="_blank">dedos arrastando natação crawl</a></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ FASE 3 ════ -->
+  <div class="phase">
+    <div class="phase-hdr">
+      <div class="phase-num">03</div>
+      <div class="phase-info">
+        <div class="phase-title">Volume e Ritmo de Corrida</div>
+        <div class="phase-months">Meses 5 – 6 · 3–4 sessões/semana · 60 min</div>
+      </div>
+    </div>
+    <div class="phase-target"><span class="ico">🎯</span> <span><b>Meta:</b> 800 m contínuos de crawl · Descobrir seu ritmo aeróbico na água</span></div>
+
+    <div class="table-scroll">
+    <table class="week-table">
+      <thead><tr><th>Dia</th><th>Tipo</th><th>Série Principal</th><th>Volume</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="day-lbl">Seg</span></td>
+          <td><span class="sess-type t-tecnica">Técnica</span></td>
+          <td>Aquec 400 m · 10×50 m com 15 s de descanso (foco: contagem de braçadas por 25 m)</td>
+          <td>2.000 m</td>
+        </tr>
+        <tr>
+          <td><span class="day-lbl">Qua</span></td>
+          <td><span class="sess-type t-volume">Volume</span></td>
+          <td>Aquec 400 m · 3×400 m com 45 s de descanso · Despec 200 m</td>
+          <td>2.400 m</td>
+        </tr>
+        <tr>
+          <td><span class="day-lbl">Sex</span></td>
+          <td><span class="sess-type t-tecnica">Técnica</span></td>
+          <td>Pirâmide: 100-200-400-200-100 m com descanso proporcional</td>
+          <td>2.200 m</td>
+        </tr>
+        <tr>
+          <td><span class="day-lbl">Sáb</span></td>
+          <td><span class="sess-type t-forca">Força</span></td>
+          <td>Academia: ombros, costas, core (complementar à natação)</td>
+          <td>—</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+
+    <div class="medo-card mt-md">
+      <b>Dica desta fase:</b> Conte suas braçadas a cada 25 metros. Um iniciante faz 22-28 braçadas/25 m. Com técnica melhorando, chega a 16-20. Menos braçadas = mais eficiência = menos cansaço no triathlon.
+    </div>
+  </div>
+
+  <!-- ════ FASE 4 ════ -->
+  <div class="phase">
+    <div class="phase-hdr">
+      <div class="phase-num">04</div>
+      <div class="phase-info">
+        <div class="phase-title">Introdução às Águas Abertas</div>
+        <div class="phase-months">Meses 7 – 8 · 3 sessões piscina + 1 sessão águas abertas</div>
+      </div>
+    </div>
+    <div class="phase-target"><span class="ico">🎯</span> <span><b>Meta:</b> Primeiro nado de 200 m em água aberta · 1.200 m de crawl na piscina</span></div>
+
+    <div class="ow-box">
+      <div class="ow-hdr">
+        <span style="font-size:1.1rem">🌊</span>
+        <span class="ow-hdr-title">Protocolo de Transição para Águas Abertas</span>
+      </div>
+      <div class="ow-body">
+        <div class="ow-step">
+          <div class="ow-step-num">1</div>
+          <div class="ow-step-text"><b>Piscina aberta ou lago raso:</b> Comece em água clara com fundo visível, máximo 1,5 m de profundidade. Com um parceiro ou salva-vidas presente. 100 m de distância no máximo.</div>
+        </div>
+        <div class="ow-step">
+          <div class="ow-step-num">2</div>
+          <div class="ow-step-text"><b>Aprenda a visada (sighting):</b> A cada 6-8 braçadas, levante rapidamente a cabeça (como um jacaré) para ver onde está indo. Olhe, expire, vire para respirar normal. Treinar isto na piscina primeiro.</div>
+        </div>
+        <div class="ow-step">
+          <div class="ow-step-num">3</div>
+          <div class="ow-step-text"><b>Use boia de segurança:</b> Boia inflável laranja presa ao tornozelo. Não ajuda na propulsão, mas é um flutuador de emergência e te torna visível para barcos.</div>
+        </div>
+        <div class="ow-step">
+          <div class="ow-step-num">4</div>
+          <div class="ow-step-text"><b>Roupa de neoprene (wetsuit):</b> Experimente antes do mês 8. Aumenta muito a flutuabilidade — você ficará mais alto na água. Alivia o medo e melhora o desempenho em triathlon.</div>
+        </div>
+        <div class="ow-step">
+          <div class="ow-step-num">5</div>
+          <div class="ow-step-text"><b>Progressão de distância:</b> 100 m → 200 m → 400 m → 800 m. Nunca pule etapas. Sempre com acompanhante nos primeiros meses.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="medo-card mt-md">
+      <b>Sobre o medo de águas abertas — é normal, é gerenciável:</b><br>
+      O medo em água aberta é 90% o desconhecido (não enxergar o fundo, não sentir o limite da piscina). Estratégia comprovada: (1) entre pela beira, fique de pé por 2 minutos respirando devagar antes de nadar; (2) foque num ponto de referência à frente — não olhe embaixo; (3) se der ansiedade, vire de costas, flutue 10 segundos, respire, recomece; (4) progrida distância MUITO gradualmente — cada novo marco constrói confiança real.
+    </div>
+
+    <div class="section-label mt-lg">Exercício de Visada (Sighting)</div>
+    <div class="drills-grid">
+      <div class="drill-card">
+        <div class="drill-name">Exercício 09</div>
+        <div class="drill-title">Visada de Jacaré</div>
+        <div class="drill-visual">Levante só os olhos acima d'água enquanto ainda está de cara para baixo. Olhos saem, boca não. Depois expire e gire para respirar normalmente.</div>
+        <ul class="drill-steps">
+          <li data-n="1">Treine na piscina: olhe para o fim da raia a cada 8 braçadas</li>
+          <li data-n="2">Levante só as sobrancelhas acima da água — mínimo</li>
+          <li data-n="3">Expire neste momento (pela boca submersa)</li>
+          <li data-n="4">Gire a cabeça para o lado para inspirar normalmente</li>
+          <li data-n="5">Continue nadando. Não pare — o sighting deve fluir no ritmo</li>
+        </ul>
+        <div class="drill-search"><a href="https://www.youtube.com/results?search_query=open+water+sighting+drill" target="_blank">open water sighting drill</a> · <a href="https://www.youtube.com/results?search_query=visada+nata%C3%A7%C3%A3o+%C3%A1guas+abertas" target="_blank">visada natação águas abertas</a></div>
+      </div>
+      <div class="drill-card">
+        <div class="drill-name">Exercício 10</div>
+        <div class="drill-title">Nado em Rascunho (Drafting)</div>
+        <div class="drill-visual">Nadar logo atrás ou ao lado de outro atleta economiza até 25% de energia. A turbulência da frente te "puxa". Essencial para triathlon em grupo.</div>
+        <ul class="drill-steps">
+          <li data-n="1">Nadar 50 cm atrás dos pés de alguém mais rápido</li>
+          <li data-n="2">Fique na "bolha" — posição logo atrás do quadril</li>
+          <li data-n="3">Alterne: 2 min na frente, 2 min atrás, compare o esforço</li>
+          <li data-n="4">Não toque o outro nadador — ajuste sua velocidade</li>
+          <li data-n="5">Treine em grupo na piscina antes de fazer em água aberta</li>
+        </ul>
+        <div class="drill-search"><a href="https://www.youtube.com/results?search_query=swimming+drafting+triathlon" target="_blank">swimming drafting triathlon</a> · <a href="https://www.youtube.com/results?search_query=rascunho+nata%C3%A7%C3%A3o+triathlon" target="_blank">rascunho natação triathlon</a></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ FASE 5 ════ -->
+  <div class="phase">
+    <div class="phase-hdr">
+      <div class="phase-num">05</div>
+      <div class="phase-info">
+        <div class="phase-title">Específico para Triathlon</div>
+        <div class="phase-months">Meses 9 – 10 · 3–4 sessões/semana</div>
+      </div>
+    </div>
+    <div class="phase-target"><span class="ico">🎯</span> <span><b>Meta:</b> 1.500 m contínuos na piscina · Completar nado em traje de triathlon</span></div>
+
+    <div class="table-scroll">
+    <table class="week-table">
+      <thead><tr><th>Dia</th><th>Tipo</th><th>Série Principal</th><th>Volume</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="day-lbl">Ter</span></td>
+          <td><span class="sess-type t-tecnica">Técnica</span></td>
+          <td>Partida de triathlon (de pé, mergulho) · 4×200 m em ritmo de prova com 30 s desc</td>
+          <td>2.500 m</td>
+        </tr>
+        <tr>
+          <td><span class="day-lbl">Qui</span></td>
+          <td><span class="sess-type t-volume">Volume</span></td>
+          <td>1×1500 m contínuo com visada a cada 8 braçadas — simular percurso de prova</td>
+          <td>3.000 m</td>
+        </tr>
+        <tr>
+          <td><span class="day-lbl">Sáb</span></td>
+          <td><span class="sess-type t-volume">Brick</span></td>
+          <td>400 m de nado em piscina (com roupa de tri) → saída rápida → 20 min de bike</td>
+          <td>—</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+
+    <div class="section-label mt-md">Técnicas de Prova</div>
+    <div class="drills-grid">
+      <div class="drill-card">
+        <div class="drill-name">Partida de Prova</div>
+        <div class="drill-title">Como Sair na Largada</div>
+        <div class="drill-visual">A largada em triathlon é caótica. Posicione-se nas laterais ou atrás para evitar o aglomerado. Comece um pouco mais devagar — você vai poupar energia para o restante.</div>
+        <ul class="drill-steps">
+          <li data-n="1">Posicione-se nas laterais da largada na sua primeira prova</li>
+          <li data-n="2">Entre na água antes do sinal e molhe rosto/pescoço se frio</li>
+          <li data-n="3">Nos primeiros 100 m: ritmo controlado, não sprint</li>
+          <li data-n="4">Respire nos dois lados para ver outros nadadores</li>
+          <li data-n="5">Estabeleça seu ritmo nos 200 m — só então acelere</li>
+        </ul>
+        <div class="drill-search"><a href="https://www.youtube.com/results?search_query=triathlon+swim+start+strategy" target="_blank">triathlon swim start strategy</a> · <a href="https://www.youtube.com/results?search_query=largada+nata%C3%A7%C3%A3o+triathlon" target="_blank">largada natação triathlon</a></div>
+      </div>
+      <div class="drill-card">
+        <div class="drill-name">Saída da Água</div>
+        <div class="drill-title">Transição Nado → Bike</div>
+        <div class="drill-visual">Levante cedo ao entrar em água rasa — a 20 m da beira. Retire o bonê e óculos ainda na água. Na T1, a cabeça pode girar por mudança de posição — normal.</div>
+        <ul class="drill-steps">
+          <li data-n="1">Quando sentir o fundo: levante e corra (não nade mais)</li>
+          <li data-n="2">Retire cap e óculos na água para ganhar tempo</li>
+          <li data-n="3">Na T1 (transição): respire fundo — tontura é normal</li>
+          <li data-n="4">Calce os sapatos de bike devagar — a pressa gasta tempo</li>
+          <li data-n="5">Treine esta transição em treinos brick</li>
+        </ul>
+        <div class="drill-search"><a href="https://www.youtube.com/results?search_query=triathlon+T1+transition" target="_blank">triathlon T1 transition</a> · <a href="https://www.youtube.com/results?search_query=transi%C3%A7%C3%A3o+T1+triathlon" target="_blank">transição T1 triathlon</a></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ FASE 6 ════ -->
+  <div class="phase">
+    <div class="phase-hdr">
+      <div class="phase-num">06</div>
+      <div class="phase-info">
+        <div class="phase-title">Polimento e Prova</div>
+        <div class="phase-months">Meses 11 – 12 · Reduzir volume · Manter intensidade</div>
+      </div>
+    </div>
+    <div class="phase-target"><span class="ico">🎯</span> <span><b>Meta:</b> Completar a etapa de natação da sua primeira prova de triathlon</span></div>
+
+    <div class="table-scroll">
+    <table class="week-table">
+      <thead><tr><th>Semana</th><th>Foco</th><th>Ação</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="day-lbl">Sem -4</span></td>
+          <td><span class="sess-type t-volume">Volume máx</span></td>
+          <td>Últimas séries longas · 1×1.800 m piscina · 1 sessão águas abertas 800 m</td>
+        </tr>
+        <tr>
+          <td><span class="day-lbl">Sem -3</span></td>
+          <td><span class="sess-type t-tecnica">Taper início</span></td>
+          <td>Reduza 25% do volume · Mantenha intensidade · Confirme roupa de neoprene</td>
+        </tr>
+        <tr>
+          <td><span class="day-lbl">Sem -2</span></td>
+          <td><span class="sess-type t-tecnica">Taper</span></td>
+          <td>Reduza 40% · 2 sessões curtas (800 m cada) · Revise rota da prova</td>
+        </tr>
+        <tr>
+          <td><span class="day-lbl">Sem -1</span></td>
+          <td><span class="sess-type t-descanso">Pré-prova</span></td>
+          <td>1 nado leve de 400 m na quarta-feira · Nada na sexta/sábado · DESCANSO</td>
+        </tr>
+        <tr>
+          <td><span class="day-lbl">DIA DA PROVA</span></td>
+          <td><span class="sess-type t-volume">Prova!</span></td>
+          <td>Entre na água 15 min antes para aquecer · Ritmo conversacional nos primeiros 300 m</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <!-- ════ FORÇA COMPLEMENTAR ════ -->
+  <div class="tech-section" style="margin-top:2.5rem">
+    <div class="section-label">Força na Academia para Natação</div>
+    <div class="section-title">Exercícios que Melhoram o Crawl</div>
+    <div class="drills-grid">
+      <div class="drill-card">
+        <div class="drill-name">Força 01</div>
+        <div class="drill-title">Remada com Elástico / Remada Sentada</div>
+        <div class="drill-visual">Replica o movimento de puxada. Fortalece dorsal, romboides e bíceps — os músculos principais da braçada de crawl.</div>
+        <ul class="drill-steps">
+          <li data-n="•">3×12 com elástico ancorado na frente, cotovelo puxando para trás</li>
+          <li data-n="•">Simule o cotovelo alto da captura no começo do movimento</li>
+        </ul>
+      </div>
+      <div class="drill-card">
+        <div class="drill-name">Força 02</div>
+        <div class="drill-title">Prancha Lateral + Rotação</div>
+        <div class="drill-visual">Treina a rotação do core — o movimento central do crawl. Mais específico para natação do que o agachamento.</div>
+        <ul class="drill-steps">
+          <li data-n="•">Prancha lateral 30 s cada lado + rotação do tronco 10x</li>
+          <li data-n="•">4 séries. Mantenha quadril elevado durante a rotação</li>
+        </ul>
+      </div>
+      <div class="drill-card">
+        <div class="drill-name">Força 03</div>
+        <div class="drill-title">Puxada na Frente + Puxada Tríceps</div>
+        <div class="drill-visual">Puxada fortalece a captura. Extensão de tríceps fortalece a fase de empurrada (fim da braçada) — onde se perde mais propulsão.</div>
+        <ul class="drill-steps">
+          <li data-n="•">Puxada na frente: 3×10 com pegada um pouco mais larga que ombros</li>
+          <li data-n="•">Extensão tríceps cabos: 3×15 com cotovelo fixo</li>
+        </ul>
+      </div>
+      <div class="drill-card">
+        <div class="drill-name">Força 04</div>
+        <div class="drill-title">Elevação de Ombros (Rotador)</div>
+        <div class="drill-visual">Com 64 anos, o manguito rotador precisa de atenção especial — é a lesão mais comum em nadadores. Previna com exercícios específicos.</div>
+        <ul class="drill-steps">
+          <li data-n="•">Rotação externa com elástico: 3×15 cada braço</li>
+          <li data-n="•">Elevação lateral com halteres leves: 3×12</li>
+          <li data-n="•">Faça ANTES de nadar como aquecimento</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- DICA DE OURO -->
+  <div class="medo-card mt-lg" style="border-left-color:var(--shimmer);background:var(--foam)">
+    <b style="color:var(--lane)">Total Immersion — o método mais indicado para você:</b><br>
+    O método "Total Immersion" (TI) ensina natação como arte de se mover pela água com o mínimo de esforço. Perfeito para adultos que aprendem crawl depois dos 50. Pesquise no YouTube: <a href="https://www.youtube.com/results?search_query=Total+Immersion+freestyle" target="_blank" style="color:var(--lane);font-weight:700">"Total Immersion freestyle"</a> ou <a href="https://www.youtube.com/results?search_query=Terry+Laughlin+swimming" target="_blank" style="color:var(--lane);font-weight:700">"Terry Laughlin swimming"</a>. Os vídeos do canal oficial TI Swimming são os melhores recursos gratuitos disponíveis.
+  </div>
+
+</div><!-- /wrap -->
+
+<footer>
+  <div style="max-width:700px;margin:0 auto">
+    <b>Plano elaborado com base no perfil de Luiz Silva, 64 anos.</b> Frequência cardíaca máxima estimada: 156 bpm. Mantenha as sessões na Zona 2 (FC 110–130 bpm) na piscina durante os 4 primeiros meses. · Sempre aqueça o manguito rotador antes de nadar. · Hidrate-se mesmo na água — não sente a transpiração, mas ela existe. · Sessões com monitor de coração waterproof (ex: Garmin HRM-Swim) são ideais para controle de carga.
+  </div>
+</footer>
+
+</body>
+</html>
