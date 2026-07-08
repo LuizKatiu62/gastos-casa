@@ -204,15 +204,25 @@ body{padding-top:45px}
 .tp-photo-modal-close{border:1px solid #bfdbfe;background:#fff;color:#1e3a8a;border-radius:999px;padding:.35rem .7rem;font-size:.82rem;font-weight:900;cursor:pointer;font-family:inherit}
 .tp-photo-modal-img{display:block;width:100%;height:auto;max-height:78vh;object-fit:contain;background:#eff6ff}
 
-.coach-sheet-wrap{overflow:auto;border:1px solid var(--border);border-radius:12px;background:#fff}
-.coach-sheet-table{width:100%;min-width:760px;border-collapse:separate;border-spacing:0}
-.coach-sheet-table thead th{font-size:.64rem;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);background:#f8fafc;padding:.55rem .5rem;border-bottom:1px solid var(--border);text-align:left}
-.coach-sheet-table tbody td{padding:.55rem .5rem;border-bottom:1px solid #eef2f7;vertical-align:top;font-size:.73rem;color:var(--text)}
-.coach-sheet-table tbody tr:last-child td{border-bottom:none}
-.coach-sheet-day{font-size:.64rem;font-weight:900;text-transform:uppercase;letter-spacing:.45px;color:var(--blue)}
-.coach-cell-main{font-weight:700;color:var(--text);line-height:1.4}
-.coach-cell-note{font-size:.64rem;color:var(--muted);line-height:1.4;margin-top:2px}
-.coach-empty{color:#94a3b8;font-size:.68rem}
+/* Coach day cards */
+.coach-day-block{border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:.55rem}
+.coach-day-hdr{display:flex;align-items:center;justify-content:space-between;padding:.48rem .75rem;background:#f8fafc;border-bottom:1px solid var(--border)}
+@media(prefers-color-scheme:dark){.coach-day-hdr{background:#1e293b}}
+.coach-day-lbl{font-size:.72rem;font-weight:900;text-transform:uppercase;letter-spacing:.5px;color:var(--blue)}
+.coach-day-done-btn{font-size:.7rem;font-weight:700;padding:.26rem .62rem;border-radius:20px;border:1.5px solid var(--border);background:var(--bg);color:var(--muted);cursor:pointer;font-family:inherit;transition:all .15s}
+.coach-day-done-btn.on{background:#10b981;border-color:#10b981;color:#fff}
+.coach-sport-card{display:flex;align-items:flex-start;gap:.6rem;padding:.58rem .75rem;border-top:1px solid var(--border);border-left:4px solid transparent}
+.coach-sport-card:first-child{border-top:none}
+.sport-swim{border-left-color:#0ea5e9}
+.sport-bike{border-left-color:#f97316}
+.sport-run{border-left-color:#10b981}
+.sport-gym{border-left-color:#8b5cf6}
+.sport-rest{border-left-color:#94a3b8;background:#f9fafb}
+@media(prefers-color-scheme:dark){.sport-rest{background:#1e293b}}
+.coach-sport-ico{font-size:.95rem;flex-shrink:0;margin-top:.1rem;line-height:1}
+.coach-sport-body{flex:1;min-width:0}
+.coach-sport-title{font-size:.78rem;font-weight:700;color:var(--text);line-height:1.3}
+.coach-sport-note{font-size:.68rem;color:var(--muted);margin-top:.2rem;line-height:1.5}
 .coach-status-btn{border:1px solid #bfdbfe;background:#eff6ff;color:#1e40af;border-radius:999px;padding:.22rem .6rem;font-size:.62rem;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap}
 .coach-status-btn.on{border-color:#22c55e;background:#ecfdf5;color:#166534}
 
@@ -425,7 +435,7 @@ body{padding-top:45px}
   <div>
     <h1>🏃 Treinos · Luiz Silva</h1>
     <p id="hSub">Carregando…</p>
-    <div id="ver-badge" style="font-size:.55rem;color:rgba(255,255,255,.55);font-family:monospace;margin-top:.1rem">v2026-07-07-11</div>
+    <div id="ver-badge" style="font-size:.55rem;color:rgba(255,255,255,.55);font-family:monospace;margin-top:.1rem">v2026-07-08-01</div>
   </div>
   <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.3rem">
     <button class="btn-refresh" id="btn-garmin" onclick="syncGarmin()">⚡ Sync Garmin</button>
@@ -460,15 +470,9 @@ body{padding-top:45px}
     <!-- ══ COACH ══ -->
     <div class="sec" id="sec-coach">
       <div class="card">
-        <div class="card-title">📋 Planilha Semanal — Coach Profissional</div>
-        <div class="tp-types-note">Plano semanal com <b>Corrida</b>, <b>Natação</b>, <b>Bike</b> e <b>Academia</b>, ajustado automaticamente pela sua performance recente do Garmin.</div>
-        <div id="coach-plan-levels" class="tp-levels" style="margin-top:.55rem">
-          <button class="sf-btn sf-on" onclick="setPlanoTipo('tri_iniciante',this)">Tri Iniciante</button>
-          <button class="sf-btn" onclick="setPlanoTipo('tri_intermediario',this)">Tri Intermediário</button>
-          <button class="sf-btn" onclick="setPlanoTipo('tri_avancado',this)">Tri Avançado</button>
-          <button class="sf-btn" onclick="setPlanoTipo('tri_regeneracao',this)">Semana Regenerativa</button>
-        </div>
-        <div class="tp-config" style="margin-top:.6rem">
+        <div class="card-title">📋 Planilha Semanal</div>
+        <!-- Objetivo (define tipo de plano) -->
+        <div class="tp-config" style="margin-top:.55rem">
           <select id="coach-objective" class="tp-select" onchange="setCoachObjective(this.value)">
             <option value="triathlon">🏊🚴🏃 Triathlon</option>
             <option value="run10k">🏃 10 km</option>
@@ -477,32 +481,25 @@ body{padding-top:45px}
             <option value="ultra">⛰️ Ultra Maratona</option>
           </select>
           <select id="coach-target" class="tp-select" onchange="setTriTarget(this.value)">
-            <option value="sprint">🎯 Tri Sprint</option>
-            <option value="olimpico">🎯 Tri Olímpico</option>
-            <option value="703">🎯 Tri 70.3</option>
+            <option value="sprint">Sprint</option>
+            <option value="olimpico">Olímpico</option>
+            <option value="703">70.3</option>
           </select>
           <select id="coach-cycle" class="tp-select" onchange="setTriCycle(Number(this.value))">
-            <option value="8">8 semanas</option>
-            <option value="12">12 semanas</option>
+            <option value="8">8 sem</option>
+            <option value="12">12 sem</option>
           </select>
-          <button class="tp-apply" onclick="restartTriCycle()">Reiniciar ciclo</button>
+          <button class="tp-apply" onclick="restartTriCycle()">↺ Reiniciar</button>
         </div>
-        <div id="coach-sheet-meta" class="tp-meta" style="margin-top:.55rem"></div>
-        <div class="coach-sheet-wrap">
-          <table class="coach-sheet-table" aria-label="Planilha semanal de treinos">
-            <thead>
-              <tr>
-                <th>Dia</th>
-                <th>Corrida</th>
-                <th>Natação</th>
-                <th>Bike</th>
-                <th>Academia</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody id="coach-sheet-body"></tbody>
-          </table>
+        <!-- Nível de intensidade (secundário) -->
+        <div id="coach-plan-levels" class="tp-levels" style="margin-top:.45rem">
+          <button class="sf-btn sf-on" onclick="setPlanoTipo('tri_iniciante',this)">Iniciante</button>
+          <button class="sf-btn" onclick="setPlanoTipo('tri_intermediario',this)">Intermediário</button>
+          <button class="sf-btn" onclick="setPlanoTipo('tri_avancado',this)">Avançado</button>
+          <button class="sf-btn" onclick="setPlanoTipo('tri_regeneracao',this)">↻ Regenerar</button>
         </div>
+        <div id="coach-sheet-meta" class="tp-meta" style="margin-top:.5rem"></div>
+        <div id="coach-week-cards" style="margin-top:.6rem"></div>
         <div id="coach-gym-guide"></div>
       </div>
     </div>
@@ -815,7 +812,7 @@ window.addEventListener('DOMContentLoaded', () => {
 const FB_DB   = 'https://gastos-casa-7f431-default-rtdb.firebaseio.com';
 const FB_KEY  = 'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU';
 const FB_PATH = 'treinos/luiz';
-const APP_VERSION = '2026-07-07-11';
+const APP_VERSION = '2026-07-08-01';
 const SNAPSHOT_KEY = 'treinos_last_snapshot_v1';
 const TRAINING_KICKOFF_DATE = '2026-07-07';
 let charts = {}, curTab = 'treinos', DATA = null, curEsporte = 'todos';
@@ -2943,6 +2940,14 @@ function saveRaceGoal(){
     curEvento = 'maratona';
     localStorage.setItem('coachEvento', curEvento);
   }
+  // Auto-sync coach objective from race distance
+  const _objMap = {10:'run10k', 21.1:'half', 42.2:'marathon'};
+  const _newObj = _objMap[raceGoal.dist];
+  if(_newObj && _newObj !== triCfg.objective){
+    triCfg.objective = _newObj;
+    saveTriCfg();
+    syncCoachObjectiveUi();
+  }
   initEventoBtn();
   raceGoalExpanded = false;
   updateRaceGoalUI();
@@ -3047,9 +3052,66 @@ function parseCoachPlanRow(item){
   return row;
 }
 
+// ── coach card helpers ──
+function splitNoteForSports(note){
+  const s = {};
+  const nat = note.match(/Nata[cç][aã]o:\s*([\s\S]*?)(?=(?:For[cç]a:|Bike:|Brick:|$))/i);
+  const gym = note.match(/For[cç]a:\s*([\s\S]*?)(?=(?:Nata[cç][aã]o:|Bike:|Brick:|$))/i);
+  const bike= note.match(/Bike:\s*([\s\S]*?)(?=(?:Nata[cç][aã]o:|For[cç]a:|Brick:|Transition[^.]*\.|$))/i);
+  const brk = note.match(/(?:Transition[^.]*\.\s*)?Brick:\s*([\s\S]*?)$/i);
+  if(nat) s.swim = nat[1].trim().replace(/\.?\s*$/,'');
+  if(gym) s.gym  = gym[1].trim().replace(/\.?\s*$/,'');
+  if(bike) s.bike= bike[1].trim().replace(/\.?\s*$/,'');
+  if(brk) s.run  = brk[1].trim();
+  return s;
+}
+
+function renderSportCard(emoji, css, title, note){
+  return `<div class="coach-sport-card ${css}">
+    <span class="coach-sport-ico">${emoji}</span>
+    <div class="coach-sport-body">
+      <div class="coach-sport-title">${title}</div>
+      ${note?`<div class="coach-sport-note">${note}</div>`:''}
+    </div>
+  </div>`;
+}
+
+function buildDayCards(p, i, done){
+  const isDone = !!done[i];
+  const treino = String(p.treino||'');
+  const note   = String(p.note||'');
+  const btn = `<button class="coach-day-done-btn ${isDone?'on':''}" onclick="togglePlanoDone(${i})">${isDone?'✓ Feito':'Confirmar'}</button>`;
+  if(/descanso/i.test(treino)){
+    return `<div class="coach-day-block">
+      <div class="coach-day-hdr"><span class="coach-day-lbl">${p.day}</span>${btn}</div>
+      ${renderSportCard('🛌','sport-rest','Descanso total',note)}
+    </div>`;
+  }
+  const parts = treino.split('+').map(s=>s.trim()).filter(Boolean);
+  const ns = splitNoteForSports(note);
+  const multi = Object.keys(ns).length > 0;
+  const cards = parts.map(part=>{
+    const pl = part.toLowerCase();
+    const isSWIM = /natação|natacao|técnica|tecnica|endurance|adaptação|adaptacao/i.test(pl);
+    const isBIKE = /bike|cross/i.test(pl);
+    const isRUN  = !isBIKE && /corrida|brick|rodagem|qualidade|longo/i.test(pl);
+    const isGYM  = /academia|força|forca/i.test(pl);
+    const clean  = part.replace(/[\u{1F3CA}\u{1F6B4}\u{1F3C3}\u{1F4AA}🏃🚻]/gu,'').replace(/[🏊🚴🏃💪🎯⚡📏]/g,'').trim();
+    if(isSWIM) return renderSportCard('🏊','sport-swim',clean, multi?(ns.swim||note):note);
+    if(isBIKE) return renderSportCard('🚴','sport-bike',clean, multi?(ns.bike||note):note);
+    if(isRUN)  return renderSportCard('🏃','sport-run', clean, multi?(ns.run||note):note);
+    if(isGYM)  return renderSportCard('💪','sport-gym', clean, multi?(ns.gym||''):note);
+    return renderSportCard('🏃','sport-run',clean,note);
+  });
+  return `<div class="coach-day-block">
+    <div class="coach-day-hdr"><span class="coach-day-lbl">${p.day}</span>${btn}</div>
+    ${cards.join('')}
+  </div>`;
+}
+
 function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
-  const body = document.getElementById('coach-sheet-body');
-  if(!body) return;
+  const cardsEl = document.getElementById('coach-week-cards');
+  if(!cardsEl) return;
 
   const wk = ensureWeeklyPlano(curPlanoTipo);
   const tipoAtual = wk.data.selectedType || curPlanoTipo || 'tri_intermediario';
@@ -3082,18 +3144,7 @@ function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
     metaEl.innerHTML = `Semana ${wk.weekKey} · ciclo ${metrics.week}/${metrics.totalWeeks} · ${phaseLabel}${metrics.deload?' · deload':''} · alvo ${metrics.target} · concluído ${doneCount}/${plan.length}`;
   }
 
-  body.innerHTML = plan.map((p,i)=>{
-    const cols = parseCoachPlanRow(p);
-    const cell = (v)=>v ? `<div class="coach-cell-main">${v}</div>` : `<span class="coach-empty">—</span>`;
-    return `<tr>
-      <td class="coach-sheet-day">${p.day}</td>
-      <td>${cell(cols.corrida)}</td>
-      <td>${cell(cols.natacao)}</td>
-      <td>${cell(cols.bike)}</td>
-      <td>${cell(cols.academia)}</td>
-      <td><button class="coach-status-btn ${done[i]?'on':''}" onclick="togglePlanoDone(${i})">${done[i]?'Feito':'Confirmar'}</button></td>
-    </tr>`;
-  }).join('');
+  cardsEl.innerHTML = plan.map((p,i) => buildDayCards(p, i, done)).join('');
 
   const gymWrap = document.getElementById('coach-gym-guide');
   if(gymWrap){
