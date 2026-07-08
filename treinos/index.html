@@ -425,7 +425,7 @@ body{padding-top:45px}
   <div>
     <h1>🏃 Treinos · Luiz Silva</h1>
     <p id="hSub">Carregando…</p>
-    <div style="font-size:.55rem;color:rgba(255,255,255,.55);font-family:monospace;margin-top:.1rem">v<span id="ver-badge">—</span></div>
+    <div id="ver-badge" style="font-size:.55rem;color:rgba(255,255,255,.55);font-family:monospace;margin-top:.1rem">v2026-07-07-10</div>
   </div>
   <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.3rem">
     <button class="btn-refresh" id="btn-garmin" onclick="syncGarmin()">⚡ Sync Garmin</button>
@@ -816,7 +816,6 @@ const FB_DB   = 'https://gastos-casa-7f431-default-rtdb.firebaseio.com';
 const FB_KEY  = 'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU';
 const FB_PATH = 'treinos/luiz';
 const APP_VERSION = '2026-07-07-10';
-document.addEventListener('DOMContentLoaded', function(){ var el=document.getElementById('ver-badge'); if(el) el.textContent=APP_VERSION; });
 const SNAPSHOT_KEY = 'treinos_last_snapshot_v1';
 const TRAINING_KICKOFF_DATE = '2026-07-07';
 let charts = {}, curTab = 'treinos', DATA = null, curEsporte = 'todos';
