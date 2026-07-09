@@ -833,7 +833,7 @@ window.addEventListener('DOMContentLoaded', () => {
 const FB_DB   = 'https://gastos-casa-7f431-default-rtdb.firebaseio.com';
 const FB_KEY  = 'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU';
 const FB_PATH = 'treinos/luiz';
-const APP_VERSION = '2026-07-09-04';
+const APP_VERSION = '2026-07-09-05';
 const SNAPSHOT_KEY = 'treinos_last_snapshot_v1';
 const TRAINING_KICKOFF_DATE = '2026-07-07';
 let charts = {}, curTab = 'treinos', DATA = null, curEsporte = 'todos';
@@ -4985,11 +4985,16 @@ bootstrapApp();
 // Temporary hotfix: disable Service Worker to avoid stale/offline cache lockups.
 if('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.getRegistrations()
-      .then(regs => Promise.all(regs.map(r => r.unregister())))
-      .then(() => console.log('✓ Service Worker disabled'))
-      .catch(err => console.warn('SW disable failed:', err));
+    navigator.serviceWorker.register('./sw.js').then(reg => {
+      reg.addEventListener('updatefound', () => {
+        const sw = reg.installing;
+        sw.addEventListener('statechange', () => {
+          if(sw.state === 'activated') location.reload();
+        });
+      });
+    }).catch(e => console.warn('SW:', e));
   });
+  navigator.serviceWorker.addEventListener('controllerchange', () => location.reload());
 }
 </script>
 </body>
