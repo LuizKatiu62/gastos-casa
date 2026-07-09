@@ -833,7 +833,7 @@ window.addEventListener('DOMContentLoaded', () => {
 const FB_DB   = 'https://gastos-casa-7f431-default-rtdb.firebaseio.com';
 const FB_KEY  = 'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU';
 const FB_PATH = 'treinos/luiz';
-const APP_VERSION = '2026-07-09-05';
+const APP_VERSION = '2026-07-09-06';
 const SNAPSHOT_KEY = 'treinos_last_snapshot_v1';
 const TRAINING_KICKOFF_DATE = '2026-07-07';
 let charts = {}, curTab = 'treinos', DATA = null, curEsporte = 'todos';
@@ -3641,14 +3641,32 @@ function renderTreinos(ativ,meta,sem){
       <div style="font-size:.8rem;font-weight:600;color:var(--muted)">${r.val}</div>
     </div>`).join('');
 
+  // Lista individual de atividades
+  const icoStyle=e=>{const es=e||'corrida';return es==='bike'?'background:linear-gradient(135deg,#f97316,#d97706)':es==='natacao'?'background:linear-gradient(135deg,#3b82f6,#06b6d4)':es==='academia'?'background:linear-gradient(135deg,#7c3aed,#a855f7)':es==='duathlon'||es==='multisport'?'background:linear-gradient(135deg,#f59e0b,#b45309)':es==='triathlon'?'background:linear-gradient(135deg,#0ea5e9,#6366f1)':'background:linear-gradient(135deg,var(--blue),var(--green))';};
+  const listaHtml=periodFiltered.slice(0,30).map(a=>`
+    <div class="run" style="${a._manual?'border-left:3px solid var(--blue);padding-left:.5rem':''}">
+      <div class="run-ico" style="${icoStyle(getEsporte(a))}">${TIPO_ICO[a.tipo]||'🏃'}</div>
+      <div class="run-info">
+        <div class="run-name">${dow(a.data)}, ${fd(a.data)}<span class="badge b-${a.tipo||'facil'}">${TIPO_LBL[a.tipo]||'Corrida'}</span>${a._manual?'<span class="badge" style="background:#dbeafe;color:#1e40af;margin-left:.25rem">Manual</span>':''}</div>
+        <div class="run-meta">${a.notas?a.notas+' · ':''}${a.duracao||''}${a.fcMed?' · ❤️ '+a.fcMed+' bpm':''}${a.calorias?' · 🔥 '+a.calorias+' kcal':''}</div>
+      </div>
+      <div class="run-right" style="display:flex;flex-direction:column;align-items:flex-end;gap:.25rem">
+        <div class="run-km">${a.distancia>0?a.distancia+' km':a.duracao}</div>
+        <div class="run-pace">${a.pace&&a.esporte!=='academia'?a.pace+' /km':''}</div>
+        ${a._manual?`<button onclick="excluirManual('${a.id}')" style="font-size:.6rem;padding:.15rem .4rem;border:1px solid #fca5a5;background:#fef2f2;color:#dc2626;border-radius:5px;cursor:pointer">🗑</button>`:''}
+      </div>
+    </div>`).join('');
+
   document.getElementById('run-list').innerHTML=`
     <div style="padding:.1rem 0">
       ${sportRowsHtml}
       ${healthData.length?`<div style="margin-top:.1rem">${healthRowsHtml}</div>`:''}
-      <div style="padding-top:.55rem;text-align:right">
-        <button onclick="abrirManual()" style="background:none;border:none;color:var(--muted);font-size:.72rem;cursor:pointer;font-weight:600">➕ Adicionar treino manual</button>
-      </div>
-    </div>`;
+    </div>
+    <div style="margin-top:.75rem;display:flex;align-items:center;justify-content:space-between">
+      <span style="font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)">Últimos Treinos</span>
+      <button onclick="abrirManual()" style="background:var(--blue);color:#fff;border:none;border-radius:8px;padding:.28rem .65rem;font-size:.72rem;font-weight:700;cursor:pointer">➕ Manual</button>
+    </div>
+    <div class="run-list" style="margin-top:.4rem">${listaHtml||'<div style="color:var(--muted);font-size:.8rem;padding:.5rem 0">Nenhuma atividade no período</div>'}</div>`;
 
   renderCoachSemanal();
 }
