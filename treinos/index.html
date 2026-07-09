@@ -592,6 +592,10 @@ body{padding-top:45px}
       <div class="div-label">Últimos <span class="period-note">180 dias</span></div>
       <div id="t-stats" class="sgrid sg3" style="margin-bottom:.75rem"></div>
       <div class="card">
+        <div class="card-title">📊 Resumo do Período</div>
+        <div id="run-list"></div>
+      </div>
+      <div class="card">
         <div class="card-title">📊 Volume por Semana (km)</div>
         <div class="ch" style="height:200px"><canvas id="cVol"></canvas></div>
         <div class="ch-sub" id="vol-sub"></div>
@@ -600,10 +604,6 @@ body{padding-top:45px}
         <div class="card-title">📅 Frequência Semanal (treinos)</div>
         <div class="ch" style="height:165px"><canvas id="cFreq"></canvas></div>
         <div class="ch-sub" id="freq-sub"></div>
-      </div>
-      <div class="card">
-        <div class="card-title">📊 Resumo do Período</div>
-        <div id="run-list"></div>
       </div>
     </div>
 
@@ -833,7 +833,7 @@ window.addEventListener('DOMContentLoaded', () => {
 const FB_DB   = 'https://gastos-casa-7f431-default-rtdb.firebaseio.com';
 const FB_KEY  = 'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU';
 const FB_PATH = 'treinos/luiz';
-const APP_VERSION = '2026-07-09-03';
+const APP_VERSION = '2026-07-09-04';
 const SNAPSHOT_KEY = 'treinos_last_snapshot_v1';
 const TRAINING_KICKOFF_DATE = '2026-07-07';
 let charts = {}, curTab = 'treinos', DATA = null, curEsporte = 'todos';
