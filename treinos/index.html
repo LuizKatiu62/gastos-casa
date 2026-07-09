@@ -836,7 +836,7 @@ window.addEventListener('DOMContentLoaded', () => {
 const FB_DB   = 'https://gastos-casa-7f431-default-rtdb.firebaseio.com';
 const FB_KEY  = 'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU';
 const FB_PATH = 'treinos/luiz';
-const APP_VERSION = '2026-07-09-01';
+const APP_VERSION = '2026-07-09-02';
 const SNAPSHOT_KEY = 'treinos_last_snapshot_v1';
 const TRAINING_KICKOFF_DATE = '2026-07-07';
 let charts = {}, curTab = 'treinos', DATA = null, curEsporte = 'todos';
@@ -1233,17 +1233,22 @@ function hideAddGymForm(){
 function addCustomGymItem(){
   const dateIso = (document.getElementById('add-gym-date')||{}).value || localISODate();
   const sessionId = (document.getElementById('add-gym-session')||{}).value || 'musculacao';
-  const lblMap = {musculacao:'Musculação', core:'Core', mobilidade:'Mobilidade'};
-  const sessionLabel = lblMap[sessionId] || sessionId;
+  const descExtra = ((document.getElementById('add-gym-desc')||{}).value||'').trim();
+  const lblMap = {musculacao:'Musculação', core:'Core', mobilidade:'Mobilidade', funcional:'Funcional', piscina:'Natação — Piscina', livre:'Livre'};
+  const sessionLabel = descExtra || lblMap[sessionId] || sessionId;
   const d = new Date(dateIso+'T12:00:00');
   const day = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][d.getDay()];
   const time = motraTimeForDay(day);
-  const body = gymSessionMotraText(sessionId) || sessionLabel;
+  const body = descExtra ? descExtra : (gymSessionMotraText(sessionId) || sessionLabel);
   const dayPayload = `Treino de Academia\n${sessionLabel}\n\nDia ${day} · ${dateIso} · ${time}\n\n${body}`;
   if(!motraState.customItems) motraState.customItems = [];
   motraState.customItems.push({sessionLabel, sessionId, dateIso, day, time, dayPayload, launched:false, custom:true, id: dateIso+'__'+sessionId+'__'+Date.now()});
   saveMotraState();
   hideAddGymForm();
+  const dateEl = document.getElementById('add-gym-date');
+  const descEl = document.getElementById('add-gym-desc');
+  if(dateEl) dateEl.value = '';
+  if(descEl) descEl.value = '';
   refreshCoachFromData();
 }
 function removeCustomGymItem(idx){
@@ -3148,49 +3153,82 @@ function renderSportCard(emoji, css, title, note){
   </div>`;
 }
 
-function buildDayCards(p, i, done, isCustom){
+function buildDayCards(p, i, done, isCustom, extras){
   const isDone = !!done[i];
   const treino = String(p.treino||'');
   const note   = String(p.note||'');
-  const editBtn = `<button class="coach-day-done-btn" style="margin-left:.3rem;font-size:.62rem" onclick="toggleDayEdit(${i})" title="Editar/adicionar treino">✏️</button>`;
+  const extraList = Array.isArray(extras) ? extras : [];
+
+  const editBtn = `<button class="coach-day-done-btn" style="margin-left:.3rem;font-size:.62rem" onclick="toggleDayEdit(${i})" title="Editar plano do dia">✏️</button>`;
+  const addBtn  = `<button class="coach-day-done-btn" style="margin-left:.3rem;font-size:.68rem;background:#ecfdf5;border-color:#10b981;color:#065f46" onclick="toggleDayAdd(${i})" title="Incluir nova atividade">＋</button>`;
   const doneBtn = `<button class="coach-day-done-btn ${isDone?'on':''}" onclick="togglePlanoDone(${i})">${isDone?'✓ Feito':'Confirmar'}</button>`;
-  const hdrRight = `<div style="display:flex;gap:.3rem;align-items:center">${doneBtn}${editBtn}</div>`;
-  const dayLbl = `<span class="coach-day-lbl">${p.day}${isCustom?'<span style="font-size:.55rem;color:#0ea5e9;margin-left:4px">✎</span>':''}</span>`;
+  const hdrRight = `<div style="display:flex;gap:.3rem;align-items:center">${doneBtn}${addBtn}${editBtn}</div>`;
+  const dayLbl = `<span class="coach-day-lbl">${p.day}${isCustom?'<span style="font-size:.55rem;color:#0ea5e9;margin-left:4px">✎</span>':''}${extraList.length?`<span style="font-size:.55rem;color:#10b981;margin-left:4px">+${extraList.length}</span>`:''}</span>`;
+
   const editPanel = `<div class="day-edit-panel" id="day-edit-${i}">
-    <div class="day-edit-row"><label class="day-edit-lbl">Treino</label><input class="day-edit-input" id="day-edit-treino-${i}" value="${treino.replace(/"/g,'&quot;')}" placeholder="Ex: Corrida 5km · Renee"></div>
-    <div class="day-edit-row"><label class="day-edit-lbl">Observações</label><input class="day-edit-input" id="day-edit-note-${i}" value="${note.replace(/"/g,'&quot;')}" placeholder="Pace alvo, intensidade, evento..."></div>
+    <div style="font-size:.62rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.4rem">✏️ Alterar plano do dia</div>
+    <div class="day-edit-row"><label class="day-edit-lbl">Treino</label><input class="day-edit-input" id="day-edit-treino-${i}" value="${treino.replace(/"/g,'&quot;')}" placeholder="Ex: Corrida fácil Z2"></div>
+    <div class="day-edit-row"><label class="day-edit-lbl">Observações</label><input class="day-edit-input" id="day-edit-note-${i}" value="${note.replace(/"/g,'&quot;')}" placeholder="Pace alvo, intensidade..."></div>
     <div class="day-edit-actions">
       <button class="day-edit-save" onclick="saveDayEdit(${i})">Salvar</button>
       ${isCustom?`<button class="day-edit-reset" onclick="resetDayEdit(${i})">Restaurar plano</button>`:''}
       <button class="day-edit-reset" onclick="toggleDayEdit(${i})">Cancelar</button>
     </div>
   </div>`;
-  if(/descanso/i.test(treino)){
-    return `<div class="coach-day-block">
-      <div class="coach-day-hdr">${dayLbl}${hdrRight}</div>
-      ${renderSportCard('🛌','sport-rest','Descanso total',note)}
-      ${editPanel}
+
+  const addPanel = `<div class="day-edit-panel" id="day-add-${i}" style="background:#f0fdf4;border-top:1px dashed #10b981">
+    <div style="font-size:.62rem;font-weight:800;color:#065f46;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.4rem">＋ Incluir nova atividade neste dia</div>
+    <div class="day-edit-row"><label class="day-edit-lbl">Atividade</label><input class="day-edit-input" id="day-add-treino-${i}" placeholder="Ex: Corrida Renee 5km · Prova"></div>
+    <div class="day-edit-row"><label class="day-edit-lbl">Observações</label><input class="day-edit-input" id="day-add-note-${i}" placeholder="Pace, local, evento..."></div>
+    <div class="day-edit-actions">
+      <button class="day-edit-save" style="background:#10b981" onclick="saveDayAdd(${i})">Incluir</button>
+      <button class="day-edit-reset" onclick="toggleDayAdd(${i})">Cancelar</button>
+    </div>
+  </div>`;
+
+  const extraCards = extraList.map((ex, j) => {
+    const t = String(ex.treino||'').toLowerCase();
+    const isSWIM = /natação|natacao|nado|swim/i.test(t);
+    const isBIKE = /bike|ciclismo/i.test(t);
+    const isGYM  = /academia|força|musculação/i.test(t);
+    const css = isSWIM?'sport-swim':isBIKE?'sport-bike':isGYM?'sport-gym':'sport-run';
+    const ico = isSWIM?'🏊':isBIKE?'🚴':isGYM?'💪':'🏃';
+    const removeBtn = `<button onclick="removeDayExtra(${i},${j})" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:.75rem;padding:0 .2rem;line-height:1;flex-shrink:0" title="Remover">✕</button>`;
+    return `<div class="coach-sport-card ${css}" style="position:relative">
+      <span class="coach-sport-ico">${ico}</span>
+      <div class="coach-sport-body" style="flex:1">
+        <div class="coach-sport-title">${ex.treino}</div>
+        ${ex.note?`<div class="coach-sport-note">${ex.note}</div>`:''}
+      </div>
+      ${removeBtn}
     </div>`;
-  }
-  const parts = treino.split('+').map(s=>s.trim()).filter(Boolean);
-  const ns = splitNoteForSports(note);
-  const multi = Object.keys(ns).length > 0;
-  const cards = parts.map(part=>{
-    const pl = part.toLowerCase();
-    const isSWIM = /natação|natacao|técnica|tecnica|endurance|adaptação|adaptacao/i.test(pl);
-    const isBIKE = /bike|cross/i.test(pl);
-    const isRUN  = !isBIKE && /corrida|brick|rodagem|qualidade|longo/i.test(pl);
-    const isGYM  = /academia|força|forca/i.test(pl);
-    const clean  = part.replace(/[\u{1F3CA}\u{1F6B4}\u{1F3C3}\u{1F4AA}🏃🚻]/gu,'').replace(/[🏊🚴🏃💪🎯⚡📏]/g,'').trim();
-    if(isSWIM) return renderSportCard('🏊','sport-swim',clean, multi?(ns.swim||note):note);
-    if(isBIKE) return renderSportCard('🚴','sport-bike',clean, multi?(ns.bike||note):note);
-    if(isRUN)  return renderSportCard('🏃','sport-run', clean, multi?(ns.run||note):note);
-    if(isGYM)  return renderSportCard('💪','sport-gym', clean, multi?(ns.gym||''):note);
-    return renderSportCard('🏃','sport-run',clean,note);
-  });
+  }).join('');
+
+  const buildMainCards = () => {
+    if(/descanso/i.test(treino)) return renderSportCard('🛌','sport-rest','Descanso total',note);
+    const parts = treino.split('+').map(s=>s.trim()).filter(Boolean);
+    const ns = splitNoteForSports(note);
+    const multi = Object.keys(ns).length > 0;
+    return parts.map(part=>{
+      const pl = part.toLowerCase();
+      const isSWIM = /natação|natacao|técnica|tecnica|endurance|adaptação|adaptacao/i.test(pl);
+      const isBIKE = /bike|cross/i.test(pl);
+      const isRUN  = !isBIKE && /corrida|brick|rodagem|qualidade|longo/i.test(pl);
+      const isGYM  = /academia|força|forca/i.test(pl);
+      const clean  = part.replace(/[\u{1F3CA}\u{1F6B4}\u{1F3C3}\u{1F4AA}🏃🚻]/gu,'').replace(/[🏊🚴🏃💪🎯⚡📏]/g,'').trim();
+      if(isSWIM) return renderSportCard('🏊','sport-swim',clean, multi?(ns.swim||note):note);
+      if(isBIKE) return renderSportCard('🚴','sport-bike',clean, multi?(ns.bike||note):note);
+      if(isRUN)  return renderSportCard('🏃','sport-run', clean, multi?(ns.run||note):note);
+      if(isGYM)  return renderSportCard('💪','sport-gym', clean, multi?(ns.gym||''):note);
+      return renderSportCard('🏃','sport-run',clean,note);
+    }).join('');
+  };
+
   return `<div class="coach-day-block">
     <div class="coach-day-hdr">${dayLbl}${hdrRight}</div>
-    ${cards.join('')}
+    ${buildMainCards()}
+    ${extraCards}
+    ${addPanel}
     ${editPanel}
   </div>`;
 }
@@ -3198,6 +3236,18 @@ function buildDayCards(p, i, done, isCustom){
 function toggleDayEdit(i){
   const el = document.getElementById('day-edit-'+i);
   if(el) el.classList.toggle('open');
+  const ap = document.getElementById('day-add-'+i);
+  if(ap && ap.classList.contains('open')) ap.classList.remove('open');
+}
+function toggleDayAdd(i){
+  const el = document.getElementById('day-add-'+i);
+  if(el) el.classList.toggle('open');
+  const ep = document.getElementById('day-edit-'+i);
+  if(ep && ep.classList.contains('open')) ep.classList.remove('open');
+  if(el && el.classList.contains('open')){
+    const inp = document.getElementById('day-add-treino-'+i);
+    if(inp) inp.focus();
+  }
 }
 
 function saveDayEdit(i){
@@ -3213,6 +3263,27 @@ function saveDayEdit(i){
 function resetDayEdit(i){
   const wk = ensureWeeklyPlano(curPlanoTipo);
   if(wk.data.overrides) delete wk.data.overrides[i];
+  saveTpState();
+  refreshCoachFromData();
+}
+
+function saveDayAdd(i){
+  const treino = ((document.getElementById('day-add-treino-'+i)||{}).value||'').trim();
+  if(!treino) return;
+  const note = (document.getElementById('day-add-note-'+i)||{}).value||'';
+  const wk = ensureWeeklyPlano(curPlanoTipo);
+  if(!wk.data.extras) wk.data.extras = {};
+  if(!wk.data.extras[i]) wk.data.extras[i] = [];
+  wk.data.extras[i].push({treino, note});
+  saveTpState();
+  refreshCoachFromData();
+}
+
+function removeDayExtra(i, j){
+  const wk = ensureWeeklyPlano(curPlanoTipo);
+  if(!wk.data.extras || !wk.data.extras[i]) return;
+  wk.data.extras[i].splice(j, 1);
+  if(!wk.data.extras[i].length) delete wk.data.extras[i];
   saveTpState();
   refreshCoachFromData();
 }
@@ -3236,6 +3307,7 @@ function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
   const built = buildPeriodizedTriWeek(info, calcTriAverages(), weekIndex, cycle.cycleWeeks, cycle.target, objective, wk.weekKey);
   const basePlan = wk.data.plan || built.plan;
   const overrides = wk.data.overrides || {};
+  const dayExtras = wk.data.extras || {};
   const plan = basePlan.map((p, i) => overrides[i] ? {...p, ...overrides[i]} : p);
   const metrics = wk.data.metrics || built.metrics;
 
@@ -3254,7 +3326,7 @@ function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
     metaEl.innerHTML = `Semana ${wk.weekKey} · ciclo ${metrics.week}/${metrics.totalWeeks} · ${phaseLabel}${metrics.deload?' · deload':''} · alvo ${metrics.target} · concluído ${doneCount}/${plan.length}`;
   }
 
-  cardsEl.innerHTML = plan.map((p,i) => buildDayCards(p, i, done, !!overrides[i])).join('');
+  cardsEl.innerHTML = plan.map((p,i) => buildDayCards(p, i, done, !!overrides[i], dayExtras[i])).join('');
 
   const gymWrap = document.getElementById('coach-gym-guide');
   if(gymWrap){
@@ -3279,20 +3351,24 @@ function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
             </div>
           `).join('')}
         </div>
-        <button onclick="showAddGymForm()" style="width:100%;margin-top:.5rem;padding:.4rem;background:none;border:1.5px dashed var(--border);border-radius:8px;color:var(--muted);font-size:.74rem;font-weight:700;cursor:pointer;font-family:inherit">+ Adicionar treino de academia</button>
-        <div id="add-gym-form" style="display:none;margin-top:.5rem;display:none">
+        <button onclick="showAddGymForm()" style="width:100%;margin-top:.5rem;padding:.4rem;background:none;border:1.5px dashed var(--border);border-radius:8px;color:var(--muted);font-size:.74rem;font-weight:700;cursor:pointer;font-family:inherit">+ Incluir treino de academia</button>
+        <div id="add-gym-form" style="display:none;margin-top:.5rem">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-bottom:.4rem">
             <div><div class="day-edit-lbl">Data</div><input type="date" id="add-gym-date" class="day-edit-input"></div>
-            <div><div class="day-edit-lbl">Sessão</div>
+            <div><div class="day-edit-lbl">Tipo</div>
               <select id="add-gym-session" class="day-edit-input">
                 <option value="musculacao">💪 Musculação</option>
                 <option value="core">🧘 Core</option>
                 <option value="mobilidade">🦵 Mobilidade</option>
+                <option value="funcional">🏋️ Funcional</option>
+                <option value="piscina">🏊 Natação</option>
+                <option value="livre">✏️ Livre</option>
               </select>
             </div>
           </div>
+          <div class="day-edit-row" style="margin-bottom:.4rem"><label class="day-edit-lbl">Descrição (opcional)</label><input class="day-edit-input" id="add-gym-desc" placeholder="Ex: Supino + agachamento · 45 min"></div>
           <div style="display:flex;gap:.4rem">
-            <button class="day-edit-save" onclick="addCustomGymItem()">Adicionar</button>
+            <button class="day-edit-save" onclick="addCustomGymItem()">Incluir</button>
             <button class="day-edit-reset" onclick="hideAddGymForm()">Cancelar</button>
           </div>
         </div>
@@ -3300,28 +3376,30 @@ function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
     ` : `
       <div class="card-title" style="margin-top:.8rem">📲 Motra — Treinos de Academia</div>
       <div class="tp-type-card" style="margin-bottom:.75rem">
-        <button onclick="showAddGymForm()" style="width:100%;margin-top:.2rem;padding:.5rem;background:none;border:1.5px dashed var(--border);border-radius:8px;color:var(--muted);font-size:.74rem;font-weight:700;cursor:pointer;font-family:inherit">+ Adicionar treino de academia</button>
+        <button onclick="showAddGymForm()" style="width:100%;margin-top:.2rem;padding:.5rem;background:none;border:1.5px dashed var(--border);border-radius:8px;color:var(--muted);font-size:.74rem;font-weight:700;cursor:pointer;font-family:inherit">+ Incluir treino de academia</button>
         <div id="add-gym-form" style="display:none;margin-top:.5rem">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-bottom:.4rem">
             <div><div class="day-edit-lbl">Data</div><input type="date" id="add-gym-date" class="day-edit-input"></div>
-            <div><div class="day-edit-lbl">Sessão</div>
+            <div><div class="day-edit-lbl">Tipo</div>
               <select id="add-gym-session" class="day-edit-input">
                 <option value="musculacao">💪 Musculação</option>
                 <option value="core">🧘 Core</option>
                 <option value="mobilidade">🦵 Mobilidade</option>
+                <option value="funcional">🏋️ Funcional</option>
+                <option value="piscina">🏊 Natação</option>
+                <option value="livre">✏️ Livre</option>
               </select>
             </div>
           </div>
+          <div class="day-edit-row" style="margin-bottom:.4rem"><label class="day-edit-lbl">Descrição (opcional)</label><input class="day-edit-input" id="add-gym-desc" placeholder="Ex: Supino + agachamento · 45 min"></div>
           <div style="display:flex;gap:.4rem">
-            <button class="day-edit-save" onclick="addCustomGymItem()">Adicionar</button>
+            <button class="day-edit-save" onclick="addCustomGymItem()">Incluir</button>
             <button class="day-edit-reset" onclick="hideAddGymForm()">Cancelar</button>
           </div>
         </div>
       </div>
     `;
-    gymWrap.innerHTML = sessions.length
-      ? `${motraHtml}<div class="card-title" style="margin-top:.8rem">📸 Como Executar a Força — Fotos Reais</div>${sessions.map(buildGymBlock).join('')}`
-      : motraHtml;
+    gymWrap.innerHTML = motraHtml;
   }
 
   renderIndices(ativ, bb, sono, hrv);
