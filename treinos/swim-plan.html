@@ -59,18 +59,47 @@ body {
   padding: .55rem 1.5rem;
   display: flex;
   align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0,0,0,.4);
 }
 .back-bar a {
   display: inline-flex;
   align-items: center;
   gap: .4rem;
-  color: rgba(255,255,255,.65);
-  font-size: .72rem;
+  color: rgba(255,255,255,.8);
+  font-size: .8rem;
   font-weight: 700;
   text-decoration: none;
   letter-spacing: .04em;
+  padding: .25rem .5rem;
+  border-radius: 6px;
+  -webkit-tap-highlight-color: rgba(255,255,255,.15);
 }
-.back-bar a:hover { color: #fff; }
+.back-bar a:hover, .back-bar a:active { color: #fff; background: rgba(255,255,255,.1); }
+
+/* ── BOTÃO FLUTUANTE VOLTAR ── */
+.fab-back {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 1rem;
+  z-index: 200;
+  background: #071826;
+  color: rgba(255,255,255,.85);
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 24px;
+  padding: .5rem 1rem;
+  font-size: .75rem;
+  font-weight: 700;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  box-shadow: 0 4px 16px rgba(0,0,0,.5);
+  -webkit-tap-highlight-color: rgba(255,255,255,.15);
+}
+.fab-back:active { background: #0d2b42; }
 
 /* ── HEADER ── */
 .hero {
@@ -453,8 +482,11 @@ footer b { color: var(--text); }
 
 <!-- BACK BAR -->
 <div class="back-bar">
-  <a href="./index.html" onclick="if(history.length>1){event.preventDefault();history.back()}">← App de Treinos</a>
+  <a href="./index.html">← App de Treinos</a>
 </div>
+
+<!-- FAB BOTÃO VOLTAR (fixo na tela mesmo ao rolar) -->
+<a class="fab-back" href="./index.html">← Treinos</a>
 
 <!-- HERO -->
 <header class="hero">
@@ -995,6 +1027,9 @@ footer b { color: var(--text); }
 <footer>
   <div style="max-width:700px;margin:0 auto">
     <b>Plano elaborado com base no perfil de Luiz Silva, 64 anos.</b> Frequência cardíaca máxima estimada: 156 bpm. Mantenha as sessões na Zona 2 (FC 110–130 bpm) na piscina durante os 4 primeiros meses. · Sempre aqueça o manguito rotador antes de nadar. · Hidrate-se mesmo na água — não sente a transpiração, mas ela existe. · Sessões com monitor de coração waterproof (ex: Garmin HRM-Swim) são ideais para controle de carga.
+  </div>
+  <div style="text-align:center;margin-top:1.5rem">
+    <a href="./index.html" style="display:inline-flex;align-items:center;gap:.5rem;background:#071826;color:rgba(255,255,255,.8);border-radius:10px;padding:.6rem 1.4rem;font-size:.8rem;font-weight:700;text-decoration:none">← Voltar ao App de Treinos</a>
   </div>
 </footer>
 
