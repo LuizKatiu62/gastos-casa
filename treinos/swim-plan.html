@@ -537,6 +537,105 @@ footer b { color: var(--text); }
 .mt-lg { margin-top: 1.5rem; }
 .text-sm { font-size: .82rem; color: var(--sub); line-height: 1.5; }
 .table-scroll { overflow-x: auto; }
+
+/* ── PHASE COLORS ── */
+.phases-wrap .phase { border: none; color: #fff; }
+
+.phases-wrap .phase:nth-child(1) { background: linear-gradient(145deg, #0A3670 0%, #1565C0 100%); }
+.phases-wrap .phase:nth-child(2) { background: linear-gradient(145deg, #00524A 0%, #00796B 100%); }
+.phases-wrap .phase:nth-child(3) { background: linear-gradient(145deg, #1A4A1A 0%, #388E3C 100%); }
+.phases-wrap .phase:nth-child(4) { background: linear-gradient(145deg, #013252 0%, #0277BD 100%); }
+.phases-wrap .phase:nth-child(5) { background: linear-gradient(145deg, #36004F 0%, #7B1FA2 100%); }
+.phases-wrap .phase:nth-child(6) { background: linear-gradient(145deg, #7B2200 0%, #E65100 100%); }
+.phases-wrap .phase:nth-child(7) { background: linear-gradient(145deg, #5D0000 0%, #C62828 100%); }
+
+/* Header on colored cards */
+.phases-wrap button.phase-hdr { border-bottom-color: rgba(255,255,255,.18); }
+.phases-wrap .phase:not(.is-open) button.phase-hdr { border-bottom-color: transparent; }
+.phases-wrap button.phase-hdr:hover { background: rgba(255,255,255,.1); }
+.phases-wrap .phase-num { color: rgba(255,255,255,.95); }
+.phases-wrap .phase-title { color: #fff; }
+.phases-wrap .phase-months { color: rgba(255,255,255,.68); }
+.phases-wrap .phase-chevron { color: rgba(255,255,255,.7); opacity: 1; }
+.phases-wrap .phase.is-open .phase-chevron { color: #fff; transform: rotate(180deg); }
+
+/* Expanded content area */
+.phases-wrap .phase-pad { background: rgba(0,0,0,.22); }
+
+/* Phase target badge */
+.phases-wrap .phase-target {
+  background: rgba(255,255,255,.12);
+  border-color: rgba(255,255,255,.22);
+  color: rgba(255,255,255,.88);
+}
+.phases-wrap .phase-target b { color: #fff; }
+
+/* Section label */
+.phases-wrap .section-label {
+  color: rgba(255,255,255,.65);
+  border-bottom-color: rgba(255,255,255,.18);
+}
+
+/* Table */
+.phases-wrap .week-table th {
+  color: rgba(255,255,255,.6);
+  border-bottom-color: rgba(255,255,255,.22);
+}
+.phases-wrap .week-table td {
+  color: rgba(255,255,255,.9);
+  border-bottom-color: rgba(255,255,255,.1);
+}
+.phases-wrap .week-table tr:last-child td { border-bottom: none; }
+.phases-wrap .day-lbl { color: rgba(255,255,255,.9); }
+.phases-wrap .t-tecnica { background: rgba(255,255,255,.18); color: #fff; }
+.phases-wrap .t-volume  { background: rgba(255,255,255,.18); color: #fff; }
+.phases-wrap .t-forca   { background: rgba(255,255,255,.18); color: #fff; }
+.phases-wrap .t-descanso{ background: rgba(0,0,0,.25); color: rgba(255,255,255,.6); }
+
+/* Drill cards */
+.phases-wrap .drill-card {
+  background: rgba(255,255,255,.12);
+  border-color: rgba(255,255,255,.18);
+  box-shadow: none;
+}
+.phases-wrap .drill-name { color: rgba(255,255,255,.65); }
+.phases-wrap .drill-title { color: #fff; }
+.phases-wrap .drill-visual {
+  background: rgba(0,0,0,.2);
+  border-left-color: rgba(255,255,255,.45);
+  color: rgba(255,255,255,.82);
+}
+.phases-wrap .drill-steps li { color: rgba(255,255,255,.88); }
+.phases-wrap .drill-steps li::before { color: rgba(255,255,255,.65); }
+.phases-wrap .drill-search {
+  background: rgba(255,255,255,.12);
+  color: rgba(255,255,255,.85);
+}
+.phases-wrap .drill-search a { color: rgba(255,255,255,.85); text-decoration-color: rgba(255,255,255,.35); }
+.phases-wrap .drill-search a:hover { color: #fff; text-decoration-color: #fff; }
+
+/* Tip / medo cards */
+.phases-wrap .medo-card {
+  background: rgba(0,0,0,.22);
+  border-color: rgba(255,255,255,.18);
+  border-left-color: rgba(255,255,255,.5);
+  color: rgba(255,255,255,.9);
+}
+.phases-wrap .medo-card b { color: #fff; }
+
+/* Open water box */
+.phases-wrap .ow-box {
+  background: rgba(0,0,0,.2);
+  border-color: rgba(255,255,255,.18);
+}
+.phases-wrap .ow-hdr { background: rgba(0,0,0,.35); }
+.phases-wrap .ow-step-num {
+  background: rgba(255,255,255,.15);
+  border-color: rgba(255,255,255,.45);
+  color: #fff;
+}
+.phases-wrap .ow-step-text { color: rgba(255,255,255,.88); }
+.phases-wrap .ow-step-text b { color: #fff; }
   </style>
 </head>
 <body>
