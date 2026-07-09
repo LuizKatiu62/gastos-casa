@@ -602,11 +602,8 @@ body{padding-top:45px}
         <div class="ch-sub" id="freq-sub"></div>
       </div>
       <div class="card">
-        <div class="card-title" style="display:flex;align-items:center;justify-content:space-between">
-          🏃 Últimos Treinos
-          <button onclick="abrirManual()" style="background:var(--blue);color:#fff;border:none;border-radius:8px;padding:.3rem .75rem;font-size:.75rem;font-weight:700;cursor:pointer">➕ Manual</button>
-        </div>
-        <div class="run-list" id="run-list"></div>
+        <div class="card-title">📊 Resumo do Período</div>
+        <div id="run-list"></div>
       </div>
     </div>
 
@@ -836,7 +833,7 @@ window.addEventListener('DOMContentLoaded', () => {
 const FB_DB   = 'https://gastos-casa-7f431-default-rtdb.firebaseio.com';
 const FB_KEY  = 'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU';
 const FB_PATH = 'treinos/luiz';
-const APP_VERSION = '2026-07-09-02';
+const APP_VERSION = '2026-07-09-03';
 const SNAPSHOT_KEY = 'treinos_last_snapshot_v1';
 const TRAINING_KICKOFF_DATE = '2026-07-07';
 let charts = {}, curTab = 'treinos', DATA = null, curEsporte = 'todos';
@@ -3571,24 +3568,87 @@ function renderTreinos(ativ,meta,sem){
       ` · <b>Média semanal no período:</b> ${freqPeriodoSem}x/sem · <b>Alvo no período:</b> ${alvoPeriodo} treinos`;
   }
 
-  // Ícone por esporte
-  const icoStyle=e=>{const es=e||'corrida';return es==='bike'?'background:linear-gradient(135deg,#f97316,#d97706)':es==='natacao'?'background:linear-gradient(135deg,#3b82f6,#06b6d4)':es==='academia'?'background:linear-gradient(135deg,#7c3aed,#a855f7)':'background:linear-gradient(135deg,var(--blue),var(--green))';};
+  // ─── Resumo estilo Garmin ───
+  const SPORT_SUMM={
+    corrida:   {ico:'🏃',lbl:'Corrida',    grad:'linear-gradient(135deg,var(--blue),var(--green))'},
+    bike:      {ico:'🚴',lbl:'Bike',       grad:'linear-gradient(135deg,#f97316,#d97706)'},
+    natacao:   {ico:'🏊',lbl:'Natação',    grad:'linear-gradient(135deg,#3b82f6,#06b6d4)'},
+    academia:  {ico:'💪',lbl:'Academia',   grad:'linear-gradient(135deg,#7c3aed,#a855f7)'},
+    duathlon:  {ico:'🚴🏃',lbl:'Duathlon', grad:'linear-gradient(135deg,#f59e0b,#b45309)'},
+    triathlon: {ico:'🏊🚴🏃',lbl:'Triathlon',grad:'linear-gradient(135deg,#0ea5e9,#6366f1)'},
+    multisport:{ico:'🏅',lbl:'Multisport', grad:'linear-gradient(135deg,#f59e0b,#eab308)'},
+  };
+  const getSummGrp=a=>{
+    const t=a.tipo||'';
+    if(t==='multi_sport'||t==='multisport') return 'multisport';
+    if(t==='duathlon') return 'duathlon';
+    if(t==='triathlon') return 'triathlon';
+    return getEsporte(a);
+  };
+  const grps={};
+  periodFiltered.forEach(a=>{
+    const g=getSummGrp(a);
+    if(!grps[g]) grps[g]={count:0,dist:0};
+    grps[g].count++;
+    grps[g].dist=+(grps[g].dist+(a.distancia||0)).toFixed(2);
+  });
+  const GRP_ORDER=['corrida','bike','natacao','triathlon','duathlon','multisport','academia'];
+  const fmtDist=(g,dist)=>{
+    if(g==='academia') return '—';
+    if(g==='natacao'&&dist<2) return Math.round(dist*1000)+' m';
+    return dist>0?dist+' km':'—';
+  };
+  const sortedGrps=Object.keys(grps).sort((a,b)=>{
+    const oa=GRP_ORDER.indexOf(a),ob=GRP_ORDER.indexOf(b);
+    if(oa<0&&ob<0) return grps[b].dist-grps[a].dist;
+    if(oa<0) return 1; if(ob<0) return -1;
+    return oa-ob;
+  });
+  const sportRowsHtml=sortedGrps.length?sortedGrps.map(g=>{
+    const cfg=SPORT_SUMM[g]||{ico:'🏅',lbl:g,grad:'linear-gradient(135deg,#64748b,#475569)'};
+    const {count,dist}=grps[g];
+    return `<div style="display:flex;align-items:center;gap:.7rem;padding:.62rem 0;border-bottom:1px solid var(--border)">
+      <div style="width:34px;height:34px;border-radius:50%;${cfg.grad};display:flex;align-items:center;justify-content:center;font-size:.85rem;flex-shrink:0">${cfg.ico}</div>
+      <div style="flex:1;font-size:.83rem;color:var(--text)"><b>${count}</b> ${cfg.lbl}</div>
+      <div style="font-size:.86rem;font-weight:700;color:var(--text)">${fmtDist(g,dist)}</div>
+    </div>`;
+  }).join(''):`<div style="padding:1rem 0;text-align:center;color:var(--muted);font-size:.8rem">Nenhuma atividade no período</div>`;
 
-  // Lista de atividades
-  document.getElementById('run-list').innerHTML=
-    periodFiltered.slice(0,20).map(a=>`
-      <div class="run" style="${a._manual?'border-left:3px solid var(--blue);padding-left:.5rem':''}">
-        <div class="run-ico" style="${icoStyle(getEsporte(a))}">${TIPO_ICO[a.tipo]||'🏃'}</div>
-        <div class="run-info">
-          <div class="run-name">${dow(a.data)}, ${fd(a.data)}<span class="badge b-${a.tipo||'facil'}">${TIPO_LBL[a.tipo]||'Corrida'}</span>${a._manual?'<span class="badge" style="background:#dbeafe;color:#1e40af;margin-left:.25rem">Manual</span>':''}</div>
-          <div class="run-meta">${a.notas?a.notas+' · ':''}${a.duracao||''}${a.fcMed?' · ❤️ '+a.fcMed+' bpm':''}${a.calorias?' · 🔥 '+a.calorias+' kcal':''}</div>
-        </div>
-        <div class="run-right" style="display:flex;flex-direction:column;align-items:flex-end;gap:.25rem">
-          <div class="run-km">${a.distancia>0?a.distancia+' km':a.duracao}</div>
-          <div class="run-pace">${a.pace&&a.esporte!=='academia'?a.pace+' /km':''}</div>
-          ${a._manual?`<button onclick="excluirManual('${a.id}')" style="font-size:.6rem;padding:.15rem .4rem;border:1px solid #fca5a5;background:#fef2f2;color:#dc2626;border-radius:5px;cursor:pointer">🗑</button>`:''}
-        </div>
-      </div>`).join('');
+  // Saúde — médias do período
+  const _sono=DATA?.sono||{},_stress=DATA?.stress||{},_hrv=DATA?.hrv||{},_bb=DATA?.bodyBattery||{};
+  const _sonoKeys=Object.keys(_sono).filter(k=>k>=d0&&(_sono[k].duracao||0)>=2);
+  const _stressKeys=Object.keys(_stress).filter(k=>k>=d0&&(_stress[k].avg||0)>0);
+  const _bbKeys=Object.keys(_bb).filter(k=>k>=d0&&(_bb[k].max||0)>0);
+  const _hrvKeys=Object.keys(_hrv).filter(k=>k>=d0);
+  const _hrvV=k=>(_hrv[k]?.ontem||0)>0?_hrv[k].ontem:(_hrv[k]?.semanal||0);
+  const _hrvF=_hrvKeys.filter(k=>_hrvV(k)>0);
+  const sonoMedP=_sonoKeys.length?+(_sonoKeys.reduce((s,k)=>s+(_sono[k].duracao||0),0)/_sonoKeys.length).toFixed(1):0;
+  const sonoScP=_sonoKeys.length?Math.round(_sonoKeys.reduce((s,k)=>s+(_sono[k].score||0),0)/_sonoKeys.length):0;
+  const stressP=_stressKeys.length?Math.round(_stressKeys.reduce((s,k)=>s+(_stress[k].avg||0),0)/_stressKeys.length):0;
+  const bbP=_bbKeys.length?Math.round(_bbKeys.reduce((s,k)=>s+(_bb[k].max||0),0)/_bbKeys.length):0;
+  const hrvP=_hrvF.length?Math.round(_hrvF.reduce((s,k)=>s+_hrvV(k),0)/_hrvF.length):0;
+  const fmtSleep=h=>{if(!h)return'—';const hh=Math.floor(h),mm=Math.round((h-hh)*60);return mm?`${hh}h ${mm}m`:`${hh}h`;};
+  const healthData=[
+    sonoMedP>0&&{ico:'💤',lbl:'Sono',   val:`${sonoScP>0?sonoScP+' · ':''}${fmtSleep(sonoMedP)} Méd`,col:'#0ea5e9'},
+    stressP>0 &&{ico:'😰',lbl:'Stress', val:`${stressP} Méd`,  col:'#f59e0b'},
+    hrvP>0    &&{ico:'💚',lbl:'HRV',    val:`${hrvP} ms Méd`,  col:'#22c55e'},
+    bbP>0     &&{ico:'🔋',lbl:'Energia',val:`${bbP}% Méd`,     col:'#a855f7'},
+  ].filter(Boolean);
+  const healthRowsHtml=healthData.map(r=>`
+    <div style="display:flex;align-items:center;gap:.7rem;padding:.62rem 0;border-bottom:1px solid var(--border)">
+      <div style="width:34px;height:34px;border-radius:50%;background:${r.col}22;border:1.5px solid ${r.col}55;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0">${r.ico}</div>
+      <div style="flex:1;font-size:.83rem;font-weight:600;color:var(--text)">${r.lbl}</div>
+      <div style="font-size:.8rem;font-weight:600;color:var(--muted)">${r.val}</div>
+    </div>`).join('');
+
+  document.getElementById('run-list').innerHTML=`
+    <div style="padding:.1rem 0">
+      ${sportRowsHtml}
+      ${healthData.length?`<div style="margin-top:.1rem">${healthRowsHtml}</div>`:''}
+      <div style="padding-top:.55rem;text-align:right">
+        <button onclick="abrirManual()" style="background:none;border:none;color:var(--muted);font-size:.72rem;cursor:pointer;font-weight:600">➕ Adicionar treino manual</button>
+      </div>
+    </div>`;
 
   renderCoachSemanal();
 }
