@@ -139,6 +139,8 @@ body{padding-top:45px}
 .b-bike,.b-bike_indoor,.b-bike_trilha,.b-bike_virtual{background:#fff1ec;color:#7c2d12}
 .b-natacao,.b-natacao_ar{background:#e0f2fe;color:#0c4a6e}
 .b-musculacao{background:#f3e8ff;color:#4c1d95}
+.b-duathlon,.b-multi_sport,.b-multisport{background:#fef9c3;color:#854d0e}
+.b-triathlon{background:#e0f2fe;color:#075985}
 
 /* ── SPORT FILTER ── */
 .sf-wrap{display:flex;gap:.4rem;margin-bottom:.75rem;flex-wrap:wrap}
@@ -413,6 +415,15 @@ body{padding-top:45px}
 .prova-footer{display:flex;align-items:center;justify-content:space-between;margin-top:.5rem;gap:.5rem;flex-wrap:wrap}
 .prova-data{font-size:.75rem;font-weight:700;color:var(--blue)}
 .prova-usa .prova-data{color:#dc2626}
+.day-edit-panel{padding:.6rem .75rem .75rem;border-top:1px dashed var(--border);background:var(--bg);display:none}
+.day-edit-panel.open{display:block}
+.day-edit-row{display:flex;flex-direction:column;gap:.3rem;margin-bottom:.5rem}
+.day-edit-lbl{font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.day-edit-input{font-size:.78rem;padding:.4rem .55rem;border:1.5px solid var(--border);border-radius:7px;background:var(--bg);color:var(--text);font-family:inherit;width:100%}
+.day-edit-input:focus{outline:none;border-color:var(--blue)}
+.day-edit-actions{display:flex;gap:.4rem;margin-top:.4rem}
+.day-edit-save{flex:1;background:var(--blue);color:#fff;border:none;border-radius:7px;padding:.42rem .6rem;font-size:.75rem;font-weight:700;cursor:pointer;font-family:inherit}
+.day-edit-reset{background:transparent;color:var(--muted);border:1.5px solid var(--border);border-radius:7px;padding:.42rem .6rem;font-size:.75rem;font-weight:700;cursor:pointer;font-family:inherit}
 .swim-plan-link{display:flex;align-items:center;gap:.5rem;margin-top:.85rem;padding:.6rem .9rem;background:rgba(14,165,233,.08);border:1px solid rgba(14,165,233,.28);border-radius:10px;color:#0ea5e9;font-size:.78rem;font-weight:700;text-decoration:none;justify-content:center;transition:background .15s}
 .swim-plan-link:hover{background:rgba(14,165,233,.16)}
 .prova-treinar-btn{display:block;width:100%;margin-top:.55rem;padding:.45rem .75rem;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:.75rem;font-weight:800;cursor:pointer;font-family:inherit;text-align:center;transition:opacity .15s}
@@ -544,6 +555,7 @@ body{padding-top:45px}
         <button class="sf-btn" onclick="setEsporte('bike',this)">🚴 Bike</button>
         <button class="sf-btn" onclick="setEsporte('natacao',this)">🏊 Natação</button>
         <button class="sf-btn" onclick="setEsporte('academia',this)">💪 Academia</button>
+        <button class="sf-btn" onclick="setEsporte('multisport',this)">🏅 MultiSport</button>
       </div>
       <div class="mode-switch" id="treinos-mode-switch">
         <button class="mode-pill on" data-mode="atleta" onclick="setTreinosMode('atleta',this)">🏁 Modo Atleta</button>
@@ -824,7 +836,7 @@ window.addEventListener('DOMContentLoaded', () => {
 const FB_DB   = 'https://gastos-casa-7f431-default-rtdb.firebaseio.com';
 const FB_KEY  = 'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU';
 const FB_PATH = 'treinos/luiz';
-const APP_VERSION = '2026-07-08-05';
+const APP_VERSION = '2026-07-09-01';
 const SNAPSHOT_KEY = 'treinos_last_snapshot_v1';
 const TRAINING_KICKOFF_DATE = '2026-07-07';
 let charts = {}, curTab = 'treinos', DATA = null, curEsporte = 'todos';
@@ -1119,7 +1131,7 @@ function gymSessionMotraText(sessionId=''){
 
 function buildMotraGymQueue(plan=[], weekKey=''){
   const weekState = (motraState?.weeks?.[weekKey] && typeof motraState.weeks[weekKey]==='object') ? motraState.weeks[weekKey] : {};
-  return (Array.isArray(plan)?plan:[]).map(item => {
+  const planItems = (Array.isArray(plan)?plan:[]).map(item => {
     const sessionId = detectGymSessionId(item?.treino||'');
     if(!sessionId) return null;
     const day = String(item?.day||'').trim();
@@ -1133,6 +1145,14 @@ function buildMotraGymQueue(plan=[], weekKey=''){
     const queueKey = `${dateIso}__${sessionId}`;
     return {day, dateIso, time, sessionId, sessionLabel, payload, dayPayload, weekKey, queueKey, launched: !!weekState[queueKey]};
   }).filter(Boolean);
+  const customItems = (motraState.customItems || []).map(c => ({
+    ...c,
+    weekKey,
+    queueKey: c.id,
+    payload: c.dayPayload,
+    launched: !!(weekState[c.id] || c.launched)
+  }));
+  return [...planItems, ...customItems].sort((a,b) => (a.dateIso||'').localeCompare(b.dateIso||''));
 }
 
 function buildMotraGeneratePrompt(item){
@@ -1197,6 +1217,42 @@ function refreshCoachFromData(){
   if(!DATA) return;
   const a = (DATA.atividades||[]).sort((x,y)=>y.data.localeCompare(x.data));
   renderCoach(a, DATA.meta||{}, DATA.bodyBattery||{}, DATA.sono||{}, DATA.stress||{}, DATA.hrv||{}, DATA.semanal||{});
+}
+
+function showAddGymForm(){
+  const f = document.getElementById('add-gym-form');
+  if(!f) return;
+  f.style.display = 'block';
+  const dateEl = document.getElementById('add-gym-date');
+  if(dateEl && !dateEl.value) dateEl.value = localISODate();
+}
+function hideAddGymForm(){
+  const f = document.getElementById('add-gym-form');
+  if(f) f.style.display = 'none';
+}
+function addCustomGymItem(){
+  const dateIso = (document.getElementById('add-gym-date')||{}).value || localISODate();
+  const sessionId = (document.getElementById('add-gym-session')||{}).value || 'musculacao';
+  const lblMap = {musculacao:'Musculação', core:'Core', mobilidade:'Mobilidade'};
+  const sessionLabel = lblMap[sessionId] || sessionId;
+  const d = new Date(dateIso+'T12:00:00');
+  const day = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][d.getDay()];
+  const time = motraTimeForDay(day);
+  const body = gymSessionMotraText(sessionId) || sessionLabel;
+  const dayPayload = `Treino de Academia\n${sessionLabel}\n\nDia ${day} · ${dateIso} · ${time}\n\n${body}`;
+  if(!motraState.customItems) motraState.customItems = [];
+  motraState.customItems.push({sessionLabel, sessionId, dateIso, day, time, dayPayload, launched:false, custom:true, id: dateIso+'__'+sessionId+'__'+Date.now()});
+  saveMotraState();
+  hideAddGymForm();
+  refreshCoachFromData();
+}
+function removeCustomGymItem(idx){
+  const item = motraGymQueue[idx];
+  if(!item || !item.custom) return;
+  if(!motraState.customItems) return;
+  motraState.customItems = motraState.customItems.filter(c => c.id !== item.id);
+  saveMotraState();
+  refreshCoachFromData();
 }
 
 function setMotraLaunchStatus(item, launched){
@@ -1505,6 +1561,8 @@ function getEsporte(a){
   if(t.startsWith('bike')) return 'bike';
   if(t==='natacao'||t==='natacao_ar') return 'natacao';
   if(t==='musculacao') return 'academia';
+  if(t==='duathlon'||t==='multi_sport'||t==='multisport') return 'duathlon';
+  if(t==='triathlon') return 'triathlon';
   return 'corrida';
 }
 
@@ -1857,6 +1915,8 @@ function calcTriAverages(){
     if(sp==='bike') byWeek[w].bikeKm += +a.distancia || 0;
     if(sp==='natacao') byWeek[w].swimKm += +a.distancia || 0;
     if(sp==='academia') byWeek[w].gym += 1;
+    if(sp==='duathlon'){ byWeek[w].bikeKm += (+a.distancia||0)*0.6; byWeek[w].runKm += (+a.distancia||0)*0.4; }
+    if(sp==='triathlon'){ byWeek[w].swimKm += (+a.distancia||0)*0.15; byWeek[w].bikeKm += (+a.distancia||0)*0.65; byWeek[w].runKm += (+a.distancia||0)*0.2; }
   });
   const weeks = Object.values(byWeek);
   if(!weeks.length) return {runKm:18,bikeKm:70,swimKm:3,gymPerWeek:2,runPace:390,bikePace:165,swimPace:130,runFc:145,bikeFc:138};
@@ -2349,8 +2409,8 @@ function showEmpty(err, errMsg){
 // ── helpers ──
 const MESES=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 const DIAS=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
-const TIPO_ICO={facil:'🏃',trilha:'⛰️',intervalado:'⚡',esteira:'🏃',caminhada:'🚶',virtual:'💻',bike:'🚴',bike_indoor:'🚴',bike_trilha:'🚵',bike_virtual:'🚴',natacao:'🏊',natacao_ar:'🏊',musculacao:'💪'};
-const TIPO_LBL={facil:'Fácil',trilha:'Trilha',intervalado:'Intervalo',esteira:'Esteira',caminhada:'Caminhada',virtual:'Virtual',bike:'Bike',bike_indoor:'Bike Indoor',bike_trilha:'MTB',bike_virtual:'Bike Virtual',natacao:'Natação',natacao_ar:'Natação AR',musculacao:'Academia'};
+const TIPO_ICO={facil:'🏃',trilha:'⛰️',intervalado:'⚡',esteira:'🏃',caminhada:'🚶',virtual:'💻',bike:'🚴',bike_indoor:'🚴',bike_trilha:'🚵',bike_virtual:'🚴',natacao:'🏊',natacao_ar:'🏊',musculacao:'💪',duathlon:'🚴🏃',triathlon:'🏊🚴🏃',multi_sport:'🏅',multisport:'🏅'};
+const TIPO_LBL={facil:'Fácil',trilha:'Trilha',intervalado:'Intervalo',esteira:'Esteira',caminhada:'Caminhada',virtual:'Virtual',bike:'Bike',bike_indoor:'Bike Indoor',bike_trilha:'MTB',bike_virtual:'Bike Virtual',natacao:'Natação',natacao_ar:'Natação AR',musculacao:'Academia',duathlon:'Duathlon',triathlon:'Triathlon',multi_sport:'MultiSport',multisport:'MultiSport'};
 
 function fd(d){if(!d)return'';const[y,m,dia]=d.split('-');return`${+dia} ${MESES[+m-1]}`;}
 function dow(d){if(!d)return'';return DIAS[new Date(d+'T12:00:00').getDay()];}
@@ -3088,15 +3148,28 @@ function renderSportCard(emoji, css, title, note){
   </div>`;
 }
 
-function buildDayCards(p, i, done){
+function buildDayCards(p, i, done, isCustom){
   const isDone = !!done[i];
   const treino = String(p.treino||'');
   const note   = String(p.note||'');
-  const btn = `<button class="coach-day-done-btn ${isDone?'on':''}" onclick="togglePlanoDone(${i})">${isDone?'✓ Feito':'Confirmar'}</button>`;
+  const editBtn = `<button class="coach-day-done-btn" style="margin-left:.3rem;font-size:.62rem" onclick="toggleDayEdit(${i})" title="Editar/adicionar treino">✏️</button>`;
+  const doneBtn = `<button class="coach-day-done-btn ${isDone?'on':''}" onclick="togglePlanoDone(${i})">${isDone?'✓ Feito':'Confirmar'}</button>`;
+  const hdrRight = `<div style="display:flex;gap:.3rem;align-items:center">${doneBtn}${editBtn}</div>`;
+  const dayLbl = `<span class="coach-day-lbl">${p.day}${isCustom?'<span style="font-size:.55rem;color:#0ea5e9;margin-left:4px">✎</span>':''}</span>`;
+  const editPanel = `<div class="day-edit-panel" id="day-edit-${i}">
+    <div class="day-edit-row"><label class="day-edit-lbl">Treino</label><input class="day-edit-input" id="day-edit-treino-${i}" value="${treino.replace(/"/g,'&quot;')}" placeholder="Ex: Corrida 5km · Renee"></div>
+    <div class="day-edit-row"><label class="day-edit-lbl">Observações</label><input class="day-edit-input" id="day-edit-note-${i}" value="${note.replace(/"/g,'&quot;')}" placeholder="Pace alvo, intensidade, evento..."></div>
+    <div class="day-edit-actions">
+      <button class="day-edit-save" onclick="saveDayEdit(${i})">Salvar</button>
+      ${isCustom?`<button class="day-edit-reset" onclick="resetDayEdit(${i})">Restaurar plano</button>`:''}
+      <button class="day-edit-reset" onclick="toggleDayEdit(${i})">Cancelar</button>
+    </div>
+  </div>`;
   if(/descanso/i.test(treino)){
     return `<div class="coach-day-block">
-      <div class="coach-day-hdr"><span class="coach-day-lbl">${p.day}</span>${btn}</div>
+      <div class="coach-day-hdr">${dayLbl}${hdrRight}</div>
       ${renderSportCard('🛌','sport-rest','Descanso total',note)}
+      ${editPanel}
     </div>`;
   }
   const parts = treino.split('+').map(s=>s.trim()).filter(Boolean);
@@ -3116,9 +3189,32 @@ function buildDayCards(p, i, done){
     return renderSportCard('🏃','sport-run',clean,note);
   });
   return `<div class="coach-day-block">
-    <div class="coach-day-hdr"><span class="coach-day-lbl">${p.day}</span>${btn}</div>
+    <div class="coach-day-hdr">${dayLbl}${hdrRight}</div>
     ${cards.join('')}
+    ${editPanel}
   </div>`;
+}
+
+function toggleDayEdit(i){
+  const el = document.getElementById('day-edit-'+i);
+  if(el) el.classList.toggle('open');
+}
+
+function saveDayEdit(i){
+  const treino = (document.getElementById('day-edit-treino-'+i)||{}).value||'';
+  const note   = (document.getElementById('day-edit-note-'+i)||{}).value||'';
+  const wk = ensureWeeklyPlano(curPlanoTipo);
+  if(!wk.data.overrides) wk.data.overrides = {};
+  wk.data.overrides[i] = {treino, note};
+  saveTpState();
+  refreshCoachFromData();
+}
+
+function resetDayEdit(i){
+  const wk = ensureWeeklyPlano(curPlanoTipo);
+  if(wk.data.overrides) delete wk.data.overrides[i];
+  saveTpState();
+  refreshCoachFromData();
 }
 
 function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
@@ -3138,7 +3234,9 @@ function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
   const weekIndex = diffWeeks(cycle.startKey, wk.weekKey) + 1;
   const objective = ['triathlon','run10k','half','marathon','ultra'].includes(cycle.objective) ? cycle.objective : (triCfg.objective || 'triathlon');
   const built = buildPeriodizedTriWeek(info, calcTriAverages(), weekIndex, cycle.cycleWeeks, cycle.target, objective, wk.weekKey);
-  const plan = wk.data.plan || built.plan;
+  const basePlan = wk.data.plan || built.plan;
+  const overrides = wk.data.overrides || {};
+  const plan = basePlan.map((p, i) => overrides[i] ? {...p, ...overrides[i]} : p);
   const metrics = wk.data.metrics || built.metrics;
 
   const targetSel = document.getElementById('coach-target');
@@ -3156,14 +3254,12 @@ function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
     metaEl.innerHTML = `Semana ${wk.weekKey} · ciclo ${metrics.week}/${metrics.totalWeeks} · ${phaseLabel}${metrics.deload?' · deload':''} · alvo ${metrics.target} · concluído ${doneCount}/${plan.length}`;
   }
 
-  cardsEl.innerHTML = plan.map((p,i) => buildDayCards(p, i, done)).join('');
+  cardsEl.innerHTML = plan.map((p,i) => buildDayCards(p, i, done, !!overrides[i])).join('');
 
   const gymWrap = document.getElementById('coach-gym-guide');
   if(gymWrap){
     motraGymQueue = buildMotraGymQueue(plan, wk.weekKey);
     const sessions = [...new Set(plan.map(p=>detectGymSessionId(p.treino)).filter(Boolean))];
-    const sentCount = motraGymQueue.filter(i=>i.launched).length;
-    const totalCount = motraGymQueue.length;
     const motraHtml = motraGymQueue.length ? `
       <div class="card-title" style="margin-top:.8rem">📲 Motra — Treinos de Academia</div>
       <div class="tp-type-card" style="margin-bottom:.75rem">
@@ -3173,15 +3269,56 @@ function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
             <div style="display:flex;align-items:center;gap:.6rem;padding:.45rem .5rem;border:1px solid var(--border);border-radius:9px;background:var(--bg)">
               <div style="font-size:.68rem;font-weight:900;text-transform:uppercase;letter-spacing:.4px;color:var(--blue);min-width:28px">${item.day}</div>
               <div style="flex:1;min-width:0">
-                <div style="font-size:.76rem;font-weight:700;color:var(--text)">${item.sessionLabel}</div>
+                <div style="font-size:.76rem;font-weight:700;color:var(--text)">${item.sessionLabel}${item.custom?'<span style="font-size:.6rem;color:#0ea5e9;margin-left:4px">+manual</span>':''}</div>
                 <div style="font-size:.62rem;color:var(--muted)">${item.dateIso} · ${item.time}</div>
               </div>
-              <button class="coach-status-btn ${item.launched?'on':''}" onclick="markMotraGymItem(${idx}, ${item.launched?'false':'true'})" style="white-space:nowrap">${item.launched?'✓ Salvo':'Salvar'}</button>
+              <div style="display:flex;gap:.3rem;align-items:center">
+                <button class="coach-status-btn ${item.launched?'on':''}" onclick="markMotraGymItem(${idx}, ${item.launched?'false':'true'})" style="white-space:nowrap">${item.launched?'✓ Salvo':'Salvar'}</button>
+                ${item.custom?`<button onclick="removeCustomGymItem(${idx})" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:.9rem;padding:.2rem" title="Remover">✕</button>`:''}
+              </div>
             </div>
           `).join('')}
         </div>
+        <button onclick="showAddGymForm()" style="width:100%;margin-top:.5rem;padding:.4rem;background:none;border:1.5px dashed var(--border);border-radius:8px;color:var(--muted);font-size:.74rem;font-weight:700;cursor:pointer;font-family:inherit">+ Adicionar treino de academia</button>
+        <div id="add-gym-form" style="display:none;margin-top:.5rem;display:none">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-bottom:.4rem">
+            <div><div class="day-edit-lbl">Data</div><input type="date" id="add-gym-date" class="day-edit-input"></div>
+            <div><div class="day-edit-lbl">Sessão</div>
+              <select id="add-gym-session" class="day-edit-input">
+                <option value="musculacao">💪 Musculação</option>
+                <option value="core">🧘 Core</option>
+                <option value="mobilidade">🦵 Mobilidade</option>
+              </select>
+            </div>
+          </div>
+          <div style="display:flex;gap:.4rem">
+            <button class="day-edit-save" onclick="addCustomGymItem()">Adicionar</button>
+            <button class="day-edit-reset" onclick="hideAddGymForm()">Cancelar</button>
+          </div>
+        </div>
       </div>
-    ` : '';
+    ` : `
+      <div class="card-title" style="margin-top:.8rem">📲 Motra — Treinos de Academia</div>
+      <div class="tp-type-card" style="margin-bottom:.75rem">
+        <button onclick="showAddGymForm()" style="width:100%;margin-top:.2rem;padding:.5rem;background:none;border:1.5px dashed var(--border);border-radius:8px;color:var(--muted);font-size:.74rem;font-weight:700;cursor:pointer;font-family:inherit">+ Adicionar treino de academia</button>
+        <div id="add-gym-form" style="display:none;margin-top:.5rem">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-bottom:.4rem">
+            <div><div class="day-edit-lbl">Data</div><input type="date" id="add-gym-date" class="day-edit-input"></div>
+            <div><div class="day-edit-lbl">Sessão</div>
+              <select id="add-gym-session" class="day-edit-input">
+                <option value="musculacao">💪 Musculação</option>
+                <option value="core">🧘 Core</option>
+                <option value="mobilidade">🦵 Mobilidade</option>
+              </select>
+            </div>
+          </div>
+          <div style="display:flex;gap:.4rem">
+            <button class="day-edit-save" onclick="addCustomGymItem()">Adicionar</button>
+            <button class="day-edit-reset" onclick="hideAddGymForm()">Cancelar</button>
+          </div>
+        </div>
+      </div>
+    `;
     gymWrap.innerHTML = sessions.length
       ? `${motraHtml}<div class="card-title" style="margin-top:.8rem">📸 Como Executar a Força — Fotos Reais</div>${sessions.map(buildGymBlock).join('')}`
       : motraHtml;
@@ -3266,7 +3403,7 @@ function renderIndices(ativ, bb, sono, hrv){
 function renderTreinos(ativ,meta,sem){
   applyTreinosMode();
   renderPlanoSemanal();
-  const filtrado=curEsporte==='todos'?ativ:ativ.filter(a=>getEsporte(a)===curEsporte);
+  const filtrado=curEsporte==='todos'?ativ:curEsporte==='multisport'?ativ.filter(a=>a.tipo==='duathlon'||a.tipo==='triathlon'||a.tipo==='multi_sport'||a.tipo==='multisport'||a.esporte==='duathlon'||a.esporte==='triathlon'):ativ.filter(a=>getEsporte(a)===curEsporte);
   const d0=localISODate(new Date(Date.now()-curPeriodo*864e5));
   const periodFiltered = filtrado.filter(a=>a.data>=d0);
   const periodDaysLabel = `${curPeriodo}d`;
