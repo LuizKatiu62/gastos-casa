@@ -64,6 +64,8 @@ TIPO_MAP = {
     "fitness_equipment": "musculacao", "cardio_training": "musculacao",
     "hiit": "musculacao", "indoor_cardio": "musculacao",
     "barre": "musculacao", "pilates": "musculacao",
+    "multi_sport": "multi_sport", "multisport": "multi_sport",
+    "duathlon": "duathlon", "triathlon": "triathlon",
 }
 ESPORTE_MAP = {
     "running": "corrida", "trail_running": "corrida", "ultra_run": "corrida",
@@ -79,6 +81,8 @@ ESPORTE_MAP = {
     "fitness_equipment": "academia", "cardio_training": "academia",
     "hiit": "academia", "indoor_cardio": "academia",
     "barre": "academia", "pilates": "academia",
+    "multi_sport": "duathlon", "multisport": "duathlon",
+    "duathlon": "duathlon", "triathlon": "triathlon",
 }
 IGNORAR = {"yoga", "elliptical", "rowing", "incident_detected"}
 

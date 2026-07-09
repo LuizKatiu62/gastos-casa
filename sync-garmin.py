@@ -56,6 +56,9 @@ TIPO_MAP = {
     # Natação
     "swimming": "natacao", "open_water_swimming": "natacao_ar",
     "lap_swimming": "natacao",
+    # Multi-sport / Triathlon / Duathlon
+    "multi_sport": "multi_sport", "multisport": "multi_sport",
+    "duathlon": "duathlon", "triathlon": "triathlon",
     # Academia
     "strength_training": "musculacao", "weight_training": "musculacao",
     "fitness_equipment": "musculacao", "cardio_training": "musculacao",
@@ -77,6 +80,8 @@ ESPORTE_MAP = {
     "strength_training": "academia", "weight_training": "academia",
     "fitness_equipment": "academia", "cardio_training": "academia",
     "barre": "academia", "pilates": "academia",
+    "multi_sport": "duathlon", "multisport": "duathlon",
+    "duathlon": "duathlon", "triathlon": "triathlon",
 }
 IGNORAR = {
     "yoga", "elliptical", "rowing", "incident_detected",
