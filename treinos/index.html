@@ -915,7 +915,7 @@ let curPeriodo = PERIODO;
 let curPlanoTipo = 'tri_intermediario';
 let curCoachTipo = 'intervalado';
 let curTreinosMode = localStorage.getItem('treinos_mode_v1') || 'atleta';
-const TP_STATE_KEY = 'treinos_programados_state_v4';
+const TP_STATE_KEY = 'treinos_programados_state_v5';
 const TRI_CFG_KEY = 'tri_cfg_v1';
 const COACH_STATE_KEY = 'treinos_coach_state_v1';
 function localISODate(ref=new Date()){
@@ -1078,19 +1078,25 @@ function applyTimeWindowAndRisk(plan=[], weekendIntense=true){
   return list.map(item => {
     const day = String(item?.day||'').toLowerCase();
     const isWeekend = day.startsWith('sáb') || day.startsWith('sab') || day.startsWith('dom');
-    const weekdayPrefix = '🕠 Dias úteis: treino somente após 17:30.';
+    const hasGym = /academia/i.test(String(item?.treino||''));
+    const gymPrefix = '🌅 Academia 5:30–6:30am.';
+    const weekdayPrefix = '🕠 Tarde: treino somente após 17:30.';
     const weekendPrefix = '🕘 Fim de semana: janela livre para treinos-chave.';
     const weekendLoad = weekendIntense
       ? 'Índices Garmin liberam sessão mais intensa.'
       : 'Índices Garmin em alerta: carga reduzida para evitar overtraining.';
     const noteRaw = String(item?.note||'')
+      .replace(/^🌅 Academia 5:30–6:30am\.\s*/,'')
+      .replace(/^🕠 Tarde: treino somente após 17:30\.\s*/,'')
       .replace(/^🕠 Dias úteis: treino somente após 17:30\.\s*/,'')
       .replace(/^🕘 Fim de semana: janela livre para treinos-chave\.\s*/,'')
       .replace(/^Índices Garmin liberam sessão mais intensa\.\s*/,'')
       .replace(/^Índices Garmin em alerta: carga reduzida para evitar overtraining\.\s*/,'');
     const note = isWeekend
       ? `${weekendPrefix} ${weekendLoad} ${noteRaw}`.trim()
-      : `${weekdayPrefix} ${noteRaw}`.trim();
+      : hasGym
+        ? `${gymPrefix} ${noteRaw}`.trim()
+        : `${weekdayPrefix} ${noteRaw}`.trim();
     return {...item, note};
   });
 }
@@ -1133,7 +1139,7 @@ function buildMotraGymQueue(plan=[], weekKey=''){
     if(!sessionId) return null;
     const day = String(item?.day||'').trim();
     const dateIso = isoDateFromWeekDay(weekKey, day);
-    const time = motraTimeForDay(day);
+    const time = '05:30';
     const sessionLabel = gymSessionLabel(sessionId);
     const body = gymSessionMotraText(sessionId);
     const title = `Motra · ${sessionLabel}`;
@@ -2096,21 +2102,21 @@ function buildPeriodizedTriWeek(profile, avg, weekIndex, totalWeeks, targetKey, 
   const bikeFcZ2 = `${Math.max(110,avg.bikeFc-8)}-${Math.max(120,avg.bikeFc+6)} bpm`;
 
   const planTri = swimBeginner ? [
-    {day:'Seg', treino:`🏊 Adaptação ${swimTech} m + 💪 Força Pernas e Core`, note:`Natação: respiração bilateral, flutuação e técnica. Sem séries longas. Força: agachamento goblet 3×12, afundo búlgaro 3×8, prancha 3×30s.`},
-    {day:'Ter', treino:`🚴 Bike qualidade ${bikeQuality} km`, note:`Aquec 10' Z1 → 3×8 min Z3 (FC ${bikeFcZ2}) c/ 3 min Z1 entre → 10' despec. Cadência 85-95 rpm. Teto FC: ${runFcTeto} bpm.`},
-    {day:'Qua', treino:`🏃 Corrida Tempo Z3 — ${qualityRun} km`, note:`Aquec 10' fácil (${runZ1Pace}/km · FC ${runFcZ1}) → 20' Tempo Z3 (${runTempoPace}/km · FC ${runFcZ3}) → 10' recup Z1. Teto: ${runFcTeto} bpm. Se FC subir acima do teto, reduza o pace.`},
-    {day:'Qui', treino:`🏊 Técnica leve ${swimEnd} m + 💪 Força Costas e Postura`, note:`Natação: educativos curtos, foco em confiança na água. Força: remada sentada 3×10, puxada frente 3×10, supino halteres 3×8.`},
-    {day:'Sex', treino:`🛌 Descanso total`, note:`Recuperação obrigatória. Mobilidade leve 15 min (quadril, posterior de coxa, panturrilha) se quiser se mover.`},
-    {day:'Sáb', treino:`🚴 Longo ${bikeLongWknd} km + 🏃 Brick ${brickRunWknd} km`, note: weekendIntense ? `Bike: Z2 constante (FC ${bikeFcZ2}). Transition < 90s. Brick: saias correndo no ritmo que o corpo pede, sem checar pace — foco em sensação.` : `Volume reduzido para recuperação. Bike Z1/Z2 tranquilo + brick curtinho de adaptação.`},
-    {day:'Dom', treino:`🏃 Longo Z2 — ${longRunWknd} km`, note: weekendIntense ? `100% Z2 conversacional. Pace ${runEasyPace}/km · FC ${runFcZ2}. Se FC sair de Z2, caminhe 1 min. Hidrate a cada 20 min.` : `Longo conservador. Pace ${runZ1Pace}–${runEasyPace}/km · FC ${runFcZ1}. Prioridade: absorver a carga sem somar fadiga.`}
+    {day:'Seg', treino:`💪 Academia A — 5:30–6:30am`, note:`Força triathlon iniciante: agachamento goblet 3×12, afundo búlgaro 3×8, hip thrust 4×10, prancha 3×30s. Saída às 6:30am. Opcional: corrida fácil Z1 15-20 min à tarde.`},
+    {day:'Ter', treino:`🏊 Adaptação ${swimTech} m`, note:`Natação: respiração bilateral, flutuação e técnica. Educativos de braçada. Sem séries longas — foco em confiança na água.`},
+    {day:'Qua', treino:`💪 Academia B — 5:30–6:30am + 🏃 Corrida Z3 ${qualityRun} km`, note:`Academia: remada sentada 3×10, puxada 3×10, supino halteres 3×8. Tarde: aquec 10' Z1 (${runZ1Pace}/km) → 20' Tempo Z3 (${runTempoPace}/km · FC ${runFcZ3}) → 10' recup Z1. Teto: ${runFcTeto} bpm.`},
+    {day:'Qui', treino:`🏊 Técnica ${swimEnd} m + 🚴 Bike ${bikeQuality} km`, note:`Natação: educativos, foco em confiança na água. Tarde: Bike — aquec 10' → 3×8 min Z3 (FC ${bikeFcZ2}) c/ 3' Z1 → 10' despec. Cadência 85-95 rpm. Teto: ${runFcTeto} bpm.`},
+    {day:'Sex', treino:`💪 Academia A — 5:30–6:30am`, note:`Força de pernas pré-fim de semana: agachamento 3×10, RDL 3×8, hip thrust 4×10, elevação panturrilha 3×15, prancha 3×30s. Não corra — preservar as pernas.`},
+    {day:'Sáb', treino:`🚴 Longo ${bikeLongWknd} km + 🏃 Brick ${brickRunWknd} km`, note: weekendIntense ? `Bike: Z2 constante (FC ${bikeFcZ2}). Transition < 90s. Brick: ritmo natural — foco em sensação, não pace.` : `Volume reduzido. Bike Z1/Z2 tranquilo + brick curtinho de adaptação.`},
+    {day:'Dom', treino:`🏊 Adaptação ${swimTech} m + 🏃 Longo Z2 — ${longRunWknd} km`, note: weekendIntense ? `Natação técnica leve de manhã. Tarde: longo 100% Z2 conversacional. Pace ${runEasyPace}/km · FC ${runFcZ2}. Se FC sair de Z2, caminhe 1 min.` : `Domingo conservador. Natação leve + longo reduzido: pace ${runZ1Pace}–${runEasyPace}/km · FC ${runFcZ1}.`}
   ] : [
-    {day:'Seg', treino:`🏊 Técnica ${swimTech} m + 💪 Força Pernas e Core`, note:`Natação: drills + técnica de braçada. Força: agachamento goblet 3×10, RDL 3×8, hip thrust 4×10, farmer carry 4×30m.`},
-    {day:'Ter', treino:`🚴 Bike qualidade ${bikeQuality} km`, note:`Aquec 10' Z1 → 4×6 min Z3/Z4 (FC ${bikeFcZ2}) c/ 3' Z1 entre → 10' despec. Cadência 88-95 rpm. Teto FC: ${runFcTeto} bpm.`},
-    {day:'Qua', treino:`🏃 Corrida Tempo Z3 — ${qualityRun} km`, note:`Aquec 10' fácil (${runZ1Pace}/km · FC ${runFcZ1}) → 20' Tempo Z3 (${runTempoPace}/km · FC ${runFcZ3}) → 10' recup Z1. Teto: ${runFcTeto} bpm. Constância de pace > velocidade.`},
-    {day:'Qui', treino:`🏊 Endurance ${swimEnd} m + 💪 Força Costas e Postura`, note:`Natação: nado contínuo ~${swimCss}/100m, mantendo técnica. Força: remada 3×12, puxada frente 3×10, press halteres 3×8, prancha 3×40s.`},
-    {day:'Sex', treino:`🛌 Descanso total`, note:`Recuperação obrigatória. Mobilidade leve 15-20 min: mobilização do quadril, alongamento do IT-band e panturrilha.`},
-    {day:'Sáb', treino:`🚴 Longo ${bikeLongWknd} km + 🏃 Brick ${brickRunWknd} km`, note: weekendIntense ? `Bike: Z2 estável (FC ${bikeFcZ2}), pace ${bikeZ2}/km. Transition < 90s. Brick: saída em ritmo natural — não olhe o pace por 5 min, depois alvo ${runEasyPace}/km.` : `Sinais Garmin em alerta. Volume reduzido — bike Z1/Z2 fácil + brick de adaptação sem pressão de ritmo.`},
-    {day:'Dom', treino:`🏃 Longo Z2 — ${longRunWknd} km`, note: weekendIntense ? `100% conversacional Z2. Pace alvo ${runEasyPace}/km · FC ${runFcZ2}. Gel a cada 45 min se >1h. Se FC subir de Z2, caminhe até controlar.` : `Longo na versão conservadora. Pace ${runZ1Pace}–${runEasyPace}/km · FC ${runFcZ1}. Recuperação > performance hoje.`}
+    {day:'Seg', treino:`💪 Academia A — 5:30–6:30am`, note:`Força triathlon: agachamento goblet 3×10, RDL 3×8, hip thrust 4×10, farmer carry 4×30m, prancha 3×40s. Saída às 6:30am. Opcional: corrida fácil Z1 15-20 min à tarde.`},
+    {day:'Ter', treino:`🏊 Técnica ${swimTech} m + 🚴 Bike fácil ${bikeEasy} km`, note:`Natação: drills de braçada, respiração bilateral. Tarde: Bike Z1/Z2 solto (FC ${bikeFcZ2}). Recuperação ativa — não force o pace.`},
+    {day:'Qua', treino:`💪 Academia B — 5:30–6:30am + 🏃 Corrida Tempo Z3 — ${qualityRun} km`, note:`Academia: remada 3×12, puxada 3×10, press halteres 3×8, prancha 3×40s. Tarde: aquec 10' Z1 (${runZ1Pace}/km) → 20' Tempo Z3 (${runTempoPace}/km · FC ${runFcZ3}) → 10' recup Z1. Teto: ${runFcTeto} bpm.`},
+    {day:'Qui', treino:`🏊 Endurance ${swimEnd} m + 🚴 Bike qualidade ${bikeQuality} km`, note:`Natação: nado contínuo ~${swimCss}/100m, mantendo técnica. Tarde: Bike — aquec 10' → 4×6 min Z3/Z4 (FC ${bikeFcZ2}) c/ 3' Z1 → 10' despec. Cadência 88-95 rpm. Teto: ${runFcTeto} bpm.`},
+    {day:'Sex', treino:`💪 Academia A — 5:30–6:30am`, note:`Força de pernas pré-fim de semana: agachamento 3×10, RDL 3×8, hip thrust 4×10, elevação panturrilha 3×15, prancha 3×40s. Não corra hoje — preservar as pernas para sábado.`},
+    {day:'Sáb', treino:`🚴 Longo ${bikeLongWknd} km + 🏃 Brick ${brickRunWknd} km`, note: weekendIntense ? `Bike: Z2 estável (FC ${bikeFcZ2}), pace ${bikeZ2}/km. Transition < 90s. Brick: ritmo natural — alvo ${runEasyPace}/km, não olhe o pace nos primeiros 5 min.` : `Sinais Garmin em alerta. Volume reduzido — bike Z1/Z2 fácil + brick de adaptação.`},
+    {day:'Dom', treino:`🏊 Endurance ${swimEnd} m + 🏃 Longo Z2 — ${longRunWknd} km`, note: weekendIntense ? `Natação técnica de manhã: drills e nado contínuo. Tarde: longo 100% Z2 conversacional. Pace ${runEasyPace}/km · FC ${runFcZ2}. Gel a cada 45 min se >1h.` : `Domingo conservador. Natação leve + longo reduzido: pace ${runZ1Pace}–${runEasyPace}/km · FC ${runFcZ1}.`}
   ];
 
   const runObjectiveBase = {
@@ -2161,13 +2167,13 @@ function buildPeriodizedTriWeek(profile, avg, weekIndex, totalWeeks, targetKey, 
     const qualEntry = qualVariants[weekVariant] || qualVariants.limiar;
     const crossEntry = crossVariants[weekVariant] || crossVariants.velocidade;
     plan = [
-      {day:'Seg', treino:`🏃 Rodagem Regenerativa ${runRec} km`, note:`Z1 puro. Pace ${runZ1Pace}/km · FC ${runFcZ1}. Se FC sobe de Z1, caminhe. Objetivo: ativar circulação, não gerar carga.`},
-      {day:'Ter', treino:qualEntry.label, note:qualEntry.note},
-      {day:'Qua', treino:crossEntry.label, note:crossEntry.note},
-      {day:'Qui', treino:`🏃 Rodagem Z2 — ${runEasy} km`, note:`Base aeróbica conversacional Z2. Pace ${runEasyPace}/km · FC ${runFcZ2}. Você deve conseguir falar frases completas sem ofegar.`},
-      {day:'Sex', treino:`🛌 Descanso total`, note:`Recuperação obrigatória. Mobilidade 15 min: quadril, IT-band, panturrilha. Sem corrida.`},
-      {day:'Sáb', treino: objective==='ultra' ? `🏃 Longo 1 — ${runLongWknd} km` : `🏃 Longo — ${runLongWknd} km`, note: weekendIntense ? (objective==='ultra' ? `Primeiro longo do bloco ultra. Pace ${paceLong}/km · FC ${runFcZ2}. Gel a cada 45 min. Hidratação constante.` : `Longo principal. Pace ${paceLong}/km · FC ${runFcZ2}. 100% conversacional. Gel a cada 45 min se >1h.`) : `Longo reduzido. Sinais Garmin em alerta — pace ${runZ1Pace}/km · FC ${runFcZ1}. Prioridade: absorver a carga sem somar fadiga.`},
-      {day:'Dom', treino: objective==='ultra' ? `🏃 Longo 2 — ${ultraBackToBackWknd} km + 🏊 Técnica ${swimEasy} m` : `🏊 Técnica ${swimEasy} m + 💪 Força Costas e Postura`, note: weekendIntense ? (objective==='ultra' ? `Back-to-back leve para resistência específica. Pace ${runZ1Pace}/km · FC ${runFcZ1}. Não force — foco em tempo em pés.` : `Natação técnica: drills e educativos, sem volume. Força: remada 3×10, puxada 3×10, press halteres 3×8.`) : `Domingo conservador. Técnica sem carga e força de suporte. Deixe o corpo recuperar.`}
+      {day:'Seg', treino:`💪 Academia A — 5:30–6:30am + 🏃 Rodagem ${runRec} km`, note:`Academia: agachamento goblet 3×10, RDL 3×8, hip thrust 4×10, prancha 3×40s. Tarde: rodagem Z1 regenerativa. Pace ${runZ1Pace}/km · FC ${runFcZ1}. Se FC sobe de Z1, caminhe — não gerar carga.`},
+      {day:'Ter', treino:`🏊 Natação ${swimEasy} m + ${qualEntry.label}`, note:`Natação técnica: drills de crawl, respiração bilateral — sem volume forçado. Tarde: ${qualEntry.note}`},
+      {day:'Qua', treino:`💪 Academia B — 5:30–6:30am + 🏃 Rodagem Z2 ${runEasy} km`, note:`Academia: remada 3×10, puxada 3×10, press halteres 3×8, prancha 3×40s. Tarde: base aeróbica Z2 conversacional. Pace ${runEasyPace}/km · FC ${runFcZ2}. Você deve conseguir falar frases completas.`},
+      {day:'Qui', treino:`🏊 Natação ${swimEasy} m`, note:`Natação de recuperação. Drills e educativos leves — sem volume forçado. Dia de absorver a carga de ter + qua.`},
+      {day:'Sex', treino:`💪 Academia A — 5:30–6:30am`, note:`Força de pernas pré-fim de semana: agachamento 3×10, RDL 3×8, hip thrust 4×10, elevação panturrilha 3×15, prancha 3×40s. Não corra hoje — preservar as pernas para sábado.`},
+      {day:'Sáb', treino: objective==='ultra' ? `🏃 Longo 1 — ${runLongWknd} km` : `🏃 Longo — ${runLongWknd} km`, note: weekendIntense ? (objective==='ultra' ? `Primeiro longo do bloco ultra. Pace ${paceLong}/km · FC ${runFcZ2}. Gel a cada 45 min. Hidratação constante.` : `Longo principal. Pace ${paceLong}/km · FC ${runFcZ2}. 100% conversacional. Gel a cada 45 min se >1h.`) : `Longo reduzido. Sinais Garmin em alerta — pace ${runZ1Pace}/km · FC ${runFcZ1}. Prioridade: absorver a carga.`},
+      {day:'Dom', treino: objective==='ultra' ? `🏊 Natação ${swimEasy} m + 🏃 Longo 2 — ${ultraBackToBackWknd} km` : `🏊 Natação ${swimEasy} m`, note: weekendIntense ? (objective==='ultra' ? `Natação técnica leve de manhã. Back-to-back ultra: pace ${runZ1Pace}/km · FC ${runFcZ1}. Não force — foco em tempo em pés.` : `Natação técnica leve para fechar a semana. Drills e educativos. Recuperação ativa após o longo.`) : `Domingo conservador. Natação leve de recuperação. Deixe o corpo absorver a carga da semana.`}
     ];
 
     objectiveLabel = runCfg.label;
@@ -2187,7 +2193,7 @@ function buildPeriodizedTriWeek(profile, avg, weekIndex, totalWeeks, targetKey, 
       },0)).toFixed(1) : runTarget,
       bikeKm:bikeMetric,
       swimKm:swimMetric,
-      gym:'2x',
+      gym:'3x',
       week: wk,
       totalWeeks,
       phase,
@@ -2195,8 +2201,8 @@ function buildPeriodizedTriWeek(profile, avg, weekIndex, totalWeeks, targetKey, 
       overtrainingRisk,
       target: objectiveLabel,
       criterio: runCfg
-        ? `Plano específico para ${runCfg.label}, com 1 dia de descanso fixo, dias úteis após 17:30 e ajuste anti-overtraining pelos sinais Garmin.`
-        : 'Baseado na sua performance Garmin, com dias úteis após 17:30, ajuste conservador para 64 anos, natação iniciante e proteção anti-overtraining.',
+        ? `Academia Seg/Qua/Sex 5:30–6:30am, Natação Ter/Qui/Dom, Corrida distribuída nos dias úteis e sábado. Ajuste anti-overtraining pelos sinais Garmin.`
+        : 'Academia Seg/Qua/Sex 5:30–6:30am, Natação Ter/Qui/Dom, Bike+Corrida nos fins de semana. Ajuste conservador para 64 anos com proteção anti-overtraining.',
       garmin:`Garmin → BB3d ${g.bbAvg3}% · Sono7d ${g.sonoAvg7}h · HRV ${g.hrvAvg} · VO2 ${g.vo2Now} · tendência ${(g.volTrend*100).toFixed(0)}%`,
       weekVariant: weekVariantLabel
     }
@@ -3179,17 +3185,19 @@ function renderSportCard(emoji, css, title, note){
   </div>`;
 }
 
-function buildDayCards(p, i, done, isCustom, extras){
+function buildDayCards(p, i, done, isCustom, extras, originalDay){
   const isDone = !!done[i];
   const treino = String(p.treino||'');
   const note   = String(p.note||'');
   const extraList = Array.isArray(extras) ? extras : [];
+  const isDayMoved = originalDay && originalDay !== p.day;
 
   const editBtn = `<button class="coach-day-done-btn" style="margin-left:.3rem;font-size:.62rem" onclick="toggleDayEdit(${i})" title="Editar plano do dia">✏️</button>`;
   const addBtn  = `<button class="coach-day-done-btn" style="margin-left:.3rem;font-size:.68rem;background:#ecfdf5;border-color:#10b981;color:#065f46" onclick="toggleDayAdd(${i})" title="Incluir nova atividade">＋</button>`;
+  const moveBtn = `<button class="coach-day-done-btn" style="margin-left:.3rem;font-size:.68rem;background:#f0f9ff;border-color:#0ea5e9;color:#0369a1" onclick="toggleDayMove(${i})" title="Mover para outro dia">📅</button>`;
   const doneBtn = `<button class="coach-day-done-btn ${isDone?'on':''}" onclick="togglePlanoDone(${i})">${isDone?'✓ Feito':'Confirmar'}</button>`;
-  const hdrRight = `<div style="display:flex;gap:.3rem;align-items:center">${doneBtn}${addBtn}${editBtn}</div>`;
-  const dayLbl = `<span class="coach-day-lbl">${p.day}${isCustom?'<span style="font-size:.55rem;color:#0ea5e9;margin-left:4px">✎</span>':''}${extraList.length?`<span style="font-size:.55rem;color:#10b981;margin-left:4px">+${extraList.length}</span>`:''}</span>`;
+  const hdrRight = `<div style="display:flex;gap:.3rem;align-items:center">${doneBtn}${addBtn}${moveBtn}${editBtn}</div>`;
+  const dayLbl = `<span class="coach-day-lbl">${p.day}${isDayMoved?`<span style="font-size:.55rem;color:#0ea5e9;margin-left:4px" title="Movido de ${originalDay}">↩${originalDay}</span>`:''}${isCustom&&!isDayMoved?'<span style="font-size:.55rem;color:#0ea5e9;margin-left:4px">✎</span>':''}${extraList.length?`<span style="font-size:.55rem;color:#10b981;margin-left:4px">+${extraList.length}</span>`:''}</span>`;
 
   const editPanel = `<div class="day-edit-panel" id="day-edit-${i}">
     <div style="font-size:.62rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.4rem">✏️ Alterar plano do dia</div>
@@ -3209,6 +3217,20 @@ function buildDayCards(p, i, done, isCustom, extras){
     <div class="day-edit-actions">
       <button class="day-edit-save" style="background:#10b981" onclick="saveDayAdd(${i})">Incluir</button>
       <button class="day-edit-reset" onclick="toggleDayAdd(${i})">Cancelar</button>
+    </div>
+  </div>`;
+
+  const DAYS_LIST = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
+  const moveDayBtns = DAYS_LIST.map(d => {
+    const sel = p.day === d;
+    return `<button onclick="saveDayMove(${i},'${d}')" style="padding:.3rem .5rem;border-radius:7px;border:1.5px solid ${sel?'#0369a1':'#bae6fd'};background:${sel?'#0369a1':'#e0f2fe'};color:${sel?'#fff':'#0369a1'};font-size:.75rem;font-weight:800;cursor:pointer;font-family:inherit">${d}</button>`;
+  }).join('');
+  const movePanel = `<div class="day-edit-panel" id="day-move-${i}" style="background:#f0f9ff;border-top:1px dashed #0ea5e9">
+    <div style="font-size:.62rem;font-weight:800;color:#0369a1;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.5rem">📅 Mover para outro dia da semana</div>
+    <div style="display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.5rem">${moveDayBtns}</div>
+    <div class="day-edit-actions">
+      ${isDayMoved?`<button class="day-edit-reset" onclick="saveDayMove(${i},null)">↩ Restaurar (${originalDay})</button>`:''}
+      <button class="day-edit-reset" onclick="toggleDayMove(${i})">Fechar</button>
     </div>
   </div>`;
 
@@ -3255,6 +3277,7 @@ function buildDayCards(p, i, done, isCustom, extras){
     ${buildMainCards()}
     ${extraCards}
     ${addPanel}
+    ${movePanel}
     ${editPanel}
   </div>`;
 }
@@ -3264,16 +3287,28 @@ function toggleDayEdit(i){
   if(el) el.classList.toggle('open');
   const ap = document.getElementById('day-add-'+i);
   if(ap && ap.classList.contains('open')) ap.classList.remove('open');
+  const mp = document.getElementById('day-move-'+i);
+  if(mp && mp.classList.contains('open')) mp.classList.remove('open');
 }
 function toggleDayAdd(i){
   const el = document.getElementById('day-add-'+i);
   if(el) el.classList.toggle('open');
   const ep = document.getElementById('day-edit-'+i);
   if(ep && ep.classList.contains('open')) ep.classList.remove('open');
+  const mp = document.getElementById('day-move-'+i);
+  if(mp && mp.classList.contains('open')) mp.classList.remove('open');
   if(el && el.classList.contains('open')){
     const inp = document.getElementById('day-add-treino-'+i);
     if(inp) inp.focus();
   }
+}
+function toggleDayMove(i){
+  const el = document.getElementById('day-move-'+i);
+  if(el) el.classList.toggle('open');
+  const ep = document.getElementById('day-edit-'+i);
+  if(ep && ep.classList.contains('open')) ep.classList.remove('open');
+  const ap = document.getElementById('day-add-'+i);
+  if(ap && ap.classList.contains('open')) ap.classList.remove('open');
 }
 
 function saveDayEdit(i){
@@ -3281,14 +3316,33 @@ function saveDayEdit(i){
   const note   = (document.getElementById('day-edit-note-'+i)||{}).value||'';
   const wk = ensureWeeklyPlano(curPlanoTipo);
   if(!wk.data.overrides) wk.data.overrides = {};
-  wk.data.overrides[i] = {treino, note};
+  wk.data.overrides[i] = {...(wk.data.overrides[i]||{}), treino, note};
   saveTpState();
   refreshCoachFromData();
 }
 
 function resetDayEdit(i){
   const wk = ensureWeeklyPlano(curPlanoTipo);
-  if(wk.data.overrides) delete wk.data.overrides[i];
+  if(wk.data.overrides && wk.data.overrides[i]){
+    const {day} = wk.data.overrides[i];
+    if(day) wk.data.overrides[i] = {day};
+    else delete wk.data.overrides[i];
+  }
+  saveTpState();
+  refreshCoachFromData();
+}
+
+function saveDayMove(i, newDay){
+  const wk = ensureWeeklyPlano(curPlanoTipo);
+  if(!wk.data.overrides) wk.data.overrides = {};
+  const existing = wk.data.overrides[i] || {};
+  if(newDay){
+    wk.data.overrides[i] = {...existing, day: newDay};
+  } else {
+    const {day: _, ...rest} = existing;
+    if(Object.keys(rest).length) wk.data.overrides[i] = rest;
+    else delete wk.data.overrides[i];
+  }
   saveTpState();
   refreshCoachFromData();
 }
@@ -3352,7 +3406,7 @@ function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
     metaEl.innerHTML = `<b style="color:var(--blue)">${metrics.weekVariant||''}</b> · Semana ${metrics.week}/${metrics.totalWeeks} · ${phaseLabel}${metrics.deload?' · Deload':''} · ${metrics.target} · ${doneCount}/${plan.length} concluído`;
   }
 
-  cardsEl.innerHTML = plan.map((p,i) => buildDayCards(p, i, done, !!overrides[i], dayExtras[i])).join('');
+  cardsEl.innerHTML = plan.map((p,i) => buildDayCards(p, i, done, !!overrides[i], dayExtras[i], basePlan[i]?.day)).join('');
 
   const gymWrap = document.getElementById('coach-gym-guide');
   if(gymWrap){
