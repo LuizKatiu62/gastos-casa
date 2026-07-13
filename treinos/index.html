@@ -1726,9 +1726,9 @@ function restartTriCycle(){
     cycleWeeks: triCfg.cycleWeeks,
     objective: triCfg.objective || 'triathlon'
   };
-  saveTpState();
   const wk = isoWeekInfo().key;
-  if(tpState.weeks?.[wk]) tpState.weeks[wk] = {};
+  tpState.weeks[wk] = {};
+  saveTpState();
   syncCoachObjectiveUi();
   renderPlanoSemanal();
   if(DATA){
@@ -1792,16 +1792,22 @@ function ensureWeeklyPlano(nivel){
   if(!tpState.weeks[nowWeek]) tpState.weeks[nowWeek] = {};
   if(tpState.weeks[nowWeek][tipo]){
     const saved = tpState.weeks[nowWeek][tipo];
-    const normalized = normalizePlanLabels(saved.plan || []);
-    const kickoffAdjusted = applySwimFirstKickoff(normalized, nowWeek);
-    const g = calcGarminSignals();
-    const weekendIntense = !(g.guard <= 0.9 || g.bbAvg3 < 45 || g.sonoAvg7 < 6.2 || g.hrvAvg < 38 || g.volTrend > 0.18);
-    const scheduleAdjusted = applyTimeWindowAndRisk(kickoffAdjusted, weekendIntense);
-    if(JSON.stringify(saved.plan||[]) !== JSON.stringify(scheduleAdjusted)){
-      saved.plan = scheduleAdjusted;
-      saveTpState();
+    // Invalidate cache if objective changed since plan was built
+    const currentObjective = tpState.cycle?.objective || triCfg.objective || 'triathlon';
+    if(saved.objective && saved.objective !== currentObjective){
+      delete tpState.weeks[nowWeek][tipo];
+    } else {
+      const normalized = normalizePlanLabels(saved.plan || []);
+      const kickoffAdjusted = applySwimFirstKickoff(normalized, nowWeek);
+      const g = calcGarminSignals();
+      const weekendIntense = !(g.guard <= 0.9 || g.bbAvg3 < 45 || g.sonoAvg7 < 6.2 || g.hrvAvg < 38 || g.volTrend > 0.18);
+      const scheduleAdjusted = applyTimeWindowAndRisk(kickoffAdjusted, weekendIntense);
+      if(JSON.stringify(saved.plan||[]) !== JSON.stringify(scheduleAdjusted)){
+        saved.plan = scheduleAdjusted;
+        saveTpState();
+      }
+      return {weekKey:nowWeek, data:saved};
     }
-    return {weekKey:nowWeek, data:saved};
   }
 
   if(!tpState.cycle){
@@ -1820,7 +1826,8 @@ function ensureWeeklyPlano(nivel){
 
   tpState.weeks[nowWeek][tipo] = {
     selectedType: prev?.selectedType || tipo,
-    done: prev?.done || {},
+    objective: cycleObjective,
+    done: {},
     plan: applyTimeWindowAndRisk(
       applySwimFirstKickoff(normalizePlanLabels(built.plan), nowWeek),
       !(built?.metrics?.overtrainingRisk)
@@ -2046,6 +2053,8 @@ function buildPeriodizedTriWeek(profile, avg, weekIndex, totalWeeks, targetKey, 
   const phase = wk<=phaseCut1 ? 'base' : wk<=phaseCut2 ? 'build' : 'taper';
   const deload = wk%4===0 && wk<totalWeeks-1;
   const deloadFactor = deload ? 0.78 : 1;
+  const weekVariant = deload ? 'deload' : ['velocidade','limiar','fartlek'][(wk - 1) % 3];
+  const weekVariantLabel = {velocidade:'⚡ Velocidade (Intervalados)',limiar:'⏱️ Limiar (Tempo Run)',fartlek:'🎭 Fartlek / Progressivo',deload:'↻ Deload (Recuperação)'}[weekVariant];
   const ageGuard = ATHLETE_AGE >= 60 ? 0.9 : 1;
   const swimBeginner = profile?.label === 'Tri Iniciante' || avg.swimKm < 3;
   const overtrainingRisk = g.guard <= 0.9 || g.bbAvg3 < 45 || g.sonoAvg7 < 6.2 || g.hrvAvg < 38 || g.volTrend > 0.18;
@@ -2131,11 +2140,30 @@ function buildPeriodizedTriWeek(profile, avg, weekIndex, totalWeeks, targetKey, 
     const ultraBackToBack = objective==='ultra' ? Math.max(10, +(runLong*0.42).toFixed(1)) : 0;
     const ultraBackToBackWknd = objective==='ultra' ? (weekendIntense ? ultraBackToBack : Math.max(8, +(ultraBackToBack*0.72).toFixed(1))) : 0;
 
-    const qualLabel = objective==='run10k' ? `3×1 km Z3/Z4 (${paceQual}/km · FC ${runFcZ3}) c/ 2 min Z1 entre. Aquec 10' Z1 (${runZ1Pace}/km) + 10' despec.` : `Aquec 10' Z1 → 20–25' Tempo Z3 (${paceQual}/km · FC ${runFcZ3}) → 10' recup Z1. Teto: ${runFcTeto} bpm.`;
+    const qualVariants = {
+      velocidade: objective==='run10k'
+        ? {label:`⚡ Intervalados — ${runQuality} km`, note:`Aquec 10' Z1 (${runZ1Pace}/km) → 6×600 m Z4 (${paceQual}/km · FC ${runFcZ3}) c/ 90s Z1 entre → 10' despec. Teto: ${runFcTeto} bpm.`}
+        : {label:`⚡ Intervalados — ${runQuality} km`, note:`Aquec 10' Z1 → 5×1000 m Z4 (${paceQual}/km · FC ${runFcZ3}) c/ 2 min Z1 → 10' despec. Teto: ${runFcTeto} bpm.`},
+      limiar: objective==='run10k'
+        ? {label:`⏱️ Tempo Z3 — ${runQuality} km`, note:`Aquec 10' Z1 → 20' Tempo Z3 (${paceQual}/km · FC ${runFcZ3}) → 10' recup Z1. Pace constante do início ao fim. Teto: ${runFcTeto} bpm.`}
+        : {label:`⏱️ Tempo Z3 — ${runQuality} km`, note:`Aquec 10' Z1 → 25' Tempo Z3 (${paceQual}/km · FC ${runFcZ3}) → 10' recup Z1. Constância de pace > velocidade. Teto: ${runFcTeto} bpm.`},
+      fartlek: objective==='run10k'
+        ? {label:`🎭 Fartlek — ${runQuality} km`, note:`Fartlek: Aquec 10' Z1 → 10×[90s forte (${paceQual}/km) + 60s leve (${runZ1Pace}/km)] → 10' despec. Teto: ${runFcTeto} bpm.`}
+        : {label:`🎭 Progressivo — ${runQuality} km`, note:`Progressivo sem parar: 1/3 Z1 (${runZ1Pace}/km) → 1/3 Z2 (${runEasyPace}/km) → 1/3 Z3 (${paceQual}/km). Total: ${runQuality} km.`},
+      deload: {label:`🏃 Rodagem Leve — ${Math.max(4,+(runQuality*0.6).toFixed(1))} km`, note:`Semana deload. Pace ${runZ1Pace}/km · FC ${runFcZ1}. FC nunca acima de Z2. Absorver a carga das semanas anteriores.`}
+    };
+    const crossVariants = {
+      velocidade: {label:`🚴 Bike Z2 — ${crossBike} km`, note:`Bike Z2 (FC ${bikeFcZ2}). Articulações em descanso, base aeróbica mantida. Cadência > 80 rpm.`},
+      limiar:     {label:`💪 Academia — Força`, note:`Força específica para corrida: agachamento 3×10, RDL 3×8, hip thrust 3×12, prancha 3×40s, farmer carry 4×30m. 50–60 min.`},
+      fartlek:    {label:`🏊 Natação Técnica — ${swimEasy} m`, note:`Cross-training de baixo impacto. Crawl técnico: educativos, respiração bilateral. Sem volume forçado. Mobilidade de ombros.`},
+      deload:     {label:`🚴 Bike Leve — ${Math.round(crossBike*0.6)} km`, note:`Bike Z1 de recuperação ativa. FC nunca acima de Z2. Semana deload.`}
+    };
+    const qualEntry = qualVariants[weekVariant] || qualVariants.limiar;
+    const crossEntry = crossVariants[weekVariant] || crossVariants.velocidade;
     plan = [
       {day:'Seg', treino:`🏃 Rodagem Regenerativa ${runRec} km`, note:`Z1 puro. Pace ${runZ1Pace}/km · FC ${runFcZ1}. Se FC sobe de Z1, caminhe. Objetivo: ativar circulação, não gerar carga.`},
-      {day:'Ter', treino:`🏃 Qualidade Z3 — ${runQuality} km`, note:qualLabel+` Constância de pace > velocidade. Teto absoluto: ${runFcTeto} bpm.`},
-      {day:'Qua', treino:`🚴 Cross ${crossBike} km`, note:`Bike Z1/Z2 (FC ${bikeFcZ2}). Preserva articulações e mantém base aeróbica sem impacto. Pace de recuperação.`},
+      {day:'Ter', treino:qualEntry.label, note:qualEntry.note},
+      {day:'Qua', treino:crossEntry.label, note:crossEntry.note},
       {day:'Qui', treino:`🏃 Rodagem Z2 — ${runEasy} km`, note:`Base aeróbica conversacional Z2. Pace ${runEasyPace}/km · FC ${runFcZ2}. Você deve conseguir falar frases completas sem ofegar.`},
       {day:'Sex', treino:`🛌 Descanso total`, note:`Recuperação obrigatória. Mobilidade 15 min: quadril, IT-band, panturrilha. Sem corrida.`},
       {day:'Sáb', treino: objective==='ultra' ? `🏃 Longo 1 — ${runLongWknd} km` : `🏃 Longo — ${runLongWknd} km`, note: weekendIntense ? (objective==='ultra' ? `Primeiro longo do bloco ultra. Pace ${paceLong}/km · FC ${runFcZ2}. Gel a cada 45 min. Hidratação constante.` : `Longo principal. Pace ${paceLong}/km · FC ${runFcZ2}. 100% conversacional. Gel a cada 45 min se >1h.`) : `Longo reduzido. Sinais Garmin em alerta — pace ${runZ1Pace}/km · FC ${runFcZ1}. Prioridade: absorver a carga sem somar fadiga.`},
@@ -2169,7 +2197,8 @@ function buildPeriodizedTriWeek(profile, avg, weekIndex, totalWeeks, targetKey, 
       criterio: runCfg
         ? `Plano específico para ${runCfg.label}, com 1 dia de descanso fixo, dias úteis após 17:30 e ajuste anti-overtraining pelos sinais Garmin.`
         : 'Baseado na sua performance Garmin, com dias úteis após 17:30, ajuste conservador para 64 anos, natação iniciante e proteção anti-overtraining.',
-      garmin:`Garmin → BB3d ${g.bbAvg3}% · Sono7d ${g.sonoAvg7}h · HRV ${g.hrvAvg} · VO2 ${g.vo2Now} · tendência ${(g.volTrend*100).toFixed(0)}%`
+      garmin:`Garmin → BB3d ${g.bbAvg3}% · Sono7d ${g.sonoAvg7}h · HRV ${g.hrvAvg} · VO2 ${g.vo2Now} · tendência ${(g.volTrend*100).toFixed(0)}%`,
+      weekVariant: weekVariantLabel
     }
   };
 }
@@ -2210,7 +2239,7 @@ function renderPlanoSemanal(){
     </div>
   `).join('');
   el.innerHTML = `
-    <div class="tp-meta">Semana ${wk.weekKey} · ciclo ${metrics.week}/${metrics.totalWeeks} · alvo ${metrics.target} · perfil ${info.label} · concluído ${doneCount}/${plan.length}</div>
+    <div class="tp-meta"><b>${metrics.weekVariant||''}</b> · Semana ${metrics.week}/${metrics.totalWeeks} · ${metrics.target} · ${doneCount}/${plan.length} concluído</div>
     <div class="tp-type-card">
       <div class="tp-type-title">${info.label}</div>
       <div class="tp-type-desc"><b>Foco:</b> ${info.foco}<br><b>Fase:</b> ${phaseLabel}${metrics.deload?' (deload)':''}<br><b>Corrida:</b> ${metrics.runKm} km/sem · <b>Bike:</b> ${metrics.bikeKm} km/sem · <b>Natação:</b> ${metrics.swimKm} km/sem · <b>Academia:</b> ${metrics.gym}<br><b>Critério:</b> ${metrics.criterio}<br><b>Sinais usados:</b> ${metrics.garmin}</div>
@@ -3320,7 +3349,7 @@ function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
   const doneCount = Object.values(done).filter(Boolean).length;
   const metaEl = document.getElementById('coach-sheet-meta');
   if(metaEl){
-    metaEl.innerHTML = `Semana ${wk.weekKey} · ciclo ${metrics.week}/${metrics.totalWeeks} · ${phaseLabel}${metrics.deload?' · deload':''} · alvo ${metrics.target} · concluído ${doneCount}/${plan.length}`;
+    metaEl.innerHTML = `<b style="color:var(--blue)">${metrics.weekVariant||''}</b> · Semana ${metrics.week}/${metrics.totalWeeks} · ${phaseLabel}${metrics.deload?' · Deload':''} · ${metrics.target} · ${doneCount}/${plan.length} concluído`;
   }
 
   cardsEl.innerHTML = plan.map((p,i) => buildDayCards(p, i, done, !!overrides[i], dayExtras[i])).join('');
