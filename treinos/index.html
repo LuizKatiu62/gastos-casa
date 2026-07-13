@@ -508,10 +508,8 @@ body{padding-top:45px}
             <option value="olimpico">Olímpico</option>
             <option value="703">70.3</option>
           </select>
-          <select id="coach-cycle" class="tp-select" onchange="setTriCycle(Number(this.value))">
-            <option value="8">8 sem</option>
-            <option value="12">12 sem</option>
-          </select>
+          <input type="date" id="coach-event-date" class="tp-select" style="min-width:0;flex:1" onchange="setCoachEventDate(this.value)" title="Data da prova / evento">
+          <span id="coach-event-weeks" style="font-size:.72rem;font-weight:800;white-space:nowrap;color:var(--blue)"></span>
         </div>
         <!-- Nível de intensidade (secundário) -->
         <div id="coach-plan-levels" class="tp-levels" style="margin-top:.45rem">
@@ -915,7 +913,7 @@ let curPeriodo = PERIODO;
 let curPlanoTipo = 'tri_intermediario';
 let curCoachTipo = 'intervalado';
 let curTreinosMode = localStorage.getItem('treinos_mode_v1') || 'atleta';
-const TP_STATE_KEY = 'treinos_programados_state_v5';
+const TP_STATE_KEY = 'treinos_programados_state_v6';
 const TRI_CFG_KEY = 'tri_cfg_v1';
 const COACH_STATE_KEY = 'treinos_coach_state_v1';
 function localISODate(ref=new Date()){
@@ -1677,16 +1675,24 @@ function saveCoachState(){
 function loadTriCfg(){
   try{
     const raw = localStorage.getItem(TRI_CFG_KEY);
-    if(!raw) return {target:'olimpico', cycleWeeks:12, objective:'triathlon'};
+    if(!raw) return {target:'olimpico', cycleWeeks:12, objective:'triathlon', eventDate:null};
     const parsed = JSON.parse(raw);
     return {
       target: TRI_TARGETS[parsed?.target] ? parsed.target : 'olimpico',
-      cycleWeeks: parsed?.cycleWeeks===8 ? 8 : 12,
-      objective: ['triathlon','run10k','half','marathon','ultra'].includes(parsed?.objective) ? parsed.objective : 'triathlon'
+      cycleWeeks: Math.max(4, Math.min(52, Number(parsed?.cycleWeeks)||12)),
+      objective: ['triathlon','run10k','half','marathon','ultra'].includes(parsed?.objective) ? parsed.objective : 'triathlon',
+      eventDate: parsed?.eventDate || null
     };
   }catch(_){
-    return {target:'olimpico', cycleWeeks:12, objective:'triathlon'};
+    return {target:'olimpico', cycleWeeks:12, objective:'triathlon', eventDate:null};
   }
+}
+
+function computeCycleWeeks(){
+  if(!triCfg.eventDate) return 12;
+  const eventMs = new Date(triCfg.eventDate + 'T12:00:00') - new Date();
+  const weeks = Math.round(eventMs / (7 * 24 * 3600 * 1000));
+  return Math.max(4, Math.min(52, weeks));
 }
 
 function saveTriCfg(){
@@ -1717,20 +1723,37 @@ function syncCoachObjectiveUi(){
     triSel.style.display = isTri ? '' : 'none';
     triSel.disabled = !isTri;
   }
+  const evInput = document.getElementById('coach-event-date');
+  if(evInput && triCfg.eventDate) evInput.value = triCfg.eventDate;
+  const evWeeks = document.getElementById('coach-event-weeks');
+  if(evWeeks){
+    if(triCfg.eventDate){
+      const wks = computeCycleWeeks();
+      evWeeks.textContent = wks <= 0 ? '⚠️ passado' : `${wks} sem`;
+      evWeeks.style.color = wks <= 0 ? '#dc2626' : 'var(--blue)';
+    } else {
+      evWeeks.textContent = '← data?';
+      evWeeks.style.color = 'var(--muted)';
+    }
+  }
 }
 
-function setTriCycle(weeks){
-  triCfg.cycleWeeks = weeks===8 ? 8 : 12;
+function setCoachEventDate(dateStr){
+  triCfg.eventDate = dateStr || null;
+  triCfg.cycleWeeks = computeCycleWeeks();
   saveTriCfg();
+  syncCoachObjectiveUi();
   restartTriCycle();
 }
 
 function restartTriCycle(){
+  const weeks = computeCycleWeeks();
   tpState.cycle = {
     startKey: isoWeekInfo().key,
     target: triCfg.target,
-    cycleWeeks: triCfg.cycleWeeks,
-    objective: triCfg.objective || 'triathlon'
+    cycleWeeks: weeks,
+    objective: triCfg.objective || 'triathlon',
+    eventDate: triCfg.eventDate || null
   };
   const wk = isoWeekInfo().key;
   tpState.weeks[wk] = {};
@@ -1817,7 +1840,7 @@ function ensureWeeklyPlano(nivel){
   }
 
   if(!tpState.cycle){
-    tpState.cycle = {startKey: nowWeek, target: triCfg.target, cycleWeeks: triCfg.cycleWeeks, objective: triCfg.objective || 'triathlon'};
+    tpState.cycle = {startKey: nowWeek, target: triCfg.target, cycleWeeks: computeCycleWeeks(), objective: triCfg.objective || 'triathlon', eventDate: triCfg.eventDate || null};
   }
 
   const prevKey = prevWeekKey(nowWeek);
@@ -1826,7 +1849,7 @@ function ensureWeeklyPlano(nivel){
   const avg = calcTriAverages();
   const cycleTarget = TRI_TARGETS[tpState.cycle.target] ? tpState.cycle.target : triCfg.target;
   const cycleObjective = ['triathlon','run10k','half','marathon','ultra'].includes(tpState.cycle.objective) ? tpState.cycle.objective : (triCfg.objective || 'triathlon');
-  const cycleWeeks = tpState.cycle.cycleWeeks===8 ? 8 : 12;
+  const cycleWeeks = Math.max(4, Math.min(52, Number(tpState.cycle.cycleWeeks)||12));
   const weekIndex = diffWeeks(tpState.cycle.startKey, nowWeek) + 1;
   const built = buildPeriodizedTriWeek(info, avg, weekIndex, cycleWeeks, cycleTarget, cycleObjective, nowWeek);
 
@@ -2230,9 +2253,7 @@ function renderPlanoSemanal(){
   const phaseLabel = metrics.phase==='base'?'Base':metrics.phase==='build'?'Construção':'Polimento';
   const phaseChip = metrics.deload ? `<span class="tp-alt-chip">Deload</span>` : '';
   const targetSel = document.getElementById('tp-target');
-  const cycleSel = document.getElementById('tp-cycle');
   if(targetSel) targetSel.value = cycle.target || triCfg.target;
-  if(cycleSel) cycleSel.value = String(cycle.cycleWeeks || triCfg.cycleWeeks);
   syncCoachObjectiveUi();
   const rows = plan.map((p,i)=>`
     <div class="tp-row ${(p.treino.includes('Academia A') || p.treino.includes('Academia B')) ? 'tp-row-photo' : ''}">
@@ -3392,18 +3413,17 @@ function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
   const metrics = wk.data.metrics || built.metrics;
 
   const targetSel = document.getElementById('coach-target');
-  const cycleSel = document.getElementById('coach-cycle');
   const objSel = document.getElementById('coach-objective');
   if(objSel) objSel.value = objective;
   if(targetSel) targetSel.value = cycle.target || triCfg.target;
-  if(cycleSel) cycleSel.value = String(cycle.cycleWeeks || triCfg.cycleWeeks);
   syncCoachObjectiveUi();
 
   const phaseLabel = metrics.phase==='base' ? 'Base' : metrics.phase==='build' ? 'Construção' : 'Polimento';
   const doneCount = Object.values(done).filter(Boolean).length;
   const metaEl = document.getElementById('coach-sheet-meta');
   if(metaEl){
-    metaEl.innerHTML = `<b style="color:var(--blue)">${metrics.weekVariant||''}</b> · Semana ${metrics.week}/${metrics.totalWeeks} · ${phaseLabel}${metrics.deload?' · Deload':''} · ${metrics.target} · ${doneCount}/${plan.length} concluído`;
+    const eventLabel = (cycle.eventDate||triCfg.eventDate) ? `📅 ${(cycle.eventDate||triCfg.eventDate).split('-').reverse().slice(0,2).join('/')} · ` : '';
+    metaEl.innerHTML = `${eventLabel}<b style="color:var(--blue)">${metrics.weekVariant||''}</b> · Semana ${metrics.week}/${metrics.totalWeeks} · ${phaseLabel}${metrics.deload?' · Deload':''} · ${metrics.target} · ${doneCount}/${plan.length} concluído`;
   }
 
   cardsEl.innerHTML = plan.map((p,i) => buildDayCards(p, i, done, !!overrides[i], dayExtras[i], basePlan[i]?.day)).join('');
@@ -4964,17 +4984,17 @@ function setCoachFromProva(nome, data, dists){
 
   // Calcula semanas até a prova
   const raceMs = new Date(data+'T12:00:00') - new Date();
-  const weeksLeft = Math.max(1, Math.round(raceMs / (7*24*3600*1000)));
-  const cycleWeeks = weeksLeft >= 12 ? 12 : 8;
+  const weeksLeft = Math.max(4, Math.round(raceMs / (7*24*3600*1000)));
 
   // Atualiza configuração do coach
   triCfg.objective = objective;
-  triCfg.cycleWeeks = cycleWeeks;
+  triCfg.eventDate = data;
+  triCfg.cycleWeeks = weeksLeft;
   saveTriCfg();
 
   // Reinicia ciclo a partir de hoje
   const nowWeek = isoWeekInfo().key;
-  tpState.cycle = {startKey:nowWeek, target:triCfg.target, cycleWeeks:cycleWeeks, objective:objective};
+  tpState.cycle = {startKey:nowWeek, target:triCfg.target, cycleWeeks:weeksLeft, objective:objective, eventDate:data};
   if(tpState.weeks?.[nowWeek]) tpState.weeks[nowWeek] = {};
   saveTpState();
 
