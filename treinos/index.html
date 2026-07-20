@@ -395,6 +395,15 @@ body{padding-top:45px}
 /* ── DIVIDER ── */
 .div-label{font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin:.25rem 0 .6rem;padding-top:.5rem;border-top:1px solid var(--border)}
 
+/* ── SURGERY MILESTONE BANNER ── */
+.surgery-banner{background:linear-gradient(135deg,#0b2239,#12345a 48%,#145da0);color:#fff;border-radius:14px;padding:1rem;margin-bottom:.85rem}
+.surgery-banner .sb-title{font-size:.78rem;font-weight:800;letter-spacing:.3px;margin-bottom:.2rem}
+.surgery-banner .sb-sub{font-size:.7rem;opacity:.88;margin-bottom:.7rem}
+.surgery-banner .sb-stats{display:flex;gap:1.2rem}
+.surgery-banner .sb-stat{flex:1}
+.surgery-banner .sb-val{font-size:1.4rem;font-weight:800;line-height:1.1}
+.surgery-banner .sb-lbl{font-size:.68rem;opacity:.88;margin-top:.1rem}
+
 @media(max-width:640px){.ring-grid{grid-template-columns:1fr}}
 @media(max-width:640px){.glance-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:380px){.insight-grid{grid-template-columns:1fr}.chart-row{grid-template-columns:1fr}.sg3{grid-template-columns:repeat(3,1fr)}.sv{font-size:1.15rem}.glance-grid{grid-template-columns:1fr}}
@@ -591,6 +600,7 @@ body{padding-top:45px}
       <div id="t-stats" class="sgrid sg3" style="margin-bottom:.75rem"></div>
       <div class="card">
         <div class="card-title">📊 Resumo do Período</div>
+        <div class="surgery-banner" id="surgery-banner"></div>
         <div id="run-list"></div>
       </div>
       <div class="card">
@@ -3582,7 +3592,25 @@ function renderIndices(ativ, bb, sono, hrv){
 }
 
 // ════════════════ TREINOS ════════════════
+const CIRURGIA_DATA = '2025-06-13';
+function renderSurgeryBanner(ativ){
+  const el = document.getElementById('surgery-banner');
+  if(!el) return;
+  const corridas = ativ.filter(a => getEsporte(a)==='corrida' && a.data >= CIRURGIA_DATA);
+  const km = corridas.reduce((s,a)=>s+a.distancia,0).toFixed(1);
+  const qtd = corridas.length;
+  const dias = Math.floor((Date.now() - new Date(CIRURGIA_DATA+'T00:00:00').getTime())/864e5);
+  el.innerHTML = `
+    <div class="sb-title">🎗️ Todas as minhas corridas</div>
+    <div class="sb-sub">13/06/2025 (dia da cirurgia) até hoje · ${dias} dias</div>
+    <div class="sb-stats">
+      <div class="sb-stat"><div class="sb-val">${km}</div><div class="sb-lbl">km percorridos</div></div>
+      <div class="sb-stat"><div class="sb-val">${qtd}</div><div class="sb-lbl">corridas</div></div>
+    </div>`;
+}
+
 function renderTreinos(ativ,meta,sem){
+  renderSurgeryBanner(ativ);
   applyTreinosMode();
   renderPlanoSemanal();
   const filtrado=curEsporte==='todos'?ativ:curEsporte==='multisport'?ativ.filter(a=>a.tipo==='duathlon'||a.tipo==='triathlon'||a.tipo==='multi_sport'||a.tipo==='multisport'||a.esporte==='duathlon'||a.esporte==='triathlon'):ativ.filter(a=>getEsporte(a)===curEsporte);
