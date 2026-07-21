@@ -841,6 +841,7 @@ window.addEventListener('DOMContentLoaded', () => {
 const FB_DB   = 'https://gastos-casa-7f431-default-rtdb.firebaseio.com';
 const FB_KEY  = 'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU';
 const FB_PATH = 'treinos/luiz';
+const FB_PATH_MANUAL = 'treinos_manual/luiz'; // separate from FB_PATH: Garmin sync PUTs (overwrites) FB_PATH hourly
 const APP_VERSION = '2026-07-09-09';
 const SNAPSHOT_KEY = 'treinos_last_snapshot_v1';
 const TRAINING_KICKOFF_DATE = '2026-07-07';
@@ -856,10 +857,40 @@ const MANUAL_TIPOS = {
 };
 function loadManuais(){ try{ return JSON.parse(localStorage.getItem(MANUAIS_KEY)||'[]'); }catch(e){ return []; } }
 function saveManuais(list){ try{ localStorage.setItem(MANUAIS_KEY, JSON.stringify(list)); }catch(e){} }
+
+// ─── Sync manuais via Firebase (treinos_manual/luiz) — cross-device, and what the
+// Apple Shortcuts automation (MOTRA → Health → this app) writes into ───
+let _remoteManuais = [];
+async function fetchManuaisRemote(token){
+  try{
+    const res = await fetch(`${FB_DB}/${FB_PATH_MANUAL}.json?auth=${token}`);
+    if(!res.ok) return [];
+    const d = await res.json();
+    return d ? Object.values(d) : [];
+  }catch(e){ console.error('fetchManuaisRemote erro:', e.message); return []; }
+}
+async function pushManualRemote(ativ, token){
+  try{
+    const t = token || await fbToken();
+    await fetch(`${FB_DB}/${FB_PATH_MANUAL}/${ativ.id}.json?auth=${t}`,
+      {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(ativ)});
+  }catch(e){ console.error('pushManualRemote erro:', e.message); }
+}
+async function deleteManualRemote(id, token){
+  try{
+    const t = token || await fbToken();
+    await fetch(`${FB_DB}/${FB_PATH_MANUAL}/${id}.json?auth=${t}`, {method:'DELETE'});
+  }catch(e){ console.error('deleteManualRemote erro:', e.message); }
+}
 function mergeAtividades(garminAtiv){
-  const manuais = loadManuais();
   const garminIds = new Set((garminAtiv||[]).map(a=>a.id));
-  const novasM = manuais.filter(a=>!garminIds.has(a.id));
+  const seen = new Set();
+  const novasM = [];
+  [...loadManuais(), ...(_remoteManuais||[])].forEach(a=>{
+    if(!a || !a.id || garminIds.has(a.id) || seen.has(a.id)) return;
+    seen.add(a.id);
+    novasM.push(a);
+  });
   return [...(garminAtiv||[]), ...novasM].sort((a,b)=>b.data.localeCompare(a.data));
 }
 function localISOToday(){
@@ -906,6 +937,7 @@ function salvarManual(){
   const list = loadManuais();
   list.push(ativ);
   saveManuais(list);
+  pushManualRemote(ativ); // fire-and-forget: syncs to Firebase so it shows on every device
   fecharManual();
   setAppAlert('Treino salvo! ✓', 'info');
   if(DATA){ DATA.atividades = mergeAtividades(DATA.atividades); render(DATA); }
@@ -913,6 +945,8 @@ function salvarManual(){
 function excluirManual(id){
   const list = loadManuais().filter(a=>a.id!==id);
   saveManuais(list);
+  deleteManualRemote(id);
+  _remoteManuais = (_remoteManuais||[]).filter(a=>a.id!==id);
   if(DATA){ DATA.atividades = mergeAtividades(DATA.atividades.filter(a=>a.id!==id)); render(DATA); }
 }
 
@@ -2400,6 +2434,7 @@ async function loadData(){
       showEmpty();
       return;
     }
+    _remoteManuais = await fetchManuaisRemote(token);
     DATA=d;
     saveSnapshot(d);
     try {
