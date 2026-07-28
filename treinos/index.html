@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Treinos">
 <meta name="theme-color" content="#0b2239">
-<link rel="manifest" href="./manifest.json?v=2026-07-07-02">
+<link rel="manifest" href="./manifest.json?v=2026-07-28-01">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%231a56db' width='192' height='192'/><text x='50%' y='50%' font-size='120' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%231a56db' width='180' height='180' rx='40'/><text x='50%' y='50%' font-size='110' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <title>Treinos · Luiz Silva</title>
@@ -236,6 +236,14 @@ body{padding-top:45px}
 
 /* ── CHARTS ── */
 .ch{position:relative;height:175px}
+.chart-empty{
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;text-align:center;gap:.35rem;
+  border:1.5px dashed var(--border);border-radius:12px;background:#f8fafc;
+  padding:1rem;
+}
+.chart-empty b{font-size:.82rem;font-weight:800;color:var(--muted)}
+.chart-empty span{font-size:.7rem;color:#94a3b8;line-height:1.5;max-width:26ch}
 .ch-sm{position:relative;height:130px}
 .chart-row{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:.75rem}
 
@@ -467,7 +475,7 @@ body{padding-top:45px}
   <div>
     <h1>🏃 Treinos · Luiz Silva</h1>
     <p id="hSub">Carregando…</p>
-    <div id="ver-badge" style="font-size:.55rem;color:rgba(255,255,255,.55);font-family:monospace;margin-top:.1rem">v2026-07-08-03</div>
+    <div id="ver-badge" style="font-size:.55rem;color:rgba(255,255,255,.55);font-family:monospace;margin-top:.1rem">v2026-07-28-01</div>
   </div>
   <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.3rem">
     <button class="btn-refresh" id="btn-garmin" onclick="syncGarmin()">⚡ Sync Garmin</button>
@@ -509,6 +517,7 @@ body{padding-top:45px}
             <option value="triathlon">🏊🚴🏃 Triathlon</option>
             <option value="run10k">🏃 10 km</option>
             <option value="half">🏃 Meia Maratona</option>
+            <option value="run25k">🏃 25 km</option>
             <option value="marathon">🏃 Maratona</option>
             <option value="ultra">⛰️ Ultra Maratona</option>
           </select>
@@ -763,6 +772,7 @@ body{padding-top:45px}
             <select class="calc-sel" id="calc-dist">
               <option value="10">10 km</option>
               <option value="21.1">21,1 km — Meia</option>
+              <option value="25">25 km</option>
               <option value="42.2">42,2 km — Maratona</option>
             </select>
           </div>
@@ -797,6 +807,23 @@ body{padding-top:45px}
           <button class="pf-btn" onclick="filterProvas('21.1',this)">Meia (21,1 km)</button>
           <button class="pf-btn" onclick="filterProvas('42.2',this)">Maratona (42,2 km)</button>
         </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">🎯 Simulador de Estratégia (3 blocos)</div>
+        <div class="calc-grid">
+          <div class="calc-field"><label>Distância (km)</label><input class="calc-inp" id="ns-dist" type="number" step="0.1" value="25" oninput="calcNegSplit()"></div>
+          <div class="calc-field"><label>Troca 1 — fim do km</label><input class="calc-inp" id="ns-a" type="number" value="13" oninput="calcNegSplit()"></div>
+        </div>
+        <div class="calc-grid">
+          <div class="calc-field"><label>Pace bloco 1</label><input class="calc-inp" id="ns-p1" type="text" value="6:00" oninput="calcNegSplit()"></div>
+          <div class="calc-field"><label>Troca 2 — fim do km</label><input class="calc-inp" id="ns-b" type="number" value="21" oninput="calcNegSplit()"></div>
+        </div>
+        <div class="calc-grid">
+          <div class="calc-field"><label>Pace bloco 2</label><input class="calc-inp" id="ns-p2" type="text" value="5:30" oninput="calcNegSplit()"></div>
+          <div class="calc-field"><label>Pace bloco 3</label><input class="calc-inp" id="ns-p3" type="text" value="5:00" oninput="calcNegSplit()"></div>
+        </div>
+        <div id="ns-result" style="margin-top:.75rem"></div>
       </div>
 
       <div id="provas-list"></div>
@@ -842,9 +869,23 @@ const FB_DB   = 'https://gastos-casa-7f431-default-rtdb.firebaseio.com';
 const FB_KEY  = 'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU';
 const FB_PATH = 'treinos/luiz';
 const FB_PATH_MANUAL = 'treinos_manual/luiz'; // separate from FB_PATH: Garmin sync PUTs (overwrites) FB_PATH hourly
-const APP_VERSION = '2026-07-09-09';
+const APP_VERSION = '2026-07-28-01';
 const SNAPSHOT_KEY = 'treinos_last_snapshot_v1';
 const TRAINING_KICKOFF_DATE = '2026-07-07';
+const RACE_WEEK_KEY = '2026-W31';
+const RACE_WEEK_PLAN = [
+  {day:'Seg', treino:'🏃 10 km leve', note:'Última rodagem de volume da semana. Daqui em diante, só redução.'},
+  {day:'Ter', treino:'🏃 Regenerativo + educativos — 45 min', note:'10 min Z1 · 20 min Z2 · 6×20s strides no ritmo de 3 km com 80s de trote · 5 min solto. Os strides não cansam: acordam o sistema nervoso, que é o que perde afiação no taper.'},
+  {day:'Qua', treino:'🏃 Calibração de ritmo — 3×1,5 km a 5:30', note:'15 min de aquecimento progressivo · 3×1,5 km a 5:30/km com 90s de trote · 10 min solto. É teste, não treino: se os 5:30 saírem controlados, o plano de domingo está validado. Se custarem, o bloco final da prova vira 5:15.'},
+  {day:'Qui', treino:'🏃 Rodagem curta — 30 a 35 min Z1/Z2', note:'Tudo Z1/Z2 mais 4×15s de aceleração leve no fim. Corte para 30 min se as pernas estiverem pesadas. Perna leve vale mais que qualquer treino agora.'},
+  {day:'Sex', treino:'🛌 Descanso total', note:'Sem corrida. Mobilidade leve, hidratação, dormir cedo. Evitar tênis novo, massagem profunda e comida diferente.'},
+  {day:'Sáb', treino:'🏃 Shakeout pré-prova — 20 min', note:'15 min Z1 mais 4×45s a 5:30 com 1 min de caminhada. Usar o tênis de prova. Tira a sensação de perna morta que o descanso de sexta deixa.'},
+  {day:'Dom', treino:'🏁 PROVA — 25 km · alvo 2:22:00', note:'Aquecimento: 10 min Z1 mais mobilidade e 3×30s progressivos, terminando 15 a 20 min antes da largada. Km 1 a 13 a 6:00 · km 14 a 21 a 5:30 · km 22 a 25 a 5:00. Parciais: 10 km 60:00 · 15 km 1:29 · 20 km 1:56:30 · 25 km 2:22:00. Géis no km 7, 13 e 19, sempre antes de acelerar. Plano B no km 21: se os 5:00 não estiverem lá, feche a 5:15 (2:23).'}
+];
+
+function applyRaceWeek(plan, weekKey){
+  return weekKey === RACE_WEEK_KEY ? RACE_WEEK_PLAN.map(function(p){ return Object.assign({}, p); }) : plan;
+}
 let charts = {}, curTab = 'treinos', DATA = null, curEsporte = 'todos';
 
 // ─── TREINOS MANUAIS ───
@@ -1724,7 +1765,7 @@ function loadTriCfg(){
     return {
       target: TRI_TARGETS[parsed?.target] ? parsed.target : 'olimpico',
       cycleWeeks: Math.max(4, Math.min(52, Number(parsed?.cycleWeeks)||12)),
-      objective: ['triathlon','run10k','half','marathon','ultra'].includes(parsed?.objective) ? parsed.objective : 'triathlon',
+      objective: ['triathlon','run10k','half','run25k','marathon','ultra'].includes(parsed?.objective) ? parsed.objective : 'triathlon',
       eventDate: parsed?.eventDate || null
     };
   }catch(_){
@@ -1751,7 +1792,7 @@ function setTriTarget(target){
 }
 
 function setCoachObjective(objective){
-  const valid = ['triathlon','run10k','half','marathon','ultra'];
+  const valid = ['triathlon','run10k','half','run25k','marathon','ultra'];
   triCfg.objective = valid.includes(objective) ? objective : 'triathlon';
   saveTriCfg();
   syncCoachObjectiveUi();
@@ -1874,7 +1915,7 @@ function ensureWeeklyPlano(nivel){
       const kickoffAdjusted = applySwimFirstKickoff(normalized, nowWeek);
       const g = calcGarminSignals();
       const weekendIntense = !(g.guard <= 0.9 || g.bbAvg3 < 45 || g.sonoAvg7 < 6.2 || g.hrvAvg < 38 || g.volTrend > 0.18);
-      const scheduleAdjusted = applyTimeWindowAndRisk(kickoffAdjusted, weekendIntense);
+      const scheduleAdjusted = applyRaceWeek(applyTimeWindowAndRisk(kickoffAdjusted, weekendIntense), nowWeek);
       if(JSON.stringify(saved.plan||[]) !== JSON.stringify(scheduleAdjusted)){
         saved.plan = scheduleAdjusted;
         saveTpState();
@@ -1892,7 +1933,7 @@ function ensureWeeklyPlano(nivel){
   const info = PLANO_TIPOS[tipo] || PLANO_TIPOS.tri_intermediario;
   const avg = calcTriAverages();
   const cycleTarget = TRI_TARGETS[tpState.cycle.target] ? tpState.cycle.target : triCfg.target;
-  const cycleObjective = ['triathlon','run10k','half','marathon','ultra'].includes(tpState.cycle.objective) ? tpState.cycle.objective : (triCfg.objective || 'triathlon');
+  const cycleObjective = ['triathlon','run10k','half','run25k','marathon','ultra'].includes(tpState.cycle.objective) ? tpState.cycle.objective : (triCfg.objective || 'triathlon');
   const cycleWeeks = Math.max(4, Math.min(52, Number(tpState.cycle.cycleWeeks)||12));
   const weekIndex = diffWeeks(tpState.cycle.startKey, nowWeek) + 1;
   const built = buildPeriodizedTriWeek(info, avg, weekIndex, cycleWeeks, cycleTarget, cycleObjective, nowWeek);
@@ -1901,10 +1942,10 @@ function ensureWeeklyPlano(nivel){
     selectedType: prev?.selectedType || tipo,
     objective: cycleObjective,
     done: {},
-    plan: applyTimeWindowAndRisk(
+    plan: applyRaceWeek(applyTimeWindowAndRisk(
       applySwimFirstKickoff(normalizePlanLabels(built.plan), nowWeek),
       !(built?.metrics?.overtrainingRisk)
-    ),
+    ), nowWeek),
     metrics: built.metrics
   };
   saveTpState();
@@ -2189,6 +2230,7 @@ function buildPeriodizedTriWeek(profile, avg, weekIndex, totalWeeks, targetKey, 
   const runObjectiveBase = {
     run10k: {label:'10 km', weekly: 24, longPct:0.26, qualityPct:0.22, longMax:14},
     half: {label:'Meia Maratona', weekly: 34, longPct:0.33, qualityPct:0.2, longMax:22},
+    run25k: {label:'25 km', weekly: 38, longPct:0.35, qualityPct:0.18, longMax:25},
     marathon: {label:'Maratona', weekly: 44, longPct:0.38, qualityPct:0.16, longMax:30},
     ultra: {label:'Ultra Maratona', weekly: 54, longPct:0.42, qualityPct:0.12, longMax:36}
   };
@@ -2290,7 +2332,7 @@ function renderPlanoSemanal(){
   const info = PLANO_TIPOS[tipoAtual] || PLANO_TIPOS.tri_intermediario;
   const cycle = tpState.cycle || {startKey:wk.weekKey,target:triCfg.target,cycleWeeks:triCfg.cycleWeeks,objective:triCfg.objective||'triathlon'};
   const weekIndex = diffWeeks(cycle.startKey, wk.weekKey)+1;
-  const objective = ['triathlon','run10k','half','marathon','ultra'].includes(cycle.objective) ? cycle.objective : (triCfg.objective || 'triathlon');
+  const objective = ['triathlon','run10k','half','run25k','marathon','ultra'].includes(cycle.objective) ? cycle.objective : (triCfg.objective || 'triathlon');
   const built = buildPeriodizedTriWeek(info, calcTriAverages(), weekIndex, cycle.cycleWeeks, cycle.target, objective, wk.weekKey);
   const plan = wk.data.plan || built.plan;
   const metrics = wk.data.metrics || built.metrics;
@@ -2487,26 +2529,39 @@ function showEmpty(err, errMsg){
   const hdr=err?'⚠️ Problema ao carregar':'ℹ️ Sem dados yet';
   const msg=err?`<p style="font-size:.8rem;color:#e11d48;margin-bottom:.5rem">Erro: ${errMsg||'Desconhecido'}</p>`:'';
   const retry=err?'<button class="btn-refresh" onclick="loadData()" style="background:rgba(239,68,68,.2);border-color:#ef4444;color:#dc2626">🔄 Tentar novamente</button>':'';
-  document.getElementById('coach-status').innerHTML=`
+  // Escreve apenas em elementos que existem de fato no HTML atual.
+  const setHtml = (id, html) => { const el = document.getElementById(id); if(el) el.innerHTML = html; };
+  const hideEl  = (id) => { const el = document.getElementById(id); if(el) el.style.display = 'none'; };
+
+  setHtml('empty-msg', `
     <div class="empty"><div style="font-size:3rem;margin-bottom:.75rem">${err?'⚠️':'🏃'}</div>
     <h3>${hdr}</h3>
     ${msg}
-    <p>Rode o script no Terminal para importar seus treinos:<br><br>
-    <code>cd ~/gastos-casa && python3 sync-garmin.py</code><br><br>
-    Depois clique em <strong>↻ Sync</strong> acima.</p>
-    ${retry}</div>`;
-  document.getElementById('coach-sugestao').innerHTML='';
-  document.getElementById('coach-insights').innerHTML='';
-  document.getElementById('coach-stats-hero').innerHTML='';
-  document.getElementById('coach-sport-stats').innerHTML='';
-  const coachHero=document.getElementById('coach-hero');
+    <p>Os dados do Garmin não carregaram, mas a planilha da semana continua disponível na aba <strong>Coach</strong>.<br><br>
+    Toque em <strong>⚡ Sync Garmin</strong> para tentar de novo.</p>
+    ${retry}</div>`);
+  const emptyEl = document.getElementById('empty-msg');
+  if(emptyEl) emptyEl.style.display = 'block';
+
+  setHtml('coach-sugestao','');
+  setHtml('coach-insights','');
+  setHtml('coach-stats-hero','');
+  setHtml('coach-sport-stats','');
+  setHtml('coach-hero','');
   const coachNote=document.getElementById('coach-note');
-  if(coachHero) coachHero.innerHTML='';
   if(coachNote){ coachNote.innerHTML=''; coachNote.style.display='none'; }
-  document.getElementById('empty-msg').style.display='none';
+
   setAppAlert('');
-  loadRaceGoal();
-  document.getElementById('hSub').textContent = err ? (errMsg||'Erro ao carregar') : 'Sem dados disponíveis';
+  try { loadRaceGoal(); } catch(e){ console.warn('loadRaceGoal:', e.message); }
+
+  // A planilha semanal nao depende do Garmin: desenha mesmo offline.
+  try { renderCoach([], {}, {}, {}, {}, {}, {}); }
+  catch(e){ console.warn('renderCoach offline:', e.message); }
+
+  setTimeout(markEmptyCharts, 200);
+
+  const hSubEl = document.getElementById('hSub');
+  if(hSubEl) hSubEl.textContent = err ? (errMsg||'Erro ao carregar') : 'Sem dados disponíveis';
 }
 
 // ── helpers ──
@@ -2828,6 +2883,29 @@ function mkChart(id,type,labels,data,color,opts={}){
   });
 }
 
+function markEmptyCharts(){
+  document.querySelectorAll('.ch, .ch-sm').forEach(box => {
+    const cv = box.querySelector('canvas');
+    if(!cv) return;
+    const hasChart = (typeof Chart !== 'undefined' && typeof Chart.getChart === 'function')
+      ? !!Chart.getChart(cv) : false;
+    let ph = box.querySelector('.chart-empty');
+    if(hasChart){
+      if(ph) ph.remove();
+      cv.style.display = '';
+      return;
+    }
+    cv.style.display = 'none';
+    if(!ph){
+      ph = document.createElement('div');
+      ph.className = 'chart-empty';
+      ph.innerHTML = '<b>\ud83d\udced Sem dados para este gr\u00e1fico</b>'
+        + '<span>Os gr\u00e1ficos usam o hist\u00f3rico do Garmin. Toque em <b>\u26a1 Sync Garmin</b> no topo para carregar.</span>';
+      box.appendChild(ph);
+    }
+  });
+}
+
 // ── RENDER ──
 function render(d){
   window.__APP_BOOT_OK = true;
@@ -2854,6 +2932,9 @@ function render(d){
   renderIndices(ativ,bb,sono,hrv);
   renderEvolucao(ativ);
   renderSaude(bb,sono,stress,hrv);
+
+  // Alguns graficos sao criados dentro de requestAnimationFrame: espera antes de avaliar.
+  setTimeout(markEmptyCharts, 400);
 }
 
 // ════════════════ COACH ════════════════
@@ -3116,7 +3197,7 @@ function saveRaceGoal(){
     localStorage.setItem('coachEvento', curEvento);
   }
   // Auto-sync coach objective from race distance
-  const _objMap = {10:'run10k', 21.1:'half', 42.2:'marathon'};
+  const _objMap = {10:'run10k', 21.1:'half', 25:'run25k', 42.2:'marathon'};
   const _newObj = _objMap[raceGoal.dist];
   if(_newObj && _newObj !== triCfg.objective){
     triCfg.objective = _newObj;
@@ -3449,7 +3530,7 @@ function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
   const cycle = tpState.cycle || {startKey:wk.weekKey,target:triCfg.target,cycleWeeks:triCfg.cycleWeeks,objective:triCfg.objective||'triathlon'};
   const info = PLANO_TIPOS[tipoAtual] || PLANO_TIPOS.tri_intermediario;
   const weekIndex = diffWeeks(cycle.startKey, wk.weekKey) + 1;
-  const objective = ['triathlon','run10k','half','marathon','ultra'].includes(cycle.objective) ? cycle.objective : (triCfg.objective || 'triathlon');
+  const objective = ['triathlon','run10k','half','run25k','marathon','ultra'].includes(cycle.objective) ? cycle.objective : (triCfg.objective || 'triathlon');
   const built = buildPeriodizedTriWeek(info, calcTriAverages(), weekIndex, cycle.cycleWeeks, cycle.target, objective, wk.weekKey);
   const basePlan = wk.data.plan || built.plan;
   const overrides = wk.data.overrides || {};
@@ -4499,6 +4580,7 @@ function go(id,btn){
   document.querySelectorAll('.tab').forEach(b=>b.classList.remove('on'));
   document.getElementById('sec-'+id).classList.add('on');
   btn.classList.add('on'); curTab=id;
+  try { markEmptyCharts(); } catch(_){}
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
@@ -5042,7 +5124,7 @@ function usarDistCalc(dist){
 function setCoachFromProva(nome, data, dists){
   // Determina distância principal (maior da lista)
   const mainDist = [...dists].sort((a,b)=>b-a)[0];
-  const objMap = {5:'run10k', 10:'run10k', 21.1:'half', 42.2:'marathon'};
+  const objMap = {5:'run10k', 10:'run10k', 21.1:'half', 25:'run25k', 42.2:'marathon'};
   const objective = objMap[mainDist] || 'run10k';
 
   // Calcula semanas até a prova
@@ -5079,6 +5161,42 @@ function setCoachFromProva(nome, data, dists){
     const a=(DATA.atividades||[]).sort((a,b)=>b.data.localeCompare(a.data));
     renderCoach(a,DATA.meta||{},DATA.bodyBattery||{},DATA.sono||{},DATA.stress||{},DATA.hrv||{},DATA.semanal||{});
   }
+}
+
+function calcNegSplit(){
+  const num = id => parseFloat((document.getElementById(id)||{}).value) || 0;
+  const paceOf = id => {
+    const v = ((document.getElementById(id)||{}).value||'').trim();
+    const m = v.match(/^(\d+):(\d{1,2})$/);
+    return m ? (+m[1])*60 + (+m[2]) : 0;
+  };
+  const out = document.getElementById('ns-result');
+  if(!out) return;
+  const D = num('ns-dist'), A = num('ns-a'), B = num('ns-b');
+  const p1 = paceOf('ns-p1'), p2 = paceOf('ns-p2'), p3 = paceOf('ns-p3');
+  if(!D || !p1 || !p2 || !p3 || !(A > 0 && A < B && B < D)){
+    out.innerHTML = '<div style="font-size:.75rem;color:var(--muted);padding:.5rem 0">Escreva os paces no formato m:ss e mantenha 0 &lt; troca 1 &lt; troca 2 &lt; dist\u00e2ncia.</div>';
+    return;
+  }
+  const at = d => d <= A ? d*p1 : d <= B ? A*p1 + (d-A)*p2 : A*p1 + (B-A)*p2 + (d-B)*p3;
+  const fmt = t => {
+    const h = Math.floor(t/3600), m = Math.floor((t%3600)/60), sec = Math.round(t%60);
+    return h ? `${h}:${pad(m)}:${pad(sec)}` : `${m}:${pad(sec)}`;
+  };
+  const total = at(D);
+  const marks = [];
+  for(let k = 5; k < D; k += 5) marks.push(k);
+  [A,B].forEach(k => { if(marks.indexOf(k) < 0) marks.push(k); });
+  marks.sort((x,y) => x-y);
+  const paceAt = k => k <= A ? p1 : k <= B ? p2 : p3;
+  const rows = marks.map(k => `<tr class="${(k===A||k===B)?'split-5k':''}"><td>km ${k}</td><td>${s2p(paceAt(k))} /km</td><td>${fmt(at(k))}</td></tr>`).join('')
+    + `<tr class="split-final"><td>\ud83c\udfc1 ${D} km</td><td>\u2014</td><td>${fmt(total)}</td></tr>`;
+  out.innerHTML = `
+    <div class="pace-hero">
+      <div class="pace-hero-val">${fmt(total)}</div>
+      <div class="pace-hero-sub">Pace m\u00e9dio: <strong>${s2p(Math.round(total/D))} /km</strong> \u00b7 blocos de ${A} km \u00b7 ${(B-A)} km \u00b7 ${(D-B).toFixed(1)} km</div>
+    </div>
+    <table class="split-table"><thead><tr><th>Marco</th><th>Pace</th><th>Tempo</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 function calcPace(){
@@ -5135,6 +5253,7 @@ async function bootstrapApp(){
 
   dbg('renderProvas...');
   try { renderProvas(); } catch (e) { dbg('renderProvas ERRO: ' + e.message); }
+  try { calcNegSplit(); } catch (e) { dbg('calcNegSplit ERRO: ' + e.message); }
 
   dbg('Chart.js...');
   const chartOk = await ensureChartJs();
