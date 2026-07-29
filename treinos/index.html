@@ -1618,12 +1618,7 @@ async function ensureChartJs(){
   for(const src of candidates){
     try {
       await loadScriptOnce(src);
-      if(typeof Chart!=='undefined'){
-        try{
-          if(typeof zoneBandsPlugin!=='undefined') Chart.register(zoneBandsPlugin);
-        }catch(_){ }
-        return true;
-      }
+      if(typeof Chart!=='undefined') return true;
     } catch(_) {}
   }
   return false;
