@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Treinos">
 <meta name="theme-color" content="#0b2239">
-<link rel="manifest" href="./manifest.json?v=2026-07-28-11">
+<link rel="manifest" href="./manifest.json?v=2026-07-28-13">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%231a56db' width='192' height='192'/><text x='50%' y='50%' font-size='120' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%231a56db' width='180' height='180' rx='40'/><text x='50%' y='50%' font-size='110' font-family='system-ui' font-weight='900' fill='white' text-anchor='middle' dominant-baseline='central'>🏃</text></svg>">
 <title>Treinos · Luiz Silva</title>
@@ -485,7 +485,7 @@ body{padding-top:45px}
   <div>
     <h1>🏃 Treinos · Luiz Silva</h1>
     <p id="hSub">Carregando…</p>
-    <div id="ver-badge" style="font-size:.55rem;color:rgba(255,255,255,.55);font-family:monospace;margin-top:.1rem">v2026-07-28-11</div>
+    <div id="ver-badge" style="font-size:.55rem;color:rgba(255,255,255,.55);font-family:monospace;margin-top:.1rem">v2026-07-28-13</div>
   </div>
   <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.3rem">
     <button class="btn-refresh" id="btn-garmin" onclick="syncGarmin()">⚡ Sync Garmin</button>
@@ -878,8 +878,9 @@ window.addEventListener('DOMContentLoaded', () => {
 const FB_DB   = 'https://gastos-casa-7f431-default-rtdb.firebaseio.com';
 const FB_KEY  = 'AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU';
 const FB_PATH = 'treinos/luiz';
-const FB_PATH_MANUAL = 'treinos_manual/luiz'; // separate from FB_PATH: Garmin sync PUTs (overwrites) FB_PATH hourly
-const APP_VERSION = '2026-07-28-11';
+const FB_PATH_MANUAL = 'treinos_manual/luiz';
+const FB_PATH_COACH  = 'treinos_coach_edits/luiz'; // edicoes do Coach // separate from FB_PATH: Garmin sync PUTs (overwrites) FB_PATH hourly
+const APP_VERSION = '2026-07-28-13';
 const SNAPSHOT_KEY = 'treinos_last_snapshot_v1';
 const TRAINING_KICKOFF_DATE = '2026-07-07';
 const RACE_WEEK_KEY = '2026-W31';
@@ -1746,8 +1747,102 @@ function loadTpState(){
   }
 }
 
+// ─── Edicoes do usuario ficam FORA do plano gerado ───
+// Assim sobrevivem a Regenerar, troca de objetivo, mudanca de data e nova versao do app.
+function userEdits(weekKey){
+  if(!tpState.userEdits || typeof tpState.userEdits !== 'object') tpState.userEdits = {};
+  if(!tpState.userEdits[weekKey]) tpState.userEdits[weekKey] = {done:{}, overrides:{}, extras:{}};
+  const u = tpState.userEdits[weekKey];
+  if(!u.done) u.done = {};
+  if(!u.overrides) u.overrides = {};
+  if(!u.extras) u.extras = {};
+  return u;
+}
+
+// Traz para o novo formato o que ja estava salvo dentro do plano.
+function migrateLegacyEdits(){
+  let moved = 0;
+  Object.keys(tpState.weeks || {}).forEach(wk => {
+    Object.keys(tpState.weeks[wk] || {}).forEach(tipo => {
+      const d = tpState.weeks[wk][tipo] || {};
+      const u = userEdits(wk);
+      ['done','overrides','extras'].forEach(k => {
+        if(d[k] && Object.keys(d[k]).length){
+          Object.keys(d[k]).forEach(idx => {
+            if(u[k][idx] === undefined){ u[k][idx] = d[k][idx]; moved++; }
+          });
+        }
+      });
+    });
+  });
+  if(moved){ try{ localStorage.setItem(TP_STATE_KEY, JSON.stringify(tpState)); }catch(_){ } }
+  return moved;
+}
+
 function saveTpState(){
   try{ localStorage.setItem(TP_STATE_KEY, JSON.stringify(tpState)); }catch(_){}
+  scheduleCoachEditsPush();
+}
+
+// Sincronizacao das edicoes do Coach: guarda so o que voce editou.
+function collectCoachEdits(){
+  const out = {};
+  Object.keys(tpState.userEdits || {}).forEach(wk => {
+    const u = tpState.userEdits[wk] || {};
+    const has = ['done','overrides','extras'].some(k => u[k] && Object.keys(u[k]).length);
+    if(has) out[wk] = { done:u.done||{}, overrides:u.overrides||{}, extras:u.extras||{} };
+  });
+  return out;
+}
+
+function applyCoachEdits(edits){
+  if(!edits || typeof edits !== 'object') return false;
+  let changed = false;
+  Object.keys(edits).forEach(wk => {
+    const remote = edits[wk] || {};
+    if(remote.done || remote.overrides || remote.extras){
+      const u = userEdits(wk);
+      u.done = remote.done || {};
+      u.overrides = remote.overrides || {};
+      u.extras = remote.extras || {};
+      changed = true;
+    }
+  });
+  return changed;
+}
+
+let _coachPushTimer = null;
+function scheduleCoachEditsPush(){
+  clearTimeout(_coachPushTimer);
+  _coachPushTimer = setTimeout(pushCoachEditsRemote, 1500);
+}
+
+async function pushCoachEditsRemote(){
+  try{
+    const token = await fbToken();
+    if(!token) return;
+    const payload = { updatedAt: Date.now(), edits: collectCoachEdits() };
+    await fetch(`${FB_DB}/${FB_PATH_COACH}.json?auth=${token}`,
+      {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+    try{ localStorage.setItem('coach_edits_synced_at', String(payload.updatedAt)); }catch(_){ }
+  }catch(e){ console.warn('pushCoachEditsRemote:', e.message); }
+}
+
+async function fetchCoachEditsRemote(token){
+  try{
+    const res = await fetch(`${FB_DB}/${FB_PATH_COACH}.json?auth=${token}`);
+    if(!res.ok) return false;
+    const d = await res.json();
+    if(!d || !d.edits) return false;
+    const localAt = Number(localStorage.getItem('coach_edits_synced_at') || 0);
+    if(Number(d.updatedAt || 0) <= localAt) return false;
+    const changed = applyCoachEdits(d.edits);
+    if(changed){
+      try{ localStorage.setItem(TP_STATE_KEY, JSON.stringify(tpState)); }catch(_){ }
+      try{ localStorage.setItem('coach_edits_synced_at', String(d.updatedAt)); }catch(_){ }
+    }
+    return changed;
+  }catch(e){ console.warn('fetchCoachEditsRemote:', e.message); return false; }
 }
 
 function loadCoachState(){
@@ -1963,11 +2058,9 @@ function ensureWeeklyPlano(nivel){
 }
 
 function togglePlanoDone(idx){
-  const {weekKey, data} = ensureWeeklyPlano(curPlanoTipo);
-  if(!tpState.weeks[weekKey]) tpState.weeks[weekKey] = {};
-  if(!tpState.weeks[weekKey][curPlanoTipo]) tpState.weeks[weekKey][curPlanoTipo] = data;
-  const cur = !!tpState.weeks[weekKey][curPlanoTipo].done[idx];
-  tpState.weeks[weekKey][curPlanoTipo].done[idx] = !cur;
+  const {weekKey} = ensureWeeklyPlano(curPlanoTipo);
+  const u = userEdits(weekKey);
+  u.done[idx] = !u.done[idx];
   saveTpState();
   renderPlanoSemanal();
   refreshCoachFromData();
@@ -2487,6 +2580,7 @@ async function loadData(){
       return;
     }
     _remoteManuais = await fetchManuaisRemote(token);
+    await fetchCoachEditsRemote(token);
     DATA=d;
     saveSnapshot(d);
     try {
@@ -3455,18 +3549,19 @@ function saveDayEdit(i){
   const treino = (document.getElementById('day-edit-treino-'+i)||{}).value||'';
   const note   = (document.getElementById('day-edit-note-'+i)||{}).value||'';
   const wk = ensureWeeklyPlano(curPlanoTipo);
-  if(!wk.data.overrides) wk.data.overrides = {};
-  wk.data.overrides[i] = {...(wk.data.overrides[i]||{}), treino, note};
+  const u = userEdits(wk.weekKey);
+  u.overrides[i] = {...(u.overrides[i]||{}), treino, note};
   saveTpState();
   refreshCoachFromData();
 }
 
 function resetDayEdit(i){
   const wk = ensureWeeklyPlano(curPlanoTipo);
-  if(wk.data.overrides && wk.data.overrides[i]){
-    const {day} = wk.data.overrides[i];
-    if(day) wk.data.overrides[i] = {day};
-    else delete wk.data.overrides[i];
+  const u = userEdits(wk.weekKey);
+  if(u.overrides[i]){
+    const {day} = u.overrides[i];
+    if(day) u.overrides[i] = {day};
+    else delete u.overrides[i];
   }
   saveTpState();
   refreshCoachFromData();
@@ -3474,14 +3569,14 @@ function resetDayEdit(i){
 
 function saveDayMove(i, newDay){
   const wk = ensureWeeklyPlano(curPlanoTipo);
-  if(!wk.data.overrides) wk.data.overrides = {};
-  const existing = wk.data.overrides[i] || {};
+  const u = userEdits(wk.weekKey);
+  const existing = u.overrides[i] || {};
   if(newDay){
-    wk.data.overrides[i] = {...existing, day: newDay};
+    u.overrides[i] = {...existing, day: newDay};
   } else {
     const {day: _, ...rest} = existing;
-    if(Object.keys(rest).length) wk.data.overrides[i] = rest;
-    else delete wk.data.overrides[i];
+    if(Object.keys(rest).length) u.overrides[i] = rest;
+    else delete u.overrides[i];
   }
   saveTpState();
   refreshCoachFromData();
@@ -3492,18 +3587,19 @@ function saveDayAdd(i){
   if(!treino) return;
   const note = (document.getElementById('day-add-note-'+i)||{}).value||'';
   const wk = ensureWeeklyPlano(curPlanoTipo);
-  if(!wk.data.extras) wk.data.extras = {};
-  if(!wk.data.extras[i]) wk.data.extras[i] = [];
-  wk.data.extras[i].push({treino, note});
+  const u = userEdits(wk.weekKey);
+  if(!u.extras[i]) u.extras[i] = [];
+  u.extras[i].push({treino, note});
   saveTpState();
   refreshCoachFromData();
 }
 
 function removeDayExtra(i, j){
   const wk = ensureWeeklyPlano(curPlanoTipo);
-  if(!wk.data.extras || !wk.data.extras[i]) return;
-  wk.data.extras[i].splice(j, 1);
-  if(!wk.data.extras[i].length) delete wk.data.extras[i];
+  const u = userEdits(wk.weekKey);
+  if(!u.extras[i]) return;
+  u.extras[i].splice(j, 1);
+  if(!u.extras[i].length) delete u.extras[i];
   saveTpState();
   refreshCoachFromData();
 }
@@ -3519,15 +3615,16 @@ function renderCoach(ativ,meta,bb,sono,stress,hrv,sem){
     b.classList.toggle('sf-on', (b.getAttribute('onclick')||'').includes(`'${tipoAtual}'`));
   });
 
-  const done = wk.data.done || {};
+  const _u = userEdits(wk.weekKey);
+  const done = _u.done;
   const cycle = tpState.cycle || {startKey:wk.weekKey,target:triCfg.target,cycleWeeks:triCfg.cycleWeeks,objective:triCfg.objective||'triathlon'};
   const info = PLANO_TIPOS[tipoAtual] || PLANO_TIPOS.tri_intermediario;
   const weekIndex = diffWeeks(cycle.startKey, wk.weekKey) + 1;
   const objective = ['triathlon','run10k','half','run25k','marathon','ultra'].includes(cycle.objective) ? cycle.objective : (triCfg.objective || 'triathlon');
   const built = buildPeriodizedTriWeek(info, calcTriAverages(), weekIndex, cycle.cycleWeeks, cycle.target, objective, wk.weekKey);
   const basePlan = wk.data.plan || built.plan;
-  const overrides = wk.data.overrides || {};
-  const dayExtras = wk.data.extras || {};
+  const overrides = _u.overrides;
+  const dayExtras = _u.extras;
   const plan = basePlan.map((p, i) => overrides[i] ? {...p, ...overrides[i]} : p);
   const metrics = wk.data.metrics || built.metrics;
 
@@ -5247,6 +5344,8 @@ async function bootstrapApp(){
 
   const hs = document.getElementById('hSub');
   if (hs) hs.textContent = `Inicializando app v${APP_VERSION}...`;
+
+  try { migrateLegacyEdits(); } catch(e){ console.warn('migrateLegacyEdits:', e.message); }
 
   dbg('renderProvas...');
   try { renderProvas(); } catch (e) { dbg('renderProvas ERRO: ' + e.message); }
