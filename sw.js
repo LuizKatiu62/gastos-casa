@@ -1,118 +1,56 @@
-const CACHE = 'gastos-v198';
+/* ══════════════════════════════════════════════════════════════
+   Treinos · service worker
 
-const CORE_ASSETS = [
-  './index.html',
-  './travel.html',
-  './manifest.json',
-];
+   Estratégia: REDE PRIMEIRO.
+   Com internet, você sempre recebe a versão mais nova — nada de
+   ficar preso numa cópia velha depois de publicar. Sem internet,
+   o app abre a partir do cache e mostra a última leitura guardada.
 
-const EXT_URLS = [
-  'https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js',
-  'https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js',
-  'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js',
-];
+   Ao publicar uma versão nova, mude VERSAO abaixo.
+   ══════════════════════════════════════════════════════════════ */
 
-self.addEventListener('install', e => {
+const VERSAO = 'treinos-v2-2026-07-30-02';
+const ESSENCIAIS = ['./', './index.html', './manifest.json'];
+
+self.addEventListener('install', e=>{
+  self.skipWaiting();
   e.waitUntil(
-    caches.open(CACHE).then(async c => {
-      await c.addAll(CORE_ASSETS);
-      await Promise.allSettled(
-        EXT_URLS.map(url =>
-          fetch(url, { cache: 'force-cache' })
-            .then(res => { if (res.ok) c.put(url, res); })
-            .catch(() => {})
-        )
-      );
-    }).then(() => self.skipWaiting())
+    caches.open(VERSAO).then(c=>c.addAll(ESSENCIAIS)).catch(()=>{})
   );
 });
 
-self.addEventListener('activate', e => {
-  e.waitUntil(
-    caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
-      .then(() => self.clients.claim())
-      .then(() => self.clients.matchAll({ includeUncontrolled: true, type: 'window' }))
-      .then(clients => Promise.all(clients.map(client => {
-        // Navigate the client directly to fresh content — bypasses stale JS and bfcache
-        const freshUrl = new URL('./travel.html?_r=' + Date.now(), self.location.href).href;
-        return client.navigate(freshUrl)
-          .catch(() => client.postMessage({ type: 'SW_UPDATED' }));
-      })))
-  );
+self.addEventListener('activate', e=>{
+  e.waitUntil((async()=>{
+    const chaves = await caches.keys();
+    await Promise.all(chaves.filter(k=>k!==VERSAO).map(k=>caches.delete(k)));
+    await self.clients.claim();
+  })());
 });
 
-// Allow page to trigger skipWaiting explicitly
-self.addEventListener('message', e => {
-  if (e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting();
-});
+self.addEventListener('fetch', e=>{
+  const req = e.request;
+  if(req.method !== 'GET') return;
 
-self.addEventListener('fetch', e => {
-  if (e.request.method !== 'GET') return;
-  const url = e.request.url;
+  const url = new URL(req.url);
+  // Firebase, GitHub e fontes nunca passam pelo cache
+  if(url.origin !== self.location.origin) return;
 
-  // version.json — sempre da rede, nunca do cache
-  if (url.includes('version.json')) {
-    e.respondWith(fetch(e.request, { cache: 'no-store' }).catch(() => new Response('{"v":0}', { status: 200 })));
-    return;
-  }
-
-  // travel.html — sempre da rede com timestamp único; fallback para cache se offline
-  if (url.includes('travel.html')) {
-    const freshUrl = url.split('?')[0] + '?_r=' + Date.now();
-    e.respondWith(
-      fetch(new Request(freshUrl, { cache: 'no-store' }))
-        .then(res => {
-          if (res.ok) caches.open(CACHE).then(c => c.put('./travel.html', res.clone()));
-          return res;
-        })
-        .catch(() => caches.match('./travel.html'))
-    );
-    return;
-  }
-
-  // index.html — sempre da rede; fallback para cache se offline
-  if (url.endsWith('/') || url.includes('index.html')) {
-    e.respondWith(
-      fetch(e.request, { cache: 'no-store' })
-        .then(res => {
-          if (res.ok) caches.open(CACHE).then(c => c.put(e.request, res.clone()));
-          return res;
-        })
-        .catch(() => caches.match(e.request))
-    );
-    return;
-  }
-
-  // Firebase / auth APIs — sempre rede
-  if (url.includes('firebaseio.com') || url.includes('googleapis.com') || url.includes('firebaseapp.com')) {
-    e.respondWith(fetch(e.request).catch(() => new Response('', { status: 503 })));
-    return;
-  }
-
-  // External CDN — cache-first
-  const isExt = url.includes('gstatic.com') || url.includes('cloudflare.com');
-  if (isExt) {
-    e.respondWith(
-      caches.match(e.request).then(cached => {
-        if (cached) return cached;
-        return fetch(e.request).then(res => {
-          if (res.ok) caches.open(CACHE).then(c => c.put(e.request, res.clone()));
-          return res;
-        }).catch(() => new Response('', { status: 503 }));
-      })
-    );
-    return;
-  }
-
-  // Todo o resto — cache-first
-  e.respondWith(
-    caches.match(e.request).then(cached => {
-      if (cached) return cached;
-      return fetch(e.request).then(res => {
-        if (res.ok) caches.open(CACHE).then(c => c.put(e.request, res.clone()));
-        return res;
-      });
-    })
-  );
+  e.respondWith((async()=>{
+    try{
+      const resposta = await fetch(req);
+      if(resposta && resposta.ok){
+        const copia = resposta.clone();
+        caches.open(VERSAO).then(c=>c.put(req, copia)).catch(()=>{});
+      }
+      return resposta;
+    }catch(err){
+      const guardado = await caches.match(req);
+      if(guardado) return guardado;
+      if(req.mode === 'navigate'){
+        const inicio = await caches.match('./index.html');
+        if(inicio) return inicio;
+      }
+      throw err;
+    }
+  })());
 });
