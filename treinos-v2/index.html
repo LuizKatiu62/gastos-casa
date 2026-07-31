@@ -3916,48 +3916,39 @@ function mostrarAtualizacao(){
     navigator.serviceWorker.getRegistrations().then(rs=>
       Promise.all(rs.map(r=>r.unregister()))).then(()=>location.reload(true));
   };
-}
+/* ══════════════════════════════════════════════════════════════════
+   COLAR NO FIM DO index.html, LOGO ANTES DA LINHA </script>
+   1) Botão "Começar" da capa   2) Máscara de tempo na calculadora
+   ══════════════════════════════════════════════════════════════════ */
 
-/* ═══════════ ABERTURA ═══════════ */
-function montarCapa(){
-  const capa=q('#capa'); if(!capa) return;
+/* ───────────── 1. CAPA ───────────── */
+(function(){
+  const capa = document.getElementById('capa');
+  const bt   = document.getElementById('btEntrar');
+  if(!capa || !bt) return;
 
-  /* resumo do dia: prova, treino e a última atividade */
-  const o = objetivoAtivo();
-  const dias = o && o.data ? diff(iso(HOJE), o.data) : null;
-  const s = ST.plano ? sessaoDe(iso(HOJE)) : null;
-  const prox = (()=>{ if(s) return {q:'Hoje', t:s.titulo};
-    for(let i=1;i<=7;i++){ const k=iso(addD(HOJE,i)); const x=sessaoDe(k);
-      if(x) return {q: i===1?'Amanhã':DIA3[dow(dt(k))-1], t:x.titulo} }
-    return null; })();
-  const ult = ST.runs.find(r=>!r.walk);
-
-  const blocos=[];
-  if(o && dias!==null && dias>=0)
-    blocos.push({k:o.nome.length>18?o.nome.slice(0,17)+'…':o.nome,
-      v: dias===0?'Hoje':dias, u: dias===0?'':(dias===1?'dia':'dias')});
-  blocos.push(prox
-    ? {k:'Treino · '+prox.q, v:prox.t.length>15?prox.t.slice(0,14)+'…':prox.t, u:''}
-    : {k:'Treino', v:'Descanso', u:''});
-  if(ult) blocos.push({k:'Última corrida', v:ult.km.toFixed(1), u:'km'});
-
-  q('#cResumo').innerHTML = blocos.slice(0,3).map(b=>
-    `<div><div class="k">${b.k}</div><div class="v mono">${b.v}${b.u?`<small>${b.u}</small>`:''}</div></div>`).join('');
-
-  const hoje=new Date();
-  q('#cData').textContent = DIA[dow(hoje)] + ', ' + hoje.getDate() + ' de ' + MES[hoje.getMonth()];
-
-  const fechar=()=>{
+  let fechada = false;
+  function fecharCapa(){
+    if(fechada) return;
+    fechada = true;
     capa.classList.add('saindo');
-    setTimeout(()=>capa.style.display='none', 520);
-    document.removeEventListener('keydown', porTecla);
-  };
-  const porTecla=e=>{ if(e.key==='Enter'||e.key===' '||e.key==='Escape') fechar() };
-  q('#btEntrar').onclick=fechar;
-  capa.addEventListener('click', e=>{ if(e.target===capa||e.target.closest('.miolo')) fechar() });
-  document.addEventListener('keydown', porTecla);
-}
-  /* ── MÁSCARA DE TEMPO — colar antes do </script>, no fim do index.html ── */
+    setTimeout(function(){ capa.style.display = 'none' }, 520);
+  }
+
+  bt.addEventListener('click', fecharCapa);
+  bt.addEventListener('touchend', function(e){ e.preventDefault(); fecharCapa() });
+
+  capa.addEventListener('click', function(e){
+    if(e.target === capa || e.target.closest('.miolo')) fecharCapa();
+  });
+
+  document.addEventListener('keydown', function(e){
+    if(fechada) return;
+    if(e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') fecharCapa();
+  });
+})();
+
+/* ───────────── 2. MÁSCARA DE TEMPO ───────────── */
 (function(){
   function maskTime(el, modo){
     const max = modo === 'ms' ? 4 : 6;
@@ -4019,6 +4010,7 @@ function montarCapa(){
     };
   });
 })();
+
 </script>
 </body>
 </html>
