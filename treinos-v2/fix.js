@@ -1,6 +1,6 @@
 /* ══════════════════════════════════════════════════════════════════
    fix.js — correções da v2
-   Versão 2026-08-01b · quatro correções, num arquivo só.
+   Versão 2026-08-01c · cinco correções, num arquivo só.
 
    INSTALAÇÃO: envie este arquivo para a pasta treinos-v2 pelo
    Add file → Upload files. Ele substitui o fix.js que já está lá.
@@ -12,6 +12,7 @@
    2) Máscara de tempo na calculadora de pace
    3) Gráficos da aba Saúde legíveis no celular
    4) Gráficos da aba Evolução legíveis no celular
+   5) Mapa de semanas da aba Treinos: nunca colapsa e enche a largura
    ══════════════════════════════════════════════════════════════════ */
 
 /* ═══════════ 1 e 2 ═══════════ */
@@ -554,5 +555,128 @@ window.chartCad = function(){
 if(typeof renderEvolucao === 'function' && typeof ST === 'object' && ST.aba === 'evolucao'){
   try{ renderEvolucao() }catch(e){}
 }
+
+})();
+
+
+/* ═══════════ 5. MAPA DE SEMANAS DA ABA TREINOS ═══════════
+   O mapa desenha uma coluna por semana com célula fixa de 13 px. Com o
+   intervalo em 7 dias sobra UMA semana — duas colunas de 13 px grudadas
+   na borda esquerda, impossíveis de acertar com o dedo.
+
+   Duas mudanças:
+   · piso de 10 semanas, para o mapa nunca colapsar. Ele é um panorama;
+     não faz sentido encolher junto com o filtro das listas de baixo.
+   · célula calculada pela largura disponível, entre 13 e 40 px, em vez
+     de fixa. Com 10 semanas num iPhone dá ~29 px — dedo acerta.
+   Acima de 24 semanas volta a 13 px e o mapa rola de lado, como antes. */
+(function(){
+'use strict';
+
+const GAP = 3, MIN_SEM = 10, MAX_SEM = 26, CEL_MIN = 13, CEL_MAX = 40;
+
+const css = document.createElement('style');
+css.textContent = `
+.mcell{width:var(--mc,13px) !important;height:var(--mc,13px) !important;
+  border-radius:calc(var(--mc,13px) / 4) !important}
+.mdias span{height:var(--mc,13px) !important;line-height:var(--mc,13px) !important;
+  font-size:clamp(8px, calc(var(--mc,13px) * .5), 12px) !important}
+.mlab span{width:var(--mc,13px) !important;
+  font-size:clamp(8px, calc(var(--mc,13px) * .5), 12px) !important}
+.mfoot{font-size:11.5px !important}
+.mfoot i{width:13px !important;height:13px !important}
+`;
+document.head.appendChild(css);
+
+const COR = {corrida:'var(--run)', bike:'var(--bike)', natacao:'var(--swim)', forca:'var(--gym)'};
+
+function redesenhar(){
+  const host = document.getElementById('tMapa');
+  if(!host || typeof ST === 'undefined' || !ST.runs) return;
+
+  /* quantas semanas cabem/valem */
+  const SEM = Math.max(MIN_SEM, Math.min(MAX_SEM, Math.ceil(ST.periodo / 7)));
+  const larg = host.clientWidth || 320;
+  let cel = Math.floor((larg - (SEM - 1) * GAP) / SEM);
+  cel = Math.max(CEL_MIN, Math.min(CEL_MAX, cel));
+  document.documentElement.style.setProperty('--mc', cel + 'px');
+
+  /* o mapa mostra a própria janela, não a do filtro das listas */
+  const ini = segundaDe(addD(HOJE, -(SEM - 1) * 7));
+  const dentro = ST.runs.filter(r => addD(HOJE, -r.d) >= ini);
+  const porDia = {};
+  dentro.forEach(r => { const k = iso(addD(HOJE, -r.d)); (porDia[k] = porDia[k] || []).push(r) });
+  const maxMin = Math.max(...Object.values(porDia).map(v =>
+    v.reduce((a, b) => a + duracaoDe(b), 0) / 60), 1);
+
+  let colunas = '', rotulos = '', mesAnt = -1;
+  for(let w = 0; w < SEM; w++){
+    const iniSem = addD(ini, w * 7);
+    const mostra = iniSem.getMonth() !== mesAnt;
+    if(mostra) mesAnt = iniSem.getMonth();
+    rotulos += `<span>${mostra ? MES3[iniSem.getMonth()][0].toUpperCase() : ''}</span>`;
+    let celulas = '';
+    for(let d = 0; d < 7; d++){
+      const dia = addD(iniSem, d), k = iso(dia), its = porDia[k] || [];
+      if(dia > HOJE){ celulas += '<div class="mcell" style="opacity:.25"></div>'; continue }
+      if(!its.length){ celulas += '<div class="mcell"></div>'; continue }
+      const min = its.reduce((a, b) => a + duracaoDe(b), 0) / 60;
+      const dom = its.reduce((a, b) => duracaoDe(b) > duracaoDe(a) ? b : a);
+      const op = (0.35 + 0.65 * Math.min(1, min / maxMin)).toFixed(2);
+      const cor = dom.walk ? 'var(--rest)' : (COR[dom.mod] || 'var(--rest)');
+      celulas += `<div class="mcell on" style="background:${cor};opacity:${op}" ` +
+        `data-sem2="${iso(segundaDe(dia))}" ` +
+        `title="${dia.getDate()} ${MES3[dia.getMonth()]} · ${Math.round(min)} min"></div>`;
+    }
+    colunas += `<div class="mcol">${celulas}</div>`;
+  }
+  host.innerHTML = `<div><div class="mlab">${rotulos}</div><div class="mapa-in">${colunas}</div></div>`;
+
+  /* título e contagem passam a falar da janela do mapa */
+  const card = host.closest('.card');
+  const h2 = card && card.querySelector('h2');
+  if(h2) h2.textContent = `Últimas ${SEM} semanas`;
+  const tag = document.getElementById('tMapaTag');
+  if(tag) tag.textContent = Object.keys(porDia).length + ' dias ativos';
+
+  /* clicar numa semana abre o mês correspondente, como antes.
+     Em vez de mexer no estado interno, aciono o próprio cabeçalho do mês. */
+  host.querySelectorAll('[data-sem2]').forEach(c => {
+    c.onclick = () => {
+      const d = dt(c.dataset.sem2);
+      const k = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+      const bloco = document.getElementById('w-' + k);
+      if(!bloco){                       // mês fora do filtro atual das listas
+        const t = document.getElementById('tMapaAviso');
+        if(t) t.textContent = 'Esse mês está fora do intervalo escolhido acima.';
+        return;
+      }
+      if(!bloco.classList.contains('open')){
+        const cab = bloco.querySelector('[data-m]');
+        if(cab) cab.click();
+      }
+      bloco.scrollIntoView({behavior:'smooth', block:'start'});
+    };
+  });
+}
+
+/* roda depois do render original, sem alterá-lo */
+if(typeof renderTreinos === 'function'){
+  const original = renderTreinos;
+  window.renderTreinos = function(){
+    const r = original.apply(this, arguments);
+    try{ redesenhar() }catch(e){ console.warn('mapa:', e.message) }
+    return r;
+  };
+}
+
+/* recalcula ao girar o aparelho ou mudar a largura */
+let t = null;
+window.addEventListener('resize', () => {
+  clearTimeout(t);
+  t = setTimeout(() => { if(ST && ST.aba === 'treinos') try{ redesenhar() }catch(e){} }, 200);
+});
+
+if(typeof ST === 'object' && ST.aba === 'treinos'){ try{ redesenhar() }catch(e){} }
 
 })();
