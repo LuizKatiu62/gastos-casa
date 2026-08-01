@@ -1,6 +1,6 @@
 /* ══════════════════════════════════════════════════════════════════
    fix.js — correções da v2
-   Versão 2026-08-01 · três correções, num arquivo só.
+   Versão 2026-08-01b · quatro correções, num arquivo só.
 
    INSTALAÇÃO: envie este arquivo para a pasta treinos-v2 pelo
    Add file → Upload files. Ele substitui o fix.js que já está lá.
@@ -11,6 +11,7 @@
    1) Botão "Começar" da capa
    2) Máscara de tempo na calculadora de pace
    3) Gráficos da aba Saúde legíveis no celular
+   4) Gráficos da aba Evolução legíveis no celular
    ══════════════════════════════════════════════════════════════════ */
 
 /* ═══════════ 1 e 2 ═══════════ */
@@ -344,6 +345,214 @@ window.grafStress = function(str){
 /* redesenha se a aba Saúde já estiver aberta quando este arquivo carregar */
 if(typeof renderSaude === 'function' && typeof ST === 'object' && ST.aba === 'saude'){
   try{ renderSaude() }catch(e){}
+}
+
+})();
+
+
+/* ═══════════ 4. GRÁFICOS DA ABA EVOLUÇÃO ═══════════
+   Mesmo problema da aba Saúde: área de 680 de largura encolhida para
+   ~326 px no iPhone, ou seja 48% — fonte de 10 px virava 4,8 px.
+   Pior nos dois gráficos de nuvem de pontos, que precisam de área
+   mais quadrada para as duas escalas ficarem comparáveis.
+
+   Agora: 380 de largura (escala 0,86) e altura maior, 300 nas nuvens.
+   Os pontos também cresceram, porque com 3 px ninguém acerta o toque. */
+(function(){
+'use strict';
+
+const W = 380;
+const ML = 46, MR = 16, MT = 24, MB = 42;
+const IW = W - ML - MR;
+
+const css = document.createElement('style');
+css.textContent = `
+#pacePlot text, #effPlot text, #cadPlot text{
+  font-family:'JetBrains Mono',ui-monospace,monospace;
+  font-variant-numeric:tabular-nums; font-size:13px; fill:var(--tx3)}
+#pacePlot text.on, #effPlot text.on, #cadPlot text.on{fill:var(--tx);font-weight:700}
+#pacePlot text.val, #effPlot text.val, #cadPlot text.val{font-size:15px;font-weight:700}
+#pacePlot text.eixo, #effPlot text.eixo, #cadPlot text.eixo{font-size:11.5px;opacity:.8}
+.leg{gap:8px 16px !important;margin-top:15px !important}
+.leg span{font-size:12.5px !important}
+.note{font-size:12.5px !important;line-height:1.6 !important}
+.sub{font-size:14px !important}
+.tip{font-size:12.5px !important;padding:11px 13px !important}
+`;
+document.head.appendChild(css);
+
+const q = s => document.querySelector(s);
+const g = (H, rot, corpo) =>
+  `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${rot}">${corpo}</svg>`;
+
+function grade(tk, y, rot){
+  return tk.map(t =>
+    `<line x1="${ML}" x2="${W-MR}" y1="${y(t)}" y2="${y(t)}" stroke="var(--line)" stroke-width="1"/>` +
+    `<text x="${ML-9}" y="${y(t)+4.5}" text-anchor="end">${rot?rot(t):t}</text>`).join('');
+}
+const selo = (H, txt, cor) =>
+  `<text class="val" x="${W-MR}" y="${MT-8}" text-anchor="end" fill="${cor}">${txt}</text>`;
+
+/* ─────────── PACE ─────────── */
+window.chartPace = function(){
+  const H = 290, IH = H - MT - MB;
+  const D = ST.runs.filter(r=>noPeriodo(r) && (r.mod||'corrida')==='corrida');
+  const runs = D.filter(r=>!r.walk);
+  const host = q('#pacePlot');
+  if(runs.length < 6){
+    host.innerHTML = `<p class="note" style="border:0;padding:0;margin:0">Só ${runs.length} corrida${runs.length===1?'':'s'} em ${ST.periodo} dias. Aumente o intervalo na barra acima para ver a tendência.</p>`;
+    q('#paceSub').textContent='Período curto demais'; q('#paceTag').textContent='—'; return;
+  }
+  const span = Math.max(...D.map(r=>r.d)) || 1;
+  const wk = {};
+  runs.forEach(r=>{ const k=Math.floor(r.d/7); (wk[k]=wk[k]||[]).push(r.pace) });
+  const stats = Object.keys(wk).map(Number).sort((a,b)=>b-a)
+    .map(k=>({k, med:med(wk[k]), lo:quant(wk[k],.25), hi:quant(wk[k],.75)}));
+  const all = runs.map(r=>r.pace);
+  const tk = timeTicks(Math.min(...all), Math.max(...all), 4);
+  const lo = tk[0], hi = tk[tk.length-1];
+  const x = d => ML + IW - (d/span)*IW;
+  const y = v => MT + ((v-lo)/(hi-lo))*IH;     /* mais rápido em cima */
+
+  let s = grade(tk, y, t=>mmss(t));
+  if(stats.length > 1){
+    const up = stats.map(a=>[x(a.k*7+3), y(a.lo)]);
+    const dn = stats.map(a=>[x(a.k*7+3), y(a.hi)]).reverse();
+    const dd = spline(dn);
+    s += `<path d="${spline(up)} L${dn[0][0]},${dn[0][1]} ${dd.slice(dd.indexOf('C'))} Z" fill="rgba(201,242,78,.15)"/>`;
+  }
+  runs.forEach(r=>{ s += `<circle cx="${x(r.d)}" cy="${y(r.pace)}" r="3.6" fill="#3A4757"/>` });
+  s += `<path d="${spline(stats.map(a=>[x(a.k*7+3), y(a.med)]))}" fill="none" stroke="#C9F24E" stroke-width="3" stroke-linecap="round"/>`;
+  const last = stats[stats.length-1];
+  s += `<circle cx="${x(last.k*7+3)}" cy="${y(last.med)}" r="6" fill="#0A0D12" stroke="#C9F24E" stroke-width="3"/>`;
+  s += `<line class="cross" x1="0" x2="0" y1="${MT}" y2="${MT+IH}" stroke="#8FA0B4" stroke-dasharray="3 3" opacity="0"/>`;
+  s += selo(H, mmss(last.med)+'/km', '#C9F24E');
+  [span, Math.round(span*.5), 0].forEach((d,i,arr)=>{
+    const anc = i===0?'start' : i===arr.length-1?'end' : 'middle';
+    s += `<text class="${d===0?'on':''}" x="${x(d)}" y="${H-15}" text-anchor="${anc}">${d===0?'hoje':dLabel(d)}</text>`;
+  });
+  host.innerHTML = g(H, 'Pace por corrida com mediana semanal', s);
+
+  hover(host, px=>{
+    let b=null, bd=1e9;
+    runs.forEach(r=>{ const dd=Math.abs(x(r.d)-px); if(dd<bd){bd=dd;b=r} });
+    return b ? {...b, x:x(b.d)} : null;
+  }, r=>`<div class="t">${dLabel(r.d)}</div>
+      <div class="r"><i>Pace</i><b>${mmss(r.pace)}/km</b></div>
+      <div class="r"><i>Distância</i><b>${r.km.toFixed(1)} km</b></div>
+      <div class="r"><i>FC</i><b>${isFinite(r.fc)&&r.fc>0?r.fc+' bpm':'—'}</b></div>`);
+
+  const ganho = stats[0].med - last.med;
+  q('#paceSub').innerHTML = `Mediana da semana em <b>${mmss(last.med)}/km</b>` +
+    (ganho>0 ? ` — <b>${Math.round(ganho)}s/km mais rápido</b> que no início` : '');
+  q('#paceTag').textContent = ganho>0 ? `−${Math.round(ganho)}s/km` : 'estável';
+};
+
+/* ─────────── EFICIÊNCIA AERÓBICA ─────────── */
+window.chartEff = function(){
+  const H = 320, IH = H - MT - MB;
+  const runs = ST.runs.filter(r=>noPeriodo(r) && !r.walk && (r.mod||'corrida')==='corrida' && isFinite(r.fc) && r.fc>60);
+  const host = q('#effPlot');
+  if(runs.length < 8){
+    host.innerHTML = `<p class="note" style="border:0;padding:0;margin:0">Esta comparação precisa de 8 corridas com frequência cardíaca. Em ${ST.periodo} dias há ${runs.length}. Aumente o intervalo na barra acima.</p>`;
+    q('#effSub').textContent='Período curto demais'; q('#effTag').textContent='—'; q('#effNote').textContent=''; return;
+  }
+  const half = Math.max(...runs.map(r=>r.d))/2;
+  const px = runs.map(r=>r.pace), py = runs.map(r=>r.fc);
+  const xt = timeTicks(Math.min(...px), Math.max(...px), 3);
+  const yt = ticks(Math.min(...py), Math.max(...py), 4);
+  const xlo=xt[0], xhi=xt[xt.length-1], ylo=yt[0], yhi=yt[yt.length-1];
+  const X = v => ML + IW - ((v-xlo)/(xhi-xlo))*IW;
+  const Y = v => MT + IH - ((v-ylo)/(yhi-ylo))*IH;
+
+  let s = grade(yt, Y);
+  xt.forEach(t=>{ s += `<text x="${X(t)}" y="${H-22}" text-anchor="middle">${mmss(t)}</text>` });
+  runs.forEach(r=>{
+    const novo = r.d < half;
+    s += `<circle cx="${X(r.pace)}" cy="${Y(r.fc)}" r="${novo?5.4:4.6}" fill="${novo?'#C9F24E':'#4A5768'}" opacity="${novo?.88:.72}"/>`;
+  });
+  const fit = grp=>{
+    const n=grp.length, sx=grp.reduce((a,b)=>a+b.pace,0), sy=grp.reduce((a,b)=>a+b.fc,0);
+    const sxy=grp.reduce((a,b)=>a+b.pace*b.fc,0), sxx=grp.reduce((a,b)=>a+b.pace*b.pace,0);
+    const m=(n*sxy-sx*sy)/(n*sxx-sx*sx||1); return {m, b:(sy-m*sx)/n};
+  };
+  const gA = runs.filter(r=>r.d>=half), gB = runs.filter(r=>r.d<half);
+  [[gA,'#4A5768'],[gB,'#C9F24E']].forEach(([grp,c])=>{
+    if(grp.length < 3) return;
+    const {m,b} = fit(grp);
+    s += `<line x1="${X(xlo+12)}" y1="${Y(m*(xlo+12)+b)}" x2="${X(xhi-12)}" y2="${Y(m*(xhi-12)+b)}" stroke="${c}" stroke-width="2.8" stroke-linecap="round"/>`;
+  });
+  s += `<text class="eixo" x="${W-MR}" y="${H-5}" text-anchor="end">mais rápido →</text>`;
+  s += `<text class="eixo" x="${ML-9}" y="${MT-9}" text-anchor="end">bpm</text>`;
+  host.innerHTML = g(H, 'Frequência cardíaca por pace, dois períodos', s);
+
+  hover(host, (mx,my)=>{
+    let b=null, bd=1e9;
+    runs.forEach(r=>{ const d=Math.hypot(X(r.pace)-mx, Y(r.fc)-my); if(d<bd){bd=d;b=r} });
+    return bd<45 && b ? {...b, x:X(b.pace)} : null;
+  }, r=>`<div class="t">${dLabel(r.d)}</div>
+      <div class="r"><i>Pace</i><b>${mmss(r.pace)}/km</b></div>
+      <div class="r"><i>FC</i><b>${r.fc} bpm</b></div>`);
+
+  if(gA.length>=3 && gB.length>=3){
+    const ref = med(runs.map(r=>r.pace));
+    const a = fit(gA), b = fit(gB);
+    const queda = Math.round((a.m*ref+a.b) - (b.m*ref+b.b));
+    q('#effSub').innerHTML = `No mesmo pace de <b>${mmss(ref)}/km</b>, seu coração trabalha <b>${Math.abs(queda)} bpm ${queda>0?'mais baixo':'mais alto'}</b> que há três meses`;
+    q('#effTag').textContent = (queda>0?'−':'+') + Math.abs(queda) + ' bpm';
+    q('#effTag').className = 'tag ' + (queda>0?'ok':'warn');
+  }
+  q('#effNote').innerHTML = `Cada ponto é uma corrida. Se a nuvem verde está deslocada para <b>baixo e para a direita</b> em relação à cinza, você ganhou base aeróbica: mais velocidade com menos esforço cardíaco. É mais confiável que o pace sozinho, que depende do dia, do terreno e do calor.`;
+};
+
+/* ─────────── CADÊNCIA ─────────── */
+window.chartCad = function(){
+  const H = 320, IH = H - MT - MB;
+  const runs = ST.runs.filter(r=>noPeriodo(r) && !r.walk && (r.mod||'corrida')==='corrida' && isFinite(r.cad) && r.cad>120);
+  const host = q('#cadPlot');
+  if(runs.length < 8){
+    host.innerHTML = `<p class="note" style="border:0;padding:0;margin:0">Só ${runs.length} corrida${runs.length===1?'':'s'} com cadência em ${ST.periodo} dias. Aumente o intervalo na barra acima.</p>`;
+    q('#cadSub').textContent='Período curto demais'; q('#cadTag').textContent='—'; q('#cadNote').textContent=''; return;
+  }
+  const px = runs.map(r=>r.pace), py = runs.map(r=>r.cad);
+  const xt = timeTicks(Math.min(...px), Math.max(...px), 3);
+  const yt = ticks(Math.min(...py), Math.max(...py), 4);
+  const xlo=xt[0], xhi=xt[xt.length-1], ylo=yt[0], yhi=yt[yt.length-1];
+  const X = v => ML + IW - ((v-xlo)/(xhi-xlo))*IW;
+  const Y = v => MT + IH - ((v-ylo)/(yhi-ylo))*IH;
+  const esp = p => 150 + (430-p)*.115;
+
+  let s = grade(yt, Y);
+  const band = [];
+  for(let p=xlo; p<=xhi; p+=6) band.push([X(p), Y(esp(p)+5)]);
+  for(let p=xhi; p>=xlo; p-=6) band.push([X(p), Y(esp(p)-5)]);
+  s += `<polygon points="${band.map(p=>p.join(',')).join(' ')}" fill="rgba(63,217,138,.14)"/>`;
+  xt.forEach(t=>{ s += `<text x="${X(t)}" y="${H-22}" text-anchor="middle">${mmss(t)}</text>` });
+  runs.forEach(r=>{ s += `<circle cx="${X(r.pace)}" cy="${Y(r.cad)}" r="5" fill="#C9F24E" opacity=".82"/>` });
+  s += `<text class="eixo" x="${W-MR}" y="${H-5}" text-anchor="end">mais rápido →</text>`;
+  s += `<text class="eixo" x="${ML-9}" y="${MT-9}" text-anchor="end">spm</text>`;
+  host.innerHTML = g(H, 'Cadência por pace', s);
+
+  hover(host, (mx,my)=>{
+    let b=null, bd=1e9;
+    runs.forEach(r=>{ const d=Math.hypot(X(r.pace)-mx, Y(r.cad)-my); if(d<bd){bd=d;b=r} });
+    return bd<45 && b ? {...b, x:X(b.pace)} : null;
+  }, r=>`<div class="t">${dLabel(r.d)}</div>
+      <div class="r"><i>Cadência</i><b>${r.cad} spm</b></div>
+      <div class="r"><i>Pace</i><b>${mmss(r.pace)}/km</b></div>`);
+
+  const rec = runs.slice(0,10);
+  const mc = Math.round(med(rec.map(r=>r.cad))), mp = med(rec.map(r=>r.pace));
+  const alvo = Math.round(esp(mp)), ok = Math.abs(mc-alvo) <= 5;
+  q('#cadSub').innerHTML = `<b>${mc} spm</b> no pace de <b>${mmss(mp)}/km</b> — ` +
+    (ok ? 'dentro do esperado' : `${Math.abs(mc-alvo)} spm ${mc<alvo?'abaixo':'acima'} do esperado`);
+  q('#cadTag').textContent = ok ? 'Coerente' : 'Revisar';
+  q('#cadTag').className = 'tag ' + (ok?'ok':'warn');
+  q('#cadNote').innerHTML = `Cadência não tem número ideal fixo: ela sobe junto com a velocidade. Comparar seus <b>${mc} spm</b> a um alvo de 180 spm — medido em atletas de elite em prova — não diz nada útil. A faixa verde é o esperado <b>para o seu pace</b>.`;
+};
+
+if(typeof renderEvolucao === 'function' && typeof ST === 'object' && ST.aba === 'evolucao'){
+  try{ renderEvolucao() }catch(e){}
 }
 
 })();
