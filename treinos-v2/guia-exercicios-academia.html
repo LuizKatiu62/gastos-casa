@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guia de execução — Academia · Luiz em Movimento</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#10151C;
+    --ink-2:#46515F;
+    --paper:#EFF2EE;
+    --card:#FFFFFF;
+    --line:#D5DAD3;
+    --go:#0B6E5B;
+    --warn:#A8500B;
+    --radius:14px;
+    --tap:46px;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+    font-size:17px;
+    line-height:1.55;
+  }
+  .wrap{max-width:720px;margin:0 auto;padding:0 18px 64px}
+
+  /* ── Cabeçalho ─────────────────────────────── */
+  header{background:var(--ink);color:#fff;padding:34px 0 26px;margin-bottom:0}
+  header .wrap{padding-bottom:0}
+  .eyebrow{
+    font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.16em;
+    text-transform:uppercase;color:#8FB8AE;margin:0 0 10px
+  }
+  h1{
+    font-family:"Barlow Condensed",Impact,sans-serif;font-weight:700;
+    text-transform:uppercase;letter-spacing:.02em;line-height:.95;
+    font-size:clamp(38px,11vw,62px);margin:0 0 12px
+  }
+  .lede{margin:0;color:#C3CBD3;font-size:16px;max-width:46ch}
+
+  /* ── Barra de rotinas ──────────────────────── */
+  .tabs{
+    position:sticky;top:0;z-index:20;background:var(--paper);
+    border-bottom:1px solid var(--line);padding:10px 0;margin-bottom:26px
+  }
+  .tabs .wrap{padding-bottom:0;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .tab{
+    font-family:"Barlow Condensed",sans-serif;font-weight:600;font-size:19px;
+    text-transform:uppercase;letter-spacing:.04em;
+    min-height:var(--tap);padding:0 16px;border:1.5px solid var(--ink);
+    background:transparent;color:var(--ink);border-radius:999px;cursor:pointer
+  }
+  .tab[aria-selected="true"]{background:var(--ink);color:#fff}
+  .tab:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid var(--go);outline-offset:2px}
+  .modo{
+    margin-left:auto;display:flex;align-items:center;gap:8px;
+    font-size:14px;color:var(--ink-2);min-height:var(--tap)
+  }
+  .modo input{width:20px;height:20px;accent-color:var(--go)}
+
+  /* ── Blocos ────────────────────────────────── */
+  section{margin:0 0 30px}
+  h2{
+    font-family:"Barlow Condensed",sans-serif;font-weight:700;text-transform:uppercase;
+    font-size:26px;letter-spacing:.03em;margin:34px 0 4px;
+    border-bottom:2px solid var(--ink);padding-bottom:6px
+  }
+  h2 span{font-family:"IBM Plex Mono",monospace;font-size:12px;font-weight:500;
+    letter-spacing:.1em;color:var(--ink-2);text-transform:none;float:right;padding-top:9px}
+  .bloco{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px}
+  .bloco p{margin:0 0 10px}
+  .bloco ul{margin:0;padding-left:20px}
+  .bloco li{margin-bottom:6px}
+
+  /* ── Cartão de exercício ───────────────────── */
+  .ex{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:18px 20px 20px;margin-bottom:16px
+  }
+  .ex[hidden]{display:none}
+  .ex-top{display:flex;align-items:flex-start;gap:14px}
+  .num{
+    font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:30px;line-height:1;
+    color:var(--go);min-width:34px;padding-top:2px
+  }
+  .ex h3{
+    font-family:"Barlow Condensed",sans-serif;font-weight:600;text-transform:uppercase;
+    font-size:27px;line-height:1.05;letter-spacing:.02em;margin:0 0 6px
+  }
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+  .chip{
+    font-family:"IBM Plex Mono",monospace;font-size:12.5px;letter-spacing:.04em;
+    background:#E7ECE6;color:var(--ink);border-radius:6px;padding:4px 9px
+  }
+  .chip.series{background:var(--go);color:#fff}
+
+  /* assinatura: a plaqueta do MOTRA */
+  .plate{
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+    border:1.5px dashed var(--ink-2);border-radius:8px;
+    padding:10px 12px;margin:0 0 16px;background:#FAFBFA
+  }
+  .plate .lbl{
+    font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--ink-2);width:100%
+  }
+  .plate .en{
+    font-family:"IBM Plex Mono",monospace;font-size:15px;font-weight:500;
+    letter-spacing:.02em;flex:1;min-width:0
+  }
+  .copy{
+    min-height:38px;padding:0 14px;border:1.5px solid var(--ink);background:transparent;
+    color:var(--ink);border-radius:999px;font-family:"IBM Plex Sans",sans-serif;
+    font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap
+  }
+  .copy.ok{background:var(--go);border-color:var(--go);color:#fff}
+
+  .det h4{
+    font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--ink-2);margin:16px 0 7px;font-weight:500
+  }
+  .det ol{margin:0;padding-left:22px}
+  .det ol li{margin-bottom:7px}
+  .det ul{margin:0;padding-left:20px;list-style:none}
+  .det ul li{margin-bottom:6px;position:relative}
+  .det ul li::before{
+    content:"×";position:absolute;left:-18px;color:var(--warn);font-weight:700
+  }
+  .fix{
+    border-left:3px solid var(--go);padding:2px 0 2px 12px;margin-top:14px;
+    font-size:15.5px;color:var(--ink-2)
+  }
+  .video{
+    display:inline-flex;align-items:center;gap:9px;min-height:var(--tap);
+    margin-top:16px;padding:0 18px;background:var(--ink);color:#fff;
+    border-radius:999px;text-decoration:none;font-weight:500;font-size:15.5px
+  }
+  .video::before{content:"▶";font-size:12px}
+  .video-en{display:block;margin-top:9px;font-size:14px;color:var(--ink-2)}
+
+  /* modo academia: só o essencial */
+  body.compact .det,body.compact .plate .lbl{display:none}
+  body.compact .ex{padding-bottom:16px}
+
+  .aviso{
+    background:#FBF3E8;border:1px solid #E3CBA6;border-radius:var(--radius);
+    padding:18px 20px;font-size:15.5px
+  }
+  .aviso strong{display:block;font-family:"Barlow Condensed",sans-serif;
+    text-transform:uppercase;font-size:20px;letter-spacing:.03em;margin-bottom:6px}
+  footer{margin-top:40px;padding-top:18px;border-top:1px solid var(--line);
+    font-size:14px;color:var(--ink-2)}
+  @media (prefers-reduced-motion:no-preference){
+    .copy,.tab{transition:background .18s ease,color .18s ease}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <p class="eyebrow">Academia · Preparação 64 km</p>
+    <h1>Guia de<br>execução</h1>
+    <p class="lede">Como fazer cada exercício das suas duas rotinas, com o nome em inglês para achar no MOTRA e um vídeo para conferir a técnica antes de repetir.</p>
+  </div>
+</header>
+
+<nav class="tabs">
+  <div class="wrap">
+    <button class="tab" role="tab" aria-selected="true" data-rot="pernas">Pernas e core</button>
+    <button class="tab" role="tab" aria-selected="false" data-rot="costas">Costas e postura</button>
+    <label class="modo"><input type="checkbox" id="compact"> Modo academia</label>
+  </div>
+</nav>
+
+<main class="wrap">
+
+  <section>
+    <h2>Antes de começar <span>8 min</span></h2>
+    <div class="bloco">
+      <p><strong>Aquecimento geral:</strong> 5 minutos de bike ou esteira em ritmo leve, só para subir a temperatura.</p>
+      <p><strong>Mobilidade:</strong> 10 agachamentos sem peso · 10 pontes de glúteo no chão · 8 rotações de tronco para cada lado · 15 elevações de panturrilha.</p>
+      <p><strong>Série de reconhecimento:</strong> no primeiro exercício do dia, faça uma série com metade da carga antes de valer. É ela que avisa se o corpo está pronto para o peso planejado.</p>
+    </div>
+  </section>
+
+  <h2 id="titulo-rotina">Pernas e core <span id="contagem">6 exercícios</span></h2>
+
+  <div id="lista"></div>
+
+  <section>
+    <h2>Como escolher a carga</h2>
+    <div class="bloco">
+      <ul>
+        <li><strong>Duas repetições na reserva.</strong> A carga certa é aquela em que, na última série, você ainda conseguiria fazer mais duas repetições com boa técnica. Nada de ir até a falha.</li>
+        <li><strong>Quando subir.</strong> Se completou todas as séries e repetições com técnica limpa em duas sessões seguidas, aumente o menor incremento disponível (2 a 5 kg, ou uma placa).</li>
+        <li><strong>Técnica manda mais que peso.</strong> Se a última repetição sai diferente da primeira, o peso está alto — volte um degrau.</li>
+        <li><strong>Depois do longão.</strong> Se a academia cair no dia seguinte ao treino longo, use a rotina de costas e postura ou reduza a carga de pernas em 30%.</li>
+        <li><strong>Regra das 48 horas.</strong> Dor muscular que ainda incomoda depois de dois dias é sinal de que a sessão foi pesada demais para a fase.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <h2>Para encerrar <span>5 min</span></h2>
+    <div class="bloco">
+      <p>Caminhe 3 a 5 minutos e alongue, 30 segundos cada: posterior de coxa, panturrilha, flexor do quadril e peitoral. Registre a sessão no MOTRA antes de sair do vestiário — o Atalho do iPhone leva tudo para o app.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="aviso">
+      <strong>Respiração e sinais de parada</strong>
+      <p>Solte o ar na hora do esforço e puxe na volta. Prender a respiração para fazer força aumenta a pressão dentro do abdome — vale evitar sempre, e com mais motivo depois de uma cirurgia pélvica.</p>
+      <p style="margin-bottom:0">Interrompa a série e procure orientação se aparecer dor articular aguda, tontura, dor no peito, falta de ar fora do normal, ou pressão e perda de urina durante o esforço. Este guia é material de apoio à execução, não substitui a avaliação do seu médico ou de um fisioterapeuta — se puder passar as duas rotinas por um profissional uma vez, o ajuste fino vale muito.</p>
+    </div>
+  </section>
+
+  <footer>
+    Guia de execução das rotinas <em>Força — Pernas e Core</em> e <em>Força — Costas e Postura</em>, as mesmas que o app envia para o MOTRA. Os nomes em inglês são os que funcionam na busca da biblioteca do aplicativo.
+  </footer>
+</main>
+
+<script>
+const EX = [
+  {
+    rot:["pernas"], nome:"Agachamento Goblet", en:"Goblet Squat", series:"3 × 10-12",
+    musc:"quadríceps · glúteo · core",
+    passos:[
+      "Segure um halter ou kettlebell junto ao peito, com as duas mãos, cotovelos apontados para baixo.",
+      "Pés na largura dos ombros, pontas levemente abertas para fora.",
+      "Puxe o ar e desça como quem vai sentar numa cadeira baixa — os joelhos seguem a direção das pontas dos pés.",
+      "Desça até as coxas ficarem paralelas ao chão, ou até onde for confortável, e suba empurrando o chão enquanto solta o ar."
+    ],
+    erros:["Joelho caindo para dentro na subida","Calcanhar saindo do chão","Peito desabando para a frente"],
+    fix:"Se o joelho incomoda: diminua a profundidade ou faça sentando e levantando de um banco, com o peso mais leve.",
+    vidPt:"agachamento goblet como fazer tecnica", vidEn:"goblet squat proper form"
+  },
+  {
+    rot:["pernas"], nome:"Levantamento Romeno", en:"Romanian Deadlift", series:"3 × 8-10",
+    musc:"posterior de coxa · glúteo · lombar",
+    passos:[
+      "Em pé, halteres à frente das coxas, joelhos com uma flexão leve — e que permanece leve o tempo todo.",
+      "Empurre o quadril para trás e deixe os halteres deslizarem rentes às pernas.",
+      "Desça até sentir a parte de trás da coxa esticar, sem arredondar as costas. Para a maioria, isso acontece na altura do joelho.",
+      "Volte empurrando o quadril para a frente e apertando o glúteo no final, sem jogar o tronco para trás."
+    ],
+    erros:["Dobrar muito o joelho e virar agachamento","Costas arredondadas na descida","Estufar o peito e arquear a lombar no topo"],
+    fix:"É o exercício que mais protege o posterior de coxa na corrida. Comece leve: a técnica importa muito mais que a carga aqui.",
+    vidPt:"levantamento terra romeno halteres tecnica", vidEn:"romanian deadlift dumbbell form"
+  },
+  {
+    rot:["pernas"], nome:"Afundo Búlgaro", en:"Bulgarian Split Squat", series:"3 × 8 cada perna",
+    musc:"glúteo · quadríceps · equilíbrio",
+    passos:[
+      "De costas para um banco, apoie o peito do pé de trás sobre ele.",
+      "Dê um passo à frente de uns 60 a 70 cm com a outra perna e incline o tronco levemente para a frente.",
+      "Desça na vertical até o joelho de trás quase encostar no chão.",
+      "Suba empurrando com o calcanhar da perna da frente. Termine todas as repetições de um lado antes de trocar."
+    ],
+    erros:["Passo curto demais, o que joga toda a carga no joelho da frente","Tronco balançando para os lados","Descer para a frente em vez de para baixo"],
+    fix:"Enquanto o equilíbrio não vier, segure numa barra ou no rack com uma das mãos, ou faça o afundo comum, dando um passo à frente.",
+    vidPt:"afundo bulgaro como fazer execucao", vidEn:"bulgarian split squat form"
+  },
+  {
+    rot:["pernas"], nome:"Hip Thrust", en:"Hip Thrust", series:"4 × 10",
+    musc:"glúteo máximo · potência de quadril",
+    passos:[
+      "Sente no chão com as costas apoiadas na borda de um banco, na altura logo abaixo das escápulas.",
+      "Pés na largura do quadril, calcanhares posicionados de modo que, no topo, o joelho fique em 90°.",
+      "Apoie a barra ou o halter sobre o quadril, com uma proteção por baixo.",
+      "Suba o quadril apertando o glúteo, com o queixo em direção ao peito, segure 1 segundo no topo e desça controlando."
+    ],
+    erros:["Empurrar com a lombar em vez do glúteo","Prender a respiração para subir","Pés perto demais do corpo, o que passa o trabalho para a coxa"],
+    fix:"Glúteo forte é o que segura o quadril nos quilômetros finais de um longão. Se a barra incomodar, comece só com o peso do corpo e uma pausa de 2 segundos.",
+    vidPt:"hip thrust tecnica correta gluteo", vidEn:"hip thrust proper form"
+  },
+  {
+    rot:["pernas"], nome:"Elevação de Panturrilha", en:"Standing Calf Raise", series:"3 × 15-20",
+    musc:"panturrilha · tendão de aquiles · tornozelo",
+    passos:[
+      "Em pé, com a ponta dos pés numa borda ou step e os calcanhares livres.",
+      "Suba o mais alto que conseguir na ponta dos pés.",
+      "Segure 1 segundo lá em cima.",
+      "Desça bem devagar, contando até três, até sentir a panturrilha alongar embaixo."
+    ],
+    erros:["Fazer rápido, usando o impulso","Amplitude curta, sem subir nem descer por completo"],
+    fix:"A descida lenta é a parte que fortalece o tendão. Se fizer rápido, o exercício perde quase todo o efeito.",
+    vidPt:"elevacao de panturrilha em pe tecnica", vidEn:"standing calf raise form"
+  },
+  {
+    rot:["pernas","costas"], nome:"Prancha", en:"Plank", series:"3 × 30-45 s",
+    musc:"core · estabilidade de tronco",
+    passos:[
+      "Antebraços no chão, cotovelos alinhados embaixo dos ombros.",
+      "Corpo em linha reta do calcanhar até a cabeça, olhar para o chão.",
+      "Puxe o umbigo para dentro, aperte o glúteo e leve as costelas para baixo.",
+      "Respire normalmente durante todo o tempo — sem prender o ar."
+    ],
+    erros:["Quadril alto, virando um V","Quadril caído, forçando a lombar","Pescoço esticado, olhando para a frente"],
+    fix:"No MOTRA, troque a medida deste exercício de repetições para tempo. Se 30 segundos ainda balançam, faça com os joelhos apoiados.",
+    vidPt:"prancha abdominal execucao correta", vidEn:"plank proper form"
+  },
+  {
+    rot:["costas"], nome:"Remada Sentada", en:"Seated Cable Row", series:"3 × 10-12",
+    musc:"costas · escápulas · postura",
+    passos:[
+      "Sentado, pés apoiados na plataforma, joelhos com flexão leve e coluna ereta.",
+      "Puxe o triângulo até a altura do umbigo conduzindo com os cotovelos, rentes ao corpo.",
+      "Junte as escápulas no final do movimento, sem levantar os ombros na direção das orelhas.",
+      "Volte controlando, deixando os braços esticarem sem que o tronco vá junto."
+    ],
+    erros:["Balançar o tronco para trás e para a frente","Puxar com a força dos braços e esquecer as costas","Ombros subindo durante a puxada"],
+    fix:"Pense em levar os cotovelos para trás, não em puxar a barra. A imagem muda o exercício inteiro.",
+    vidPt:"remada sentada maquina tecnica costas", vidEn:"seated cable row proper form"
+  },
+  {
+    rot:["costas"], nome:"Puxada na Frente", en:"Lat Pulldown", series:"3 × 10-12",
+    musc:"dorsal · escápulas",
+    passos:[
+      "Ajuste o apoio das coxas para que o quadril não suba, e pegue a barra um pouco mais aberto que a largura dos ombros.",
+      "Incline o tronco uns 10 a 15 graus para trás e mantenha essa posição.",
+      "Puxe a barra até a parte alta do peito, levando os cotovelos em direção ao quadril.",
+      "Suba controlando até esticar os braços, sem deixar os ombros dispararem para cima."
+    ],
+    erros:["Puxar a barra atrás da nuca","Usar impulso do tronco para vencer o peso","Parar na metade do caminho, sem completar a amplitude"],
+    fix:"Se sentir mais o bíceps que as costas, feche um pouco a pegada e comece o movimento baixando os ombros.",
+    vidPt:"puxada frontal pulley tecnica costas", vidEn:"lat pulldown proper form"
+  },
+  {
+    rot:["costas"], nome:"Supino com Halteres", en:"Dumbbell Bench Press", series:"3 × 8-10",
+    musc:"peito · ombro · tríceps",
+    passos:[
+      "Deitado no banco, halteres na altura do peito, pés firmes no chão.",
+      "Encaixe as escápulas no banco, como se quisesse guardá-las no bolso de trás.",
+      "Empurre para cima e levemente para dentro, sem travar o cotovelo lá em cima.",
+      "Desça em dois a três segundos, com os cotovelos a uns 45 graus do tronco — não abertos em linha reta."
+    ],
+    erros:["Cotovelos totalmente abertos, o que castiga o ombro","Descer rápido e quicar o peso no peito","Arquear demais a lombar para ajudar"],
+    fix:"Com halteres você controla o caminho e o ombro agradece. Comece com um peso que permita subir os dois braços juntos, sem torcer o tronco.",
+    vidPt:"supino com halteres execucao correta", vidEn:"dumbbell bench press form"
+  },
+  {
+    rot:["costas"], nome:"Farmer Carry", en:"Farmers Walk", series:"4 × 30-40 m",
+    musc:"core · pegada · postura",
+    passos:[
+      "Um halter ou kettlebell pesado em cada mão, braços soltos ao lado do corpo.",
+      "Peito aberto, ombros para trás e para baixo, olhar à frente.",
+      "Caminhe em linha reta com passos normais, sem tombar para os lados e sem correr.",
+      "Ao terminar, pouse os pesos com controle, dobrando o quadril — nunca solte de qualquer jeito."
+    ],
+    erros:["Encolher os ombros na direção das orelhas","Andar torto, compensando o peso","Prender a respiração ao longo do percurso"],
+    fix:"É o exercício mais parecido com correr cansado: o tronco tem que se manter em pé enquanto tudo pede para desabar. Se não houver espaço, faça parado, segurando por 40 segundos.",
+    vidPt:"farmer walk carry tecnica execucao", vidEn:"farmers walk carry proper form"
+  }
+];
+
+const lista = document.getElementById('lista');
+const titulo = document.getElementById('titulo-rotina');
+const contagem = document.getElementById('contagem');
+const NOMES = {pernas:'Pernas e core', costas:'Costas e postura'};
+
+function yt(q){ return 'https://www.youtube.com/results?search_query=' + encodeURIComponent(q); }
+
+function render(rot){
+  const itens = EX.filter(e => e.rot.includes(rot));
+  lista.innerHTML = itens.map((e,i) => `
+    <article class="ex">
+      <div class="ex-top">
+        <div class="num">${String(i+1).padStart(2,'0')}</div>
+        <div style="flex:1;min-width:0">
+          <h3>${e.nome}</h3>
+          <div class="chips">
+            <span class="chip series">${e.series}</span>
+            <span class="chip">${e.musc}</span>
+          </div>
+          <div class="plate">
+            <span class="lbl">Buscar no MOTRA por</span>
+            <span class="en">${e.en}</span>
+            <button class="copy" data-copy="${e.en}">Copiar</button>
+          </div>
+          <div class="det">
+            <h4>Como fazer</h4>
+            <ol>${e.passos.map(p=>`<li>${p}</li>`).join('')}</ol>
+            <h4>Erros comuns</h4>
+            <ul>${e.erros.map(p=>`<li>${p}</li>`).join('')}</ul>
+            <p class="fix">${e.fix}</p>
+          </div>
+          <a class="video" href="${yt(e.vidPt)}" target="_blank" rel="noopener">Ver vídeo da execução</a>
+          <a class="video-en" href="${yt(e.vidEn)}" target="_blank" rel="noopener">Ver em inglês (nome usado no MOTRA)</a>
+        </div>
+      </div>
+    </article>`).join('');
+  titulo.firstChild.textContent = NOMES[rot] + ' ';
+  contagem.textContent = itens.length + ' exercícios';
+}
+
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(o => o.setAttribute('aria-selected', o === t));
+    render(t.dataset.rot);
+    window.scrollTo({top: titulo.offsetTop - 70, behavior: 'smooth'});
+  });
+});
+
+lista.addEventListener('click', async ev => {
+  const b = ev.target.closest('.copy');
+  if(!b) return;
+  try{
+    await navigator.clipboard.writeText(b.dataset.copy);
+    b.textContent = 'Copiado';
+  }catch(err){
+    b.textContent = 'Selecione e copie';
+  }
+  b.classList.add('ok');
+  setTimeout(()=>{ b.textContent='Copiar'; b.classList.remove('ok'); }, 1800);
+});
+
+document.getElementById('compact').addEventListener('change', e => {
+  document.body.classList.toggle('compact', e.target.checked);
+});
+
+render('pernas');
+</script>
+</body>
+</html>
