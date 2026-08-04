@@ -3956,5 +3956,27 @@ function montarCapa(){
 
 </script>
   <script src="./fix.js"></script>
+  <script>
+/* Guia de execução — botão ao lado do "Ver e enviar ao MOTRA" */
+(function(){
+  const URL_GUIA = 'https://luizkatiu62.github.io/gastos-casa/treinos-v2/exercicios.html';
+  function coloca(){
+    document.querySelectorAll('button, a').forEach(b => {
+      if(!/MOTRA/i.test(b.textContent)) return;
+      if(b.parentNode.querySelector('.link-guia')) return;
+      const a = document.createElement('a');
+      a.className = 'link-guia';
+      a.href = URL_GUIA; a.target = '_blank'; a.rel = 'noopener';
+      a.textContent = 'Guia de execução';
+      a.style.cssText = 'display:inline-block;margin:8px 0 0 8px;padding:9px 15px;' +
+        'border:1.5px solid currentColor;border-radius:999px;text-decoration:none;' +
+        'font-size:14px;color:inherit';
+      b.insertAdjacentElement('afterend', a);
+    });
+  }
+  coloca();
+  new MutationObserver(coloca).observe(document.body, {childList:true, subtree:true});
+})();
+</script>
 </body>
 </html>
