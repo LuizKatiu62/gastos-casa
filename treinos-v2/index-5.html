@@ -271,8 +271,8 @@ input,select{font-family:inherit}
 .plot{position:relative;margin-top:16px;touch-action:pan-y}
 .plot svg{display:block;width:100%;overflow:visible}
 .plot text{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums}
-.axis{font-size:10px;fill:var(--tx3)}
-.axis .on{fill:var(--tx);font-weight:700}
+.axis{font-size:13px;fill:var(--tx2);font-weight:500}
+.axis.on{fill:var(--tx);font-weight:700}
 .grid2{stroke:var(--line);stroke-width:1}
 .tip{position:absolute;top:4px;pointer-events:none;background:var(--s3);color:var(--tx);border-radius:11px;
   padding:9px 11px;font-size:11.5px;line-height:1.55;opacity:0;transition:opacity .12s;
@@ -3277,7 +3277,7 @@ const rotuloEixo = (pts, i) => {
 function moldura(W,H,ml,mr,mt,mb,tk,y,fmtY){
   let s='';
   tk.forEach(t=>s+=`<line class="grid2" x1="${ml}" x2="${W-mr}" y1="${y(t)}" y2="${y(t)}"/>
-    <text class="axis" x="${ml-7}" y="${y(t)+3.5}" text-anchor="end">${fmtY?fmtY(t):t}</text>`);
+    <text class="axis" x="${ml-9}" y="${y(t)+4.5}" text-anchor="end">${fmtY?fmtY(t):t}</text>`);
   return s;
 }
 function eixoDatas(pts, x, H, W, mr, ml){
@@ -3285,7 +3285,7 @@ function eixoDatas(pts, x, H, W, mr, ml){
   const marcas = pts.length<=3 ? pts.map((_,i)=>i) : [0, Math.floor(pts.length/2), pts.length-1];
   return marcas.map((i,n)=>{
     const d=dt(pts[i].d);
-    return `<text class="axis ${i===pts.length-1?'on':''}" x="${x(i)}" y="${H-8}"
+    return `<text class="axis ${i===pts.length-1?'on':''}" x="${x(i)}" y="${H-10}"
       text-anchor="${n===0?'start':n===marcas.length-1?'end':'middle'}">${d.getDate()} ${MES3[d.getMonth()]}</text>`;
   }).join('');
 }
@@ -3295,7 +3295,7 @@ function grafBodyBattery(bb){
   if(bb.length<2){ host.innerHTML='<p class="ajuda">Sem leituras suficientes no período.</p>'; q('#sBBsub').textContent=''; return }
   const sem = bb.length > AGRUPA;
   const pts = sem ? porSemana(bb, ['max','min']) : bb;
-  const W=680,H=200,ml=34,mr=12,mt=14,mb=28,iw=W-ml-mr,ih=H-mt-mb;
+  const W=380,H=235,ml=42,mr=12,mt=18,mb=34,iw=W-ml-mr,ih=H-mt-mb;
   const tk=[0,25,50,75,100], y=v=>mt+ih-(v/100)*ih;
   const passo=iw/pts.length, x=i=>ml+passo*i+passo/2;
   const larg=Math.max(3,Math.min(sem?22:9, passo*0.62));
@@ -3328,7 +3328,7 @@ function grafSono(sono){
   if(sono.length<2){ host.innerHTML='<p class="ajuda">Sem noites suficientes no período.</p>'; q('#sSonosub').textContent=''; return }
   const sem = sono.length > AGRUPA;
   const pts = sem ? porSemana(sono, ['duracao','profundo','rem']) : sono;
-  const W=680,H=200,ml=34,mr=12,mt=14,mb=28,iw=W-ml-mr,ih=H-mt-mb;
+  const W=380,H=235,ml=42,mr=12,mt=18,mb=34,iw=W-ml-mr,ih=H-mt-mb;
   const topo=Math.max(9, Math.ceil(Math.max(...pts.map(s2=>s2.duracao))+0.5));
   const tk=ticks(0,topo,4).filter(t=>t<=topo), y=v=>mt+ih-(v/topo)*ih;
   const passo=iw/pts.length, x=i=>ml+passo*i+passo/2;
@@ -3362,7 +3362,7 @@ function grafSono(sono){
 function grafHRV(hrv, hv){
   const host=q('#sHRV'); if(!host) return;
   if(hrv.length<3){ host.innerHTML='<p class="ajuda">Sem leituras de HRV suficientes.</p>'; q('#sHRVsub').textContent=''; return }
-  const W=680,H=200,ml=34,mr=12,mt=14,mb=28,iw=W-ml-mr,ih=H-mt-mb;
+  const W=380,H=235,ml=42,mr=12,mt=18,mb=34,iw=W-ml-mr,ih=H-mt-mb;
   const base=hrv.map(h=>({d:h.d, v:hv(h)}));
   const sem = base.length > AGRUPA;
   const pts = sem ? porSemana(base,['v']) : base;
@@ -3399,7 +3399,7 @@ function grafStress(str){
   if(str.length<2){ host.innerHTML='<p class="ajuda">Sem leituras de stress no período.</p>'; q('#sStresssub').textContent=''; return }
   const sem = str.length > AGRUPA;
   const pts = sem ? porSemana(str,['avg','max']) : str;
-  const W=680,H=200,ml=34,mr=12,mt=14,mb=28,iw=W-ml-mr,ih=H-mt-mb;
+  const W=380,H=235,ml=42,mr=12,mt=18,mb=34,iw=W-ml-mr,ih=H-mt-mb;
   const tk=[0,25,50,75,100], y=v=>mt+ih-(v/100)*ih;
   const passo=iw/Math.max(1,pts.length-1), x=i=>ml+passo*i;
   const linha=pts.map((s2,i)=>[x(i),y(s2.avg)]);
@@ -3434,7 +3434,7 @@ function chartPace(){
   if(runs.length<6){
     host.innerHTML=`<p class="note" style="border:0;padding:0;margin:0">Só ${runs.length} corrida${runs.length===1?'':'s'} em ${ST.periodo} dias. Aumente o intervalo na barra acima para ver a tendência.</p>`;
     q('#paceSub').textContent='Período curto demais'; q('#paceTag').textContent='—'; return }
-  const W=680,H=250,ml=44,mr=10,mt=12,mb=28,iw=W-ml-mr,ih=H-mt-mb;
+  const W=380,H=280,ml=50,mr=14,mt=16,mb=36,iw=W-ml-mr,ih=H-mt-mb;
   const span=Math.max(...D.map(r=>r.d))||1;
   const wk={}; runs.forEach(r=>{ const k=Math.floor(r.d/7); (wk[k]=wk[k]||[]).push(r.pace) });
   const stats=Object.keys(wk).map(Number).sort((a,b)=>b-a)
@@ -3446,19 +3446,19 @@ function chartPace(){
 
   let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Pace por corrida com mediana semanal">`;
   tk.forEach(t=>s+=`<line class="grid2" x1="${ml}" x2="${W-mr}" y1="${y(t)}" y2="${y(t)}"/>
-    <text class="axis" x="${ml-8}" y="${y(t)+3.5}" text-anchor="end">${mmss(t)}</text>`);
+    <text class="axis" x="${ml-9}" y="${y(t)+4.5}" text-anchor="end">${mmss(t)}</text>`);
   if(stats.length>1){
     const up=stats.map(a=>[x(a.k*7+3),y(a.lo)]), dn=stats.map(a=>[x(a.k*7+3),y(a.hi)]).reverse();
     const dd=spline(dn);
     s+=`<path d="${spline(up)} L${dn[0][0]},${dn[0][1]} ${dd.slice(dd.indexOf('C'))} Z" fill="rgba(201,242,78,.13)"/>`;
   }
-  runs.forEach(r=>s+=`<circle cx="${x(r.d)}" cy="${y(r.pace)}" r="2.8" fill="#3A4757"/>`);
-  s+=`<path d="${spline(stats.map(a=>[x(a.k*7+3),y(a.med)]))}" fill="none" stroke="#C9F24E" stroke-width="2.8" stroke-linecap="round"/>`;
+  runs.forEach(r=>s+=`<circle cx="${x(r.d)}" cy="${y(r.pace)}" r="3.4" fill="#3A4757"/>`);
+  s+=`<path d="${spline(stats.map(a=>[x(a.k*7+3),y(a.med)]))}" fill="none" stroke="#C9F24E" stroke-width="3.2" stroke-linecap="round"/>`;
   const last=stats[stats.length-1];
-  s+=`<circle cx="${x(last.k*7+3)}" cy="${y(last.med)}" r="5.5" fill="#0A0D12" stroke="#C9F24E" stroke-width="2.8"/>`;
+  s+=`<circle cx="${x(last.k*7+3)}" cy="${y(last.med)}" r="6" fill="#0A0D12" stroke="#C9F24E" stroke-width="3"/>`;
   s+=`<line class="cross" x1="0" x2="0" y1="${mt}" y2="${mt+ih}" stroke="#8FA0B4" stroke-dasharray="3 3" opacity="0"/>`;
-  [span,Math.round(span*.66),Math.round(span*.33),0].forEach((d,i)=>
-    s+=`<text class="axis ${d===0?'on':''}" x="${x(d)}" y="${H-9}" text-anchor="${i===0?'start':d===0?'end':'middle'}">${d===0?'hoje':dLabel(d)}</text>`);
+  [span,Math.round(span/2),0].forEach((d,i)=>
+    s+=`<text class="axis ${d===0?'on':''}" x="${x(d)}" y="${H-11}" text-anchor="${i===0?'start':d===0?'end':'middle'}">${d===0?'hoje':dLabel(d)}</text>`);
   host.innerHTML=s+'</svg>';
   hover(host,px=>{ let b=null,bd=1e9; runs.forEach(r=>{const dd=Math.abs(x(r.d)-px); if(dd<bd){bd=dd;b=r}});
     return b?{...b,x:x(b.d)}:null },
@@ -3479,17 +3479,17 @@ function chartEff(){
     q('#effSub').textContent='Período curto demais'; q('#effTag').textContent='—'; q('#effNote').textContent=''; return;
   }
   const half=Math.max(...runs.map(r=>r.d))/2;
-  const W=680,H=250,ml=40,mr=14,mt=14,mb=34,iw=W-ml-mr,ih=H-mt-mb;
+  const W=380,H=294,ml=46,mr=16,mt=28,mb=50,iw=W-ml-mr,ih=H-mt-mb;
   const px=runs.map(r=>r.pace), py=runs.map(r=>r.fc);
-  const xt=timeTicks(Math.min(...px),Math.max(...px),4), yt=ticks(Math.min(...py),Math.max(...py),4);
+  const xt=timeTicks(Math.min(...px),Math.max(...px),3), yt=ticks(Math.min(...py),Math.max(...py),4);
   const xlo=xt[0],xhi=xt[xt.length-1],ylo=yt[0],yhi=yt[yt.length-1];
   const X=v=>ml+iw-((v-xlo)/(xhi-xlo))*iw, Y=v=>mt+ih-((v-ylo)/(yhi-ylo))*ih;
   let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Frequência cardíaca por pace, dois períodos">`;
   yt.forEach(t=>s+=`<line class="grid2" x1="${ml}" x2="${W-mr}" y1="${Y(t)}" y2="${Y(t)}"/>
-    <text class="axis" x="${ml-8}" y="${Y(t)+3.5}" text-anchor="end">${t}</text>`);
-  xt.forEach(t=>s+=`<text class="axis" x="${X(t)}" y="${H-16}" text-anchor="middle">${mmss(t)}</text>`);
+    <text class="axis" x="${ml-9}" y="${Y(t)+4.5}" text-anchor="end">${t}</text>`);
+  xt.forEach((t,i)=>s+=`<text class="axis" x="${X(t)}" y="${H-27}" text-anchor="${i===0?'start':i===xt.length-1?'end':'middle'}">${mmss(t)}</text>`);
   runs.forEach(r=>{ const nv=r.d<half;
-    s+=`<circle cx="${X(r.pace)}" cy="${Y(r.fc)}" r="${nv?4.2:3.6}" fill="${nv?'#C9F24E':'#4A5768'}" opacity="${nv?.85:.75}"/>` });
+    s+=`<circle cx="${X(r.pace)}" cy="${Y(r.fc)}" r="${nv?5:4.2}" fill="${nv?'#C9F24E':'#4A5768'}" opacity="${nv?.9:.75}"/>` });
   const fit=g=>{ const n=g.length, sx=g.reduce((a,b)=>a+b.pace,0), sy=g.reduce((a,b)=>a+b.fc,0);
     const sxy=g.reduce((a,b)=>a+b.pace*b.fc,0), sxx=g.reduce((a,b)=>a+b.pace*b.pace,0);
     const m=(n*sxy-sx*sy)/(n*sxx-sx*sx||1); return {m, b:(sy-m*sx)/n} };
@@ -3497,14 +3497,15 @@ function chartEff(){
   [[gA,'#4A5768'],[gB,'#C9F24E']].forEach(([g,c])=>{
     if(g.length<3) return;
     const {m,b}=fit(g);
-    s+=`<line x1="${X(xlo+12)}" y1="${Y(m*(xlo+12)+b)}" x2="${X(xhi-12)}" y2="${Y(m*(xhi-12)+b)}" stroke="${c}" stroke-width="2.2" stroke-linecap="round"/>`;
+    const p1=Math.max(xlo,Math.min(...g.map(r=>r.pace))), p2=Math.min(xhi,Math.max(...g.map(r=>r.pace)));
+    s+=`<line x1="${X(p1)}" y1="${Y(m*p1+b)}" x2="${X(p2)}" y2="${Y(m*p2+b)}" stroke="${c}" stroke-width="2.8" stroke-linecap="round"/>`;
   });
-  s+=`<text class="axis" x="${W-mr}" y="${H-3}" text-anchor="end">mais rápido →</text>`;
-  s+=`<text class="axis" x="${ml-8}" y="${mt-2}" text-anchor="end">bpm</text></svg>`;
+  s+=`<text class="axis" x="${W-mr}" y="${H-7}" text-anchor="end">mais rápido →</text>`;
+  s+=`<text class="axis" x="${ml-9}" y="${mt-7}" text-anchor="end">bpm</text></svg>`;
   host.innerHTML=s;
   hover(host,(mx,my)=>{ let b=null,bd=1e9;
     runs.forEach(r=>{const d=Math.hypot(X(r.pace)-mx,Y(r.fc)-my); if(d<bd){bd=d;b=r}});
-    return bd<45&&b?{...b,x:X(b.pace)}:null },
+    return bd<32&&b?{...b,x:X(b.pace)}:null },
     r=>`<div class="t">${dLabel(r.d)}</div>
       <div class="r"><i>Pace</i><b>${mmss(r.pace)}/km</b></div>
       <div class="r"><i>FC</i><b>${r.fc} bpm</b></div>`);
@@ -3526,27 +3527,27 @@ function chartCad(){
     host.innerHTML=`<p class="note" style="border:0;padding:0;margin:0">Só ${runs.length} corrida${runs.length===1?'':'s'} com cadência em ${ST.periodo} dias. Aumente o intervalo na barra acima.</p>`;
     q('#cadSub').textContent='Período curto demais'; q('#cadTag').textContent='—'; q('#cadNote').textContent=''; return;
   }
-  const W=680,H=240,ml=38,mr=14,mt=14,mb=34,iw=W-ml-mr,ih=H-mt-mb;
+  const W=380,H=284,ml=46,mr=16,mt=28,mb=50,iw=W-ml-mr,ih=H-mt-mb;
   const px=runs.map(r=>r.pace), py=runs.map(r=>r.cad);
-  const xt=timeTicks(Math.min(...px),Math.max(...px),4), yt=ticks(Math.min(...py),Math.max(...py),4);
+  const xt=timeTicks(Math.min(...px),Math.max(...px),3), yt=ticks(Math.min(...py),Math.max(...py),4);
   const xlo=xt[0],xhi=xt[xt.length-1],ylo=yt[0],yhi=yt[yt.length-1];
   const X=v=>ml+iw-((v-xlo)/(xhi-xlo))*iw, Y=v=>mt+ih-((v-ylo)/(yhi-ylo))*ih;
   const esp=p=>150+(430-p)*.115;
   let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Cadência por pace">`;
   yt.forEach(t=>s+=`<line class="grid2" x1="${ml}" x2="${W-mr}" y1="${Y(t)}" y2="${Y(t)}"/>
-    <text class="axis" x="${ml-8}" y="${Y(t)+3.5}" text-anchor="end">${t}</text>`);
+    <text class="axis" x="${ml-9}" y="${Y(t)+4.5}" text-anchor="end">${t}</text>`);
   const band=[];
   for(let p=xlo;p<=xhi;p+=6) band.push([X(p),Y(esp(p)+5)]);
   for(let p=xhi;p>=xlo;p-=6) band.push([X(p),Y(esp(p)-5)]);
   s+=`<polygon points="${band.map(p=>p.join(',')).join(' ')}" fill="rgba(63,217,138,.12)"/>`;
-  xt.forEach(t=>s+=`<text class="axis" x="${X(t)}" y="${H-16}" text-anchor="middle">${mmss(t)}</text>`);
-  runs.forEach(r=>s+=`<circle cx="${X(r.pace)}" cy="${Y(r.cad)}" r="3.8" fill="#C9F24E" opacity=".8"/>`);
-  s+=`<text class="axis" x="${W-mr}" y="${H-3}" text-anchor="end">mais rápido →</text>
-      <text class="axis" x="${ml-8}" y="${mt-2}" text-anchor="end">spm</text></svg>`;
+  xt.forEach((t,i)=>s+=`<text class="axis" x="${X(t)}" y="${H-27}" text-anchor="${i===0?'start':i===xt.length-1?'end':'middle'}">${mmss(t)}</text>`);
+  runs.forEach(r=>s+=`<circle cx="${X(r.pace)}" cy="${Y(r.cad)}" r="4.6" fill="#C9F24E" opacity=".85"/>`);
+  s+=`<text class="axis" x="${W-mr}" y="${H-7}" text-anchor="end">mais rápido →</text>
+      <text class="axis" x="${ml-9}" y="${mt-7}" text-anchor="end">spm</text></svg>`;
   host.innerHTML=s;
   hover(host,(mx,my)=>{ let b=null,bd=1e9;
     runs.forEach(r=>{const d=Math.hypot(X(r.pace)-mx,Y(r.cad)-my); if(d<bd){bd=d;b=r}});
-    return bd<45&&b?{...b,x:X(b.pace)}:null },
+    return bd<32&&b?{...b,x:X(b.pace)}:null },
     r=>`<div class="t">${dLabel(r.d)}</div>
       <div class="r"><i>Cadência</i><b>${r.cad} spm</b></div>
       <div class="r"><i>Pace</i><b>${mmss(r.pace)}/km</b></div>`);
@@ -3916,12 +3917,10 @@ function mostrarAtualizacao(){
     navigator.serviceWorker.getRegistrations().then(rs=>
       Promise.all(rs.map(r=>r.unregister()))).then(()=>location.reload(true));
   };
-}
-
+  }
 /* ═══════════ ABERTURA ═══════════ */
 function montarCapa(){
   const capa=q('#capa'); if(!capa) return;
-
   /* resumo do dia: prova, treino e a última atividade */
   const o = objetivoAtivo();
   const dias = o && o.data ? diff(iso(HOJE), o.data) : null;
@@ -3931,7 +3930,6 @@ function montarCapa(){
       if(x) return {q: i===1?'Amanhã':DIA3[dow(dt(k))-1], t:x.titulo} }
     return null; })();
   const ult = ST.runs.find(r=>!r.walk);
-
   const blocos=[];
   if(o && dias!==null && dias>=0)
     blocos.push({k:o.nome.length>18?o.nome.slice(0,17)+'…':o.nome,
@@ -3940,13 +3938,10 @@ function montarCapa(){
     ? {k:'Treino · '+prox.q, v:prox.t.length>15?prox.t.slice(0,14)+'…':prox.t, u:''}
     : {k:'Treino', v:'Descanso', u:''});
   if(ult) blocos.push({k:'Última corrida', v:ult.km.toFixed(1), u:'km'});
-
   q('#cResumo').innerHTML = blocos.slice(0,3).map(b=>
     `<div><div class="k">${b.k}</div><div class="v mono">${b.v}${b.u?`<small>${b.u}</small>`:''}</div></div>`).join('');
-
   const hoje=new Date();
   q('#cData').textContent = DIA[dow(hoje)] + ', ' + hoje.getDate() + ' de ' + MES[hoje.getMonth()];
-
   const fechar=()=>{
     capa.classList.add('saindo');
     setTimeout(()=>capa.style.display='none', 520);
@@ -3957,6 +3952,30 @@ function montarCapa(){
   capa.addEventListener('click', e=>{ if(e.target===capa||e.target.closest('.miolo')) fechar() });
   document.addEventListener('keydown', porTecla);
 }
+
+
+</script>
+<script>
+/* Guia de execução — botão ao lado do "Ver e enviar ao MOTRA" */
+(function(){
+  const URL_GUIA = 'https://luizkatiu62.github.io/gastos-casa/treinos-v2/guia-exercicios-academia.html';
+  function coloca(){
+    document.querySelectorAll('button, a').forEach(b => {
+      if(!/MOTRA/i.test(b.textContent)) return;
+      if(b.parentNode.querySelector('.link-guia')) return;
+      const a = document.createElement('a');
+      a.className = 'link-guia';
+      a.href = URL_GUIA; a.target = '_blank'; a.rel = 'noopener';
+      a.textContent = 'Guia de execução';
+      a.style.cssText = 'display:inline-block;margin:8px 0 0 8px;padding:9px 15px;' +
+        'border:1.5px solid currentColor;border-radius:999px;text-decoration:none;' +
+        'font-size:14px;color:inherit';
+      b.insertAdjacentElement('afterend', a);
+    });
+  }
+  coloca();
+  new MutationObserver(coloca).observe(document.body, {childList:true, subtree:true});
+})();
 </script>
 </body>
 </html>
