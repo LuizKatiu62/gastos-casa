@@ -1,6 +1,6 @@
 /* ══════════════════════════════════════════════════════════════════
    fix.js — correções da v2
-   Versão 2026-08-01c · cinco correções, num arquivo só.
+   Versão 2026-08-01d · seis correções, num arquivo só.
 
    INSTALAÇÃO: envie este arquivo para a pasta treinos-v2 pelo
    Add file → Upload files. Ele substitui o fix.js que já está lá.
@@ -13,6 +13,7 @@
    3) Gráficos da aba Saúde legíveis no celular
    4) Gráficos da aba Evolução legíveis no celular
    5) Mapa de semanas da aba Treinos: nunca colapsa e enche a largura
+   6) Aba Coach: cancelar treino, remanejar cada um, corrida no 2º treino
    ══════════════════════════════════════════════════════════════════ */
 
 /* ═══════════ 1 e 2 ═══════════ */
@@ -678,5 +679,275 @@ window.addEventListener('resize', () => {
 });
 
 if(typeof ST === 'object' && ST.aba === 'treinos'){ try{ redesenhar() }catch(e){} }
+
+})();
+
+
+/* ═══════════ 6. ABA COACH — cancelar, remanejar e segundo treino ═══════════
+   Três coisas que faltavam:
+
+   1) Cancelar um treino. Só existia "mover para outro dia". O cancelamento
+      fica guardado em ST.trocas, que já é sincronizado entre aparelhos, e
+      pode ser desfeito.
+   2) Remanejar cada treino do dia por conta própria. O botão de mover só
+      existia no treino principal; o segundo treino ficava preso ao dia.
+   3) Corrida na lista de segundo treino. O app oferecia só academia,
+      natação e bike, por uma regra fixa de "não somar impacto". A regra
+      virou aviso: aparece o alerta quando o dia já é pesado, mas a
+      decisão passa a ser sua.
+   ══════════════════════════════════════════════════════════════════════ */
+(function(){
+'use strict';
+
+const css = document.createElement('style');
+css.textContent = `
+.btn-cancelar{width:100%;margin:8px 14px 16px;width:calc(100% - 28px);padding:12px;
+  border-radius:13px;background:transparent;border:1.5px solid var(--s3);
+  color:var(--tx3);font-size:12.5px;font-weight:700;transition:.15s}
+.btn-cancelar:hover{border-color:var(--bad);color:var(--bad);background:var(--bad-wash)}
+.btn-voltar{width:100%;margin-top:16px;padding:13px;border-radius:13px;
+  background:var(--acc-wash);color:var(--acc);font-size:13px;font-weight:700}
+.opt-grupo{font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--tx3);margin:16px 0 7px;padding-left:2px}
+.opt-grupo:first-child{margin-top:4px}
+.cancelado{padding:30px 20px;text-align:center}
+.cancelado .tagc{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--warn);background:var(--warn-wash);
+  padding:4px 10px;border-radius:6px;margin-bottom:12px}
+.cancelado h2{margin:0;font-size:17px;font-weight:700}
+.cancelado p{margin:8px 0 0;font-size:13px;color:var(--tx2);line-height:1.5}
+`;
+document.head.appendChild(css);
+
+const cancelado = k => !!(ST.trocas && ST.trocas[k] && ST.trocas[k].cancelado);
+
+/* ── 1. dias cancelados somem do plano depois de cada remontagem ── */
+if(typeof rebuild === 'function'){
+  const original = rebuild;
+  window.rebuild = function(){
+    const r = original.apply(this, arguments);
+    Object.keys(ST.trocas || {}).forEach(k => {
+      if(ST.trocas[k] && ST.trocas[k].cancelado) delete ST.plano[k];
+    });
+    return r;
+  };
+  window.rebuild();
+}
+
+/* ── 2. segundo treino: lista completa, com corrida ── */
+const OPCOES = [
+  {g:'Corrida', mod:'corrida', foco:'regenerativo', t:'Regenerativa',
+   d:'Trote bem leve, 20 a 30 min. Só circular sangue.', min:25, km:4},
+  {g:'Corrida', mod:'corrida', foco:'facil', t:'Rodagem leve',
+   d:'Ritmo confortável, dá para conversar o tempo todo.', min:35, km:6},
+  {g:'Bike', mod:'bike', foco:'bikeFacil', t:'Regenerativa',
+   d:'Giro leve, sem carga, 30 a 40 min.', min:35},
+  {g:'Bike', mod:'bike', foco:'bikeFacil', t:'Aeróbica',
+   d:'Ritmo constante, 50 a 60 min. Soma volume sem impacto.', min:55},
+  {g:'Natação', mod:'natacao', foco:'natTec', t:'Soltura',
+   d:'Nado solto, sem série. Zero impacto nas pernas.', metros:1200, min:30},
+  {g:'Natação', mod:'natacao', foco:'natTec', t:'Técnica',
+   d:'Educativos e braçada longa, 1600 m.', metros:1600, min:40},
+  {g:'Academia', mod:'forca', foco:'forca', t:'Sessão da semana',
+   d:'Alterna pernas e costas conforme a semana.', min:50},
+];
+
+window.sheetAdicionar = function(k){
+  const s = sessaoDe(k), d = dt(k);
+  const pesado = s && ['intervalado','limiar','longo','longo2','brick','bikeLongo','prova'].includes(s.foco);
+  let grupoAnterior = '';
+  const lista = OPCOES.map((o, i) => {
+    const cab = o.g !== grupoAnterior ? (grupoAnterior = o.g, `<div class="opt-grupo">${o.g}</div>`) : '';
+    return cab + `<button class="opt" data-add="${i}">
+      <span class="oi" style="background:${MOD[o.mod].c}22">
+        <span style="width:11px;height:11px;border-radius:50%;background:${MOD[o.mod].c};display:block"></span></span>
+      <span class="ot"><b>${o.t}</b><span>${o.d}</span></span></button>`;
+  }).join('');
+
+  abrir(`<h3>Segundo treino</h3>
+    <p class="sd">${DIA[dow(d)].replace(/^./, c => c.toUpperCase())}, ${fmt(k)}${s ? ` · já tem <b>${s.titulo}</b>` : ''}.
+      ${pesado ? '<br><span style="color:var(--warn)">O treino de hoje já é exigente. Somar carga aqui atrasa a recuperação — se for fazer, que seja leve.</span>' : ''}</p>
+    ${lista}`);
+
+  document.querySelector('#sheetIn').querySelectorAll('[data-add]').forEach(bt => {
+    bt.onclick = () => {
+      const o = OPCOES[+bt.dataset.add];
+      const x = {id:'x' + k, data:k, mod:o.mod, foco:o.foco, extra:true,
+                 min:o.min, titulo:`${o.g} — ${o.t.toLowerCase()}`};
+      if(o.km) x.km = o.km;
+      if(o.metros) x.metros = o.metros;
+      if(o.mod === 'forca'){
+        const sid = sessaoAcademiaDe(k);
+        x.sessao = sid;
+        x.titulo = SESSOES_ACADEMIA[sid].nome;
+      }
+      ST.extras[k] = x;
+      delete ST.cache[x.id];
+      fechar(); renderCoach(); persistir();
+    };
+  });
+};
+
+/* ── 3. bloco do segundo treino, agora com mover e cancelar ── */
+window.blocoExtra = function(k){
+  const x = ST.extras[k] || null;
+  const s = sessaoDe(k);
+  if(!x) return s ? `<div class="addex"><button data-addex="${k}">+ Adicionar segundo treino</button></div>` : '';
+  const ets = etapasDe(x), fe = feitasDe(x.id);
+  const pct = Math.round(fe.length / ets.length * 100);
+  const fim = fe.length >= ets.length;
+  const cor = MOD[x.mod].c;
+  return `<div class="extra" style="border-color:${cor}">
+    <div class="exch">
+      <span class="mod" style="color:${cor}">Segundo treino · ${MOD[x.mod].n}</span>
+      <button class="exrem" data-remex="${k}" aria-label="Cancelar">×</button>
+    </div>
+    <h3>${x.titulo}</h3>
+    <div class="exfacts">${x.min ? `<span class="mono">${x.min} min</span>` : ''}${x.metros ? `<span class="mono">${x.metros} m</span>` : ''}${x.km ? `<span class="mono">${x.km} km</span>` : ''}</div>
+    <div class="ptrack" style="margin:12px 0 8px"><i style="width:${pct}%"></i></div>
+    <div class="plab"><span>${fe.length} de ${ets.length} etapas</span><span>${pct}%</span></div>
+    <div class="etapas" style="padding:6px 0 0">${ets.map(e => {
+      const on = fe.includes(e.id);
+      return `<button class="et ${on ? 'on' : ''}" data-ex="${e.id}">
+        <span class="box">${CHK}</span>
+        <span class="body"><span class="t">${e.t}</span><span class="d">${e.d}</span>
+        ${e.tags.length ? `<span class="tags">${e.tags.map(t => `<span class="tg ${t.c || ''}">${t.t}</span>`).join('')}</span>` : ''}
+        </span></button>`}).join('')}</div>
+    <div class="acts" style="padding:6px 0 0">
+      <button data-exmover="${k}">Mover dia</button>
+      ${x.mod === 'forca' ? `<button data-exmotra="${k}">MOTRA</button>` : ''}
+      <button class="${fim ? 'done' : 'pri'}" data-exok="${k}">${fim ? '✓ Concluído' : 'Concluir'}</button>
+    </div>
+    <button class="btn-cancelar" data-excancel="${k}" style="margin:0">Cancelar este treino</button>
+  </div>`;
+};
+
+window.ligarExtra = function(k){
+  const el = document.querySelector('#sess');
+  const b = sel => el.querySelector(sel);
+  if(b('[data-addex]')) b('[data-addex]').onclick = () => sheetAdicionar(k);
+  const remover = () => {
+    const x = ST.extras[k];
+    if(x) delete ST.feitas[x.id];
+    delete ST.extras[k]; delete ST.cache['x' + k];
+    renderCoach(); persistir();
+  };
+  if(b('[data-remex]')) b('[data-remex]').onclick = remover;
+  if(b('[data-excancel]')) b('[data-excancel]').onclick = remover;
+
+  const x = ST.extras[k];
+  if(!x) return;
+  el.querySelectorAll('[data-ex]').forEach(bt => bt.onclick = () => {
+    marcarEtapa(x.id, bt.dataset.ex);
+    renderDia(); renderCal(); renderSemana(); persistir();
+  });
+  if(b('[data-exok]')) b('[data-exok]').onclick = () => {
+    const ets = etapasDe(x);
+    if(feitasDe(x.id).length >= ets.length) delete ST.feitas[x.id];
+    else ST.feitas[x.id] = ets.map(e => e.id);
+    renderDia(); renderCal(); renderSemana(); persistir();
+  };
+  if(b('[data-exmotra]')) b('[data-exmotra]').onclick = () => sheetMotra(x);
+  if(b('[data-exmover]')) b('[data-exmover]').onclick = () => moverExtra(k);
+};
+
+/* ── 4. mover só o segundo treino ── */
+function moverExtra(k){
+  const opts = [];
+  for(let i = -3; i <= 7; i++){
+    const d = addD(dt(k), i), dia = iso(d);
+    if(dia === k || d < HOJE) continue;
+    opts.push({k:dia, d, livre:!ST.extras[dia]});
+  }
+  abrir(`<h3>Mover o segundo treino</h3>
+    <p class="sd">Só este treino muda de dia. O treino principal de ${fmt(k)} fica onde está.<br>
+      Dias em destaque ainda não têm segundo treino.</p>
+    <div class="dgrid">${opts.map(o => `<button class="${o.livre ? 'on' : ''}" data-mvx="${o.k}">
+      <div style="font-size:15px">${o.d.getDate()}</div>
+      <div style="font-size:9.5px;opacity:.7;margin-top:3px">${DIA3[dow(o.d) - 1]}</div></button>`).join('')}</div>`);
+  document.querySelector('#sheetIn').querySelectorAll('[data-mvx]').forEach(b => b.onclick = () => {
+    const dest = b.dataset.mvx, x = ST.extras[k];
+    if(!x) return fechar();
+    const feitas = ST.feitas[x.id];
+    delete ST.feitas[x.id]; delete ST.cache[x.id]; delete ST.extras[k];
+    x.data = dest; x.id = 'x' + dest;
+    ST.extras[dest] = x;
+    if(feitas) ST.feitas[x.id] = feitas;
+    ST.sel = dest;
+    fechar(); renderCoach(); persistir();
+  });
+}
+
+/* ── 5. cancelar o treino principal, com desfazer ── */
+function cancelarPrincipal(k){
+  const s = sessaoDe(k);
+  if(!s) return;
+  abrir(`<h3>Cancelar o treino?</h3>
+    <p class="sd"><b>${s.titulo}</b> · ${fmt(k)}<br>
+      O dia passa a contar como descanso. Isso não some com o plano: dá para
+      voltar atrás a qualquer momento, aqui mesmo.</p>
+    <button class="opt" id="cSim" style="justify-content:center">
+      <span class="ot" style="flex:none"><b style="color:var(--bad)">Sim, cancelar</b></span></button>
+    <button class="opt" id="cNao" style="justify-content:center">
+      <span class="ot" style="flex:none"><b>Manter o treino</b></span></button>`);
+  document.getElementById('cNao').onclick = fechar;
+  document.getElementById('cSim').onclick = () => {
+    ST.trocas[k] = {cancelado:true};
+    delete ST.feitas[k]; delete ST.cache[k];
+    fechar(); rebuild(); renderCoach(); persistir();
+  };
+}
+
+function desfazerCancelamento(k){
+  delete ST.trocas[k];
+  rebuild(); renderCoach(); persistir();
+}
+
+/* ── 6. injeta os botões depois que o dia é desenhado ── */
+if(typeof renderDia === 'function'){
+  const original = renderDia;
+  window.renderDia = function(){
+    const r = original.apply(this, arguments);
+    try{ ajustar() }catch(e){ console.warn('coach:', e.message) }
+    return r;
+  };
+}
+
+function ajustar(){
+  const el = document.querySelector('#sess');
+  if(!el) return;
+  const k = ST.sel;
+
+  /* dia cancelado: troca o texto de "Descanso" e oferece desfazer */
+  if(cancelado(k)){
+    const rd = el.querySelector('.restday');
+    if(rd){
+      rd.className = 'cancelado';
+      rd.innerHTML = `<div class="tagc">Treino cancelado</div>
+        <h2>Dia de descanso</h2>
+        <p>Você cancelou o treino que o plano tinha posto aqui.</p>
+        <button class="btn-voltar" id="btVoltar">Restaurar o treino do plano</button>`;
+      const b = document.getElementById('btVoltar');
+      if(b) b.onclick = () => desfazerCancelamento(k);
+    }
+    return;
+  }
+
+  /* dia com treino: botão de cancelar abaixo da barra de ações */
+  const acts = el.querySelector('.acts');
+  if(!acts || el.querySelector('[data-cancelar]')) return;
+  const mover = acts.querySelector('[data-act="mover"]');
+  if(mover) mover.textContent = 'Mover dia';
+  const b = document.createElement('button');
+  b.className = 'btn-cancelar';
+  b.setAttribute('data-cancelar', k);
+  b.textContent = 'Cancelar este treino';
+  b.onclick = () => cancelarPrincipal(k);
+  acts.insertAdjacentElement('afterend', b);
+}
+
+if(typeof ST === 'object' && ST.aba === 'coach' && typeof renderCoach === 'function'){
+  try{ renderCoach() }catch(e){}
+}
 
 })();
