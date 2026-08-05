@@ -1,6 +1,6 @@
 /* ══════════════════════════════════════════════════════════════════
    fix.js — correções da v2
-   Versão 2026-08-01e · seis correções, cada uma isolada.
+   Versão 2026-08-01f · seis correções, cada uma isolada.
 
    MUDANÇA DESTA VERSÃO: antes as seis partes eram blocos soltos no
    mesmo arquivo. Um erro em qualquer uma derrubava todas as outras,
@@ -8,7 +8,7 @@
    try/catch: se uma falhar, as cinco restantes continuam valendo.
 
    E aparece um selo no alto da tela, ao lado do relógio:
-     · "fix 01e" em verde  → tudo rodando
+     · "fix 01f" em verde  → tudo rodando
      · "fix ✗ N" em vermelho → N partes falharam; toque para ver quais
 
    INSTALAÇÃO: envie este arquivo para a pasta treinos-v2 pelo
@@ -19,10 +19,11 @@
    3) Gráficos da aba Saúde legíveis no celular
    4) Gráficos da aba Evolução legíveis no celular
    5) Mapa de semanas da aba Treinos: nunca colapsa e enche a largura
-   6) Aba Coach: cancelar treino, remanejar cada um, corrida no 2º treino
+   6) Aba Coach: cancelar treino, remanejar cada um, corrida no 2º treino,
+      e incluir treino em dia de descanso ou cancelado
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '01e';
+const FIX_VERSAO = '01f';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -782,8 +783,8 @@ window.sheetAdicionar = function(k){
       <span class="ot"><b>${o.t}</b><span>${o.d}</span></span></button>`;
   }).join('');
 
-  abrir(`<h3>Segundo treino</h3>
-    <p class="sd">${DIA[dow(d)].replace(/^./, c => c.toUpperCase())}, ${fmt(k)}${s ? ` · já tem <b>${s.titulo}</b>` : ''}.
+  abrir(`<h3>${s ? 'Segundo treino' : 'Incluir um treino'}</h3>
+    <p class="sd">${DIA[dow(d)].replace(/^./, c => c.toUpperCase())}, ${fmt(k)}${s ? ` · já tem <b>${s.titulo}</b>` : ' · o plano não pôs treino neste dia'}.
       ${pesado ? '<br><span style="color:var(--warn)">O treino de hoje já é exigente. Somar carga aqui atrasa a recuperação — se for fazer, que seja leve.</span>' : ''}</p>
     ${lista}`);
 
@@ -810,14 +811,15 @@ window.sheetAdicionar = function(k){
 window.blocoExtra = function(k){
   const x = ST.extras[k] || null;
   const s = sessaoDe(k);
-  if(!x) return s ? `<div class="addex"><button data-addex="${k}">+ Adicionar segundo treino</button></div>` : '';
+  if(!x) return `<div class="addex"><button data-addex="${k}">` +
+    (s ? '+ Adicionar segundo treino' : '+ Incluir um treino neste dia') + `</button></div>`;
   const ets = etapasDe(x), fe = feitasDe(x.id);
   const pct = Math.round(fe.length / ets.length * 100);
   const fim = fe.length >= ets.length;
   const cor = MOD[x.mod].c;
   return `<div class="extra" style="border-color:${cor}">
     <div class="exch">
-      <span class="mod" style="color:${cor}">Segundo treino · ${MOD[x.mod].n}</span>
+      <span class="mod" style="color:${cor}">${s ? 'Segundo treino' : 'Treino incluído'} · ${MOD[x.mod].n}</span>
       <button class="exrem" data-remex="${k}" aria-label="Cancelar">×</button>
     </div>
     <h3>${x.titulo}</h3>
@@ -935,23 +937,33 @@ function ajustar(){
   const el = document.querySelector('#sess');
   if(!el) return;
   const k = ST.sel;
+  const s = sessaoDe(k);
 
-  /* dia cancelado: troca o texto de "Descanso" e oferece desfazer */
-  if(cancelado(k)){
-    const rd = el.querySelector('.restday');
-    if(rd){
-      rd.className = 'cancelado';
-      rd.innerHTML = `<div class="tagc">Treino cancelado</div>
-        <h2>Dia de descanso</h2>
-        <p>Você cancelou o treino que o plano tinha posto aqui.</p>
-        <button class="btn-voltar" id="btVoltar">Restaurar o treino do plano</button>`;
-      const b = document.getElementById('btVoltar');
-      if(b) b.onclick = () => desfazerCancelamento(k);
+  /* ── dia sem treino principal: descanso do plano ou cancelado por você ── */
+  if(!s){
+    if(cancelado(k)){
+      const rd = el.querySelector('.restday');
+      if(rd){
+        rd.className = 'cancelado';
+        rd.innerHTML = `<div class="tagc">Treino cancelado</div>
+          <h2>Dia livre</h2>
+          <p>Você cancelou o treino que o plano tinha posto aqui.
+             Pode restaurá-lo, ou incluir outro no lugar.</p>
+          <button class="btn-voltar" id="btVoltar">Restaurar o treino do plano</button>`;
+        const b = document.getElementById('btVoltar');
+        if(b) b.onclick = () => desfazerCancelamento(k);
+      }
+    }
+    /* o renderDia original sai antes de chamar o blocoExtra em dias sem
+       treino, então o botão de incluir nunca aparecia. Acrescento aqui. */
+    if(!el.querySelector('.extra') && !el.querySelector('[data-addex]')){
+      el.insertAdjacentHTML('beforeend', blocoExtra(k));
+      ligarExtra(k);
     }
     return;
   }
 
-  /* dia com treino: botão de cancelar abaixo da barra de ações */
+  /* ── dia com treino: botão de cancelar abaixo da barra de ações ── */
   const acts = el.querySelector('.acts');
   if(!acts || el.querySelector('[data-cancelar]')) return;
   const mover = acts.querySelector('[data-act="mover"]');
