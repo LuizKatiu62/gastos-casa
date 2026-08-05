@@ -1,16 +1,25 @@
 /* ══════════════════════════════════════════════════════════════
    Treinos · service worker
+   Versão 2026-08-01d
 
-   Estratégia: REDE PRIMEIRO.
-   Com internet, você sempre recebe a versão mais nova — nada de
-   ficar preso numa cópia velha depois de publicar. Sem internet,
-   o app abre a partir do cache e mostra a última leitura guardada.
+   Estratégia: REDE PRIMEIRO, DE VERDADE.
+
+   A versão anterior chamava fetch(req) sem desligar o cache do
+   navegador. O Safari então respondia com a cópia guardada dele
+   sem nem consultar o servidor — dava para publicar um arquivo
+   novo no GitHub e o iPhone continuar rodando o antigo por horas.
+
+   Agora os arquivos do próprio app são buscados com cache:'reload',
+   que obriga a ida ao servidor e atualiza a cópia local. Sem
+   internet, o app volta a abrir pelo que estiver guardado.
+
+   O fix.js entrou na lista de essenciais: ele é parte do app.
 
    Ao publicar uma versão nova, mude VERSAO abaixo.
    ══════════════════════════════════════════════════════════════ */
 
-const VERSAO = 'treinos-v2-2026-07-30-02';
-const ESSENCIAIS = ['./', './index.html', './manifest.json'];
+const VERSAO = 'treinos-v2-2026-08-01d';
+const ESSENCIAIS = ['./', './index.html', './manifest.json', './fix.js'];
 
 self.addEventListener('install', e=>{
   self.skipWaiting();
@@ -27,6 +36,17 @@ self.addEventListener('activate', e=>{
   })());
 });
 
+/* busca sem passar pelo cache do navegador; se o navegador não
+   aceitar a opção, cai no fetch comum em vez de quebrar */
+async function buscarFresco(req){
+  try{
+    return await fetch(req, {cache:'reload'});
+  }catch(err){
+    if(err && err.name === 'TypeError') return await fetch(req);
+    throw err;
+  }
+}
+
 self.addEventListener('fetch', e=>{
   const req = e.request;
   if(req.method !== 'GET') return;
@@ -37,7 +57,7 @@ self.addEventListener('fetch', e=>{
 
   e.respondWith((async()=>{
     try{
-      const resposta = await fetch(req);
+      const resposta = await buscarFresco(req);
       if(resposta && resposta.ok){
         const copia = resposta.clone();
         caches.open(VERSAO).then(c=>c.put(req, copia)).catch(()=>{});
