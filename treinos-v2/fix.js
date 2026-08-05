@@ -1,12 +1,18 @@
 /* ══════════════════════════════════════════════════════════════════
    fix.js — correções da v2
-   Versão 2026-08-01d · seis correções, num arquivo só.
+   Versão 2026-08-01e · seis correções, cada uma isolada.
+
+   MUDANÇA DESTA VERSÃO: antes as seis partes eram blocos soltos no
+   mesmo arquivo. Um erro em qualquer uma derrubava todas as outras,
+   sem aviso nenhum. Agora cada parte roda dentro do seu próprio
+   try/catch: se uma falhar, as cinco restantes continuam valendo.
+
+   E aparece um selo no alto da tela, ao lado do relógio:
+     · "fix 01e" em verde  → tudo rodando
+     · "fix ✗ N" em vermelho → N partes falharam; toque para ver quais
 
    INSTALAÇÃO: envie este arquivo para a pasta treinos-v2 pelo
-   Add file → Upload files. Ele substitui o fix.js que já está lá.
-   NÃO é preciso editar o index.html: a linha
-       <script src="./fix.js"></script>
-   já existe e continua valendo.
+   Add file → Upload files. Não é preciso editar o index.html.
 
    1) Botão "Começar" da capa
    2) Máscara de tempo na calculadora de pace
@@ -16,9 +22,21 @@
    6) Aba Coach: cancelar treino, remanejar cada um, corrida no 2º treino
    ══════════════════════════════════════════════════════════════════ */
 
+const FIX_VERSAO = '01e';
+const FIX_FALHAS = [];
+
+function PARTE(nome, fn){
+  try{
+    fn();
+  }catch(erro){
+    FIX_FALHAS.push(nome + ' — ' + (erro && erro.message ? erro.message : erro));
+    console.error('fix.js · falhou em "' + nome + '":', erro);
+  }
+}
+
 /* ═══════════ 1 e 2 ═══════════ */
 /* ───────────── 1. CAPA ───────────── */
-(function(){
+PARTE('capa', function(){
   const capa = document.getElementById('capa');
   const bt   = document.getElementById('btEntrar');
   if(!capa || !bt) return;
@@ -44,10 +62,10 @@
     if(fechada) return;
     if(e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') fecharCapa();
   });
-})();
+});
 
 /* ───────────── 2. MÁSCARA DE TEMPO ───────────── */
-(function(){
+PARTE('mascara de tempo', function(){
   function maskTime(el, modo){
     const max = modo === 'ms' ? 4 : 6;
     const d = String(el.value || '').replace(/\D/g, '').slice(0, max);
@@ -109,7 +127,7 @@
       alvo.dispatchEvent(new Event('input', {bubbles:true}));
     };
   });
-})();
+});
 
 
 /* ═══════════ 3. GRÁFICOS DA ABA SAÚDE ═══════════
@@ -117,7 +135,7 @@
    encolhidos para a largura do iPhone (~326 px): a fonte de 10 px
    virava 4,8 px e a altura de 200 virava 96 px. Agora a área é
    380 × 270, quase 1:1 com a tela.                              */
-(function(){
+PARTE('graficos saude', function(){
 'use strict';
 
 /* ─────────── medidas ─────────── */
@@ -349,7 +367,7 @@ if(typeof renderSaude === 'function' && typeof ST === 'object' && ST.aba === 'sa
   try{ renderSaude() }catch(e){}
 }
 
-})();
+});
 
 
 /* ═══════════ 4. GRÁFICOS DA ABA EVOLUÇÃO ═══════════
@@ -360,7 +378,7 @@ if(typeof renderSaude === 'function' && typeof ST === 'object' && ST.aba === 'sa
 
    Agora: 380 de largura (escala 0,86) e altura maior, 300 nas nuvens.
    Os pontos também cresceram, porque com 3 px ninguém acerta o toque. */
-(function(){
+PARTE('graficos evolucao', function(){
 'use strict';
 
 const W = 380;
@@ -557,7 +575,7 @@ if(typeof renderEvolucao === 'function' && typeof ST === 'object' && ST.aba === 
   try{ renderEvolucao() }catch(e){}
 }
 
-})();
+});
 
 
 /* ═══════════ 5. MAPA DE SEMANAS DA ABA TREINOS ═══════════
@@ -571,7 +589,7 @@ if(typeof renderEvolucao === 'function' && typeof ST === 'object' && ST.aba === 
    · célula calculada pela largura disponível, entre 13 e 40 px, em vez
      de fixa. Com 10 semanas num iPhone dá ~29 px — dedo acerta.
    Acima de 24 semanas volta a 13 px e o mapa rola de lado, como antes. */
-(function(){
+PARTE('mapa de semanas', function(){
 'use strict';
 
 const GAP = 3, MIN_SEM = 10, MAX_SEM = 26, CEL_MIN = 13, CEL_MAX = 40;
@@ -680,7 +698,7 @@ window.addEventListener('resize', () => {
 
 if(typeof ST === 'object' && ST.aba === 'treinos'){ try{ redesenhar() }catch(e){} }
 
-})();
+});
 
 
 /* ═══════════ 6. ABA COACH — cancelar, remanejar e segundo treino ═══════════
@@ -696,7 +714,7 @@ if(typeof ST === 'object' && ST.aba === 'treinos'){ try{ redesenhar() }catch(e){
       virou aviso: aparece o alerta quando o dia já é pesado, mas a
       decisão passa a ser sua.
    ══════════════════════════════════════════════════════════════════════ */
-(function(){
+PARTE('aba coach', function(){
 'use strict';
 
 const css = document.createElement('style');
@@ -950,4 +968,32 @@ if(typeof ST === 'object' && ST.aba === 'coach' && typeof renderCoach === 'funct
   try{ renderCoach() }catch(e){}
 }
 
+});
+
+
+/* ─────────── selo de diagnóstico ─────────── */
+(function(){
+  function montar(){
+    const barra = document.querySelector('.appbar .in');
+    if(!barra || document.getElementById('fixSelo')) return;
+    const ok = FIX_FALHAS.length === 0;
+    const s = document.createElement('button');
+    s.id = 'fixSelo';
+    s.type = 'button';
+    s.textContent = ok ? 'fix ' + FIX_VERSAO : 'fix \u2717 ' + FIX_FALHAS.length;
+    s.style.cssText = 'flex:none;padding:4px 8px;border-radius:8px;font-size:10px;' +
+      "font-weight:800;font-family:'JetBrains Mono',monospace;letter-spacing:.03em;" +
+      'background:' + (ok ? 'rgba(63,217,138,.16)' : 'rgba(242,104,92,.18)') + ';' +
+      'color:' + (ok ? 'var(--ok)' : 'var(--bad)') + ';border:0';
+    s.onclick = function(){
+      alert(ok
+        ? 'fix.js ' + FIX_VERSAO + ' — as seis partes carregaram.'
+        : 'fix.js ' + FIX_VERSAO + '\n\nFalharam:\n\n' + FIX_FALHAS.join('\n\n'));
+    };
+    barra.insertBefore(s, barra.firstChild.nextSibling);
+    if(!ok) console.warn('fix.js · falhas:', FIX_FALHAS);
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', montar);
+  else montar();
+  setTimeout(montar, 1500);
 })();
