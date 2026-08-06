@@ -93,6 +93,10 @@
       <div class="fmt" id="nivelRuas" style="margin-top:7px"></div>
       <div class="nota" id="notaReg">O relevo vem de dados abertos de altitude e vira
         curvas de nível — cada degrau é uma camada de impressão. A água vem do OpenStreetMap.</div>
+      <label class="cmp">Área ao redor — <span id="lblMargem"></span></label>
+      <input type="range" id="margem" min="0" max="400" step="10" value="35">
+      <div class="nota">Quanto de região aparece além do percurso. Aumente para
+        alcançar o mar, um lago ou a cidade vizinha — o traçado encolhe na mesma medida.</div>
       <label class="cmp">Degraus do relevo — <span id="lblDeg"></span></label>
       <input type="range" id="deg" min="4" max="26" step="1" value="14">
     </div>
@@ -179,7 +183,7 @@ const P_TRACO=['#e0342c','#c9f24e','#ffffff','#f18701','#0d7ac4','#111418'];
 const P_TERR=['#0f8f70','#2e7d32','#4a6741','#6b5b3e','#3a5f7d','#5a4a6b'];
 
 let ST={bruto:[],meta:{},forma:'hexL',fmt:'h2',vista:'p',giro:0,relevo:2,det:420,
-  mold:13,deg:14,zoom:4.4,costa:null,temMar:0,ruas:null,ruasNivel:'p',lados:['','','','','',''],
+  mold:13,deg:14,zoom:4.4,margem:35,costa:null,temMar:0,ruas:null,ruasNivel:'p',lados:['','','','','',''],
   mCor:'#111418',tCor:'#e0342c',terrCor:'#0f8f70',agua:null,dem:null};
 
 /* ═══════ GPX ═══════ */
@@ -260,13 +264,26 @@ const sombra=(hex,f)=>{const c=hex.replace('#','');
 const claro=hex=>{const c=hex.replace('#','');
   return (parseInt(c.substr(0,2),16)*299+parseInt(c.substr(2,2),16)*587+parseInt(c.substr(4,2),16)*114)/1000>140};
 
+/* A área exibida é o miolo da peça convertido de volta para lat/lon.
+   Antes as buscas usavam uma caixa fixa de ~600 m ao redor do percurso,
+   ignorando o controle de arredor: aumentar a área não trazia dado novo.
+   Agora a consulta cobre exatamente o que está na tela.                */
+function areaVisivel(){
+  const G=geometria();
+  const xs=G.vi.map(p=>p[0]), ys=G.vi.map(p=>p[1]);
+  const c=[[Math.min(...xs),Math.min(...ys)],[Math.max(...xs),Math.max(...ys)]]
+    .map(([X,Y])=>mapa.geo(X,Y));
+  const la=c.map(p=>p[0]), lo=c.map(p=>p[1]), fol=0.0008;
+  const S=Math.min(...la)-fol, N=Math.max(...la)+fol;
+  const W=Math.min(...lo)-fol, E=Math.max(...lo)+fol;
+  return {S,N,W,E, bbox:[S,W,N,E].join(',')};
+}
+
 /* ═══════ relevo: tiles de altitude abertos ═══════ */
 async function buscarRelevo(){
   const bt=q('#btRelevo'), nota=q('#notaReg');
   if(!ST.bruto.length) return;
-  const la=ST.bruto.map(v=>v[0]), lo=ST.bruto.map(v=>v[1]);
-  const m=0.006;
-  const S=Math.min(...la)-m, N=Math.max(...la)+m, W=Math.min(...lo)-m, E=Math.max(...lo)+m;
+  const {S,N,W,E}=areaVisivel();
   const tx=(l,z)=>Math.floor((l+180)/360*2**z);
   const ty=(l,z)=>{const r=rad(l);return Math.floor((1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*2**z)};
   let z=15;
@@ -318,8 +335,7 @@ const ESPELHOS = [
 async function buscarAgua(){
   const bt=q('#btAgua'), nota=q('#notaReg');
   if(!ST.bruto.length) return;
-  const la=ST.bruto.map(v=>v[0]), lo=ST.bruto.map(v=>v[1]), m=0.006;
-  const bbox=[Math.min(...la)-m,Math.min(...lo)-m,Math.max(...la)+m,Math.max(...lo)+m].join(',');
+  const {bbox}=areaVisivel();
   const query=`[out:json][timeout:25];(way["natural"="water"](${bbox});`+
     `way["waterway"="riverbank"](${bbox});way["landuse"="reservoir"](${bbox});`+
     `way["natural"="coastline"](${bbox}););out geom;`;
@@ -367,8 +383,7 @@ const ESPESSURA={motorway:1.7,trunk:1.6,primary:1.4,secondary:1.2,tertiary:1.0};
 async function buscarRuas(){
   const bt=q('#btRuas'), nota=q('#notaReg');
   if(!ST.bruto.length) return;
-  const la=ST.bruto.map(v=>v[0]), lo=ST.bruto.map(v=>v[1]), m=0.006;
-  const bbox=[Math.min(...la)-m,Math.min(...lo)-m,Math.max(...la)+m,Math.max(...lo)+m].join(',');
+  const {bbox}=areaVisivel();
   const query=`[out:json][timeout:25];way["highway"~"^(${CLASSES[ST.ruasNivel]})$"](${bbox});out geom;`;
   bt.disabled=true;
   let erro='';
@@ -577,14 +592,14 @@ function desenhar(){
   const cxm=(x0+x1)/2, cym=(y0+y1)/2;
   const uni=xs.map((v,i)=>[v-cxm, ys[i]-cym]);
   const larg0=Math.max(1,Math.min(3,G.base/150));
-  const s=escalaQueCabe(uni, G.vi, larg0/2 + G.mold*0.18);
+  const s=escalaQueCabe(uni, G.vi, larg0/2 + G.mold*0.18) / (1 + ST.margem/100);
   mapa={ mm:(lat,lon)=>[(lon*k-cxm)*s,(-lat-cym)*s],
          geo:(X,Y)=>[Y/s*-1-cym*1+0, (X/s+cxm)/k] };
   mapa.geo=(X,Y)=>[-(Y/s+cym), (X/s+cxm)/k];
   const mx=i=>uni[i][0]*s, my=i=>uni[i][1]*s;
 
   const sig=JSON.stringify([ST.forma,ST.fmt,ST.mold,ST.deg,ST.relevo,ST.det,
-    ST.mCor,ST.tCor,ST.terrCor,ST.lados,q('#priv').checked,!!ST.dem,ST.agua?ST.agua.length:0,ST.ruas?ST.ruas.length:0,ST.costa?ST.costa.length:0,p.length]);
+    ST.mCor,ST.tCor,ST.terrCor,ST.lados,ST.margem,q('#priv').checked,!!ST.dem,ST.agua?ST.agua.length:0,ST.ruas?ST.ruas.length:0,ST.costa?ST.costa.length:0,p.length]);
   if(cache.sig!==sig){ cache.val=montarPeca(G,p,mx,my); cache.sig=sig }
   const peca=cache.val;
 
@@ -633,6 +648,9 @@ function desenhar(){
   q('#lblRel').textContent=ST.relevo.toFixed(1)+' mm';
   q('#lblMold').textContent=ST.mold+' mm';
   q('#lblDeg').textContent=ST.deg+' degraus';
+  const av=areaVisivel();
+  const kmL=(av.E-av.W)*111*Math.cos(rad((av.N+av.S)/2)), kmA=(av.N-av.S)*111;
+  q('#lblMargem').textContent=ST.margem+'% · '+kmL.toFixed(1)+' × '+kmA.toFixed(1)+' km';
 }
 
 function painel(G,p,largura){
@@ -724,7 +742,7 @@ function ler(file){const fr=new FileReader();
   fr.onload=()=>{try{aplicar(lerGPX(fr.result))}catch(err){alert('Não consegui ler: '+err.message)}};
   fr.readAsText(file)}
 q('#priv').addEventListener('input',desenhar);
-[['#det','det'],['#giro','giro'],['#rel','relevo'],['#mold','mold'],['#deg','deg'],['#zoom','zoom']].forEach(([sel,ch])=>
+[['#det','det'],['#giro','giro'],['#rel','relevo'],['#mold','mold'],['#deg','deg'],['#zoom','zoom'],['#margem','margem']].forEach(([sel,ch])=>
   q(sel).addEventListener('input',e=>{ST[ch]=+e.target.value;desenhar()}));
 q('#btRelevo').onclick=buscarRelevo;
 q('#btAgua').onclick=buscarAgua;
