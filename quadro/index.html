@@ -137,7 +137,10 @@
 
     <div class="bloco">
       <h2>Projeto</h2>
-      <button class="bt" id="btSalvar">Salvar projeto</button>
+      <label class="cmp">Nome do arquivo</label>
+      <input type="text" id="nomeProj" placeholder="ex.: quadro do Pedro — meia de Ottawa">
+      <div class="bt" style="display:none"></div>
+      <button class="bt" id="btSalvar" style="margin-top:9px">Salvar projeto</button>
       <button class="bt" id="btAbrir">Abrir projeto salvo</button>
       <button class="bt" id="btImagem">Salvar imagem (PNG)</button>
       <input type="file" id="arqProj" accept=".json,application/json" hidden>
@@ -194,7 +197,7 @@ const P_TRACO=['#e0342c','#c9f24e','#ffffff','#f18701','#0d7ac4','#111418'];
 const P_TERR=['#0f8f70','#2e7d32','#4a6741','#6b5b3e','#3a5f7d','#5a4a6b'];
 
 let ST={bruto:[],meta:{},forma:'hexL',fmt:'h2',vista:'p',giro:0,relevo:2,det:420,
-  mold:13,deg:14,zoom:4.4,margem:35,ver:{dem:true,agua:true,ruas:true},rios:null,ilhas:null,costa:null,temMar:0,ruas:null,ruasNivel:'p',lados:['','','','','',''],
+  mold:13,deg:14,zoom:4.4,margem:35,nomeProj:'',ver:{dem:true,agua:true,ruas:true},rios:null,ilhas:null,costa:null,temMar:0,ruas:null,ruasNivel:'p',lados:['','','','','',''],
   mCor:'#111418',tCor:'#e0342c',terrCor:'#0f8f70',agua:null,dem:null};
 
 /* ═══════ GPX ═══════ */
@@ -733,7 +736,7 @@ function painel(G,p,largura){
    ficaria enorme. Em vez disso guardo qual pedaço do mapa era, e ao
    abrir eu busco de novo — leva os mesmos segundos da primeira vez. */
 const CAMPOS=['forma','fmt','vista','giro','relevo','det','mold','deg','zoom','margem',
-              'lados','mCor','tCor','terrCor','ruasNivel','ver'];
+              'lados','mCor','tCor','terrCor','ruasNivel','ver','nomeProj'];
 
 function baixar(nome, conteudo, tipo){
   const b = conteudo instanceof Blob ? conteudo : new Blob([conteudo],{type:tipo});
@@ -743,16 +746,20 @@ function baixar(nome, conteudo, tipo){
   setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove() }, 1000);
 }
 const limpo = s => (s||'projeto').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
-  .replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-|-$/g,'').toLowerCase();
+  .replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-|-$/g,'').toLowerCase() || 'projeto';
+/* o nome digitado manda; sem ele, cai no nome do percurso */
+const nomeArquivo = ext => limpo(q('#nomeProj').value.trim() || ST.meta.nome) + ext;
 
 function salvarProjeto(){
+  ST.nomeProj=q('#nomeProj').value.trim();
   const cfg={}; CAMPOS.forEach(k=>cfg[k]=ST[k]);
   const proj={ v:1, salvoEm:new Date().toISOString(),
     meta:ST.meta, bruto:ST.bruto, cfg,
     agua:ST.agua, rios:ST.rios, costa:ST.costa, ilhas:ST.ilhas, ruas:ST.ruas,
     temRelevo:!!ST.dem };
-  baixar(limpo(ST.meta.nome)+'-quadro.json', JSON.stringify(proj), 'application/json');
-  q('#notaProj').innerHTML='Projeto salvo na sua pasta de downloads.';
+  const nome=nomeArquivo('.json');
+  baixar(nome, JSON.stringify(proj), 'application/json');
+  q('#notaProj').innerHTML='Salvo como <b>'+nome+'</b> na sua pasta de downloads.';
 }
 
 function abrirProjeto(file){
@@ -771,6 +778,7 @@ function abrirProjeto(file){
         const el=q('#'+id); const ch={rel:'relevo'}[id]||id;
         if(el && ST[ch]!==undefined) el.value=ST[ch];
       });
+      q('#nomeProj').value=ST.nomeProj||'';
       cache.sig=null; montar(); desenhar();
       q('#notaProj').innerHTML = p.temRelevo
         ? 'Projeto aberto. Ele tinha relevo — toque em <b>Buscar relevo do terreno</b> para trazê-lo de volta.'
@@ -783,8 +791,9 @@ function abrirProjeto(file){
 function salvarImagem(){
   const cv=q('#tela');
   cv.toBlob(b=>{
-    baixar(limpo(ST.meta.nome)+'-quadro.png', b);
-    q('#notaProj').innerHTML='Imagem salva — '+cv.width+' × '+cv.height+' pixels.';
+    const nome=nomeArquivo('.png');
+    baixar(nome, b);
+    q('#notaProj').innerHTML='Salvo como <b>'+nome+'</b> — '+cv.width+' × '+cv.height+' pixels.';
   },'image/png');
 }
 
@@ -858,6 +867,8 @@ function aplicar(d){
   if(base) ST.lados[base.i]=dataEN(d.meta.data);
   if(supD) ST.lados[supD.i]=d.meta.km.toFixed(2)+' km';
   if(supE) ST.lados[supE.i]=paceDe(d.meta);
+  ST.nomeProj=''; q('#nomeProj').value='';
+  q('#nomeProj').placeholder=d.meta.nome+' (padrão)';
   q('#btRelevo').textContent='Buscar relevo do terreno';
   q('#btAgua').textContent='Buscar lagos e rios';
   montar(); desenhar();
