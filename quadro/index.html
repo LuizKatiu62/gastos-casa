@@ -179,7 +179,7 @@ const P_TRACO=['#e0342c','#c9f24e','#ffffff','#f18701','#0d7ac4','#111418'];
 const P_TERR=['#0f8f70','#2e7d32','#4a6741','#6b5b3e','#3a5f7d','#5a4a6b'];
 
 let ST={bruto:[],meta:{},forma:'hexL',fmt:'h2',vista:'p',giro:0,relevo:2,det:420,
-  mold:13,deg:14,zoom:4.4,ruas:null,ruasNivel:'p',lados:['','','','','',''],
+  mold:13,deg:14,zoom:4.4,costa:null,temMar:0,ruas:null,ruasNivel:'p',lados:['','','','','',''],
   mCor:'#111418',tCor:'#e0342c',terrCor:'#0f8f70',agua:null,dem:null};
 
 /* ═══════ GPX ═══════ */
@@ -287,7 +287,9 @@ async function buscarRelevo(){
       })))));
     const d=c.getImageData(0,0,cv.width,cv.height).data;
     ST.dem={z,x0,y0,nx,ny,d,w:cv.width,h:cv.height};
-    nota.innerHTML='Relevo carregado. Cada faixa de cor é um degrau de altitude — e uma camada na impressão.';
+    desenhar();
+    nota.innerHTML='Relevo carregado. Cada faixa de cor é um degrau de altitude — e uma camada na impressão.'
+      + (ST.temMar ? ` Encontrei <b>mar</b> em ${ST.temMar}% da área: tudo que está no nível zero ou abaixo foi pintado como água.` : '');
     bt.textContent='Buscar de novo';
     desenhar();
   }catch(e){
@@ -319,7 +321,8 @@ async function buscarAgua(){
   const la=ST.bruto.map(v=>v[0]), lo=ST.bruto.map(v=>v[1]), m=0.006;
   const bbox=[Math.min(...la)-m,Math.min(...lo)-m,Math.max(...la)+m,Math.max(...lo)+m].join(',');
   const query=`[out:json][timeout:25];(way["natural"="water"](${bbox});`+
-    `way["waterway"="riverbank"](${bbox});way["landuse"="reservoir"](${bbox}););out geom;`;
+    `way["waterway"="riverbank"](${bbox});way["landuse"="reservoir"](${bbox});`+
+    `way["natural"="coastline"](${bbox}););out geom;`;
   bt.disabled=true;
   let erro='';
   for(let i=0;i<ESPELHOS.length;i++){
@@ -332,14 +335,22 @@ async function buscarAgua(){
       clearTimeout(to);
       if(!r.ok) throw new Error('HTTP '+r.status);
       const j=await r.json();
-      const pol=(j.elements||[]).filter(e=>e.geometry&&e.geometry.length>2)
+      const el=(j.elements||[]).filter(e=>e.geometry&&e.geometry.length>1);
+      /* costa é linha, não área: o OSM não mapeia o oceano como polígono */
+      const costa=el.filter(e=>e.tags&&e.tags.natural==='coastline')
+        .map(e=>e.geometry.map(g=>[g.lat,g.lon]));
+      const pol=el.filter(e=>!(e.tags&&e.tags.natural==='coastline') && e.geometry.length>2)
         .map(e=>e.geometry.map(g=>[g.lat,g.lon]));
       ST.agua=pol.length?pol:null;
-      nota.innerHTML=pol.length
-        ? `<b>${pol.length}</b> corpos de água desenhados. Dados do OpenStreetMap — a licença ODbL
-           exige o crédito "© OpenStreetMap contributors" na peça, na embalagem ou na página.`
-        : 'Nenhum lago ou rio mapeado nesta área. O GPX não traz essa informação: ela só existe em base de mapas.';
-      bt.textContent=pol.length?'Buscar de novo':'Nada encontrado';
+      ST.costa=costa.length?costa:null;
+      const achou=pol.length+costa.length;
+      nota.innerHTML=achou
+        ? `<b>${pol.length}</b> lagos ou rios${costa.length?` e <b>${costa.length}</b> trechos de costa`:''}.
+           O mar em si não vem daqui: ele é preenchido pela altitude, no botão do relevo.
+           Dados do OpenStreetMap — a licença ODbL exige o crédito
+           "© OpenStreetMap contributors" na peça, na embalagem ou na página.`
+        : 'Nenhum lago, rio ou costa mapeado nesta área.';
+      bt.textContent=achou?'Buscar de novo':'Nada encontrado';
       bt.disabled=false; desenhar(); return;
     }catch(e){ erro=e.message }
   }
@@ -432,6 +443,14 @@ function montarPeca(G, p, mx, my){
     });
   }
 
+  if(ST.costa){
+    xc.lineCap='round'; xc.lineJoin='round';
+    xc.strokeStyle='#1d6fa8'; xc.lineWidth=0.9;
+    ST.costa.forEach(l=>{ xc.beginPath();
+      l.forEach((c,i)=>{const[X,Y]=mapa.mm(c[0],c[1]); i?xc.lineTo(X,Y):xc.moveTo(X,Y)});
+      xc.stroke() });
+  }
+
   if(ST.agua){
     xc.fillStyle='#2f95dd'; xa.fillStyle=cinza(ALT_AGUA);
     ST.agua.forEach(w=>{
@@ -499,14 +518,17 @@ function relevoNasCamadas(xc, xa, G, ppm){
   const bx0=Math.min(...vi.map(p=>p[0])), bx1=Math.max(...vi.map(p=>p[0]));
   const by0=Math.min(...vi.map(p=>p[1])), by1=Math.max(...vi.map(p=>p[1]));
   const larg=Math.max(120,Math.round((bx1-bx0)*ppm)), altp=Math.max(120,Math.round((by1-by0)*ppm));
-  const h=new Float32Array(larg*altp); let mn=1e9,mx=-1e9;
+  const h=new Float32Array(larg*altp); let mn=1e9,mx=-1e9, nMar=0;
   for(let j=0;j<altp;j++) for(let i=0;i<larg;i++){
     const X=bx0+(i+.5)/larg*(bx1-bx0), Y=by0+(j+.5)/altp*(by1-by0);
     const [lat,lon]=mapa.geo(X,Y);
     const v=altitude(lat,lon);
     h[j*larg+i]=v===null?NaN:v;
-    if(v!==null){ if(v<mn)mn=v; if(v>mx)mx=v }
+    /* os dados de altitude trazem batimetria: altura <= 0 é mar.
+       A escala de cor usa só a terra, senão o oceano achata o relevo. */
+    if(v!==null){ if(v<=0){ nMar++ } else { if(v<mn)mn=v; if(v>mx)mx=v } }
   }
+  if(mn>mx){ mn=0; mx=1 }
   if(mx<=mn) mx=mn+1;
   const c=ST.terrCor.replace('#','');
   const R=parseInt(c.substr(0,2),16),Gc=parseInt(c.substr(2,2),16),B=parseInt(c.substr(4,2),16);
@@ -518,6 +540,12 @@ function relevoNasCamadas(xc, xa, G, ppm){
   for(let k=0;k<larg*altp;k++){
     const v=h[k], o=k*4;
     if(isNaN(v)){ ic.data[o+3]=0; ia.data[o+3]=0; continue }
+    if(v<=0){                                   /* mar */
+      ic.data[o]=42; ic.data[o+1]=118; ic.data[o+2]=176; ic.data[o+3]=255;
+      const zm=ALT_AGUA/ALT_MOLD*255;
+      ia.data[o]=ia.data[o+1]=ia.data[o+2]=zm; ia.data[o+3]=255;
+      continue;
+    }
     const t=Math.min(.9999,Math.max(0,(v-mn)/(mx-mn)));
     const nivel=Math.floor(t*N)/Math.max(1,N-1);
     const f=.58+nivel*.7;
@@ -526,6 +554,7 @@ function relevoNasCamadas(xc, xa, G, ppm){
     const z=(ALT_TERR0+nivel*(ALT_TERR1-ALT_TERR0))/ALT_MOLD*255;
     ia.data[o]=ia.data[o+1]=ia.data[o+2]=z; ia.data[o+3]=255;
   }
+  if(nMar) ST.temMar=Math.round(nMar/(larg*altp)*100);
   off.getContext('2d').putImageData(ic,0,0);
   oa.getContext('2d').putImageData(ia,0,0);
   [[xc,off],[xa,oa]].forEach(([x,img])=>{
@@ -555,7 +584,7 @@ function desenhar(){
   const mx=i=>uni[i][0]*s, my=i=>uni[i][1]*s;
 
   const sig=JSON.stringify([ST.forma,ST.fmt,ST.mold,ST.deg,ST.relevo,ST.det,
-    ST.mCor,ST.tCor,ST.terrCor,ST.lados,q('#priv').checked,!!ST.dem,ST.agua?ST.agua.length:0,ST.ruas?ST.ruas.length:0,p.length]);
+    ST.mCor,ST.tCor,ST.terrCor,ST.lados,q('#priv').checked,!!ST.dem,ST.agua?ST.agua.length:0,ST.ruas?ST.ruas.length:0,ST.costa?ST.costa.length:0,p.length]);
   if(cache.sig!==sig){ cache.val=montarPeca(G,p,mx,my); cache.sig=sig }
   const peca=cache.val;
 
@@ -669,7 +698,7 @@ function montar(){
 }
 
 function aplicar(d){
-  ST.bruto=d.pts; ST.meta=d.meta; ST.agua=null; ST.dem=null; ST.ruas=null;
+  ST.bruto=d.pts; ST.meta=d.meta; ST.agua=null; ST.dem=null; ST.ruas=null; ST.costa=null; ST.temMar=0;
   q('#btRuas').textContent='Buscar ruas';
   const inf=ladosInfo(geometria());
   ST.lados=new Array(inf.length).fill('');
