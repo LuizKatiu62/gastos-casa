@@ -747,8 +747,20 @@ function baixar(nome, conteudo, tipo){
 }
 const limpo = s => (s||'projeto').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
   .replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-|-$/g,'').toLowerCase() || 'projeto';
-/* o nome digitado manda; sem ele, cai no nome do percurso */
-const nomeArquivo = ext => limpo(q('#nomeProj').value.trim() || ST.meta.nome) + ext;
+/* Ordem de prioridade para nomear o arquivo:
+     1. o que você digitou no campo de nome
+     2. o TÍTULO DA PEÇA — o texto do topo da moldura
+     3. o nome que veio do GPX
+   A 2 é a que faltava: trocar o título na moldura passa a valer também
+   para o arquivo, que é o que se espera ao renomear a peça.          */
+function tituloDaPeca(){
+  try{
+    const t = ladosInfo(geometria()).find(x=>x.topo);
+    return t ? (ST.lados[t.i]||'').trim() : '';
+  }catch(e){ return '' }
+}
+const nomeBase = () => q('#nomeProj').value.trim() || tituloDaPeca() || ST.meta.nome;
+const nomeArquivo = ext => limpo(nomeBase()) + ext;
 
 function salvarProjeto(){
   ST.nomeProj=q('#nomeProj').value.trim();
@@ -795,6 +807,12 @@ function salvarImagem(){
     baixar(nome, b);
     q('#notaProj').innerHTML='Salvo como <b>'+nome+'</b> — '+cv.width+' × '+cv.height+' pixels.';
   },'image/png');
+}
+
+function sugerirNome(){
+  const el=q('#nomeProj'); if(!el) return;
+  const base=tituloDaPeca()||ST.meta.nome||'';
+  el.placeholder = base ? limpo(base)+'  (padrão)' : 'nome do arquivo';
 }
 
 /* ═══════ controles ═══════ */
@@ -851,7 +869,10 @@ function montar(){
   const ordem=[...info].sort((a,b)=>(a.my-b.my)||(a.mx-b.mx));
   q('#lados').innerHTML=ordem.map(o=>
     `<div class="lat"><i>${o.nome}</i><input type="text" data-l="${o.i}" value="${(ST.lados[o.i]||'').replace(/"/g,'&quot;')}"></div>`).join('');
-  q('#lados').querySelectorAll('[data-l]').forEach(el=>el.oninput=()=>{ST.lados[+el.dataset.l]=el.value;desenhar()});
+  q('#lados').querySelectorAll('[data-l]').forEach(el=>el.oninput=()=>{
+    ST.lados[+el.dataset.l]=el.value; sugerirNome(); desenhar();
+  });
+  sugerirNome();
 }
 
 function aplicar(d){
@@ -868,7 +889,6 @@ function aplicar(d){
   if(supD) ST.lados[supD.i]=d.meta.km.toFixed(2)+' km';
   if(supE) ST.lados[supE.i]=paceDe(d.meta);
   ST.nomeProj=''; q('#nomeProj').value='';
-  q('#nomeProj').placeholder=d.meta.nome+' (padrão)';
   q('#btRelevo').textContent='Buscar relevo do terreno';
   q('#btAgua').textContent='Buscar lagos e rios';
   montar(); desenhar();
