@@ -1,6 +1,6 @@
 /* ══════════════════════════════════════════════════════════════════
    fix.js — correções da v2
-   Versão 2026-08-01f · seis correções, cada uma isolada.
+   Versão 2026-08-01g · seis correções, cada uma isolada.
 
    MUDANÇA DESTA VERSÃO: antes as seis partes eram blocos soltos no
    mesmo arquivo. Um erro em qualquer uma derrubava todas as outras,
@@ -8,7 +8,7 @@
    try/catch: se uma falhar, as cinco restantes continuam valendo.
 
    E aparece um selo no alto da tela, ao lado do relógio:
-     · "fix 01f" em verde  → tudo rodando
+     · "fix 01g" em verde  → tudo rodando
      · "fix ✗ N" em vermelho → N partes falharam; toque para ver quais
 
    INSTALAÇÃO: envie este arquivo para a pasta treinos-v2 pelo
@@ -23,7 +23,7 @@
       e incluir treino em dia de descanso ou cancelado
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '01f';
+const FIX_VERSAO = '01g';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -754,52 +754,102 @@ if(typeof rebuild === 'function'){
 }
 
 /* ── 2. segundo treino: lista completa, com corrida ── */
+/* Catálogo completo. Os volumes NÃO são fixos: quando há um objetivo
+   ativo, cada treino é montado pelo montarSessao() do próprio app, que
+   escala pela fase do ciclo e pelo seu pace de limiar — igual ao que
+   acontece quando você troca o treino principal. Os números abaixo são
+   só a reserva, para quando ainda não há prova escolhida. */
 const OPCOES = [
-  {g:'Corrida', mod:'corrida', foco:'regenerativo', t:'Regenerativa',
-   d:'Trote bem leve, 20 a 30 min. Só circular sangue.', min:25, km:4},
-  {g:'Corrida', mod:'corrida', foco:'facil', t:'Rodagem leve',
-   d:'Ritmo confortável, dá para conversar o tempo todo.', min:35, km:6},
-  {g:'Bike', mod:'bike', foco:'bikeFacil', t:'Regenerativa',
-   d:'Giro leve, sem carga, 30 a 40 min.', min:35},
-  {g:'Bike', mod:'bike', foco:'bikeFacil', t:'Aeróbica',
-   d:'Ritmo constante, 50 a 60 min. Soma volume sem impacto.', min:55},
-  {g:'Natação', mod:'natacao', foco:'natTec', t:'Soltura',
-   d:'Nado solto, sem série. Zero impacto nas pernas.', metros:1200, min:30},
-  {g:'Natação', mod:'natacao', foco:'natTec', t:'Técnica',
-   d:'Educativos e braçada longa, 1600 m.', metros:1600, min:40},
-  {g:'Academia', mod:'forca', foco:'forca', t:'Sessão da semana',
+  {g:'Corrida', mod:'corrida', foco:'regenerativo', t:'Regenerativo', i:'leve',
+   d:'Trote bem leve. Recuperação ativa, não é treino.', min:25, km:4},
+  {g:'Corrida', mod:'corrida', foco:'facil', t:'Rodagem leve', i:'leve',
+   d:'Volume confortável, dá para conversar o tempo todo.', min:35, km:6},
+  {g:'Corrida', mod:'corrida', foco:'longo', t:'Treino longo', i:'volume',
+   d:'A sessão mais próxima da exigência da prova.', min:75, km:12},
+  {g:'Corrida', mod:'corrida', foco:'progressivo', t:'Progressivo', i:'moderado',
+   d:'Três blocos acelerando. Termina forte, sem quebrar.', min:48, km:8},
+  {g:'Corrida', mod:'corrida', foco:'fartlek', t:'Fartlek', i:'forte',
+   d:'Jogo de ritmo pela sensação, sem olhar o relógio.', min:45, km:8},
+  {g:'Corrida', mod:'corrida', foco:'limiar', t:'Ritmo de limiar', i:'forte',
+   d:'Confortavelmente difícil. O que mais muda o resultado.', min:40, km:7},
+  {g:'Corrida', mod:'corrida', foco:'intervalado', t:'Intervalado', i:'forte',
+   d:'Tiros de 800 m em ritmo forte. Potência aeróbica.', min:45, km:8},
+  {g:'Corrida', mod:'corrida', foco:'subidas', t:'Subidas', i:'forte',
+   d:'Ladeira em série. Força sem o impacto do intervalado.', min:50, km:8},
+  {g:'Corrida', mod:'corrida', foco:'sprint', t:'Tiros curtos', i:'forte',
+   d:'100 m quase máximos com descanso completo. Mecânica e velocidade.', min:45, km:7},
+
+  {g:'Bike', mod:'bike', foco:'bikeFacil', t:'Giro regenerativo', i:'leve',
+   d:'Leve, sem carga, 30 a 40 min.', min:35, km:16},
+  {g:'Bike', mod:'bike', foco:'bikeLimiar', t:'Limiar na bike', i:'forte',
+   d:'Blocos firmes e constantes, sem oscilar.', min:60, km:28},
+  {g:'Bike', mod:'bike', foco:'bikeInt', t:'Intervalado na bike', i:'forte',
+   d:'Séries de 4 min forte, cadência acima de 85 rpm.', min:60, km:26},
+  {g:'Bike', mod:'bike', foco:'bikeLongo', t:'Longo na bike', i:'volume',
+   d:'Resistência e ensaio de alimentação.', min:110, km:50},
+
+  {g:'Natação', mod:'natacao', foco:'natTec', t:'Técnica', i:'leve',
+   d:'Educativos e braçada longa. Zero impacto.', min:35, metros:1400},
+  {g:'Natação', mod:'natacao', foco:'natInt', t:'Séries', i:'forte',
+   d:'100 m fortes com descanso curto.', min:40, metros:1600},
+  {g:'Natação', mod:'natacao', foco:'natLimiar', t:'Ritmo', i:'moderado',
+   d:'Blocos de 400 m firmes e constantes.', min:45, metros:1800},
+  {g:'Natação', mod:'natacao', foco:'natLongo', t:'Longo', i:'volume',
+   d:'Distância contínua, sem parar.', min:50, metros:2000},
+
+  {g:'Academia', mod:'forca', foco:'forca', t:'Sessão da semana', i:'moderado',
    d:'Alterna pernas e costas conforme a semana.', min:50},
 ];
+
+/* monta o treino usando o motor do próprio app, quando possível */
+function montarExtra(k, o){
+  let base = null;
+  const obj = objetivoAtivo();
+  if(obj && obj.data){
+    try{
+      const semAte = Math.max(1, Math.ceil(diff(k, obj.data) / 7));
+      base = montarSessao(k, obj, {f:o.foco, m:o.mod}, fase(semAte),
+                          semAte, Math.min(obj.sem, 26));
+    }catch(e){ base = null }
+  }
+  const x = Object.assign({}, base || {}, {
+    id:'x' + k, data:k, mod:o.mod, foco:o.foco, extra:true
+  });
+  delete x.fase;
+  if(!x.min) x.min = o.min;
+  if(o.km && !x.km) x.km = o.km;
+  if(o.metros && !x.metros) x.metros = o.metros;
+  if(o.mod === 'forca'){
+    const sid = x.sessao || sessaoAcademiaDe(k);
+    x.sessao = sid;
+    x.titulo = SESSOES_ACADEMIA[sid].nome;
+  }
+  if(!x.titulo) x.titulo = o.g + ' — ' + o.t.toLowerCase();
+  return x;
+}
 
 window.sheetAdicionar = function(k){
   const s = sessaoDe(k), d = dt(k);
   const pesado = s && ['intervalado','limiar','longo','longo2','brick','bikeLongo','prova'].includes(s.foco);
-  let grupoAnterior = '';
+  let grupo = '';
   const lista = OPCOES.map((o, i) => {
-    const cab = o.g !== grupoAnterior ? (grupoAnterior = o.g, `<div class="opt-grupo">${o.g}</div>`) : '';
+    const cab = o.g !== grupo ? (grupo = o.g, `<div class="opt-grupo">${o.g}</div>`) : '';
     return cab + `<button class="opt" data-add="${i}">
-      <span class="oi" style="background:${MOD[o.mod].c}22">
-        <span style="width:11px;height:11px;border-radius:50%;background:${MOD[o.mod].c};display:block"></span></span>
-      <span class="ot"><b>${o.t}</b><span>${o.d}</span></span></button>`;
+      <span class="oi" style="background:${CORTAG[o.i]}22">
+        <span style="width:11px;height:11px;border-radius:50%;background:${CORTAG[o.i]};display:block"></span></span>
+      <span class="ot"><b>${o.t}</b><span>${o.d}</span></span>
+      <span class="tipotag" style="color:${CORTAG[o.i]}">${o.i}</span></button>`;
   }).join('');
 
   abrir(`<h3>${s ? 'Segundo treino' : 'Incluir um treino'}</h3>
     <p class="sd">${DIA[dow(d)].replace(/^./, c => c.toUpperCase())}, ${fmt(k)}${s ? ` · já tem <b>${s.titulo}</b>` : ' · o plano não pôs treino neste dia'}.
-      ${pesado ? '<br><span style="color:var(--warn)">O treino de hoje já é exigente. Somar carga aqui atrasa a recuperação — se for fazer, que seja leve.</span>' : ''}</p>
-    ${lista}`);
+      ${pesado ? '<br><span style="color:var(--warn)">O treino de hoje já é exigente. Somar carga forte aqui atrasa a recuperação.</span>' : ''}
+      <br>Volume e ritmo saem do seu plano, pela fase do ciclo.</p>
+    <div class="tipolista">${lista}</div>`);
 
   document.querySelector('#sheetIn').querySelectorAll('[data-add]').forEach(bt => {
     bt.onclick = () => {
-      const o = OPCOES[+bt.dataset.add];
-      const x = {id:'x' + k, data:k, mod:o.mod, foco:o.foco, extra:true,
-                 min:o.min, titulo:`${o.g} — ${o.t.toLowerCase()}`};
-      if(o.km) x.km = o.km;
-      if(o.metros) x.metros = o.metros;
-      if(o.mod === 'forca'){
-        const sid = sessaoAcademiaDe(k);
-        x.sessao = sid;
-        x.titulo = SESSOES_ACADEMIA[sid].nome;
-      }
+      const x = montarExtra(k, OPCOES[+bt.dataset.add]);
       ST.extras[k] = x;
       delete ST.cache[x.id];
       fechar(); renderCoach(); persistir();
