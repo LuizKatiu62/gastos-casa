@@ -183,7 +183,7 @@ const P_TRACO=['#e0342c','#c9f24e','#ffffff','#f18701','#0d7ac4','#111418'];
 const P_TERR=['#0f8f70','#2e7d32','#4a6741','#6b5b3e','#3a5f7d','#5a4a6b'];
 
 let ST={bruto:[],meta:{},forma:'hexL',fmt:'h2',vista:'p',giro:0,relevo:2,det:420,
-  mold:13,deg:14,zoom:4.4,margem:35,rios:null,costa:null,temMar:0,ruas:null,ruasNivel:'p',lados:['','','','','',''],
+  mold:13,deg:14,zoom:4.4,margem:35,rios:null,ilhas:null,costa:null,temMar:0,ruas:null,ruasNivel:'p',lados:['','','','','',''],
   mCor:'#111418',tCor:'#e0342c',terrCor:'#0f8f70',agua:null,dem:null};
 
 /* ═══════ GPX ═══════ */
@@ -336,12 +336,19 @@ async function buscarAgua(){
   const bt=q('#btAgua'), nota=q('#notaReg');
   if(!ST.bruto.length) return;
   const {bbox}=areaVisivel();
-  /* rio largo vira área (natural=water); rio comum é só a linha central
-     (waterway=river). Pedindo só as áreas, a maioria dos rios não vinha. */
-  const query=`[out:json][timeout:25];(way["natural"="water"](${bbox});`+
-    `way["waterway"="riverbank"](${bbox});way["landuse"="reservoir"](${bbox});`+
+  /* Três formatos convivem no OpenStreetMap e é preciso pedir os três:
+       · way  + natural=water  → lago pequeno, açude
+       · way  + waterway=river → rio comum, só a linha central
+       · RELATION + natural=water → rio largo, lago grande, baía.
+     Corpo d'água grande quase sempre é relação: vários trechos costurados,
+     com ilhas como anéis internos. Pedindo só way, tudo isso sumia.      */
+  const query=`[out:json][timeout:30];(`+
+    `way["natural"="water"](${bbox});relation["natural"="water"](${bbox});`+
+    `way["waterway"="riverbank"](${bbox});relation["waterway"="riverbank"](${bbox});`+
+    `way["landuse"="reservoir"](${bbox});relation["landuse"="reservoir"](${bbox});`+
     `way["natural"="coastline"](${bbox});`+
-    `way["waterway"~"^(river|stream|canal|ditch)$"](${bbox}););out geom;`;
+    `way["waterway"~"^(river|stream|canal|ditch)$"](${bbox});`+
+    `);out geom;`;
   bt.disabled=true;
   let erro='';
   for(let i=0;i<ESPELHOS.length;i++){
@@ -354,21 +361,36 @@ async function buscarAgua(){
       clearTimeout(to);
       if(!r.ok) throw new Error('HTTP '+r.status);
       const j=await r.json();
-      const el=(j.elements||[]).filter(e=>e.geometry&&e.geometry.length>1);
+      const bruto=(j.elements||[]);
       const tg=e=>e.tags||{};
+      /* relação não tem geometry própria: ela vem nos membros. Cada anel
+         externo vira um polígono; os internos são ilhas, que desenho na
+         cor do terreno por cima, para o buraco aparecer. */
+      const ilhas=[];
+      const relPol=[];
+      bruto.filter(e=>e.type==='relation'&&e.members).forEach(r=>{
+        r.members.forEach(m=>{
+          if(!m.geometry||m.geometry.length<3) return;
+          const anel=m.geometry.map(g=>[g.lat,g.lon]);
+          (m.role==='inner' ? ilhas : relPol).push(anel);
+        });
+      });
+      const el=bruto.filter(e=>e.geometry&&e.geometry.length>1);
       /* costa é linha, não área: o OSM não mapeia o oceano como polígono */
       const costa=el.filter(e=>tg(e).natural==='coastline')
         .map(e=>e.geometry.map(g=>[g.lat,g.lon]));
       const rios=el.filter(e=>tg(e).waterway && tg(e).waterway!=='riverbank')
         .map(e=>({cls:tg(e).waterway, pts:e.geometry.map(g=>[g.lat,g.lon])}));
       const pol=el.filter(e=>!tg(e).waterway && tg(e).natural!=='coastline' && e.geometry.length>2)
-        .map(e=>e.geometry.map(g=>[g.lat,g.lon]));
+        .map(e=>e.geometry.map(g=>[g.lat,g.lon])).concat(relPol);
       ST.agua=pol.length?pol:null;
+      ST.ilhas=ilhas.length?ilhas:null;
       ST.costa=costa.length?costa:null;
       ST.rios=rios.length?rios:null;
       const achou=pol.length+costa.length+rios.length;
+      const nRel=relPol.length;
       nota.innerHTML=achou
-        ? `<b>${pol.length}</b> áreas de água, <b>${rios.length}</b> rios e córregos${costa.length?`, <b>${costa.length}</b> trechos de costa`:''}.
+        ? `<b>${pol.length}</b> áreas de água${nRel?` (<b>${nRel}</b> de corpos grandes)`:''}, <b>${rios.length}</b> rios e córregos${costa.length?`, <b>${costa.length}</b> trechos de costa`:''}.
            O mar em si não vem daqui: ele é preenchido pela altitude, no botão do relevo.
            Dados do OpenStreetMap — a licença ODbL exige o crédito
            "© OpenStreetMap contributors" na peça, na embalagem ou na página.`
@@ -486,6 +508,15 @@ function montarPeca(G, p, mx, my){
   if(ST.agua){
     xc.fillStyle='#2f95dd'; xa.fillStyle=cinza(ALT_AGUA);
     ST.agua.forEach(w=>{
+      [xc,xa].forEach(x=>{ x.beginPath();
+        w.forEach((c,i)=>{const[X,Y]=mapa.mm(c[0],c[1]); i?x.lineTo(X,Y):x.moveTo(X,Y)});
+        x.closePath(); x.fill() });
+    });
+  }
+
+  if(ST.ilhas){
+    xc.fillStyle=sombra(ST.terrCor,.82); xa.fillStyle=cinza(ALT_TERR0+0.6);
+    ST.ilhas.forEach(w=>{
       [xc,xa].forEach(x=>{ x.beginPath();
         w.forEach((c,i)=>{const[X,Y]=mapa.mm(c[0],c[1]); i?x.lineTo(X,Y):x.moveTo(X,Y)});
         x.closePath(); x.fill() });
@@ -616,7 +647,7 @@ function desenhar(){
   const mx=i=>uni[i][0]*s, my=i=>uni[i][1]*s;
 
   const sig=JSON.stringify([ST.forma,ST.fmt,ST.mold,ST.deg,ST.relevo,ST.det,
-    ST.mCor,ST.tCor,ST.terrCor,ST.lados,ST.margem,q('#priv').checked,!!ST.dem,ST.agua?ST.agua.length:0,ST.ruas?ST.ruas.length:0,ST.costa?ST.costa.length:0,ST.rios?ST.rios.length:0,p.length]);
+    ST.mCor,ST.tCor,ST.terrCor,ST.lados,ST.margem,q('#priv').checked,!!ST.dem,ST.agua?ST.agua.length:0,ST.ruas?ST.ruas.length:0,ST.costa?ST.costa.length:0,ST.rios?ST.rios.length:0,ST.ilhas?ST.ilhas.length:0,p.length]);
   if(cache.sig!==sig){ cache.val=montarPeca(G,p,mx,my); cache.sig=sig }
   const peca=cache.val;
 
@@ -733,7 +764,7 @@ function montar(){
 }
 
 function aplicar(d){
-  ST.bruto=d.pts; ST.meta=d.meta; ST.agua=null; ST.dem=null; ST.ruas=null; ST.costa=null; ST.rios=null; ST.temMar=0;
+  ST.bruto=d.pts; ST.meta=d.meta; ST.agua=null; ST.dem=null; ST.ruas=null; ST.costa=null; ST.rios=null; ST.ilhas=null; ST.temMar=0;
   q('#btRuas').textContent='Buscar ruas';
   const inf=ladosInfo(geometria());
   ST.lados=new Array(inf.length).fill('');
