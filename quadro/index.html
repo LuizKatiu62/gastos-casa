@@ -136,6 +136,16 @@
     </div>
 
     <div class="bloco">
+      <h2>Projeto</h2>
+      <button class="bt" id="btSalvar">Salvar projeto</button>
+      <button class="bt" id="btAbrir">Abrir projeto salvo</button>
+      <button class="bt" id="btImagem">Salvar imagem (PNG)</button>
+      <input type="file" id="arqProj" accept=".json,application/json" hidden>
+      <div class="nota" id="notaProj">O projeto guarda o percurso, todos os ajustes e as
+        camadas já baixadas. A imagem serve para mandar ao cliente aprovar.</div>
+    </div>
+
+    <div class="bloco">
       <h2>Impressão · Bambu Lab</h2>
       <div id="tec"></div>
       <div class="nota" id="notaTec"></div>
@@ -717,6 +727,67 @@ function painel(G,p,largura){
     : `<b>Atenção:</b> traçado fino demais para o bico de 0,4 mm. Aumente a peça.`;
 }
 
+/* ═══════ projeto ═══════
+   Guardo o percurso, os ajustes e as camadas vetoriais já baixadas.
+   O relevo NÃO entra: são milhões de pixels de altitude, o arquivo
+   ficaria enorme. Em vez disso guardo qual pedaço do mapa era, e ao
+   abrir eu busco de novo — leva os mesmos segundos da primeira vez. */
+const CAMPOS=['forma','fmt','vista','giro','relevo','det','mold','deg','zoom','margem',
+              'lados','mCor','tCor','terrCor','ruasNivel','ver'];
+
+function baixar(nome, conteudo, tipo){
+  const b = conteudo instanceof Blob ? conteudo : new Blob([conteudo],{type:tipo});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(b); a.download = nome;
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove() }, 1000);
+}
+const limpo = s => (s||'projeto').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+  .replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-|-$/g,'').toLowerCase();
+
+function salvarProjeto(){
+  const cfg={}; CAMPOS.forEach(k=>cfg[k]=ST[k]);
+  const proj={ v:1, salvoEm:new Date().toISOString(),
+    meta:ST.meta, bruto:ST.bruto, cfg,
+    agua:ST.agua, rios:ST.rios, costa:ST.costa, ilhas:ST.ilhas, ruas:ST.ruas,
+    temRelevo:!!ST.dem };
+  baixar(limpo(ST.meta.nome)+'-quadro.json', JSON.stringify(proj), 'application/json');
+  q('#notaProj').innerHTML='Projeto salvo na sua pasta de downloads.';
+}
+
+function abrirProjeto(file){
+  const fr=new FileReader();
+  fr.onload=()=>{
+    try{
+      const p=JSON.parse(fr.result);
+      if(!p.bruto||!p.bruto.length) throw new Error('arquivo sem percurso');
+      ST.bruto=p.bruto; ST.meta=p.meta||{};
+      CAMPOS.forEach(k=>{ if(p.cfg && p.cfg[k]!==undefined) ST[k]=p.cfg[k] });
+      ST.agua=p.agua||null; ST.rios=p.rios||null; ST.costa=p.costa||null;
+      ST.ilhas=p.ilhas||null; ST.ruas=p.ruas||null; ST.dem=null; ST.temMar=0;
+      if(!ST.ver) ST.ver={dem:true,agua:true,ruas:true};
+      /* devolve os controles ao que estava salvo */
+      ['det','giro','rel','mold','deg','zoom','margem'].forEach(id=>{
+        const el=q('#'+id); const ch={rel:'relevo'}[id]||id;
+        if(el && ST[ch]!==undefined) el.value=ST[ch];
+      });
+      cache.sig=null; montar(); desenhar();
+      q('#notaProj').innerHTML = p.temRelevo
+        ? 'Projeto aberto. Ele tinha relevo — toque em <b>Buscar relevo do terreno</b> para trazê-lo de volta.'
+        : 'Projeto aberto.';
+    }catch(e){ q('#notaProj').textContent='Não consegui abrir: '+e.message }
+  };
+  fr.readAsText(file);
+}
+
+function salvarImagem(){
+  const cv=q('#tela');
+  cv.toBlob(b=>{
+    baixar(limpo(ST.meta.nome)+'-quadro.png', b);
+    q('#notaProj').innerHTML='Imagem salva — '+cv.width+' × '+cv.height+' pixels.';
+  },'image/png');
+}
+
 /* ═══════ controles ═══════ */
 /* Classifica cada aresta pela sua DIREÇÃO, não pela posição do meio.
    O hexágono de ponta em cima não tem nenhuma aresta horizontal — pela
@@ -806,6 +877,10 @@ q('#priv').addEventListener('input',desenhar);
 q('#btRelevo').onclick=buscarRelevo;
 q('#btAgua').onclick=buscarAgua;
 q('#btRuas').onclick=buscarRuas;
+q('#btSalvar').onclick=salvarProjeto;
+q('#btImagem').onclick=salvarImagem;
+q('#btAbrir').onclick=()=>q('#arqProj').click();
+q('#arqProj').onchange=e=>{const f=e.target.files[0]; if(f) abrirProjeto(f); e.target.value=''};
 (function(){let a=false,x0=0,g0=0;const cv=q('#tela');
   cv.addEventListener('pointerdown',e=>{a=true;x0=e.clientX;g0=ST.giro;cv.setPointerCapture(e.pointerId)});
   cv.addEventListener('pointermove',e=>{if(!a)return;
