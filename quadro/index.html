@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quadro de Percurso · protótipo</title>
+<style>
+  :root{--bg:#f4f5f7;--card:#fff;--ink:#14181f;--ink2:#5b6675;--line:#e3e7ed;
+        --acc:#1a7f5a;--acc-wash:#e8f5ef}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);
+    font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,sans-serif;
+    -webkit-font-smoothing:antialiased}
+  header{background:#fff;border-bottom:1px solid var(--line);padding:16px 24px}
+  header .in{max-width:1240px;margin:0 auto;display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+  header b{font-size:17px;letter-spacing:-.02em}
+  header span{font-size:13px;color:var(--ink2)}
+  main{max-width:1560px;margin:0 auto;padding:24px;display:grid;
+    grid-template-columns:1fr 340px;gap:22px;align-items:start}
+  @media(max-width:1080px){main{grid-template-columns:1fr}}
+  .palco{background:var(--card);border:1px solid var(--line);border-radius:16px;
+    padding:18px;display:flex;align-items:center;justify-content:center;min-height:720px;overflow:auto}
+  .palco canvas{max-width:100%;height:auto;cursor:grab}
+  .palco canvas:active{cursor:grabbing}
+  .lado{display:flex;flex-direction:column;gap:14px}
+  .bloco{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+  .bloco h2{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--ink2);margin-bottom:12px}
+  .solta{border:2px dashed var(--line);border-radius:12px;padding:18px 16px;text-align:center;
+    cursor:pointer;transition:.15s;background:#fbfcfd}
+  .solta:hover,.solta.over{border-color:var(--acc);background:var(--acc-wash)}
+  .solta b{display:block;font-size:14px;color:var(--acc)}
+  .solta span{display:block;font-size:12.5px;color:var(--ink2);margin-top:5px}
+  label.cmp{display:block;font-size:12px;font-weight:700;color:var(--ink2);margin:12px 0 5px}
+  label.cmp:first-child{margin-top:0}
+  input[type=text]{width:100%;padding:8px 10px;border:1px solid var(--line);
+    border-radius:9px;font:inherit;font-size:13.5px}
+  input[type=text]:focus{outline:none;border-color:var(--acc)}
+  input[type=range]{width:100%;accent-color:var(--acc)}
+  .cores{display:flex;gap:7px;flex-wrap:wrap}
+  .cor{width:28px;height:28px;border-radius:50%;border:2px solid transparent;cursor:pointer;
+    box-shadow:inset 0 0 0 1px rgba(0,0,0,.14)}
+  .cor.on{border-color:var(--ink);transform:scale(1.08)}
+  .fmt{display:grid;grid-template-columns:repeat(2,1fr);gap:7px}
+  .fmt.tres{grid-template-columns:repeat(3,1fr)}
+  .fmt button{padding:9px 6px;border:1px solid var(--line);background:#fff;border-radius:9px;
+    font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;transition:.15s}
+  .fmt button.on{background:var(--acc);border-color:var(--acc);color:#fff}
+  .linha{display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid var(--line)}
+  .linha:last-child{border:0}
+  .linha b{font-variant-numeric:tabular-nums}
+  .ok{color:var(--acc)} .alerta{color:#b45309}
+  .nota{font-size:12.5px;color:var(--ink2);line-height:1.55;margin-top:10px}
+  .nota b{color:var(--ink)}
+  .sw{display:flex;align-items:center;gap:9px;font-size:13px;margin-top:9px;cursor:pointer}
+  .sw input{width:17px;height:17px;accent-color:var(--acc)}
+  .lat{display:grid;grid-template-columns:74px 1fr;gap:8px;align-items:center;margin-bottom:6px}
+  .lat i{font-style:normal;font-size:10.5px;font-weight:700;color:var(--ink2);text-align:right}
+  .bt{width:100%;padding:10px;border:1px solid var(--acc);background:var(--acc-wash);
+    color:var(--acc);border-radius:10px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+  .bt:hover:not(:disabled){background:var(--acc);color:#fff}
+  .bt:disabled{opacity:.55;cursor:default}
+  .bt+.bt{margin-top:7px}
+</style>
+</head>
+<body>
+
+<header><div class="in">
+  <b>Quadro de Percurso</b>
+  <span>protótipo · arraste o GPX · arraste o desenho para girar</span>
+</div></header>
+
+<main>
+  <div class="palco"><canvas id="tela"></canvas></div>
+
+  <div class="lado">
+    <div class="bloco">
+      <h2>Arquivo</h2>
+      <div class="solta" id="solta">
+        <b>Arraste o GPX aqui</b>
+        <span>ou clique para escolher · nada sai do seu computador</span>
+      </div>
+      <input type="file" id="arq" accept=".gpx" hidden>
+      <label class="sw"><input type="checkbox" id="priv" checked>
+        Apagar os primeiros e últimos 200 m</label>
+    </div>
+
+    <div class="bloco">
+      <h2>Região</h2>
+      <button class="bt" id="btRelevo">Buscar relevo do terreno</button>
+      <button class="bt" id="btAgua">Buscar lagos e rios</button>
+      <div class="nota" id="notaReg">O relevo vem de dados abertos de altitude e vira
+        curvas de nível — cada degrau é uma camada de impressão. A água vem do OpenStreetMap.</div>
+      <label class="cmp">Degraus do relevo — <span id="lblDeg"></span></label>
+      <input type="range" id="deg" min="4" max="26" step="1" value="14">
+    </div>
+
+    <div class="bloco">
+      <h2>Vista</h2>
+      <div class="fmt tres" id="vista"></div>
+      <label class="cmp">Tamanho na tela — <span id="lblZoom"></span></label>
+      <input type="range" id="zoom" min="2.5" max="7.5" step="0.1" value="4.4">
+      <label class="cmp">Giro — <span id="lblGiro"></span></label>
+      <input type="range" id="giro" min="-180" max="180" step="1" value="0">
+      <label class="cmp">Altura do traçado — <span id="lblRel"></span></label>
+      <input type="range" id="rel" min="0.6" max="6" step="0.2" value="2">
+    </div>
+
+    <div class="bloco">
+      <h2>Forma e tamanho</h2>
+      <div class="fmt tres" id="forma"></div>
+      <div class="fmt" id="fmt" style="margin-top:8px"></div>
+      <label class="cmp">Largura da moldura — <span id="lblMold"></span></label>
+      <input type="range" id="mold" min="6" max="22" step="1" value="13">
+      <label class="cmp">Detalhe do traçado — <span id="lblPts"></span></label>
+      <input type="range" id="det" min="80" max="900" step="20" value="420">
+    </div>
+
+    <div class="bloco">
+      <h2>Textos da moldura</h2>
+      <div id="lados"></div>
+    </div>
+
+    <div class="bloco">
+      <h2>Cores</h2>
+      <label class="cmp">Moldura</label><div class="cores" id="corMold"></div>
+      <label class="cmp">Traçado</label><div class="cores" id="corTraco"></div>
+      <label class="cmp">Terreno</label><div class="cores" id="corTerr"></div>
+    </div>
+
+    <div class="bloco">
+      <h2>Impressão · Bambu Lab</h2>
+      <div id="tec"></div>
+      <div class="nota" id="notaTec"></div>
+    </div>
+  </div>
+  <p style="grid-column:1/-1;text-align:center;font-size:12px;color:var(--ink2);margin-top:6px">
+    Protótipo · relevo e água de dados abertos · © OpenStreetMap contributors
+  </p>
+</main>
+
+<script>
+const DEMO = {"nome":"Challenge 64k running","data":"2026-06-13","km":64.9,"seg":36742,"n":35930,"pts":[[45.30805,-65.97467],[45.3076,-65.97648],[45.30714,-65.97667],[45.30636,-65.97621],[45.30587,-65.9776],[45.30528,-65.97773],[45.30501,-65.97554],[45.30436,-65.97455],[45.30392,-65.97302],[45.30546,-65.97024],[45.30584,-65.96703],[45.30555,-65.96635],[45.30452,-65.96611],[45.30427,-65.96506],[45.30544,-65.96373],[45.30624,-65.96328],[45.30792,-65.96392],[45.30932,-65.96343],[45.31001,-65.96356],[45.31008,-65.96381],[45.30889,-65.97191],[45.30826,-65.97292],[45.3079,-65.97596],[45.30732,-65.97668],[45.30633,-65.97623],[45.30602,-65.97733],[45.30552,-65.97784],[45.30513,-65.97747],[45.30501,-65.97553],[45.30436,-65.97456],[45.30393,-65.97309],[45.30549,-65.97025],[45.30584,-65.96698],[45.30552,-65.96633],[45.30447,-65.96602],[45.30427,-65.96499],[45.30542,-65.96376],[45.30624,-65.96329],[45.30792,-65.96394],[45.30875,-65.96349],[45.31006,-65.96364],[45.3089,-65.97189],[45.30826,-65.97291],[45.3079,-65.97593],[45.30728,-65.97669],[45.30631,-65.97623],[45.30601,-65.97735],[45.30553,-65.97783],[45.3051,-65.97744],[45.30504,-65.97566],[45.30432,-65.97453],[45.30392,-65.97307],[45.30543,-65.97034],[45.30583,-65.96698],[45.30555,-65.96638],[45.30448,-65.96608],[45.30427,-65.96502],[45.30543,-65.96373],[45.30622,-65.96329],[45.3068,-65.96332],[45.30792,-65.96394],[45.30877,-65.96349],[45.31007,-65.96367],[45.3089,-65.97189],[45.30825,-65.97294],[45.30789,-65.97602],[45.3073,-65.97669],[45.30634,-65.97621],[45.30588,-65.97757],[45.30529,-65.97774],[45.30498,-65.97548],[45.30433,-65.97453],[45.30392,-65.97308],[45.30547,-65.97023],[45.30583,-65.96703],[45.3055,-65.96632],[45.30448,-65.96606],[45.30426,-65.96509],[45.30542,-65.96374],[45.30624,-65.96328],[45.30792,-65.96394],[45.30937,-65.96342],[45.31,-65.96356],[45.31007,-65.96388],[45.30909,-65.97064],[45.30857,-65.97103],[45.30847,-65.97148],[45.30874,-65.97204],[45.30904,-65.97205],[45.30845,-65.97174],[45.30857,-65.97237],[45.30825,-65.97299],[45.3079,-65.97594],[45.3073,-65.97669],[45.30635,-65.97622],[45.30589,-65.97757],[45.30529,-65.97775],[45.30496,-65.97535],[45.30435,-65.97452],[45.30392,-65.9731],[45.30548,-65.97025],[45.30584,-65.96701],[45.30554,-65.96633],[45.30454,-65.9661],[45.30427,-65.96501],[45.3054,-65.96377],[45.30623,-65.96329],[45.30792,-65.96394],[45.30927,-65.96344],[45.31008,-65.96376],[45.3089,-65.97189],[45.30826,-65.97293],[45.3079,-65.97598],[45.30731,-65.97669],[45.30634,-65.97622],[45.30602,-65.97736],[45.30548,-65.97783],[45.30509,-65.97735],[45.30497,-65.97536],[45.30435,-65.97454],[45.30393,-65.97308],[45.30549,-65.97028],[45.30585,-65.96708],[45.30556,-65.96635],[45.30448,-65.96603],[45.30426,-65.96507],[45.30543,-65.96374],[45.30626,-65.96327],[45.30793,-65.96393],[45.30929,-65.96344],[45.31008,-65.96376],[45.30889,-65.97193],[45.30825,-65.97291],[45.3079,-65.97597],[45.30732,-65.97669],[45.30631,-65.97624],[45.306,-65.97738],[45.30548,-65.97784],[45.30509,-65.97741],[45.30497,-65.97535],[45.30436,-65.97454],[45.30394,-65.97312],[45.30548,-65.97028],[45.30586,-65.967],[45.30555,-65.9663],[45.30449,-65.96604],[45.30428,-65.96501],[45.30546,-65.96374],[45.30626,-65.9633],[45.30792,-65.96394],[45.30874,-65.96342],[45.30998,-65.96355],[45.31008,-65.96378],[45.30888,-65.97197],[45.30824,-65.97296],[45.30789,-65.97598],[45.3073,-65.97669],[45.30633,-65.97623],[45.30601,-65.97734],[45.30551,-65.97783],[45.30509,-65.97739],[45.30497,-65.97536],[45.30435,-65.97456],[45.30393,-65.97309],[45.30549,-65.97022],[45.30586,-65.967],[45.30553,-65.96633],[45.30449,-65.96606],[45.30428,-65.96501],[45.30622,-65.96329],[45.30685,-65.96333],[45.30792,-65.96395],[45.30877,-65.96349],[45.31007,-65.96366],[45.30913,-65.97043],[45.30854,-65.97112],[45.30789,-65.97599],[45.30732,-65.97669],[45.30636,-65.97621],[45.30591,-65.97752],[45.3053,-65.97776],[45.30495,-65.97538],[45.30432,-65.97456],[45.30391,-65.97303],[45.30546,-65.97027],[45.30583,-65.96703],[45.30554,-65.96636],[45.30447,-65.96606],[45.30427,-65.96501],[45.30541,-65.96374],[45.30621,-65.96328],[45.30681,-65.96331],[45.30793,-65.96394],[45.30871,-65.9635],[45.31007,-65.96369],[45.30889,-65.97188],[45.30825,-65.97293],[45.30791,-65.97596],[45.30732,-65.97668],[45.30634,-65.97622],[45.30597,-65.97743],[45.3055,-65.97784],[45.3051,-65.97737],[45.30498,-65.97541],[45.30434,-65.97456],[45.30391,-65.97307],[45.30548,-65.97022],[45.30584,-65.96702],[45.30554,-65.96635],[45.30473,-65.96627],[45.30439,-65.96593],[45.30427,-65.96496],[45.30541,-65.96375],[45.30627,-65.96328],[45.30792,-65.96393],[45.30933,-65.96343],[45.30999,-65.96355],[45.31008,-65.96381],[45.3091,-65.97069],[45.30859,-65.97102],[45.30847,-65.97151],[45.30877,-65.97205],[45.30905,-65.97205],[45.30846,-65.97172],[45.3079,-65.97594],[45.30733,-65.97666],[45.30634,-65.97622],[45.30599,-65.97739],[45.3055,-65.97783],[45.3051,-65.97731],[45.30497,-65.97536],[45.30435,-65.97452],[45.30393,-65.97311],[45.30548,-65.97025],[45.30584,-65.96702],[45.30556,-65.96635],[45.3045,-65.96605],[45.30428,-65.96499],[45.30544,-65.96374],[45.30624,-65.96329],[45.30681,-65.96332],[45.30792,-65.96395],[45.30879,-65.96348],[45.31006,-65.96367],[45.3089,-65.97193],[45.30826,-65.97295],[45.3079,-65.97601],[45.3073,-65.9767],[45.30635,-65.97623],[45.30593,-65.97752],[45.30548,-65.97784],[45.30509,-65.97734],[45.30497,-65.97542],[45.30438,-65.97459],[45.30392,-65.97306],[45.30546,-65.97026],[45.30584,-65.96707],[45.30552,-65.96635],[45.30453,-65.96611],[45.30425,-65.96506],[45.30539,-65.96376],[45.30616,-65.9633],[45.30678,-65.96331],[45.30792,-65.96395],[45.30931,-65.96343],[45.31008,-65.96375],[45.30911,-65.97058],[45.30855,-65.97111],[45.3079,-65.976],[45.30732,-65.97669],[45.30634,-65.97623],[45.30601,-65.97737],[45.3055,-65.97783],[45.30507,-65.97733],[45.30495,-65.97535],[45.30433,-65.97456],[45.30391,-65.97312],[45.30545,-65.97021],[45.30583,-65.96698],[45.30554,-65.96635],[45.30456,-65.96614],[45.30428,-65.96499],[45.30541,-65.96375],[45.30621,-65.96329],[45.30682,-65.96333],[45.3079,-65.96396],[45.30878,-65.96348],[45.31006,-65.96367],[45.30888,-65.97189],[45.30825,-65.97291],[45.3079,-65.97591],[45.30729,-65.97669],[45.30633,-65.97623],[45.30597,-65.97744],[45.30548,-65.97784],[45.30508,-65.97733],[45.30496,-65.97537],[45.30435,-65.97457],[45.30392,-65.97309],[45.30547,-65.97019],[45.30583,-65.967],[45.30554,-65.96637],[45.3045,-65.96607],[45.30427,-65.965],[45.3062,-65.96329],[45.30678,-65.96331],[45.3079,-65.96394],[45.30877,-65.96349],[45.31006,-65.9637],[45.30911,-65.97051],[45.30854,-65.9711],[45.3079,-65.97595],[45.30731,-65.97669],[45.30633,-65.97622],[45.30598,-65.97739],[45.3055,-65.97783],[45.30508,-65.97737],[45.30495,-65.97534],[45.30436,-65.97456],[45.30392,-65.97308],[45.30549,-65.97017],[45.30584,-65.96702],[45.30553,-65.96633],[45.3045,-65.96606],[45.30427,-65.96501],[45.3054,-65.96375],[45.30622,-65.96328],[45.30792,-65.96393],[45.3087,-65.96349],[45.31007,-65.96366],[45.30889,-65.97192],[45.30824,-65.97296],[45.30791,-65.97588],[45.30729,-65.97669],[45.30633,-65.97622],[45.30595,-65.97746],[45.30548,-65.97783],[45.30509,-65.97736],[45.30494,-65.97533],[45.30432,-65.97447],[45.30391,-65.97307],[45.30546,-65.97028],[45.30583,-65.96707],[45.30554,-65.96635],[45.30472,-65.96629],[45.30442,-65.96598],[45.30426,-65.965],[45.30543,-65.96371],[45.30623,-65.96328],[45.30791,-65.96393],[45.3088,-65.96347],[45.31008,-65.96369],[45.30908,-65.97068],[45.30857,-65.97103],[45.30846,-65.9715],[45.30851,-65.97183],[45.30903,-65.97208],[45.30848,-65.97172],[45.3079,-65.97597],[45.3073,-65.97669],[45.30634,-65.97621],[45.30598,-65.97741],[45.30551,-65.97782],[45.3051,-65.97744],[45.30499,-65.97548],[45.30434,-65.97456],[45.30392,-65.97308],[45.30548,-65.97022],[45.30583,-65.96699],[45.30554,-65.96636],[45.30456,-65.96615],[45.30427,-65.965],[45.30624,-65.96327],[45.30793,-65.96393],[45.30934,-65.96342],[45.31008,-65.96378],[45.30889,-65.97194],[45.30825,-65.97293],[45.30789,-65.97599],[45.3073,-65.9767],[45.30634,-65.97622],[45.30597,-65.97744],[45.30538,-65.97781],[45.30507,-65.97728],[45.30497,-65.97543],[45.30438,-65.97461],[45.3039,-65.9731],[45.30547,-65.97024],[45.30583,-65.96701],[45.30553,-65.96634],[45.30454,-65.9661],[45.30424,-65.96506],[45.30617,-65.96331],[45.30676,-65.96329],[45.3079,-65.96395],[45.30933,-65.96343],[45.31,-65.96357],[45.31006,-65.96384],[45.30908,-65.97065],[45.30852,-65.9712],[45.30789,-65.97597],[45.30731,-65.9767],[45.30632,-65.97624],[45.30598,-65.9774],[45.30543,-65.97783],[45.30508,-65.97741],[45.30494,-65.97534],[45.30436,-65.97458],[45.30391,-65.9731],[45.30547,-65.97025],[45.30584,-65.96701],[45.3055,-65.96632],[45.3045,-65.96609],[45.30426,-65.96508],[45.30609,-65.96336],[45.30674,-65.96331],[45.30796,-65.96395],[45.3086,-65.96351],[45.31005,-65.96361],[45.30918,-65.96998]]};
+const q = s => document.querySelector(s);
+const rad = g => g*Math.PI/180;
+
+/* ═══════ geodésia ═══════ */
+const hav = (a,b) => {
+  const R=6371000, r=Math.PI/180;
+  const la1=a[0]*r, la2=b[0]*r, dla=(b[0]-a[0])*r, dlo=(b[1]-a[1])*r;
+  const h=Math.sin(dla/2)**2 + Math.cos(la1)*Math.cos(la2)*Math.sin(dlo/2)**2;
+  return 2*R*Math.asin(Math.sqrt(h));
+};
+function dp(p,tol){
+  if(p.length<3) return p;
+  const d=(pt,a,b)=>{const dx=b[0]-a[0],dy=b[1]-a[1];
+    if(!dx&&!dy) return Math.hypot(pt[0]-a[0],pt[1]-a[1]);
+    const t=Math.max(0,Math.min(1,((pt[0]-a[0])*dx+(pt[1]-a[1])*dy)/(dx*dx+dy*dy)));
+    return Math.hypot(pt[0]-(a[0]+t*dx),pt[1]-(a[1]+t*dy))};
+  let dm=0,idx=0;
+  for(let i=1;i<p.length-1;i++){const v=d(p[i],p[0],p[p.length-1]); if(v>dm){dm=v;idx=i}}
+  return dm>tol ? dp(p.slice(0,idx+1),tol).slice(0,-1).concat(dp(p.slice(idx),tol))
+                : [p[0],p[p.length-1]];
+}
+const simplificarPara=(p,alvo)=>{ if(p.length<=alvo) return p;
+  let lo=1e-9,hi=1; for(let i=0;i<50;i++){const m=(lo+hi)/2;(dp(p,m).length>alvo)?lo=m:hi=m}
+  return dp(p,hi) };
+const aparar=(p,m)=>{ const anda=s=>{let a=0;for(let i=0;i<s.length-1;i++){a+=hav(s[i],s[i+1]);if(a>=m)return i+1}return 0};
+  return p.slice(anda(p), p.length-anda([...p].reverse())) };
+
+/* ═══════ estado ═══════ */
+const FORMAS=[{id:'hexL',n:'Hex ⬢',off:0},{id:'hexP',n:'Hex ▲',off:-90},{id:'ret',n:'Retângulo',off:null}];
+const TAMANHOS={
+  hex:[{id:'h1',n:'16 cm',R:80},{id:'h2',n:'20 cm',R:100},{id:'h3',n:'24 cm',R:120},{id:'h4',n:'28 cm',R:140}],
+  ret:[{id:'r1',n:'15 × 20 cm',w:150,h:200},{id:'q',n:'20 × 20 cm',w:200,h:200},
+       {id:'r2',n:'20 × 30 cm',w:200,h:300},{id:'p',n:'30 × 20 cm',w:300,h:200}]};
+const VISTAS=[{id:'p',n:'Plana',t:0},{id:'m',n:'3D',t:48},{id:'a',n:'3D raso',t:26}];
+const P_MOLD=['#111418','#2b2f36','#f5f5f0','#7a4a2b','#1a2b45'];
+const P_TRACO=['#e0342c','#c9f24e','#ffffff','#f18701','#0d7ac4','#111418'];
+const P_TERR=['#0f8f70','#2e7d32','#4a6741','#6b5b3e','#3a5f7d','#5a4a6b'];
+
+let ST={bruto:[],meta:{},forma:'hexL',fmt:'h2',vista:'p',giro:0,relevo:2,det:420,
+  mold:13,deg:14,zoom:4.4,lados:['','','','','',''],
+  mCor:'#111418',tCor:'#e0342c',terrCor:'#0f8f70',agua:null,dem:null};
+
+/* ═══════ GPX ═══════ */
+function lerGPX(t){
+  const doc=new DOMParser().parseFromString(t,'text/xml');
+  let nos=[...doc.querySelectorAll('trkpt')]; if(!nos.length) nos=[...doc.querySelectorAll('rtept')];
+  if(!nos.length) throw new Error('Não achei pontos de percurso.');
+  const pts=nos.map(n=>[+n.getAttribute('lat'),+n.getAttribute('lon')]);
+  const tempos=[...doc.querySelectorAll('time')].map(x=>x.textContent);
+  const nome=doc.querySelector('trk > name')||doc.querySelector('name');
+  let dist=0; for(let i=0;i<pts.length-1;i++) dist+=hav(pts[i],pts[i+1]);
+  let seg=0;
+  if(tempos.length>1){const a=new Date(tempos[1]||tempos[0]),b=new Date(tempos[tempos.length-1]);
+    if(!isNaN(a)&&!isNaN(b)) seg=Math.max(0,(b-a)/1000)}
+  return {pts,meta:{nome:nome?nome.textContent.trim().replace(/\.$/,''):'Meu percurso',
+    data:tempos.length?(tempos[0]||'').slice(0,10):'',km:dist/1000,seg,n:pts.length}};
+}
+const hms=s=>{s=Math.round(s);const h=Math.floor(s/3600),m=Math.floor(s%3600/60);
+  return h?h+'h'+String(m).padStart(2,'0'):m+' min'};
+const paceDe=m=>{const p=m.km?m.seg/m.km:0;
+  return p?Math.floor(p/60)+':'+String(Math.round(p%60)).padStart(2,'0')+'/km':''};
+const dataEN=iso=>{if(!iso)return'';const[a,m,d]=iso.split('-');
+  return ['January','February','March','April','May','June','July','August','September','October','November','December'][+m-1]+' '+(+d)+', '+a};
+
+/* Maior escala que ainda deixa TODO o traçado dentro do polígono.
+   O miolo é um hexágono: a largura cheia só existe na faixa central.
+   Para cada aresta eu tenho a reta n·x = d; um ponto p cabe enquanto
+   s·(n·p) ≤ d. O menor desses limites, entre todos os pontos e todas
+   as arestas, é a escala que cabe. Exato, e serve para qualquer forma. */
+function escalaQueCabe(pts, poly, margem){
+  let smin = Infinity;
+  const n = poly.length;
+  for(let e=0;e<n;e++){
+    const a=poly[e], b=poly[(e+1)%n];
+    let nx=b[1]-a[1], ny=-(b[0]-a[0]);
+    const L=Math.hypot(nx,ny)||1; nx/=L; ny/=L;
+    let d=nx*a[0]+ny*a[1];
+    if(d<0){ nx=-nx; ny=-ny; d=-d }
+    d-=margem;
+    if(d<=0) return 0;
+    for(let i=0;i<pts.length;i++){
+      const v=nx*pts[i][0]+ny*pts[i][1];
+      if(v>1e-12){ const s=d/v; if(s<smin) smin=s }
+    }
+  }
+  return smin===Infinity ? 1 : smin;
+}
+
+/* ═══════ geometria: hexágono externo + interno ═══════ */
+function geometria(){
+  const f=FORMAS.find(x=>x.id===ST.forma);
+  const mold=ST.mold;
+  if(f.off===null){
+    const F=TAMANHOS.ret.find(t=>t.id===ST.fmt)||TAMANHOS.ret[2];
+    const v=[[-F.w/2,-F.h/2],[F.w/2,-F.h/2],[F.w/2,F.h/2],[-F.w/2,F.h/2]];
+    const vi=v.map(([x,y])=>[x-Math.sign(x)*mold, y-Math.sign(y)*mold]);
+    return {v,vi,W:F.w,H:F.h,base:F.w,mold,
+      aw:(F.w-mold*2)*0.94,ah:(F.h-mold*2)*0.94,cy:0};
+  }
+  const T=TAMANHOS.hex.find(t=>t.id===ST.fmt)||TAMANHOS.hex[1];
+  const R=T.R, ri=R-mold/Math.cos(rad(30));
+  const mk=r=>[...Array(6)].map((_,i)=>{const a=rad(f.off+60*i);return [r*Math.cos(a),r*Math.sin(a)]});
+  const v=mk(R), vi=mk(ri);
+  const W=Math.max(...v.map(p=>p[0]))*2, H=Math.max(...v.map(p=>p[1]))*2;
+  const plano=f.off===0;   // lado em cima
+  return {v,vi,W,H,base:W,R,ri,mold,
+    aw:(plano?2*ri:Math.sqrt(3)*ri)*0.90, ah:(plano?Math.sqrt(3)*ri:2*ri)*0.86, cy:0};
+}
+function proj(){
+  const A=rad(ST.giro),T=rad(VISTAS.find(v=>v.id===ST.vista).t);
+  const ca=Math.cos(A),sa=Math.sin(A),ct=Math.cos(T),st=Math.sin(T);
+  return {p:(x,y,z)=>[ca*x-sa*y,(sa*x+ca*y)*ct-(z||0)*st],
+          plano:(ctx,ox,oy,z,f)=>{f=f||1;
+            ctx.setTransform(f*ca, f*sa*ct, -f*sa, f*ca*ct, f*ox, f*(oy-(z||0)*st))}};
+}
+const sombra=(hex,f)=>{const c=hex.replace('#','');
+  return `rgb(${[0,2,4].map(i=>Math.round(parseInt(c.substr(i,2),16)*f)).join(',')})`};
+const claro=hex=>{const c=hex.replace('#','');
+  return (parseInt(c.substr(0,2),16)*299+parseInt(c.substr(2,2),16)*587+parseInt(c.substr(4,2),16)*114)/1000>140};
+
+/* ═══════ relevo: tiles de altitude abertos ═══════ */
+async function buscarRelevo(){
+  const bt=q('#btRelevo'), nota=q('#notaReg');
+  if(!ST.bruto.length) return;
+  const la=ST.bruto.map(v=>v[0]), lo=ST.bruto.map(v=>v[1]);
+  const m=0.006;
+  const S=Math.min(...la)-m, N=Math.max(...la)+m, W=Math.min(...lo)-m, E=Math.max(...lo)+m;
+  const tx=(l,z)=>Math.floor((l+180)/360*2**z);
+  const ty=(l,z)=>{const r=rad(l);return Math.floor((1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*2**z)};
+  let z=15;
+  while(z>10 && (tx(E,z)-tx(W,z)+1)*(ty(S,z)-ty(N,z)+1) > 12) z--;
+  const x0=tx(W,z), x1=tx(E,z), y0=ty(N,z), y1=ty(S,z);
+  const nx=x1-x0+1, ny=y1-y0+1;
+  bt.disabled=true; bt.textContent='Buscando altitude…';
+  try{
+    const cv=document.createElement('canvas');
+    cv.width=nx*256; cv.height=ny*256;
+    const c=cv.getContext('2d', {willReadFrequently:true});
+    await Promise.all([].concat(...[...Array(nx)].map((_,i)=>[...Array(ny)].map((_,j)=>
+      new Promise(res=>{
+        const im=new Image(); im.crossOrigin='anonymous';
+        im.onload=()=>{ c.drawImage(im,i*256,j*256); res() };
+        im.onerror=()=>res();
+        im.src=`https://s3.amazonaws.com/elevation-tiles-prod/terrarium/${z}/${x0+i}/${y0+j}.png`;
+      })))));
+    const d=c.getImageData(0,0,cv.width,cv.height).data;
+    ST.dem={z,x0,y0,nx,ny,d,w:cv.width,h:cv.height};
+    nota.innerHTML='Relevo carregado. Cada faixa de cor é um degrau de altitude — e uma camada na impressão.';
+    bt.textContent='Buscar de novo';
+    desenhar();
+  }catch(e){
+    nota.textContent='Não consegui ler a altitude: '+e.message+'. Talvez o servidor não permita leitura direta.';
+    bt.textContent='Tentar de novo';
+  }
+  bt.disabled=false;
+}
+function altitude(lat,lon){
+  const D=ST.dem; if(!D) return null;
+  const n=2**D.z;
+  const fx=(lon+180)/360*n, r=rad(lat);
+  const fy=(1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*n;
+  const px=(fx-D.x0)*256, py=(fy-D.y0)*256;
+  if(px<0||py<0||px>=D.w-1||py>=D.h-1) return null;
+  const i=(Math.floor(py)*D.w+Math.floor(px))*4;
+  return D.d[i]*256 + D.d[i+1] + D.d[i+2]/256 - 32768;
+}
+
+/* ═══════ água ═══════ */
+const ESPELHOS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+  'https://overpass.private.coffee/api/interpreter',
+];
+async function buscarAgua(){
+  const bt=q('#btAgua'), nota=q('#notaReg');
+  if(!ST.bruto.length) return;
+  const la=ST.bruto.map(v=>v[0]), lo=ST.bruto.map(v=>v[1]), m=0.006;
+  const bbox=[Math.min(...la)-m,Math.min(...lo)-m,Math.max(...la)+m,Math.max(...lo)+m].join(',');
+  const query=`[out:json][timeout:25];(way["natural"="water"](${bbox});`+
+    `way["waterway"="riverbank"](${bbox});way["landuse"="reservoir"](${bbox}););out geom;`;
+  bt.disabled=true;
+  let erro='';
+  for(let i=0;i<ESPELHOS.length;i++){
+    bt.textContent=`Tentando servidor ${i+1} de ${ESPELHOS.length}…`;
+    try{
+      const ctrl=new AbortController(); const to=setTimeout(()=>ctrl.abort(),30000);
+      const r=await fetch(ESPELHOS[i],{method:'POST',signal:ctrl.signal,
+        body:'data='+encodeURIComponent(query),
+        headers:{'Content-Type':'application/x-www-form-urlencoded'}});
+      clearTimeout(to);
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      const j=await r.json();
+      const pol=(j.elements||[]).filter(e=>e.geometry&&e.geometry.length>2)
+        .map(e=>e.geometry.map(g=>[g.lat,g.lon]));
+      ST.agua=pol.length?pol:null;
+      nota.innerHTML=pol.length
+        ? `<b>${pol.length}</b> corpos de água desenhados. Dados do OpenStreetMap — a licença ODbL
+           exige o crédito "© OpenStreetMap contributors" na peça, na embalagem ou na página.`
+        : 'Nenhum lago ou rio mapeado nesta área. O GPX não traz essa informação: ela só existe em base de mapas.';
+      bt.textContent=pol.length?'Buscar de novo':'Nada encontrado';
+      bt.disabled=false; desenhar(); return;
+    }catch(e){ erro=e.message }
+  }
+  nota.innerHTML='Os três servidores do OpenStreetMap recusaram ('+erro+'). '+
+    'Eles são gratuitos e vivem congestionados — tente de novo em alguns minutos.';
+  bt.textContent='Tentar de novo'; bt.disabled=false;
+}
+
+/* ═══════ desenho ═══════
+   A peça é montada em duas camadas fora da tela: uma de cor e uma de
+   ALTURA, em mm. Depois a altura vira sombreamento — é isso que faz os
+   degraus do relevo aparecerem como na peça impressa, em vez de faixas
+   chapadas de cor.                                                    */
+let mapa=null, cache={sig:null,val:null};
+
+const ALT_BASE=0, ALT_MOLD=6.2, ALT_TERR0=1.6, ALT_TERR1=4.6, ALT_AGUA=1.2, ALT_TXT=0.9;
+
+function montarPeca(G, p, mx, my){
+  const bx0=-G.W/2, by0=-G.H/2, bw=G.W, bh=G.H;
+  const ppm=Math.min(6.5, Math.sqrt(1750000/(bw*bh)));
+  const W=Math.max(200,Math.round(bw*ppm)), H=Math.max(200,Math.round(bh*ppm));
+
+  const mk=()=>{const c=document.createElement('canvas');c.width=W;c.height=H;
+    const x=c.getContext('2d',{willReadFrequently:true});
+    x.setTransform(W/bw,0,0,H/bh,-bx0*W/bw,-by0*H/bh); return [c,x]};
+  const [cCor,xc]=mk(), [cAlt,xa]=mk();
+
+  const cam=(x,v)=>{x.beginPath();v.forEach(([a,b],i)=>i?x.lineTo(a,b):x.moveTo(a,b));x.closePath()};
+  const cinza=h=>`rgb(${Math.round(h/ALT_MOLD*255)},${Math.round(h/ALT_MOLD*255)},${Math.round(h/ALT_MOLD*255)})`;
+
+  /* moldura */
+  cam(xc,G.v); xc.fillStyle=ST.mCor; xc.fill();
+  cam(xa,G.v); xa.fillStyle=cinza(ALT_MOLD); xa.fill();
+
+  /* miolo */
+  xc.save(); cam(xc,G.vi); xc.clip();
+  xa.save(); cam(xa,G.vi); xa.clip();
+  xc.fillStyle=sombra(ST.terrCor,.68); xc.fill();
+  xa.fillStyle=cinza(ALT_TERR0); xa.fillRect(bx0,by0,bw,bh);
+
+  if(ST.dem) relevoNasCamadas(xc,xa,G,ppm);
+
+  if(ST.agua){
+    xc.fillStyle='#2f95dd'; xa.fillStyle=cinza(ALT_AGUA);
+    ST.agua.forEach(w=>{
+      [xc,xa].forEach(x=>{ x.beginPath();
+        w.forEach((c,i)=>{const[X,Y]=mapa.mm(c[0],c[1]); i?x.lineTo(X,Y):x.moveTo(X,Y)});
+        x.closePath(); x.fill() });
+    });
+  }
+
+  /* traçado, dentro do miolo */
+  const larg=Math.max(1,Math.min(3,G.base/150));
+  [[xc,ST.tCor],[xa,cinza(Math.min(ALT_MOLD,ALT_TERR1+ST.relevo))]].forEach(([x,cor])=>{
+    x.beginPath();
+    p.forEach((_,i)=>{ const X=mx(i),Y=my(i); i?x.lineTo(X,Y):x.moveTo(X,Y) });
+    x.lineJoin='round'; x.lineCap='round'; x.lineWidth=larg; x.strokeStyle=cor; x.stroke();
+  });
+  xc.restore(); xa.restore();
+
+  /* textos da moldura, em relevo */
+  const corTxt=claro(ST.mCor)?'#14181f':'#ffffff';
+  [[xc,corTxt],[xa,cinza(ALT_MOLD+ALT_TXT)]].forEach(([x,cor])=>{
+    x.textAlign='center'; x.textBaseline='middle'; x.fillStyle=cor;
+    const info=ladosInfo(G);
+    for(let i=0;i<G.v.length;i++){
+      const t=(ST.lados[i]||'').trim(); if(!t) continue;
+      const grande=info[i].topo;
+      const a=G.v[i],b=G.v[(i+1)%G.v.length];
+      const mxm=(a[0]+b[0])/2,mym=(a[1]+b[1])/2, L=Math.hypot(mxm,mym)||1, r=G.mold*0.52;
+      let ang=Math.atan2(b[1]-a[1],b[0]-a[0]);
+      if(ang>Math.PI/2||ang<-Math.PI/2) ang+=Math.PI;
+      x.save(); x.translate(mxm-(mxm/L)*r, mym-(mym/L)*r); x.rotate(ang);
+      x.font=(grande?'800 ':'700 ')+(grande?G.mold*0.60:G.mold*0.42)+'px Helvetica,Arial,sans-serif';
+      x.fillText(t,0,0); x.restore();
+    }
+  });
+
+  /* ── luz: normal a partir da altura ── */
+  const dc=xc.getImageData(0,0,W,H), da=xa.getImageData(0,0,W,H);
+  const out=xc.createImageData(W,H);
+  const mmPx=bw/W;
+  const Lx=-0.55, Ly=-0.72, Lz=0.86, Ln=Math.hypot(Lx,Ly,Lz);
+  const alt=(i,j)=>{ i=Math.max(0,Math.min(W-1,i)); j=Math.max(0,Math.min(H-1,j));
+    const k=(j*W+i)*4; return da.data[k+3] ? da.data[k]/255*ALT_MOLD : 0 };
+  for(let j=0;j<H;j++) for(let i=0;i<W;i++){
+    const k=(j*W+i)*4;
+    if(!dc.data[k+3]){ out.data[k+3]=0; continue }
+    const dzx=(alt(i+1,j)-alt(i-1,j))/(2*mmPx);
+    const dzy=(alt(i,j+1)-alt(i,j-1))/(2*mmPx);
+    const nn=Math.hypot(-dzx,-dzy,1);
+    let d=((-dzx)*Lx+(-dzy)*Ly+1*Lz)/(nn*Ln);
+    d=Math.max(0,d);
+    const f=Math.min(1.35, 0.42+0.78*d);
+    out.data[k]  =Math.min(255,dc.data[k]  *f);
+    out.data[k+1]=Math.min(255,dc.data[k+1]*f);
+    out.data[k+2]=Math.min(255,dc.data[k+2]*f);
+    out.data[k+3]=255;
+  }
+  xc.setTransform(1,0,0,1,0,0); xc.putImageData(out,0,0);
+  return {cv:cCor, bx0, by0, bw, bh, larg};
+}
+
+/* bandas de altitude nas duas camadas */
+function relevoNasCamadas(xc, xa, G, ppm){
+  const vi=G.vi;
+  const bx0=Math.min(...vi.map(p=>p[0])), bx1=Math.max(...vi.map(p=>p[0]));
+  const by0=Math.min(...vi.map(p=>p[1])), by1=Math.max(...vi.map(p=>p[1]));
+  const larg=Math.max(120,Math.round((bx1-bx0)*ppm)), altp=Math.max(120,Math.round((by1-by0)*ppm));
+  const h=new Float32Array(larg*altp); let mn=1e9,mx=-1e9;
+  for(let j=0;j<altp;j++) for(let i=0;i<larg;i++){
+    const X=bx0+(i+.5)/larg*(bx1-bx0), Y=by0+(j+.5)/altp*(by1-by0);
+    const [lat,lon]=mapa.geo(X,Y);
+    const v=altitude(lat,lon);
+    h[j*larg+i]=v===null?NaN:v;
+    if(v!==null){ if(v<mn)mn=v; if(v>mx)mx=v }
+  }
+  if(mx<=mn) mx=mn+1;
+  const c=ST.terrCor.replace('#','');
+  const R=parseInt(c.substr(0,2),16),Gc=parseInt(c.substr(2,2),16),B=parseInt(c.substr(4,2),16);
+  const off=document.createElement('canvas'); off.width=larg; off.height=altp;
+  const oa=document.createElement('canvas'); oa.width=larg; oa.height=altp;
+  const ic=off.getContext('2d').createImageData(larg,altp);
+  const ia=oa.getContext('2d').createImageData(larg,altp);
+  const N=ST.deg;
+  for(let k=0;k<larg*altp;k++){
+    const v=h[k], o=k*4;
+    if(isNaN(v)){ ic.data[o+3]=0; ia.data[o+3]=0; continue }
+    const t=Math.min(.9999,Math.max(0,(v-mn)/(mx-mn)));
+    const nivel=Math.floor(t*N)/Math.max(1,N-1);
+    const f=.58+nivel*.7;
+    ic.data[o]=Math.min(255,R*f); ic.data[o+1]=Math.min(255,Gc*f);
+    ic.data[o+2]=Math.min(255,B*f); ic.data[o+3]=255;
+    const z=(ALT_TERR0+nivel*(ALT_TERR1-ALT_TERR0))/ALT_MOLD*255;
+    ia.data[o]=ia.data[o+1]=ia.data[o+2]=z; ia.data[o+3]=255;
+  }
+  off.getContext('2d').putImageData(ic,0,0);
+  oa.getContext('2d').putImageData(ia,0,0);
+  [[xc,off],[xa,oa]].forEach(([x,img])=>{
+    x.imageSmoothingEnabled=false;
+    x.drawImage(img,bx0,by0,bx1-bx0,by1-by0);
+    x.imageSmoothingEnabled=true;
+  });
+}
+
+function desenhar(){
+  const cv=q('#tela'), G=geometria(), PR=proj();
+  const esc=ST.zoom, dpr=Math.min(2,window.devicePixelRatio||1);
+  let p=q('#priv').checked ? aparar(ST.bruto,200) : ST.bruto;
+  p=simplificarPara(p,ST.det);
+  if(!p.length) return;
+
+  const latm=p.reduce((a,b)=>a+b[0],0)/p.length, k=Math.cos(rad(latm));
+  const xs=p.map(v=>v[1]*k), ys=p.map(v=>-v[0]);
+  const x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
+  const cxm=(x0+x1)/2, cym=(y0+y1)/2;
+  const uni=xs.map((v,i)=>[v-cxm, ys[i]-cym]);
+  const larg0=Math.max(1,Math.min(3,G.base/150));
+  const s=escalaQueCabe(uni, G.vi, larg0/2 + G.mold*0.18);
+  mapa={ mm:(lat,lon)=>[(lon*k-cxm)*s,(-lat-cym)*s],
+         geo:(X,Y)=>[Y/s*-1-cym*1+0, (X/s+cxm)/k] };
+  mapa.geo=(X,Y)=>[-(Y/s+cym), (X/s+cxm)/k];
+  const mx=i=>uni[i][0]*s, my=i=>uni[i][1]*s;
+
+  const sig=JSON.stringify([ST.forma,ST.fmt,ST.mold,ST.deg,ST.relevo,ST.det,
+    ST.mCor,ST.tCor,ST.terrCor,ST.lados,q('#priv').checked,!!ST.dem,ST.agua?ST.agua.length:0,p.length]);
+  if(cache.sig!==sig){ cache.val=montarPeca(G,p,mx,my); cache.sig=sig }
+  const peca=cache.val;
+
+  const esp=6;
+  const cantos=[]; G.v.forEach(([x,y])=>{cantos.push(PR.p(x,y,0));cantos.push(PR.p(x,y,-esp))});
+  const sx0=Math.min(...cantos.map(c=>c[0])),sx1=Math.max(...cantos.map(c=>c[0]));
+  const sy0=Math.min(...cantos.map(c=>c[1])),sy1=Math.max(...cantos.map(c=>c[1]));
+  const Wt=(sx1-sx0+26)*esc, Ht=(sy1-sy0+26)*esc;
+  cv.width=Wt*dpr; cv.height=Ht*dpr; cv.style.width=Wt+'px'; cv.style.height=Ht+'px';
+  const ctx=cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,Wt,Ht);
+  const ox=(-sx0+13)*esc, oy=(-sy0+13)*esc;
+  const P=(x,y,z)=>{const[a,b]=PR.p(x,y,z);return [a*esc+ox,b*esc+oy]};
+
+  /* sombra projetada na mesa */
+  ctx.save();
+  ctx.beginPath();
+  G.v.forEach(([x,y],i)=>{const[X,Y]=P(x*0.99+2,y*0.99+3,-esp);i?ctx.lineTo(X,Y):ctx.moveTo(X,Y)});
+  ctx.closePath();
+  try{ ctx.filter='blur('+(3*esc/4.4)+'px)' }catch(e){}
+  ctx.fillStyle='rgba(20,26,34,.16)'; ctx.fill();
+  ctx.filter='none'; ctx.restore();
+
+  /* paredes */
+  const n=G.v.length;
+  for(let i=0;i<n;i++){
+    const a=G.v[i],b=G.v[(i+1)%n], mxm=(a[0]+b[0])/2,mym=(a[1]+b[1])/2;
+    const q0=PR.p(mxm,mym,0),q1=PR.p(mxm*1.01,mym*1.01,0);
+    if(q1[1]-q0[1]<=0) continue;
+    const A=P(a[0],a[1],0),B=P(b[0],b[1],0),C=P(b[0],b[1],-esp),D=P(a[0],a[1],-esp);
+    const ang=Math.atan2(mym,mxm);
+    const luz=0.42+0.30*Math.max(0,Math.cos(ang-rad(-125)));
+    ctx.beginPath();ctx.moveTo(...A);ctx.lineTo(...B);ctx.lineTo(...C);ctx.lineTo(...D);ctx.closePath();
+    ctx.fillStyle=sombra(ST.mCor,luz);ctx.fill();
+  }
+
+  /* face de cima já sombreada */
+  ctx.save(); PR.plano(ctx,ox,oy,0,dpr); ctx.scale(esc,esc);
+  ctx.beginPath(); G.v.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y)); ctx.closePath(); ctx.clip();
+  ctx.drawImage(peca.cv, peca.bx0, peca.by0, peca.bw, peca.bh);
+  ctx.restore();
+
+  painel(G,p,peca.larg);
+  q('#lblPts').textContent=p.length+' pontos';
+  q('#lblGiro').textContent=ST.giro+'°';
+  q('#lblZoom').textContent=Math.round(G.W*ST.zoom)+' px';
+  q('#lblRel').textContent=ST.relevo.toFixed(1)+' mm';
+  q('#lblMold').textContent=ST.mold+' mm';
+  q('#lblDeg').textContent=ST.deg+' degraus';
+}
+
+function painel(G,p,largura){
+  const ok=largura>=0.8;
+  q('#tec').innerHTML=`
+    <div class="linha"><span>Pontos no arquivo</span><b>${ST.meta.n.toLocaleString('pt-BR')}</b></div>
+    <div class="linha"><span>Pontos na peça</span><b>${p.length}</b></div>
+    <div class="linha"><span>Traçado</span><b class="${ok?'ok':'alerta'}">${largura.toFixed(1)} mm × ${ST.relevo.toFixed(1)} mm</b></div>
+    <div class="linha"><span>Moldura</span><b>${ST.mold} mm</b></div>
+    <div class="linha"><span>Peça</span><b>${Math.round(G.W)} × ${Math.round(G.H)} × 6 mm</b></div>
+    <div class="linha"><span>Relevo do terreno</span><b>${ST.dem?ST.deg+' degraus':'—'}</b></div>`;
+  q('#notaTec').innerHTML = ok
+    ? `Traçado com <b>${largura.toFixed(1)} mm</b> de largura: dois perímetros no bico de 0,4.
+       Com a AMS, moldura, terreno, água e traçado saem numa impressão só, trocando cor por altura.`
+    : `<b>Atenção:</b> traçado fino demais para o bico de 0,4 mm. Aumente a peça.`;
+}
+
+/* ═══════ controles ═══════ */
+/* Classifica cada aresta pela sua DIREÇÃO, não pela posição do meio.
+   O hexágono de ponta em cima não tem nenhuma aresta horizontal — pela
+   posição, duas delas caíam como "Topo". Aqui uma aresta só é topo ou
+   base se ela própria for horizontal; se for vertical, é lateral. */
+function ladosInfo(G){
+  const n=G.v.length;
+  const info=G.v.map((a,i)=>{
+    const b=G.v[(i+1)%n];
+    const dx=b[0]-a[0], dy=b[1]-a[1];
+    const mx=(a[0]+b[0])/2, my=(a[1]+b[1])/2;
+    let nome;
+    if(Math.abs(dy) < Math.abs(dx)*0.4)      nome = my<0 ? 'Topo' : 'Base';
+    else if(Math.abs(dx) < Math.abs(dy)*0.4) nome = mx<0 ? 'Esquerda' : 'Direita';
+    else nome = (my<0?'Sup. ':'Inf. ') + (mx<0?'esquerdo':'direito');
+    return {i, nome, mx, my, topo:false};
+  });
+  /* o destaque vai para a aresta de cima; sem aresta horizontal,
+     para a que estiver mais alta na tela */
+  let alvo = info.find(x=>x.nome==='Topo');
+  if(!alvo) alvo = info.reduce((a,b)=>b.my<a.my?b:a);
+  alvo.topo = true;
+  return info;
+}
+
+function montar(){
+  const grupo=(alvo,lista,chave,extra)=>{
+    q(alvo).innerHTML=lista.map(f=>`<button data-x="${f.id}" class="${f.id===ST[chave]?'on':''}">${f.n}</button>`).join('');
+    q(alvo).querySelectorAll('[data-x]').forEach(b=>b.onclick=()=>{ST[chave]=b.dataset.x;if(extra)extra();montar();desenhar()});
+  };
+  grupo('#vista',VISTAS,'vista');
+  grupo('#forma',FORMAS,'forma',()=>{const hex=ST.forma.startsWith('hex');
+    if(hex!==(ST.fmt[0]==='h')) ST.fmt=hex?'h2':'r2'});
+  grupo('#fmt',ST.forma.startsWith('hex')?TAMANHOS.hex:TAMANHOS.ret,'fmt');
+  const cores=(alvo,pal,chave)=>{
+    q(alvo).innerHTML=pal.map(c=>`<div class="cor ${ST[chave]===c?'on':''}" data-c="${c}" style="background:${c}"></div>`).join('');
+    q(alvo).querySelectorAll('[data-c]').forEach(el=>el.onclick=()=>{ST[chave]=el.dataset.c;montar();desenhar()});
+  };
+  cores('#corMold',P_MOLD,'mCor'); cores('#corTraco',P_TRACO,'tCor'); cores('#corTerr',P_TERR,'terrCor');
+  const info=ladosInfo(geometria());
+  const ordem=[...info].sort((a,b)=>(a.my-b.my)||(a.mx-b.mx));
+  q('#lados').innerHTML=ordem.map(o=>
+    `<div class="lat"><i>${o.nome}</i><input type="text" data-l="${o.i}" value="${(ST.lados[o.i]||'').replace(/"/g,'&quot;')}"></div>`).join('');
+  q('#lados').querySelectorAll('[data-l]').forEach(el=>el.oninput=()=>{ST.lados[+el.dataset.l]=el.value;desenhar()});
+}
+
+function aplicar(d){
+  ST.bruto=d.pts; ST.meta=d.meta; ST.agua=null; ST.dem=null;
+  const inf=ladosInfo(geometria());
+  ST.lados=new Array(inf.length).fill('');
+  const por=n=>inf.find(x=>x.nome===n);
+  const topo=inf.find(x=>x.topo), base=por('Base')||inf.reduce((a,b)=>b.my>a.my?b:a);
+  const supD=por('Sup. direito')||por('Inf. direito');
+  const supE=por('Sup. esquerdo')||por('Inf. esquerdo');
+  if(topo) ST.lados[topo.i]=d.meta.nome;
+  if(base) ST.lados[base.i]=dataEN(d.meta.data);
+  if(supD) ST.lados[supD.i]=d.meta.km.toFixed(2)+' km';
+  if(supE) ST.lados[supE.i]=paceDe(d.meta);
+  q('#btRelevo').textContent='Buscar relevo do terreno';
+  q('#btAgua').textContent='Buscar lagos e rios';
+  montar(); desenhar();
+}
+
+q('#solta').onclick=()=>q('#arq').click();
+q('#arq').onchange=e=>{const f=e.target.files[0];if(f)ler(f)};
+['dragenter','dragover'].forEach(ev=>q('#solta').addEventListener(ev,e=>{e.preventDefault();q('#solta').classList.add('over')}));
+['dragleave','drop'].forEach(ev=>q('#solta').addEventListener(ev,e=>{e.preventDefault();q('#solta').classList.remove('over')}));
+q('#solta').addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(f)ler(f)});
+function ler(file){const fr=new FileReader();
+  fr.onload=()=>{try{aplicar(lerGPX(fr.result))}catch(err){alert('Não consegui ler: '+err.message)}};
+  fr.readAsText(file)}
+q('#priv').addEventListener('input',desenhar);
+[['#det','det'],['#giro','giro'],['#rel','relevo'],['#mold','mold'],['#deg','deg'],['#zoom','zoom']].forEach(([sel,ch])=>
+  q(sel).addEventListener('input',e=>{ST[ch]=+e.target.value;desenhar()}));
+q('#btRelevo').onclick=buscarRelevo;
+q('#btAgua').onclick=buscarAgua;
+(function(){let a=false,x0=0,g0=0;const cv=q('#tela');
+  cv.addEventListener('pointerdown',e=>{a=true;x0=e.clientX;g0=ST.giro;cv.setPointerCapture(e.pointerId)});
+  cv.addEventListener('pointermove',e=>{if(!a)return;
+    let g=g0+(e.clientX-x0)*0.6; g=((g+180)%360+360)%360-180;
+    ST.giro=Math.round(g); q('#giro').value=ST.giro; desenhar()});
+  ['pointerup','pointercancel'].forEach(ev=>cv.addEventListener(ev,()=>a=false))})();
+
+aplicar({pts:DEMO.pts,meta:{nome:DEMO.nome,data:DEMO.data,km:DEMO.km,seg:DEMO.seg,n:DEMO.n}});
+</script>
+</body>
+</html>
