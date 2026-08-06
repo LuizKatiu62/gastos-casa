@@ -1,6 +1,6 @@
 /* ══════════════════════════════════════════════════════════════════
    fix.js — correções da v2
-   Versão 2026-08-01g · seis correções, cada uma isolada.
+   Versão 2026-08-01h · seis correções, cada uma isolada.
 
    MUDANÇA DESTA VERSÃO: antes as seis partes eram blocos soltos no
    mesmo arquivo. Um erro em qualquer uma derrubava todas as outras,
@@ -8,7 +8,7 @@
    try/catch: se uma falhar, as cinco restantes continuam valendo.
 
    E aparece um selo no alto da tela, ao lado do relógio:
-     · "fix 01g" em verde  → tudo rodando
+     · "fix 01h" em verde  → tudo rodando
      · "fix ✗ N" em vermelho → N partes falharam; toque para ver quais
 
    INSTALAÇÃO: envie este arquivo para a pasta treinos-v2 pelo
@@ -23,7 +23,7 @@
       e incluir treino em dia de descanso ou cancelado
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '01g';
+const FIX_VERSAO = '01h';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -735,6 +735,9 @@ css.textContent = `
   padding:4px 10px;border-radius:6px;margin-bottom:12px}
 .cancelado h2{margin:0;font-size:17px;font-weight:700}
 .cancelado p{margin:8px 0 0;font-size:13px;color:var(--tx2);line-height:1.5}
+.cancelado.compacto{padding:14px 16px;text-align:left;display:flex;align-items:center;gap:12px}
+.cancelado.compacto .tagc{margin:0;flex:1}
+.cancelado.compacto .btn-voltar{width:auto;margin:0;padding:9px 14px;font-size:12px;flex:none}
 `;
 document.head.appendChild(css);
 
@@ -991,19 +994,31 @@ function ajustar(){
 
   /* ── dia sem treino principal: descanso do plano ou cancelado por você ── */
   if(!s){
-    if(cancelado(k)){
-      const rd = el.querySelector('.restday');
-      if(rd){
-        rd.className = 'cancelado';
-        rd.innerHTML = `<div class="tagc">Treino cancelado</div>
-          <h2>Dia livre</h2>
-          <p>Você cancelou o treino que o plano tinha posto aqui.
-             Pode restaurá-lo, ou incluir outro no lugar.</p>
-          <button class="btn-voltar" id="btVoltar">Restaurar o treino do plano</button>`;
+    const temExtra = !!ST.extras[k];
+    const rd = el.querySelector('.restday') || el.querySelector('.cancelado');
+
+    if(rd){
+      if(cancelado(k)){
+        /* com treino incluído, o aviso vira uma tarja fina: o dia deixou
+           de ser descanso, mas a opção de restaurar continua à mão */
+        rd.className = temExtra ? 'cancelado compacto' : 'cancelado';
+        rd.innerHTML = temExtra
+          ? `<div class="tagc">Treino do plano cancelado</div>
+             <button class="btn-voltar" id="btVoltar">Restaurar</button>`
+          : `<div class="tagc">Treino cancelado</div>
+             <h2>Dia livre</h2>
+             <p>Você cancelou o treino que o plano tinha posto aqui.
+                Pode restaurá-lo, ou incluir outro no lugar.</p>
+             <button class="btn-voltar" id="btVoltar">Restaurar o treino do plano</button>`;
         const b = document.getElementById('btVoltar');
         if(b) b.onclick = () => desfazerCancelamento(k);
+      } else if(temExtra){
+        /* dia de descanso do plano, mas com treino incluído por você:
+           a mensagem "Hoje não é dia de treino" passa a ser falsa */
+        rd.remove();
       }
     }
+
     /* o renderDia original sai antes de chamar o blocoExtra em dias sem
        treino, então o botão de incluir nunca aparecia. Acrescento aqui. */
     if(!el.querySelector('.extra') && !el.querySelector('[data-addex]')){
