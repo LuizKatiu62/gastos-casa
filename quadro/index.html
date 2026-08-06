@@ -91,6 +91,7 @@
       <button class="bt" id="btAgua">Buscar lagos e rios</button>
       <button class="bt" id="btRuas">Buscar ruas</button>
       <div class="fmt" id="nivelRuas" style="margin-top:7px"></div>
+      <div id="camadas" style="margin-top:4px"></div>
       <div class="nota" id="notaReg">O relevo vem de dados abertos de altitude e vira
         curvas de nível — cada degrau é uma camada de impressão. A água vem do OpenStreetMap.</div>
       <label class="cmp">Área ao redor — <span id="lblMargem"></span></label>
@@ -183,7 +184,7 @@ const P_TRACO=['#e0342c','#c9f24e','#ffffff','#f18701','#0d7ac4','#111418'];
 const P_TERR=['#0f8f70','#2e7d32','#4a6741','#6b5b3e','#3a5f7d','#5a4a6b'];
 
 let ST={bruto:[],meta:{},forma:'hexL',fmt:'h2',vista:'p',giro:0,relevo:2,det:420,
-  mold:13,deg:14,zoom:4.4,margem:35,rios:null,ilhas:null,costa:null,temMar:0,ruas:null,ruasNivel:'p',lados:['','','','','',''],
+  mold:13,deg:14,zoom:4.4,margem:35,ver:{dem:true,agua:true,ruas:true},rios:null,ilhas:null,costa:null,temMar:0,ruas:null,ruasNivel:'p',lados:['','','','','',''],
   mCor:'#111418',tCor:'#e0342c',terrCor:'#0f8f70',agua:null,dem:null};
 
 /* ═══════ GPX ═══════ */
@@ -304,7 +305,7 @@ async function buscarRelevo(){
       })))));
     const d=c.getImageData(0,0,cv.width,cv.height).data;
     ST.dem={z,x0,y0,nx,ny,d,w:cv.width,h:cv.height};
-    desenhar();
+    ST.ver.dem=true; montar(); desenhar();
     nota.innerHTML='Relevo carregado. Cada faixa de cor é um degrau de altitude — e uma camada na impressão.'
       + (ST.temMar ? ` Encontrei <b>mar</b> em ${ST.temMar}% da área: tudo que está no nível zero ou abaixo foi pintado como água.` : '');
     bt.textContent='Buscar de novo';
@@ -396,7 +397,7 @@ async function buscarAgua(){
            "© OpenStreetMap contributors" na peça, na embalagem ou na página.`
         : 'Nenhum lago, rio ou costa mapeado nesta área.';
       bt.textContent=achou?'Buscar de novo':'Nada encontrado';
-      bt.disabled=false; desenhar(); return;
+      bt.disabled=false; montar(); desenhar(); return;
     }catch(e){ erro=e.message }
   }
   nota.innerHTML='Os três servidores do OpenStreetMap recusaram ('+erro+'). '+
@@ -434,7 +435,7 @@ async function buscarRuas(){
            volte para <b>Principais</b> — cada linha precisa de 0,8 mm para sair no bico de 0,4.`
         : 'Nenhuma via desse tipo mapeada aqui. Tente o nível Todas.';
       bt.textContent=vias.length?'Buscar de novo':'Nada encontrado';
-      bt.disabled=false; desenhar(); return;
+      bt.disabled=false; montar(); desenhar(); return;
     }catch(e){ erro=e.message }
   }
   nota.innerHTML='Os três servidores recusaram ('+erro+'). Eles são gratuitos e vivem congestionados.';
@@ -473,9 +474,9 @@ function montarPeca(G, p, mx, my){
   xc.fillStyle=sombra(ST.terrCor,.68); xc.fill();
   xa.fillStyle=cinza(ALT_TERR0); xa.fillRect(bx0,by0,bw,bh);
 
-  if(ST.dem) relevoNasCamadas(xc,xa,G,ppm);
+  if(ST.dem && ST.ver.dem) relevoNasCamadas(xc,xa,G,ppm);
 
-  if(ST.ruas){
+  if(ST.ruas && ST.ver.ruas){
     xc.lineCap='round'; xc.lineJoin='round';
     const claroT=claro(ST.terrCor);
     ST.ruas.forEach(v=>{
@@ -487,7 +488,7 @@ function montarPeca(G, p, mx, my){
     });
   }
 
-  if(ST.rios){
+  if(ST.rios && ST.ver.agua){
     xc.lineCap='round'; xc.lineJoin='round'; xc.strokeStyle='#2f95dd';
     const ESP_RIO={river:1.8,canal:1.4,stream:1.0,ditch:0.8};
     ST.rios.forEach(v=>{
@@ -497,7 +498,7 @@ function montarPeca(G, p, mx, my){
     });
   }
 
-  if(ST.costa){
+  if(ST.costa && ST.ver.agua){
     xc.lineCap='round'; xc.lineJoin='round';
     xc.strokeStyle='#1d6fa8'; xc.lineWidth=0.9;
     ST.costa.forEach(l=>{ xc.beginPath();
@@ -505,7 +506,7 @@ function montarPeca(G, p, mx, my){
       xc.stroke() });
   }
 
-  if(ST.agua){
+  if(ST.agua && ST.ver.agua){
     xc.fillStyle='#2f95dd'; xa.fillStyle=cinza(ALT_AGUA);
     ST.agua.forEach(w=>{
       [xc,xa].forEach(x=>{ x.beginPath();
@@ -514,7 +515,7 @@ function montarPeca(G, p, mx, my){
     });
   }
 
-  if(ST.ilhas){
+  if(ST.ilhas && ST.ver.agua){
     xc.fillStyle=sombra(ST.terrCor,.82); xa.fillStyle=cinza(ALT_TERR0+0.6);
     ST.ilhas.forEach(w=>{
       [xc,xa].forEach(x=>{ x.beginPath();
@@ -647,7 +648,7 @@ function desenhar(){
   const mx=i=>uni[i][0]*s, my=i=>uni[i][1]*s;
 
   const sig=JSON.stringify([ST.forma,ST.fmt,ST.mold,ST.deg,ST.relevo,ST.det,
-    ST.mCor,ST.tCor,ST.terrCor,ST.lados,ST.margem,q('#priv').checked,!!ST.dem,ST.agua?ST.agua.length:0,ST.ruas?ST.ruas.length:0,ST.costa?ST.costa.length:0,ST.rios?ST.rios.length:0,ST.ilhas?ST.ilhas.length:0,p.length]);
+    ST.mCor,ST.tCor,ST.terrCor,ST.lados,ST.margem,ST.ver.dem,ST.ver.agua,ST.ver.ruas,q('#priv').checked,!!ST.dem,ST.agua?ST.agua.length:0,ST.ruas?ST.ruas.length:0,ST.costa?ST.costa.length:0,ST.rios?ST.rios.length:0,ST.ilhas?ST.ilhas.length:0,p.length]);
   if(cache.sig!==sig){ cache.val=montarPeca(G,p,mx,my); cache.sig=sig }
   const peca=cache.val;
 
@@ -709,7 +710,7 @@ function painel(G,p,largura){
     <div class="linha"><span>Traçado</span><b class="${ok?'ok':'alerta'}">${largura.toFixed(1)} mm × ${ST.relevo.toFixed(1)} mm</b></div>
     <div class="linha"><span>Moldura</span><b>${ST.mold} mm</b></div>
     <div class="linha"><span>Peça</span><b>${Math.round(G.W)} × ${Math.round(G.H)} × 6 mm</b></div>
-    <div class="linha"><span>Relevo do terreno</span><b>${ST.dem?ST.deg+' degraus':'—'}</b></div>`;
+    <div class="linha"><span>Relevo do terreno</span><b>${ST.dem&&ST.ver.dem?ST.deg+' degraus':'—'}</b></div>`;
   q('#notaTec').innerHTML = ok
     ? `Traçado com <b>${largura.toFixed(1)} mm</b> de largura: dois perímetros no bico de 0,4.
        Com a AMS, moldura, terreno, água e traçado saem numa impressão só, trocando cor por altura.`
@@ -756,6 +757,16 @@ function montar(){
     q(alvo).querySelectorAll('[data-c]').forEach(el=>el.onclick=()=>{ST[chave]=el.dataset.c;montar();desenhar()});
   };
   cores('#corMold',P_MOLD,'mCor'); cores('#corTraco',P_TRACO,'tCor'); cores('#corTerr',P_TERR,'terrCor');
+  const cam=[['dem','Relevo do terreno',!!ST.dem],
+             ['agua','Água, rios e costa',!!(ST.agua||ST.rios||ST.costa)],
+             ['ruas','Ruas',!!ST.ruas]].filter(c=>c[2]);
+  q('#camadas').innerHTML = cam.length
+    ? cam.map(([k,n])=>`<label class="sw"><input type="checkbox" data-ver="${k}"
+        ${ST.ver[k]?'checked':''}> Mostrar ${n.toLowerCase()}</label>`).join('')
+    : '';
+  q('#camadas').querySelectorAll('[data-ver]').forEach(el=>el.onchange=()=>{
+    ST.ver[el.dataset.ver]=el.checked; desenhar();
+  });
   const info=ladosInfo(geometria());
   const ordem=[...info].sort((a,b)=>(a.my-b.my)||(a.mx-b.mx));
   q('#lados').innerHTML=ordem.map(o=>
@@ -764,7 +775,7 @@ function montar(){
 }
 
 function aplicar(d){
-  ST.bruto=d.pts; ST.meta=d.meta; ST.agua=null; ST.dem=null; ST.ruas=null; ST.costa=null; ST.rios=null; ST.ilhas=null; ST.temMar=0;
+  ST.bruto=d.pts; ST.meta=d.meta; ST.agua=null; ST.dem=null; ST.ruas=null; ST.costa=null; ST.rios=null; ST.ilhas=null; ST.temMar=0; ST.ver={dem:true,agua:true,ruas:true};
   q('#btRuas').textContent='Buscar ruas';
   const inf=ladosInfo(geometria());
   ST.lados=new Array(inf.length).fill('');
