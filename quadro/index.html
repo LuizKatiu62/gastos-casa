@@ -206,6 +206,11 @@
       <h2>Printing · Bambu Lab</h2>
       <div id="tec"></div>
       <div class="nota" id="notaTec"></div>
+      <label class="cmp">Mesh quality</label>
+      <div class="fmt tres" id="qualidade"></div>
+      <button class="bt" id="bt3mf" style="margin-top:9px">Generate 3MF</button>
+      <div class="nota" id="nota3mf">One solid piece, ready for Bambu Studio.
+        Finer quality means a heavier file and a longer wait.</div>
     </div>
   </div>
 </main>
@@ -251,7 +256,7 @@ const P_TRACO=['#e0342c','#c9f24e','#ffffff','#f18701','#0d7ac4','#111418'];
 const P_TERR=['#0f8f70','#2e7d32','#4a6741','#6b5b3e','#3a5f7d','#5a4a6b'];
 
 let ST={bruto:[],meta:{},forma:'hexL',fmt:'h2',vista:'p',giro:0,relevo:2,det:420,
-  mold:13,deg:14,zoom:4.4,margem:35,nomeProj:'',rioNivel:'p',altTerreno:3,largTraco:1.4,fonte:'Helvetica,Arial',tamTitulo:8,tamTexto:5.5,altTexto:0.9,ver:{dem:true,agua:true,ruas:true},rios:null,ilhas:null,costa:null,temMar:0,ruas:null,ruasNivel:'p',lados:['','','','','',''],
+  mold:13,deg:14,zoom:4.4,margem:35,nomeProj:'',qual:'m',mapaAltura:null,rioNivel:'p',altTerreno:3,largTraco:1.4,fonte:'Helvetica,Arial',tamTitulo:8,tamTexto:5.5,altTexto:0.9,ver:{dem:true,agua:true,ruas:true},rios:null,ilhas:null,costa:null,temMar:0,ruas:null,ruasNivel:'p',lados:['','','','','',''],
   mCor:'#111418',tCor:'#e0342c',terrCor:'#0f8f70',agua:null,dem:null};
 
 /* ═══════ GPX ═══════ */
@@ -644,6 +649,8 @@ function montarPeca(G, p, mx, my){
     out.data[k+3]=255;
   }
   xc.setTransform(1,0,0,1,0,0); xc.putImageData(out,0,0);
+  /* o mesmo mapa de alturas que gerou a luz vira a malha na exportação */
+  ST.mapaAltura={d:da.data, W, H, bx0, by0, bw, bh};
   return {cv:cCor, bx0, by0, bw, bh, larg};
 }
 
@@ -811,6 +818,133 @@ function aplicarDados(){
   sugerirNome(); montar(); desenhar();
 }
 
+/* ═══════ exportação 3MF ═══════
+   Um 3MF é um ZIP com XML dentro. A malha sai do mesmo mapa de alturas
+   que desenha a prévia: grade sobre a peça, paredes onde ela acaba,
+   fundo plano. Sai uma peça sólida só — a cor você atribui no Bambu
+   Studio, por faixa de altura ou pintando.                          */
+const QUALIDADES=[{id:'r',n:'Draft',passo:1.0},{id:'m',n:'Normal',passo:0.6},
+                  {id:'f',n:'Fine',passo:0.4}];
+
+function alturaEm(x,y){
+  const M=ST.mapaAltura; if(!M) return NaN;
+  const i=Math.round((x-M.bx0)/M.bw*(M.W-1)), j=Math.round((y-M.by0)/M.bh*(M.H-1));
+  if(i<0||j<0||i>=M.W||j>=M.H) return NaN;
+  const k=(j*M.W+i)*4;
+  return M.d[k+3] ? M.d[k]/255*ALT_MOLD : NaN;
+}
+
+function gerarMalha(passo){
+  const M=ST.mapaAltura;
+  const nx=Math.ceil(M.bw/passo)+1, ny=Math.ceil(M.bh/passo)+1;
+  const A=new Float32Array(nx*ny);
+  for(let j=0;j<ny;j++) for(let i=0;i<nx;i++)
+    A[j*nx+i]=alturaEm(M.bx0+i*passo, M.by0+j*passo);
+  const V=[],T=[], idT=new Int32Array(nx*ny).fill(-1), idB=new Int32Array(nx*ny).fill(-1);
+  const dentro=k=>!isNaN(A[k]);
+  const px=i=>M.bx0+i*passo, py=j=>-(M.by0+j*passo);   /* 3MF tem Y para cima */
+  for(let k=0;k<nx*ny;k++) if(dentro(k)){
+    const i=k%nx, j=(k/nx)|0;
+    V.push(px(i),py(j),A[k]); idT[k]=V.length/3-1;
+    V.push(px(i),py(j),0);    idB[k]=V.length/3-1;
+  }
+  const tri=(a,b,c)=>T.push(a,b,c);
+  for(let j=0;j<ny-1;j++) for(let i=0;i<nx-1;i++){
+    const a=j*nx+i,b=a+1,c=a+nx,d=c+1;
+    if(!(dentro(a)&&dentro(b)&&dentro(c)&&dentro(d))) continue;
+    tri(idT[a],idT[c],idT[b]); tri(idT[b],idT[c],idT[d]);
+    tri(idB[a],idB[b],idB[c]); tri(idB[b],idB[d],idB[c]);
+  }
+  const parede=(k1,k2)=>{ tri(idT[k1],idT[k2],idB[k1]); tri(idB[k1],idT[k2],idB[k2]) };
+  for(let j=0;j<ny;j++) for(let i=0;i<nx;i++){
+    const k=j*nx+i; if(!dentro(k)) continue;
+    if(i+1<nx && dentro(k+1)){
+      if(!(j>0 && dentro(k-nx) && dentro(k-nx+1))) parede(k,k+1);
+      if(!(j+1<ny && dentro(k+nx) && dentro(k+nx+1))) parede(k+1,k);
+    }
+    if(j+1<ny && dentro(k+nx)){
+      if(!(i>0 && dentro(k-1) && dentro(k-1+nx))) parede(k+nx,k);
+      if(!(i+1<nx && dentro(k+1) && dentro(k+1+nx))) parede(k,k+nx);
+    }
+  }
+  return {V,T};
+}
+
+function crc32(u8){
+  let t=crc32.t;
+  if(!t){ t=crc32.t=new Uint32Array(256);
+    for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c=c&1?0xEDB88320^(c>>>1):c>>>1; t[n]=c>>>0 } }
+  let c=0xFFFFFFFF;
+  for(let i=0;i<u8.length;i++) c=t[(c^u8[i])&0xFF]^(c>>>8);
+  return (c^0xFFFFFFFF)>>>0;
+}
+async function comprimir(u8){
+  if(typeof CompressionStream==='undefined') return null;
+  try{
+    const s=new Blob([u8]).stream().pipeThrough(new CompressionStream('deflate-raw'));
+    return new Uint8Array(await new Response(s).arrayBuffer());
+  }catch(e){ return null }
+}
+function montarZip(ent){
+  const partes=[], central=[]; let off=0;
+  const u16=v=>[v&255,(v>>8)&255], u32=v=>[v&255,(v>>8)&255,(v>>16)&255,(v>>>24)&255];
+  ent.forEach(e=>{
+    const nome=new TextEncoder().encode(e.nome);
+    const usa=e.comp||e.dados, metodo=e.comp?8:0, c=crc32(e.dados);
+    const lh=[...u32(0x04034b50),...u16(20),...u16(0),...u16(metodo),...u16(0),...u16(0),
+      ...u32(c),...u32(usa.length),...u32(e.dados.length),...u16(nome.length),...u16(0)];
+    partes.push(new Uint8Array(lh),nome,usa);
+    central.push({nome,c,comp:usa.length,orig:e.dados.length,metodo,off});
+    off+=lh.length+nome.length+usa.length;
+  });
+  const ini=off;
+  central.forEach(e=>{
+    const h=[...u32(0x02014b50),...u16(20),...u16(20),...u16(0),...u16(e.metodo),...u16(0),...u16(0),
+      ...u32(e.c),...u32(e.comp),...u32(e.orig),...u16(e.nome.length),...u16(0),...u16(0),
+      ...u16(0),...u16(0),...u32(0),...u32(e.off)];
+    partes.push(new Uint8Array(h),e.nome); off+=h.length+e.nome.length;
+  });
+  partes.push(new Uint8Array([...u32(0x06054b50),...u16(0),...u16(0),
+    ...u16(central.length),...u16(central.length),...u32(off-ini),...u32(ini),...u16(0)]));
+  return new Blob(partes,{type:'model/3mf'});
+}
+
+async function gerar3MF(){
+  const bt=q('#bt3mf'), nota=q('#nota3mf');
+  if(!ST.bruto.length || !ST.mapaAltura){ nota.textContent='Load a GPX first.'; return }
+  const passo=(QUALIDADES.find(x=>x.id===ST.qual)||QUALIDADES[1]).passo;
+  bt.disabled=true; bt.textContent='Building mesh…';
+  await new Promise(r=>setTimeout(r,30));
+  try{
+    const t0=Date.now();
+    const m=gerarMalha(passo);
+    bt.textContent='Writing file…'; await new Promise(r=>setTimeout(r,30));
+    const p=['<?xml version="1.0" encoding="UTF-8"?>',
+      '<model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">',
+      '<resources><object id="1" type="model"><mesh><vertices>'];
+    for(let i=0;i<m.V.length;i+=3)
+      p.push('<vertex x="'+m.V[i].toFixed(3)+'" y="'+m.V[i+1].toFixed(3)+'" z="'+m.V[i+2].toFixed(3)+'"/>');
+    p.push('</vertices><triangles>');
+    for(let i=0;i<m.T.length;i+=3)
+      p.push('<triangle v1="'+m.T[i]+'" v2="'+m.T[i+1]+'" v3="'+m.T[i+2]+'"/>');
+    p.push('</triangles></mesh></object></resources><build><item objectid="1"/></build></model>');
+    const enc=new TextEncoder();
+    const modelo=enc.encode(p.join(''));
+    const CT=enc.encode('<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/></Types>');
+    const RE=enc.encode('<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Target="/3D/3dmodel.model" Id="rel0" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/></Relationships>');
+    const blob=montarZip([
+      {nome:'[Content_Types].xml',dados:CT,comp:await comprimir(CT)},
+      {nome:'_rels/.rels',dados:RE,comp:await comprimir(RE)},
+      {nome:'3D/3dmodel.model',dados:modelo,comp:await comprimir(modelo)},
+    ]);
+    baixar(nomeArquivo('.3mf'), blob);
+    nota.innerHTML='<b>'+(m.T.length/3).toLocaleString()+'</b> triangles · '+
+      (blob.size/1048576).toFixed(1)+' MB · '+((Date.now()-t0)/1000).toFixed(1)+' s. '+
+      'Open it in Bambu Studio and assign filaments by height range.';
+  }catch(e){ nota.textContent='Could not generate: '+e.message }
+  bt.disabled=false; bt.textContent='Generate 3MF';
+}
+
 /* ═══════ projeto ═══════
    Guardo o percurso, os ajustes e as camadas vetoriais já baixadas.
    O relevo NÃO entra: são milhões de pixels de altitude, o arquivo
@@ -818,7 +952,7 @@ function aplicarDados(){
    abrir eu busco de novo — leva os mesmos segundos da primeira vez. */
 const CAMPOS=['forma','fmt','vista','giro','relevo','det','mold','deg','zoom','margem',
               'lados','mCor','tCor','terrCor','ruasNivel','ver','nomeProj','rioNivel',
-              'altTerreno','largTraco','fonte','tamTitulo','tamTexto','altTexto'];
+              'altTerreno','largTraco','fonte','tamTitulo','tamTexto','altTexto','qual'];
 
 function baixar(nome, conteudo, tipo){
   const b = conteudo instanceof Blob ? conteudo : new Blob([conteudo],{type:tipo});
@@ -953,6 +1087,7 @@ function montar(){
   };
   grupo('#vista',VISTAS,'vista');
   grupo('#nivelRuas',NIVEIS,'ruasNivel');
+  grupo('#qualidade',QUALIDADES,'qual');
   grupo('#nivelRios',[{id:'p',n:'Largest only'},{id:'t',n:'All'}],'rioNivel');
   grupo('#forma',FORMAS,'forma',()=>{const hex=ST.forma.startsWith('hex');
     if(hex!==(ST.fmt[0]==='h')) ST.fmt=hex?'h2':'r2'});
@@ -1027,6 +1162,7 @@ parearNumeros();
 q('#btRuas').onclick=buscarRuas;
 ['dTitulo','dDist','dTempo','dData','dPace'].forEach(id=>
   q('#'+id).addEventListener('input', aplicarDados));
+q('#bt3mf').onclick=gerar3MF;
 q('#btSalvar').onclick=salvarProjeto;
 q('#btImagem').onclick=salvarImagem;
 q('#btAbrir').onclick=()=>q('#arqProj').click();
