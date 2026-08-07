@@ -17,9 +17,15 @@
   header span{font-size:13px;color:var(--ink2)}
   main{max-width:1560px;margin:0 auto;padding:24px;display:grid;
     grid-template-columns:1fr 340px;gap:22px;align-items:start}
-  @media(max-width:1080px){main{grid-template-columns:1fr}}
+  @media(max-width:1080px){main{grid-template-columns:1fr}
+    .palco{position:static;max-height:none}}
+  /* a prévia fica presa no lugar e o painel da direita rola sozinho */
   .palco{background:var(--card);border:1px solid var(--line);border-radius:16px;
-    padding:18px;display:flex;align-items:center;justify-content:center;min-height:720px;overflow:auto}
+    padding:18px;display:flex;align-items:center;justify-content:center;
+    position:sticky;top:16px;min-height:520px;
+    max-height:calc(100vh - 32px);overflow:auto}
+  .palco::-webkit-scrollbar{width:8px;height:8px}
+  .palco::-webkit-scrollbar-thumb{background:#d7dce4;border-radius:4px}
   .palco canvas{max-width:100%;height:auto;cursor:grab}
   .palco canvas:active{cursor:grabbing}
   .lado{display:flex;flex-direction:column;gap:14px}
@@ -321,11 +327,11 @@ async function buscarRelevo(){
     ST.ver.dem=true; montar(); desenhar();
     nota.innerHTML='Relevo carregado. Cada faixa de cor é um degrau de altitude — e uma camada na impressão.'
       + (ST.temMar ? ` Encontrei <b>mar</b> em ${ST.temMar}% da área: tudo que está no nível zero ou abaixo foi pintado como água.` : '');
-    bt.textContent='Buscar de novo';
+    bt.textContent='Relevo — buscar de novo';
     desenhar();
   }catch(e){
     nota.textContent='Não consegui ler a altitude: '+e.message+'. Talvez o servidor não permita leitura direta.';
-    bt.textContent='Tentar de novo';
+    bt.textContent='Relevo — tentar de novo';
   }
   bt.disabled=false;
 }
@@ -409,13 +415,13 @@ async function buscarAgua(){
            Dados do OpenStreetMap — a licença ODbL exige o crédito
            "© OpenStreetMap contributors" na peça, na embalagem ou na página.`
         : 'Nenhum lago, rio ou costa mapeado nesta área.';
-      bt.textContent=achou?'Buscar de novo':'Nada encontrado';
+      bt.textContent=achou?'Água — buscar de novo':'Água — nada encontrado';
       bt.disabled=false; montar(); desenhar(); return;
     }catch(e){ erro=e.message }
   }
   nota.innerHTML='Os três servidores do OpenStreetMap recusaram ('+erro+'). '+
     'Eles são gratuitos e vivem congestionados — tente de novo em alguns minutos.';
-  bt.textContent='Tentar de novo'; bt.disabled=false;
+  bt.textContent='Água — tentar de novo'; bt.disabled=false;
 }
 
 const NIVEIS=[{id:'p',n:'Principais'},{id:'t',n:'Todas'}];
@@ -447,12 +453,12 @@ async function buscarRuas(){
         ? `<b>${vias.length}</b> vias desenhadas. Se ficar denso demais para imprimir,
            volte para <b>Principais</b> — cada linha precisa de 0,8 mm para sair no bico de 0,4.`
         : 'Nenhuma via desse tipo mapeada aqui. Tente o nível Todas.';
-      bt.textContent=vias.length?'Buscar de novo':'Nada encontrado';
+      bt.textContent=vias.length?'Ruas — buscar de novo':'Ruas — nada encontrado';
       bt.disabled=false; montar(); desenhar(); return;
     }catch(e){ erro=e.message }
   }
   nota.innerHTML='Os três servidores recusaram ('+erro+'). Eles são gratuitos e vivem congestionados.';
-  bt.textContent='Tentar de novo'; bt.disabled=false;
+  bt.textContent='Ruas — tentar de novo'; bt.disabled=false;
 }
 
 /* ═══════ desenho ═══════
