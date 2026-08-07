@@ -126,8 +126,10 @@
       <div class="avancado">
       <label class="cmp">Rivers to show</label>
       <div class="fmt" id="nivelRios"></div>
-      <label class="cmp">Minimum river length (m)</label>
-      <input type="range" id="rioMin" min="0" max="3000" step="100" value="400">
+      <label class="cmp">Shortest river kept — <span id="lblRioMin"></span></label>
+      <input type="range" id="rioMin" min="0" max="80" step="1" value="25">
+      <label class="cmp">Smallest lake kept — <span id="lblAguaMin"></span></label>
+      <input type="range" id="aguaMin" min="0" max="300" step="5" value="30">
       </div>
       <div id="camadas" style="margin-top:4px"></div>
       <div class="nota" id="notaReg">Terrain comes from open elevation data and becomes contour steps —
@@ -276,7 +278,7 @@ const P_TRACO=['#e0342c','#c9f24e','#ffffff','#f18701','#0d7ac4','#111418'];
 const P_TERR=['#0f8f70','#2e7d32','#4a6741','#6b5b3e','#3a5f7d','#5a4a6b'];
 
 let ST={bruto:[],meta:{},forma:'hexL',fmt:'h2',vista:'p',giro:0,relevo:2,det:420,
-  modo:'cliente',tilt:26,rioMin:400,avisos:[],mold:13,deg:14,zoom:4.4,margem:35,nomeProj:'',qual:'m',separar:'s',mapaAltura:null,altMoldura:3.5,rioNivel:'p',altTerreno:3,largTraco:1.4,fonte:'Helvetica,Arial',tamTitulo:8,tamTexto:5.5,altTexto:0.9,ver:{dem:true,agua:true,ruas:true},rios:null,ilhas:null,costa:null,temMar:0,ruas:null,ruasNivel:'p',lados:['','','','','',''],
+  modo:'cliente',tilt:26,rioMin:25,aguaMin:30,avisos:[],mold:13,deg:14,zoom:4.4,margem:35,nomeProj:'',qual:'m',separar:'s',mapaAltura:null,altMoldura:3.5,rioNivel:'p',altTerreno:3,largTraco:1.4,fonte:'Helvetica,Arial',tamTitulo:8,tamTexto:5.5,altTexto:0.9,ver:{dem:true,agua:true,ruas:true},rios:null,ilhas:null,costa:null,temMar:0,ruas:null,ruasNivel:'p',lados:['','','','','',''],
   mCor:'#111418',tCor:'#e0342c',terrCor:'#0f8f70',agua:null,dem:null};
 
 /* ═══════ GPX ═══════ */
@@ -608,20 +610,45 @@ function montarPeca(G, p, mx, my){
     });
   }
 
+  /* ── quanto de cada feição realmente aparece na peça ──
+     O corte não pode ser pelo comprimento do rio no mundo: um rio de
+     40 km que só encosta 3 mm no canto da placa continua sendo um risco
+     frágil. Meço em milímetros de peça, que é o que a impressora vê. */
+  const bxi=[Math.min(...G.vi.map(v=>v[0])), Math.max(...G.vi.map(v=>v[0]))];
+  const byi=[Math.min(...G.vi.map(v=>v[1])), Math.max(...G.vi.map(v=>v[1]))];
+  const naPeca=(X,Y)=>X>=bxi[0]&&X<=bxi[1]&&Y>=byi[0]&&Y<=byi[1];
+  const compMM = pts => {
+    const L=pts.map(c=>mapa.mm(c[0],c[1])); let t=0;
+    for(let i=0;i<L.length-1;i++){
+      const a=L[i], b=L[i+1];
+      if(naPeca(a[0],a[1]) && naPeca(b[0],b[1])) t+=Math.hypot(b[0]-a[0], b[1]-a[1]);
+    }
+    return t;
+  };
+  const areaMM = w => {
+    const L=w.map(c=>mapa.mm(c[0],c[1])); let a=0;
+    for(let i=0,n=L.length;i<n;i++){ const j=(i+1)%n; a+=L[i][0]*L[j][1]-L[j][0]*L[i][1] }
+    return Math.abs(a)/2;
+  };
+  const soGrandes = ST.rioNivel!=='t';
+
   if(ST.rios && ST.ver.agua){
-    xc.lineCap='round'; xc.lineJoin='round'; xc.strokeStyle='#2f95dd';
-    const ESP_RIO={river:1.8,canal:1.4,stream:1.0,ditch:0.8};
-    /* "Principais" deixa só rio e canal. Córrego e vala são a maioria
-       dos 682 que vieram, e é o que entope a peça. */
-    /* além da classe, corta por comprimento: um córrego de 80 m vira um
-       risco perdido na peça e um ponto frágil na impressão */
-    const comp = pts => { let s=0; for(let i=0;i<pts.length-1;i++) s+=hav(pts[i],pts[i+1]); return s };
-    const passa = v => ST.rioNivel==='t'
-      ? true : (v.cls==='river'||v.cls==='canal') && comp(v.pts) >= ST.rioMin;
-    ST.rios.filter(passa).forEach(v=>{
-      xc.beginPath();
-      v.pts.forEach((c,i)=>{const[X,Y]=mapa.mm(c[0],c[1]); i?xc.lineTo(X,Y):xc.moveTo(X,Y)});
-      xc.lineWidth=ESP_RIO[v.cls]||1.0; xc.stroke();
+    /* nenhum curso d'água sai com menos de 1,2 mm: abaixo disso o bico
+       de 0,4 não fecha a parede e a peça racha ali. */
+    const ESP_RIO={river:2.0,canal:1.5,stream:1.2,ditch:1.2};
+    const passa = v => soGrandes
+      ? (v.cls==='river'||v.cls==='canal') && compMM(v.pts) >= ST.rioMin
+      : true;
+    const rios=ST.rios.filter(passa);
+    /* o rio agora é corpo, não pintura: entra também no mapa de altura
+       e no de regiões, então existe no 3MF e recebe filamento próprio */
+    [[xc,'#2f95dd'],[xa,cinza(aguaAlt())],[xr,reg(REG.agua)]].forEach(([x,cor])=>{
+      x.lineCap='round'; x.lineJoin='round'; x.strokeStyle=cor;
+      rios.forEach(v=>{
+        x.beginPath();
+        v.pts.forEach((c,i)=>{const[X,Y]=mapa.mm(c[0],c[1]); i?x.lineTo(X,Y):x.moveTo(X,Y)});
+        x.lineWidth=ESP_RIO[v.cls]||1.2; x.stroke();
+      });
     });
   }
 
@@ -636,7 +663,8 @@ function montarPeca(G, p, mx, my){
   if(ST.agua && ST.ver.agua){
     xc.fillStyle='#2f95dd'; xa.fillStyle=cinza(aguaAlt());
     xr.fillStyle=reg(REG.agua);
-    ST.agua.forEach(w=>{
+    /* lagoa de 3 mm² não vira nada impresso, só sujeira no fatiador */
+    ST.agua.filter(w=>!soGrandes || areaMM(w)>=ST.aguaMin).forEach(w=>{
       [xc,xa,xr].forEach(x=>{ x.beginPath();
         w.forEach((c,i)=>{const[X,Y]=mapa.mm(c[0],c[1]); i?x.lineTo(X,Y):x.moveTo(X,Y)});
         x.closePath(); x.fill() });
@@ -645,7 +673,7 @@ function montarPeca(G, p, mx, my){
 
   if(ST.ilhas && ST.ver.agua){
     xc.fillStyle=sombra(ST.terrCor,.82); xa.fillStyle=cinza(terrBase()+0.6);
-    ST.ilhas.forEach(w=>{
+    ST.ilhas.filter(w=>!soGrandes || areaMM(w)>=ST.aguaMin).forEach(w=>{
       [xc,xa].forEach(x=>{ x.beginPath();
         w.forEach((c,i)=>{const[X,Y]=mapa.mm(c[0],c[1]); i?x.lineTo(X,Y):x.moveTo(X,Y)});
         x.closePath(); x.fill() });
@@ -791,7 +819,7 @@ function desenhar(){
   const mx=i=>uni[i][0]*s, my=i=>uni[i][1]*s;
 
   const sig=JSON.stringify([ST.forma,ST.fmt,ST.mold,ST.deg,ST.relevo,ST.det,
-    ST.mCor,ST.tCor,ST.terrCor,ST.lados,ST.margem,ST.rioNivel,ST.rioMin,ST.altMoldura,ST.altTerreno,ST.largTraco,ST.fonte,ST.tamTitulo,ST.tamTexto,ST.altTexto,ST.ver.dem,ST.ver.agua,ST.ver.ruas,q('#priv').checked,!!ST.dem,ST.agua?ST.agua.length:0,ST.ruas?ST.ruas.length:0,ST.costa?ST.costa.length:0,ST.rios?ST.rios.length:0,ST.ilhas?ST.ilhas.length:0,p.length]);
+    ST.mCor,ST.tCor,ST.terrCor,ST.lados,ST.margem,ST.rioNivel,ST.rioMin,ST.aguaMin,ST.altMoldura,ST.altTerreno,ST.largTraco,ST.fonte,ST.tamTitulo,ST.tamTexto,ST.altTexto,ST.ver.dem,ST.ver.agua,ST.ver.ruas,q('#priv').checked,!!ST.dem,ST.agua?ST.agua.length:0,ST.ruas?ST.ruas.length:0,ST.costa?ST.costa.length:0,ST.rios?ST.rios.length:0,ST.ilhas?ST.ilhas.length:0,p.length]);
   if(cache.sig!==sig){ cache.val=montarPeca(G,p,mx,my); cache.sig=sig }
   const peca=cache.val;
 
@@ -837,6 +865,8 @@ function desenhar(){
   q('#lblPts').textContent=p.length+' points';
   q('#lblGiro').textContent=ST.giro+'°';
   q('#lblTilt').textContent=Math.round(ST.tilt)+'°';
+  q('#lblRioMin').textContent=ST.rioMin?ST.rioMin+' mm on the plate':'keep every river';
+  q('#lblAguaMin').textContent=ST.aguaMin?ST.aguaMin+' mm²':'keep every lake';
   q('#lblZoom').textContent=Math.round(G.W*ST.zoom)+' px';
   q('#lblRel').textContent=ST.relevo.toFixed(1)+' mm';
   q('#lblMold').textContent=ST.mold+' mm';
@@ -1102,7 +1132,7 @@ async function gerar3MF(){
    abrir eu busco de novo — leva os mesmos segundos da primeira vez. */
 const CAMPOS=['forma','fmt','vista','giro','relevo','det','mold','deg','zoom','margem',
               'lados','mCor','tCor','terrCor','ruasNivel','ver','nomeProj','rioNivel',
-              'tilt','rioMin','altMoldura','altTerreno','largTraco','fonte','tamTitulo','tamTexto','altTexto','qual','separar'];
+              'tilt','rioMin','aguaMin','altMoldura','altTerreno','largTraco','fonte','tamTitulo','tamTexto','altTexto','qual','separar'];
 
 function baixar(nome, conteudo, tipo){
   const b = conteudo instanceof Blob ? conteudo : new Blob([conteudo],{type:tipo});
@@ -1152,7 +1182,7 @@ function abrirProjeto(file){
       ST.ilhas=p.ilhas||null; ST.ruas=p.ruas||null; ST.dem=null; ST.temMar=0;
       if(!ST.ver) ST.ver={dem:true,agua:true,ruas:true};
       /* devolve os controles ao que estava salvo */
-      ['det','giro','rel','mold','deg','zoom','margem','tilt','rioMin','altMoldura','altTerreno','largTraco',
+      ['det','giro','rel','mold','deg','zoom','margem','tilt','rioMin','aguaMin','altMoldura','altTerreno','largTraco',
        'tamTitulo','tamTexto','altTexto'].forEach(id=>{
         const el=q('#'+id); const ch={rel:'relevo'}[id]||id;
         if(el && ST[ch]!==undefined) el.value=ST[ch];
@@ -1329,7 +1359,7 @@ function ler(file){const fr=new FileReader();
   fr.onload=()=>{try{aplicar(lerGPX(fr.result))}catch(err){alert('Could not read: '+err.message)}};
   fr.readAsText(file)}
 q('#priv').addEventListener('input',desenhar);
-[['#det','det'],['#giro','giro'],['#rel','relevo'],['#mold','mold'],['#deg','deg'],['#zoom','zoom'],['#margem','margem'],['#tilt','tilt'],['#rioMin','rioMin'],['#altMoldura','altMoldura'],['#altTerreno','altTerreno'],['#largTraco','largTraco'],['#tamTitulo','tamTitulo'],['#tamTexto','tamTexto'],['#altTexto','altTexto']].forEach(([sel,ch])=>
+[['#det','det'],['#giro','giro'],['#rel','relevo'],['#mold','mold'],['#deg','deg'],['#zoom','zoom'],['#margem','margem'],['#tilt','tilt'],['#rioMin','rioMin'],['#aguaMin','aguaMin'],['#altMoldura','altMoldura'],['#altTerreno','altTerreno'],['#largTraco','largTraco'],['#tamTitulo','tamTitulo'],['#tamTexto','tamTexto'],['#altTexto','altTexto']].forEach(([sel,ch])=>
   q(sel).addEventListener('input',e=>{ST[ch]=+e.target.value;desenhar()}));
 q('#btRelevo').onclick=buscarRelevo;
 q('#btAgua').onclick=buscarAgua;
