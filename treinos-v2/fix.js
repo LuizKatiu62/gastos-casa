@@ -1,6 +1,6 @@
 /* ══════════════════════════════════════════════════════════════════
    fix.js — correções da v2
-   Versão 2026-08-07l · seis correções e o plano da maratona.
+   Versão 2026-08-07m · seis correções e o plano da maratona.
 
    MUDANÇA DESTA VERSÃO: antes as seis partes eram blocos soltos no
    mesmo arquivo. Um erro em qualquer uma derrubava todas as outras,
@@ -25,9 +25,11 @@
    8) Linha do tempo do ciclo, com o percentual cumprido de verdade
    9) Sincronia iPhone ↔ Mac: relê ao voltar o foco e mescla em vez
       de sobrescrever
+  10) Suas fotos como marca d'água, uma por aba, com intensidade
+      ajustável
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '01l';
+const FIX_VERSAO = '01m';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -1413,6 +1415,112 @@ PARTE('sincronia entre aparelhos', function(){
 });
 
 
+
+/* ═══════════════════ 10. FOTOS DE FUNDO ═══════════════════
+   Suas fotos como marca d'água, uma por aba.
+
+   O app é escuro (#0A0D12). Foto sobre fundo escuro só funciona com
+   duas coisas: baixa opacidade E um véu por cima. Sem o véu, um céu
+   azul claro no alto da foto come o texto branco do cabeçalho.
+
+   As imagens já saem tratadas: 560 px de largura, saturação em 62% e
+   contraste em 92%. Ficam texturas, não retratos concorrendo com os
+   números. E são arquivos à parte, não embutidos aqui: assim carrega
+   só a da aba aberta e o navegador guarda no cache.
+
+   Toque em "Fundo" no card Progresso do ciclo para mudar a
+   intensidade: sutil · médio · forte · sem foto.
+   ══════════════════════════════════════════════════════════════════ */
+
+PARTE('fotos de fundo', function(){
+  const CHAVE = 'bq.fundo';
+  const NIVEIS = [
+    {n:'médio',    o:0.14}, {n:'forte',    o:0.24},
+    {n:'sem foto', o:0},    {n:'sutil',    o:0.08}
+  ];
+  const FOTOS = {
+    coach   :'./foto-3-corrida.jpg',
+    treinos :'./foto-2-trilha.jpg',
+    saude   :'./foto-1-bike.jpg',
+    evolucao:'./foto-4-medalhas.jpg',
+    indices :'./foto-4-medalhas.jpg',
+    provas  :'./foto-3-corrida.jpg',
+    dados   :'./foto-2-trilha.jpg'
+  };
+  const ORDEM = ['./foto-1-bike.jpg','./foto-2-trilha.jpg','./foto-3-corrida.jpg','./foto-4-medalhas.jpg'];
+
+  function nivel(){
+    const i = parseInt(localStorage.getItem(CHAVE), 10);
+    return NIVEIS[isNaN(i) ? 0 : i % NIVEIS.length];
+  }
+
+  const st = document.createElement('style');
+  st.textContent = `
+  html{background:#0A0D12}
+  body{background:transparent !important}
+  #bqFoto{position:fixed;inset:0;z-index:-1;pointer-events:none;
+    background-position:center 12%;background-size:cover;background-repeat:no-repeat;
+    transition:opacity .5s, background-image .3s}
+  #bqFoto::after{content:'';position:absolute;inset:0;
+    background:linear-gradient(180deg,rgba(10,13,18,.80) 0%,rgba(10,13,18,.62) 38%,rgba(10,13,18,.86) 100%)}
+  #bqFundoBt{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:12px;cursor:pointer;
+    border:1px solid rgba(128,128,128,.3);background:transparent;color:inherit;opacity:.6}
+  #bqFundoBt:hover{opacity:1;border-color:currentColor}`;
+  document.head.appendChild(st);
+
+  const capa = document.createElement('div');
+  capa.id = 'bqFoto';
+  document.body.appendChild(capa);
+
+  function pintar(){
+    const N = nivel();
+    if(!N.o){ capa.style.opacity = '0'; capa.style.backgroundImage = 'none'; return }
+    const aba = (typeof ST === 'object' && ST.aba) ? ST.aba : '';
+    const dia = Math.floor(Date.now() / 864e5) % ORDEM.length;
+    const url = FOTOS[aba] || ORDEM[dia];
+    capa.style.backgroundImage = 'url("' + url + '")';
+    capa.style.opacity = String(N.o);
+  }
+
+  /* o botão vive no card que eu mesmo criei, então não brigo com o app */
+  function botao(){
+    const dono = document.querySelector('#bqLinha .bqtopo');
+    if(!dono || document.getElementById('bqFundoBt')) return;
+    const b = document.createElement('button');
+    b.id = 'bqFundoBt'; b.type = 'button';
+    b.textContent = 'Fundo: ' + nivel().n;
+    b.onclick = function(){
+      const i = (parseInt(localStorage.getItem(CHAVE), 10) || 0) + 1;
+      localStorage.setItem(CHAVE, String(i % NIVEIS.length));
+      b.textContent = 'Fundo: ' + nivel().n;
+      pintar();
+    };
+    dono.appendChild(b);
+  }
+
+  const coachApp = window.renderCoach;
+  if(typeof coachApp === 'function'){
+    window.renderCoach = function(){
+      const r = coachApp.apply(this, arguments);
+      try{ pintar(); botao() }catch(e){}
+      return r;
+    };
+  }
+  const tudoApp = window.renderTudo;
+  if(typeof tudoApp === 'function'){
+    window.renderTudo = function(){
+      const r = tudoApp.apply(this, arguments);
+      try{ pintar() }catch(e){}
+      return r;
+    };
+  }
+  document.addEventListener('click', function(){ setTimeout(pintar, 60) }, true);
+  pintar();
+  setTimeout(function(){ pintar(); botao() }, 3200);
+  window.bqFundo = {pintar:pintar, nivel:nivel};
+});
+
+
 /* ─────────── selo de diagnóstico ─────────── */
 (function(){
   function montar(){
@@ -1430,7 +1538,7 @@ PARTE('sincronia entre aparelhos', function(){
     s.onclick = function(){
       if(ok && window.planoBQ){
         var l = window.planoBQ.ligado();
-        if(confirm('fix.js ' + FIX_VERSAO + ' — as nove partes carregaram.\n\n'
+        if(confirm('fix.js ' + FIX_VERSAO + ' — as dez partes carregaram.\n\n'
           + 'Plano PEI Marathon: ' + (l ? 'LIGADO' : 'desligado')
           + '\n\nOK ' + (l ? 'desliga o plano e volta ao automático do app.'
                              : 'liga o plano da maratona.'))){
@@ -1439,7 +1547,7 @@ PARTE('sincronia entre aparelhos', function(){
         return;
       }
       alert(ok
-        ? 'fix.js ' + FIX_VERSAO + ' — as nove partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
+        ? 'fix.js ' + FIX_VERSAO + ' — as dez partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
         : 'fix.js ' + FIX_VERSAO + '\n\nFalharam:\n\n' + FIX_FALHAS.join('\n\n'));
     };
     barra.insertBefore(s, barra.firstChild.nextSibling);
