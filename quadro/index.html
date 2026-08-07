@@ -120,6 +120,8 @@
       <button class="bt" id="btAgua">Buscar lagos e rios</button>
       <button class="bt" id="btRuas">Buscar ruas</button>
       <div class="fmt" id="nivelRuas" style="margin-top:7px"></div>
+      <label class="cmp">Rios a mostrar</label>
+      <div class="fmt" id="nivelRios"></div>
       <div id="camadas" style="margin-top:4px"></div>
       <div class="nota" id="notaReg">O relevo vem de dados abertos de altitude e vira
         curvas de nível — cada degrau é uma camada de impressão. A água vem do OpenStreetMap.</div>
@@ -150,6 +152,29 @@
       <input type="range" id="mold" min="6" max="22" step="1" value="13">
       <label class="cmp">Detalhe do traçado — <span id="lblPts"></span></label>
       <input type="range" id="det" min="80" max="900" step="20" value="420">
+      <label class="cmp">Altura do terreno (mm)</label>
+      <input type="range" id="altTerreno" min="1" max="6" step="0.2" value="3">
+      <label class="cmp">Largura do traçado (mm)</label>
+      <input type="range" id="largTraco" min="0.8" max="4" step="0.1" value="1.4">
+    </div>
+
+    <div class="bloco">
+      <h2>Tipografia</h2>
+      <label class="cmp">Fonte</label>
+      <select id="fonte" style="width:100%;padding:8px 10px;border:1px solid var(--line);
+        border-radius:9px;font:inherit;font-size:13.5px;background:#fff">
+        <option value="Helvetica,Arial">Helvetica</option>
+        <option value="&quot;Arial Black&quot;,Arial">Arial Black</option>
+        <option value="Impact,Arial">Impact</option>
+        <option value="Georgia,serif">Georgia</option>
+        <option value="&quot;Courier New&quot;,monospace">Courier New</option>
+      </select>
+      <label class="cmp">Tamanho do título (mm)</label>
+      <input type="range" id="tamTitulo" min="3" max="14" step="0.5" value="8">
+      <label class="cmp">Tamanho dos demais (mm)</label>
+      <input type="range" id="tamTexto" min="2" max="10" step="0.5" value="5.5">
+      <label class="cmp">Relevo do texto (mm)</label>
+      <input type="range" id="altTexto" min="0" max="2.5" step="0.1" value="0.9">
     </div>
 
     <div class="bloco">
@@ -226,7 +251,7 @@ const P_TRACO=['#e0342c','#c9f24e','#ffffff','#f18701','#0d7ac4','#111418'];
 const P_TERR=['#0f8f70','#2e7d32','#4a6741','#6b5b3e','#3a5f7d','#5a4a6b'];
 
 let ST={bruto:[],meta:{},forma:'hexL',fmt:'h2',vista:'p',giro:0,relevo:2,det:420,
-  mold:13,deg:14,zoom:4.4,margem:35,nomeProj:'',ver:{dem:true,agua:true,ruas:true},rios:null,ilhas:null,costa:null,temMar:0,ruas:null,ruasNivel:'p',lados:['','','','','',''],
+  mold:13,deg:14,zoom:4.4,margem:35,nomeProj:'',rioNivel:'p',altTerreno:3,largTraco:1.4,fonte:'Helvetica,Arial',tamTitulo:8,tamTexto:5.5,altTexto:0.9,ver:{dem:true,agua:true,ruas:true},rios:null,ilhas:null,costa:null,temMar:0,ruas:null,ruasNivel:'p',lados:['','','','','',''],
   mCor:'#111418',tCor:'#e0342c',terrCor:'#0f8f70',agua:null,dem:null};
 
 /* ═══════ GPX ═══════ */
@@ -491,7 +516,8 @@ async function buscarRuas(){
    chapadas de cor.                                                    */
 let mapa=null, cache={sig:null,val:null};
 
-const ALT_BASE=0, ALT_MOLD=6.2, ALT_TERR0=1.6, ALT_TERR1=4.6, ALT_AGUA=1.2, ALT_TXT=0.9;
+const ALT_BASE=0, ALT_MOLD=6.2, ALT_TERR0=1.6, ALT_AGUA=1.2;
+const topoTerreno = () => ALT_TERR0 + ST.altTerreno;
 
 function montarPeca(G, p, mx, my){
   const bx0=-G.W/2, by0=-G.H/2, bw=G.W, bh=G.H;
@@ -533,7 +559,10 @@ function montarPeca(G, p, mx, my){
   if(ST.rios && ST.ver.agua){
     xc.lineCap='round'; xc.lineJoin='round'; xc.strokeStyle='#2f95dd';
     const ESP_RIO={river:1.8,canal:1.4,stream:1.0,ditch:0.8};
-    ST.rios.forEach(v=>{
+    /* "Principais" deixa só rio e canal. Córrego e vala são a maioria
+       dos 682 que vieram, e é o que entope a peça. */
+    const passa = v => ST.rioNivel==='t' || v.cls==='river' || v.cls==='canal';
+    ST.rios.filter(passa).forEach(v=>{
       xc.beginPath();
       v.pts.forEach((c,i)=>{const[X,Y]=mapa.mm(c[0],c[1]); i?xc.lineTo(X,Y):xc.moveTo(X,Y)});
       xc.lineWidth=ESP_RIO[v.cls]||1.0; xc.stroke();
@@ -567,8 +596,8 @@ function montarPeca(G, p, mx, my){
   }
 
   /* traçado, dentro do miolo */
-  const larg=Math.max(1,Math.min(3,G.base/150));
-  [[xc,ST.tCor],[xa,cinza(Math.min(ALT_MOLD,ALT_TERR1+ST.relevo))]].forEach(([x,cor])=>{
+  const larg=ST.largTraco;
+  [[xc,ST.tCor],[xa,cinza(Math.min(ALT_MOLD,topoTerreno()+ST.relevo))]].forEach(([x,cor])=>{
     x.beginPath();
     p.forEach((_,i)=>{ const X=mx(i),Y=my(i); i?x.lineTo(X,Y):x.moveTo(X,Y) });
     x.lineJoin='round'; x.lineCap='round'; x.lineWidth=larg; x.strokeStyle=cor; x.stroke();
@@ -577,7 +606,7 @@ function montarPeca(G, p, mx, my){
 
   /* textos da moldura, em relevo */
   const corTxt=claro(ST.mCor)?'#14181f':'#ffffff';
-  [[xc,corTxt],[xa,cinza(ALT_MOLD+ALT_TXT)]].forEach(([x,cor])=>{
+  [[xc,corTxt],[xa,cinza(ALT_MOLD+ST.altTexto)]].forEach(([x,cor])=>{
     x.textAlign='center'; x.textBaseline='middle'; x.fillStyle=cor;
     const info=ladosInfo(G);
     for(let i=0;i<G.v.length;i++){
@@ -588,7 +617,7 @@ function montarPeca(G, p, mx, my){
       let ang=Math.atan2(b[1]-a[1],b[0]-a[0]);
       if(ang>Math.PI/2||ang<-Math.PI/2) ang+=Math.PI;
       x.save(); x.translate(mxm-(mxm/L)*r, mym-(mym/L)*r); x.rotate(ang);
-      x.font=(grande?'800 ':'700 ')+(grande?G.mold*0.60:G.mold*0.42)+'px Helvetica,Arial,sans-serif';
+      x.font=(grande?'800 ':'700 ')+(grande?ST.tamTitulo:ST.tamTexto)+'px '+ST.fonte;
       x.fillText(t,0,0); x.restore();
     }
   });
@@ -657,7 +686,7 @@ function relevoNasCamadas(xc, xa, G, ppm){
     const f=.58+nivel*.7;
     ic.data[o]=Math.min(255,R*f); ic.data[o+1]=Math.min(255,Gc*f);
     ic.data[o+2]=Math.min(255,B*f); ic.data[o+3]=255;
-    const z=(ALT_TERR0+nivel*(ALT_TERR1-ALT_TERR0))/ALT_MOLD*255;
+    const z=(ALT_TERR0+nivel*(topoTerreno()-ALT_TERR0))/ALT_MOLD*255;
     ia.data[o]=ia.data[o+1]=ia.data[o+2]=z; ia.data[o+3]=255;
   }
   if(nMar) ST.temMar=Math.round(nMar/(larg*altp)*100);
@@ -689,7 +718,7 @@ function desenhar(){
   const x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
   const cxm=(x0+x1)/2, cym=(y0+y1)/2;
   const uni=xs.map((v,i)=>[v-cxm, ys[i]-cym]);
-  const larg0=Math.max(1,Math.min(3,G.base/150));
+  const larg0=ST.largTraco;
   const s=escalaQueCabe(uni, G.vi, larg0/2 + G.mold*0.18) / (1 + ST.margem/100);
   mapa={ mm:(lat,lon)=>[(lon*k-cxm)*s,(-lat-cym)*s],
          geo:(X,Y)=>[Y/s*-1-cym*1+0, (X/s+cxm)/k] };
@@ -697,7 +726,7 @@ function desenhar(){
   const mx=i=>uni[i][0]*s, my=i=>uni[i][1]*s;
 
   const sig=JSON.stringify([ST.forma,ST.fmt,ST.mold,ST.deg,ST.relevo,ST.det,
-    ST.mCor,ST.tCor,ST.terrCor,ST.lados,ST.margem,ST.ver.dem,ST.ver.agua,ST.ver.ruas,q('#priv').checked,!!ST.dem,ST.agua?ST.agua.length:0,ST.ruas?ST.ruas.length:0,ST.costa?ST.costa.length:0,ST.rios?ST.rios.length:0,ST.ilhas?ST.ilhas.length:0,p.length]);
+    ST.mCor,ST.tCor,ST.terrCor,ST.lados,ST.margem,ST.rioNivel,ST.altTerreno,ST.largTraco,ST.fonte,ST.tamTitulo,ST.tamTexto,ST.altTexto,ST.ver.dem,ST.ver.agua,ST.ver.ruas,q('#priv').checked,!!ST.dem,ST.agua?ST.agua.length:0,ST.ruas?ST.ruas.length:0,ST.costa?ST.costa.length:0,ST.rios?ST.rios.length:0,ST.ilhas?ST.ilhas.length:0,p.length]);
   if(cache.sig!==sig){ cache.val=montarPeca(G,p,mx,my); cache.sig=sig }
   const peca=cache.val;
 
@@ -788,7 +817,8 @@ function aplicarDados(){
    ficaria enorme. Em vez disso guardo qual pedaço do mapa era, e ao
    abrir eu busco de novo — leva os mesmos segundos da primeira vez. */
 const CAMPOS=['forma','fmt','vista','giro','relevo','det','mold','deg','zoom','margem',
-              'lados','mCor','tCor','terrCor','ruasNivel','ver','nomeProj'];
+              'lados','mCor','tCor','terrCor','ruasNivel','ver','nomeProj','rioNivel',
+              'altTerreno','largTraco','fonte','tamTitulo','tamTexto','altTexto'];
 
 function baixar(nome, conteudo, tipo){
   const b = conteudo instanceof Blob ? conteudo : new Blob([conteudo],{type:tipo});
@@ -838,7 +868,8 @@ function abrirProjeto(file){
       ST.ilhas=p.ilhas||null; ST.ruas=p.ruas||null; ST.dem=null; ST.temMar=0;
       if(!ST.ver) ST.ver={dem:true,agua:true,ruas:true};
       /* devolve os controles ao que estava salvo */
-      ['det','giro','rel','mold','deg','zoom','margem'].forEach(id=>{
+      ['det','giro','rel','mold','deg','zoom','margem','altTerreno','largTraco',
+       'tamTitulo','tamTexto','altTexto'].forEach(id=>{
         const el=q('#'+id); const ch={rel:'relevo'}[id]||id;
         if(el && ST[ch]!==undefined) el.value=ST[ch];
       });
@@ -865,6 +896,29 @@ function sugerirNome(){
   const el=q('#nomeProj'); if(!el) return;
   const base=tituloDaPeca()||ST.meta.nome||'';
   el.placeholder = base ? limpo(base)+'  (padrão)' : 'nome do arquivo';
+}
+
+/* Cada régua ganha uma caixa numérica ao lado: dá para ver o valor exato
+   e digitá-lo, em vez de caçar o ponto certo arrastando. */
+function parearNumeros(){
+  document.querySelectorAll('input[type=range]').forEach(r=>{
+    if(r.dataset.pareado) return;
+    r.dataset.pareado='1';
+    const cx=document.createElement('div');
+    cx.style.cssText='display:flex;gap:8px;align-items:center';
+    r.parentNode.insertBefore(cx,r); cx.appendChild(r);
+    r.style.flex='1';
+    const n=document.createElement('input');
+    n.type='number'; n.min=r.min; n.max=r.max; n.step=r.step; n.value=r.value;
+    n.style.cssText='width:64px;padding:6px 7px;border:1px solid var(--line);'+
+      'border-radius:8px;font:inherit;font-size:12.5px;text-align:right';
+    cx.appendChild(n);
+    r.addEventListener('input',()=>{ n.value=r.value });
+    n.addEventListener('input',()=>{
+      const v=Math.max(+r.min,Math.min(+r.max,+n.value||0));
+      r.value=v; r.dispatchEvent(new Event('input',{bubbles:true}));
+    });
+  });
 }
 
 /* ═══════ controles ═══════ */
@@ -899,6 +953,7 @@ function montar(){
   };
   grupo('#vista',VISTAS,'vista');
   grupo('#nivelRuas',NIVEIS,'ruasNivel');
+  grupo('#nivelRios',[{id:'p',n:'Só os maiores'},{id:'t',n:'Todos'}],'rioNivel');
   grupo('#forma',FORMAS,'forma',()=>{const hex=ST.forma.startsWith('hex');
     if(hex!==(ST.fmt[0]==='h')) ST.fmt=hex?'h2':'r2'});
   grupo('#fmt',ST.forma.startsWith('hex')?TAMANHOS.hex:TAMANHOS.ret,'fmt');
@@ -963,10 +1018,12 @@ function ler(file){const fr=new FileReader();
   fr.onload=()=>{try{aplicar(lerGPX(fr.result))}catch(err){alert('Não consegui ler: '+err.message)}};
   fr.readAsText(file)}
 q('#priv').addEventListener('input',desenhar);
-[['#det','det'],['#giro','giro'],['#rel','relevo'],['#mold','mold'],['#deg','deg'],['#zoom','zoom'],['#margem','margem']].forEach(([sel,ch])=>
+[['#det','det'],['#giro','giro'],['#rel','relevo'],['#mold','mold'],['#deg','deg'],['#zoom','zoom'],['#margem','margem'],['#altTerreno','altTerreno'],['#largTraco','largTraco'],['#tamTitulo','tamTitulo'],['#tamTexto','tamTexto'],['#altTexto','altTexto']].forEach(([sel,ch])=>
   q(sel).addEventListener('input',e=>{ST[ch]=+e.target.value;desenhar()}));
 q('#btRelevo').onclick=buscarRelevo;
 q('#btAgua').onclick=buscarAgua;
+q('#fonte').onchange=e=>{ST.fonte=e.target.value; cache.sig=null; desenhar()};
+parearNumeros();
 q('#btRuas').onclick=buscarRuas;
 ['dTitulo','dDist','dTempo','dData','dPace'].forEach(id=>
   q('#'+id).addEventListener('input', aplicarDados));
