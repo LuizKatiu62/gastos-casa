@@ -208,10 +208,13 @@
       <h2>Printing · Bambu Lab</h2>
       <div id="tec"></div>
       <div class="nota" id="notaTec"></div>
+      <label class="cmp">Model type</label>
+      <div class="fmt" id="separar"></div>
       <label class="cmp">Mesh quality</label>
       <div class="fmt tres" id="qualidade"></div>
       <button class="bt" id="bt3mf" style="margin-top:9px">Generate 3MF</button>
-      <div class="nota" id="nota3mf">One solid piece, ready for Bambu Studio.
+      <div class="nota" id="nota3mf"><b>Split by colour</b> exports border, text, terrain,
+        water, roads and route as separate parts — assign a filament to each in Bambu Studio.
         Finer quality means a heavier file and a longer wait.</div>
     </div>
   </div>
@@ -258,7 +261,7 @@ const P_TRACO=['#e0342c','#c9f24e','#ffffff','#f18701','#0d7ac4','#111418'];
 const P_TERR=['#0f8f70','#2e7d32','#4a6741','#6b5b3e','#3a5f7d','#5a4a6b'];
 
 let ST={bruto:[],meta:{},forma:'hexL',fmt:'h2',vista:'p',giro:0,relevo:2,det:420,
-  mold:13,deg:14,zoom:4.4,margem:35,nomeProj:'',qual:'m',mapaAltura:null,altMoldura:3.5,rioNivel:'p',altTerreno:3,largTraco:1.4,fonte:'Helvetica,Arial',tamTitulo:8,tamTexto:5.5,altTexto:0.9,ver:{dem:true,agua:true,ruas:true},rios:null,ilhas:null,costa:null,temMar:0,ruas:null,ruasNivel:'p',lados:['','','','','',''],
+  mold:13,deg:14,zoom:4.4,margem:35,nomeProj:'',qual:'m',separar:'s',mapaAltura:null,altMoldura:3.5,rioNivel:'p',altTerreno:3,largTraco:1.4,fonte:'Helvetica,Arial',tamTitulo:8,tamTexto:5.5,altTexto:0.9,ver:{dem:true,agua:true,ruas:true},rios:null,ilhas:null,costa:null,temMar:0,ruas:null,ruasNivel:'p',lados:['','','','','',''],
   mCor:'#111418',tCor:'#e0342c',terrCor:'#0f8f70',agua:null,dem:null};
 
 /* ═══════ GPX ═══════ */
@@ -544,7 +547,11 @@ function montarPeca(G, p, mx, my){
   const mk=()=>{const c=document.createElement('canvas');c.width=W;c.height=H;
     const x=c.getContext('2d',{willReadFrequently:true});
     x.setTransform(W/bw,0,0,H/bh,-bx0*W/bw,-by0*H/bh); return [c,x]};
-  const [cCor,xc]=mk(), [cAlt,xa]=mk();
+  const [cCor,xc]=mk(), [cAlt,xa]=mk(), [cReg,xr]=mk();
+  /* terceira camada: quem é cada pixel. É ela que permite exportar uma
+     malha por cor, em vez de um bloco só. */
+  const REG={borda:10,terreno:20,agua:30,ruas:40,rota:50,texto:60};
+  const reg=v=>`rgb(${v},${v},${v})`;
 
   const cam=(x,v)=>{x.beginPath();v.forEach(([a,b],i)=>i?x.lineTo(a,b):x.moveTo(a,b));x.closePath()};
   const AM=altMax();
@@ -553,10 +560,13 @@ function montarPeca(G, p, mx, my){
   /* moldura */
   cam(xc,G.v); xc.fillStyle=ST.mCor; xc.fill();
   cam(xa,G.v); xa.fillStyle=cinza(bordaAlt()); xa.fill();
+  cam(xr,G.v); xr.fillStyle=reg(REG.borda); xr.fill();
 
   /* miolo */
   xc.save(); cam(xc,G.vi); xc.clip();
   xa.save(); cam(xa,G.vi); xa.clip();
+  xr.save(); cam(xr,G.vi); xr.clip();
+  cam(xr,G.vi); xr.fillStyle=reg(REG.terreno); xr.fill();
   xc.fillStyle=sombra(ST.terrCor,.68); xc.fill();
   xa.fillStyle=cinza(terrBase()); xa.fillRect(bx0,by0,bw,bh);
 
@@ -571,6 +581,15 @@ function montarPeca(G, p, mx, my){
       xc.lineWidth=ESPESSURA[v.cls]||0.8;
       xc.strokeStyle=claroT?'rgba(30,36,44,.42)':'rgba(255,252,240,.5)';
       xc.stroke();
+      /* soma 0,35 mm à altura local: a rua vira corpo próprio e pode
+         receber outro filamento, em vez de ser só pintura */
+      const cam2=(x,cor,larg)=>{ x.beginPath();
+        v.pts.forEach((c,i)=>{const[X,Y]=mapa.mm(c[0],c[1]); i?x.lineTo(X,Y):x.moveTo(X,Y)});
+        x.lineCap='round'; x.lineJoin='round'; x.lineWidth=larg; x.strokeStyle=cor; x.stroke() };
+      const lw=ESPESSURA[v.cls]||0.8;
+      xa.save(); xa.globalCompositeOperation='lighter';
+      cam2(xa, reg(Math.round(0.35/AM*255)), lw); xa.restore();
+      cam2(xr, reg(REG.ruas), lw);
     });
   }
 
@@ -597,8 +616,9 @@ function montarPeca(G, p, mx, my){
 
   if(ST.agua && ST.ver.agua){
     xc.fillStyle='#2f95dd'; xa.fillStyle=cinza(aguaAlt());
+    xr.fillStyle=reg(REG.agua);
     ST.agua.forEach(w=>{
-      [xc,xa].forEach(x=>{ x.beginPath();
+      [xc,xa,xr].forEach(x=>{ x.beginPath();
         w.forEach((c,i)=>{const[X,Y]=mapa.mm(c[0],c[1]); i?x.lineTo(X,Y):x.moveTo(X,Y)});
         x.closePath(); x.fill() });
     });
@@ -615,16 +635,16 @@ function montarPeca(G, p, mx, my){
 
   /* traçado, dentro do miolo */
   const larg=ST.largTraco;
-  [[xc,ST.tCor],[xa,cinza(Math.min(bordaAlt(),topoTerreno()+ST.relevo))]].forEach(([x,cor])=>{
+  [[xc,ST.tCor],[xa,cinza(topoTerreno()+ST.relevo)],[xr,reg(REG.rota)]].forEach(([x,cor])=>{
     x.beginPath();
     p.forEach((_,i)=>{ const X=mx(i),Y=my(i); i?x.lineTo(X,Y):x.moveTo(X,Y) });
     x.lineJoin='round'; x.lineCap='round'; x.lineWidth=larg; x.strokeStyle=cor; x.stroke();
   });
-  xc.restore(); xa.restore();
+  xc.restore(); xa.restore(); xr.restore();
 
   /* textos da moldura, em relevo */
   const corTxt=claro(ST.mCor)?'#14181f':'#ffffff';
-  [[xc,corTxt],[xa,cinza(bordaAlt()+ST.altTexto)]].forEach(([x,cor])=>{
+  [[xc,corTxt],[xa,cinza(bordaAlt()+ST.altTexto)],[xr,reg(REG.texto)]].forEach(([x,cor])=>{
     x.textAlign='center'; x.textBaseline='middle'; x.fillStyle=cor;
     const info=ladosInfo(G);
     for(let i=0;i<G.v.length;i++){
@@ -663,7 +683,7 @@ function montarPeca(G, p, mx, my){
   }
   xc.setTransform(1,0,0,1,0,0); xc.putImageData(out,0,0);
   /* o mesmo mapa de alturas que gerou a luz vira a malha na exportação */
-  ST.mapaAltura={d:da.data, W, H, bx0, by0, bw, bh, AM};
+  ST.mapaAltura={d:da.data, r:xr.getImageData(0,0,W,H).data, W, H, bx0, by0, bw, bh, AM, REG};
   return {cv:cCor, bx0, by0, bw, bh, larg};
 }
 
@@ -839,48 +859,75 @@ function aplicarDados(){
 const QUALIDADES=[{id:'r',n:'Draft',passo:1.0},{id:'m',n:'Normal',passo:0.6},
                   {id:'f',n:'Fine',passo:0.4}];
 
-function alturaEm(x,y){
-  const M=ST.mapaAltura; if(!M) return NaN;
-  const i=Math.round((x-M.bx0)/M.bw*(M.W-1)), j=Math.round((y-M.by0)/M.bh*(M.H-1));
-  if(i<0||j<0||i>=M.W||j>=M.H) return NaN;
-  const k=(j*M.W+i)*4;
-  return M.d[k+3] ? M.d[k]/255*M.AM : NaN;
+/* Amostrar um ponto só por nó perdia a rota: uma linha de 1,4 mm cai
+   entre dois nós de uma grade de 0,6 mm e simplesmente some. Aqui eu
+   varro a célula inteira e fico com o ponto MAIS ALTO — detalhe fino
+   em relevo sempre sobrevive, no máximo engorda meio passo.        */
+function amostra(x,y,raio){
+  const M=ST.mapaAltura; if(!M) return null;
+  const ci=(x-M.bx0)/M.bw*(M.W-1), cj=(y-M.by0)/M.bh*(M.H-1);
+  const i0=Math.max(0,Math.round(ci-raio)), i1=Math.min(M.W-1,Math.round(ci+raio));
+  const j0=Math.max(0,Math.round(cj-raio)), j1=Math.min(M.H-1,Math.round(cj+raio));
+  let alto=-1, quem=0, achou=false;
+  for(let j=j0;j<=j1;j++) for(let i=i0;i<=i1;i++){
+    const k=(j*M.W+i)*4;
+    if(!M.d[k+3]) continue;
+    achou=true;
+    if(M.d[k]>alto){ alto=M.d[k]; quem=M.r[k] }
+  }
+  return achou ? {h:alto/255*M.AM, reg:quem} : null;
 }
 
-function gerarMalha(passo){
+/* Uma malha por região. Cada peça é um sólido do fundo (z=0) até a sua
+   própria altura, restrito aos nós daquela região. Juntas elas formam a
+   placa inteira, e no Bambu Studio cada uma recebe um filamento.     */
+function gerarMalhas(passo, separar){
   const M=ST.mapaAltura;
   const nx=Math.ceil(M.bw/passo)+1, ny=Math.ceil(M.bh/passo)+1;
-  const A=new Float32Array(nx*ny);
-  for(let j=0;j<ny;j++) for(let i=0;i<nx;i++)
-    A[j*nx+i]=alturaEm(M.bx0+i*passo, M.by0+j*passo);
-  const V=[],T=[], idT=new Int32Array(nx*ny).fill(-1), idB=new Int32Array(nx*ny).fill(-1);
-  const dentro=k=>!isNaN(A[k]);
-  const px=i=>M.bx0+i*passo, py=j=>-(M.by0+j*passo);   /* 3MF tem Y para cima */
-  for(let k=0;k<nx*ny;k++) if(dentro(k)){
-    const i=k%nx, j=(k/nx)|0;
-    V.push(px(i),py(j),A[k]); idT[k]=V.length/3-1;
-    V.push(px(i),py(j),0);    idB[k]=V.length/3-1;
-  }
-  const tri=(a,b,c)=>T.push(a,b,c);
-  for(let j=0;j<ny-1;j++) for(let i=0;i<nx-1;i++){
-    const a=j*nx+i,b=a+1,c=a+nx,d=c+1;
-    if(!(dentro(a)&&dentro(b)&&dentro(c)&&dentro(d))) continue;
-    tri(idT[a],idT[c],idT[b]); tri(idT[b],idT[c],idT[d]);
-    tri(idB[a],idB[b],idB[c]); tri(idB[b],idB[d],idB[c]);
-  }
-  const parede=(k1,k2)=>{ tri(idT[k1],idT[k2],idB[k1]); tri(idB[k1],idT[k2],idB[k2]) };
+  const raio=Math.max(1, (passo/M.bw*M.W)/2);
+  const A=new Float32Array(nx*ny), R=new Uint8Array(nx*ny);
   for(let j=0;j<ny;j++) for(let i=0;i<nx;i++){
-    const k=j*nx+i; if(!dentro(k)) continue;
-    if(i+1<nx && dentro(k+1)){
-      if(!(j>0 && dentro(k-nx) && dentro(k-nx+1))) parede(k,k+1);
-      if(!(j+1<ny && dentro(k+nx) && dentro(k+nx+1))) parede(k+1,k);
-    }
-    if(j+1<ny && dentro(k+nx)){
-      if(!(i>0 && dentro(k-1) && dentro(k-1+nx))) parede(k+nx,k);
-      if(!(i+1<nx && dentro(k+1) && dentro(k+1+nx))) parede(k,k+nx);
-    }
+    const s=amostra(M.bx0+i*passo, M.by0+j*passo, raio);
+    const k=j*nx+i;
+    if(s){ A[k]=s.h; R[k]=s.reg } else { A[k]=NaN; R[k]=0 }
   }
-  return {V,T};
+  const grupos = separar
+    ? [['Border',[M.REG.borda]],['Text',[M.REG.texto]],['Terrain',[M.REG.terreno]],
+       ['Water',[M.REG.agua]],['Roads',[M.REG.ruas]],['Route',[M.REG.rota]]]
+    : [['Plate',null]];
+  const saida=[];
+  grupos.forEach(([nome,ids])=>{
+    const ok=k=>!isNaN(A[k]) && (!ids || ids.indexOf(R[k])>=0);
+    const V=[],T=[], idT=new Int32Array(nx*ny).fill(-1), idB=new Int32Array(nx*ny).fill(-1);
+    const px=i=>M.bx0+i*passo, py=j=>-(M.by0+j*passo);
+    for(let k=0;k<nx*ny;k++) if(ok(k)){
+      const i=k%nx, j=(k/nx)|0;
+      V.push(px(i),py(j),A[k]); idT[k]=V.length/3-1;
+      V.push(px(i),py(j),0);    idB[k]=V.length/3-1;
+    }
+    if(!V.length) return;
+    const tri=(a,b,c)=>T.push(a,b,c);
+    for(let j=0;j<ny-1;j++) for(let i=0;i<nx-1;i++){
+      const a=j*nx+i,b=a+1,c=a+nx,d=c+1;
+      if(!(ok(a)&&ok(b)&&ok(c)&&ok(d))) continue;
+      tri(idT[a],idT[c],idT[b]); tri(idT[b],idT[c],idT[d]);
+      tri(idB[a],idB[b],idB[c]); tri(idB[b],idB[d],idB[c]);
+    }
+    const parede=(k1,k2)=>{ tri(idT[k1],idT[k2],idB[k1]); tri(idB[k1],idT[k2],idB[k2]) };
+    for(let j=0;j<ny;j++) for(let i=0;i<nx;i++){
+      const k=j*nx+i; if(!ok(k)) continue;
+      if(i+1<nx && ok(k+1)){
+        if(!(j>0 && ok(k-nx) && ok(k-nx+1))) parede(k,k+1);
+        if(!(j+1<ny && ok(k+nx) && ok(k+nx+1))) parede(k+1,k);
+      }
+      if(j+1<ny && ok(k+nx)){
+        if(!(i>0 && ok(k-1) && ok(k-1+nx))) parede(k+nx,k);
+        if(!(i+1<nx && ok(k+1) && ok(k+1+nx))) parede(k,k+nx);
+      }
+    }
+    saida.push({nome,V,T});
+  });
+  return saida;
 }
 
 function crc32(u8){
@@ -926,21 +973,33 @@ async function gerar3MF(){
   const bt=q('#bt3mf'), nota=q('#nota3mf');
   if(!ST.bruto.length || !ST.mapaAltura){ nota.textContent='Load a GPX first.'; return }
   const passo=(QUALIDADES.find(x=>x.id===ST.qual)||QUALIDADES[1]).passo;
+  const separar=ST.separar==='s';
   bt.disabled=true; bt.textContent='Building mesh…';
   await new Promise(r=>setTimeout(r,30));
   try{
     const t0=Date.now();
-    const m=gerarMalha(passo);
+    const partes=gerarMalhas(passo, separar);
+    if(!partes.length) throw new Error('empty mesh');
     bt.textContent='Writing file…'; await new Promise(r=>setTimeout(r,30));
     const p=['<?xml version="1.0" encoding="UTF-8"?>',
       '<model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">',
-      '<resources><object id="1" type="model"><mesh><vertices>'];
-    for(let i=0;i<m.V.length;i+=3)
-      p.push('<vertex x="'+m.V[i].toFixed(3)+'" y="'+m.V[i+1].toFixed(3)+'" z="'+m.V[i+2].toFixed(3)+'"/>');
-    p.push('</vertices><triangles>');
-    for(let i=0;i<m.T.length;i+=3)
-      p.push('<triangle v1="'+m.T[i]+'" v2="'+m.T[i+1]+'" v3="'+m.T[i+2]+'"/>');
-    p.push('</triangles></mesh></object></resources><build><item objectid="1"/></build></model>');
+      '<resources>'];
+    let nTri=0;
+    partes.forEach((m,n)=>{
+      p.push('<object id="'+(n+2)+'" type="model" name="'+m.nome+'"><mesh><vertices>');
+      for(let i=0;i<m.V.length;i+=3)
+        p.push('<vertex x="'+m.V[i].toFixed(3)+'" y="'+m.V[i+1].toFixed(3)+'" z="'+m.V[i+2].toFixed(3)+'"/>');
+      p.push('</vertices><triangles>');
+      for(let i=0;i<m.T.length;i+=3)
+        p.push('<triangle v1="'+m.T[i]+'" v2="'+m.T[i+1]+'" v3="'+m.T[i+2]+'"/>');
+      p.push('</triangles></mesh></object>');
+      nTri+=m.T.length/3;
+    });
+    /* um objeto de montagem: as peças entram como componentes, e o
+       Bambu Studio mostra cada uma como parte, com filamento próprio */
+    p.push('<object id="1" type="model" name="Route Plate"><components>');
+    partes.forEach((m,n)=>p.push('<component objectid="'+(n+2)+'"/>'));
+    p.push('</components></object></resources><build><item objectid="1"/></build></model>');
     const enc=new TextEncoder();
     const modelo=enc.encode(p.join(''));
     const CT=enc.encode('<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/></Types>');
@@ -951,9 +1010,12 @@ async function gerar3MF(){
       {nome:'3D/3dmodel.model',dados:modelo,comp:await comprimir(modelo)},
     ]);
     baixar(nomeArquivo('.3mf'), blob);
-    nota.innerHTML='<b>'+(m.T.length/3).toLocaleString()+'</b> triangles · '+
-      (blob.size/1048576).toFixed(1)+' MB · '+((Date.now()-t0)/1000).toFixed(1)+' s. '+
-      'Open it in Bambu Studio and assign filaments by height range.';
+    nota.innerHTML='<b>'+partes.length+'</b> part'+(partes.length>1?'s':'')+' — '+
+      partes.map(m=>m.nome).join(', ')+'. <b>'+Math.round(nTri).toLocaleString()+
+      '</b> triangles · '+(blob.size/1048576).toFixed(1)+' MB · '+
+      ((Date.now()-t0)/1000).toFixed(1)+' s.' +
+      (separar?' In Bambu Studio, right-click the object → each part takes its own filament.'
+              :' One solid piece — colour it by height range in Bambu Studio.');
   }catch(e){ nota.textContent='Could not generate: '+e.message }
   bt.disabled=false; bt.textContent='Generate 3MF';
 }
@@ -965,7 +1027,7 @@ async function gerar3MF(){
    abrir eu busco de novo — leva os mesmos segundos da primeira vez. */
 const CAMPOS=['forma','fmt','vista','giro','relevo','det','mold','deg','zoom','margem',
               'lados','mCor','tCor','terrCor','ruasNivel','ver','nomeProj','rioNivel',
-              'altMoldura','altTerreno','largTraco','fonte','tamTitulo','tamTexto','altTexto','qual'];
+              'altMoldura','altTerreno','largTraco','fonte','tamTitulo','tamTexto','altTexto','qual','separar'];
 
 function baixar(nome, conteudo, tipo){
   const b = conteudo instanceof Blob ? conteudo : new Blob([conteudo],{type:tipo});
@@ -1101,6 +1163,7 @@ function montar(){
   grupo('#vista',VISTAS,'vista');
   grupo('#nivelRuas',NIVEIS,'ruasNivel');
   grupo('#qualidade',QUALIDADES,'qual');
+  grupo('#separar',[{id:'s',n:'Split by colour'},{id:'u',n:'One solid'}],'separar');
   grupo('#nivelRios',[{id:'p',n:'Largest only'},{id:'t',n:'All'}],'rioNivel');
   grupo('#forma',FORMAS,'forma',()=>{const hex=ST.forma.startsWith('hex');
     if(hex!==(ST.fmt[0]==='h')) ST.fmt=hex?'h2':'r2'});
