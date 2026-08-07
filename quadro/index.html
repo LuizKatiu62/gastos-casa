@@ -122,7 +122,7 @@
       <button class="bt" id="btRelevo">Get terrain relief</button>
       <button class="bt" id="btAgua">Get lakes and rivers</button>
       <button class="bt" id="btRuas">Get roads</button>
-      <div class="fmt" id="nivelRuas" style="margin-top:7px"></div>
+      <div class="fmt avancado" id="nivelRuas" style="margin-top:7px"></div>
       <div class="avancado">
       <label class="cmp">Rivers to show</label>
       <div class="fmt" id="nivelRios"></div>
@@ -1213,7 +1213,7 @@ function aplicarModo(){
     ? 'drop your GPX · 20 cm hex plate · drag to orbit'
     : 'studio mode · every setting exposed';
   if(cli){                       /* o cliente não escolhe medida */
-    ST.forma='hexL'; ST.fmt='h2'; ST.separar='s'; ST.qual='m'; ST.rioNivel='p';
+    ST.forma='hexL'; ST.fmt='h2'; ST.separar='s'; ST.qual='m'; ST.rioNivel='p'; ST.ruasNivel='p';
     if(ST.largTraco<1.6) ST.largTraco=1.6;   /* 4x o bico de 0,4 */
   }
 }
