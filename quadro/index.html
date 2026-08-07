@@ -72,6 +72,15 @@
   .bt:hover:not(:disabled){background:var(--acc);color:#12151a}
   .bt:disabled{opacity:.55;cursor:default}
   .bt+.bt{margin-top:7px}
+.ped{border:1px solid var(--line);border-radius:9px;padding:9px 10px;margin-top:7px;background:var(--card2)}
+.ped b{display:block;font-size:13px;color:var(--ink);margin-bottom:2px}
+.ped small{color:var(--ink2);font-size:11px}
+.ped .acoes{display:flex;gap:5px;margin-top:7px;flex-wrap:wrap}
+.ped .acoes button{font-size:11px;font-weight:700;padding:4px 9px;border-radius:14px;
+  border:1px solid var(--line);background:var(--card);color:var(--ink2);cursor:pointer}
+.ped .acoes button:hover{border-color:var(--acc);color:var(--acc)}
+.ped .acoes button.on{background:var(--acc-wash);border-color:var(--acc);color:var(--acc)}
+.ped .abrir{background:var(--acc)!important;color:#14181f!important;border-color:var(--acc)!important}
 </style>
 </head>
 <body>
@@ -79,7 +88,7 @@
 <header><div class="in">
   <b>Route Plate</b>
   <span id="subtitulo">drop your GPX · drag the plate to orbit</span>
-  <div class="fmt" id="modo" style="margin-left:auto;width:220px;grid-template-columns:1fr 1fr"></div>
+  
 </div></header>
 
 <main>
@@ -123,91 +132,29 @@
       <button class="bt" id="btRelevo">Get terrain relief</button>
       <button class="bt" id="btAgua">Get lakes and rivers</button>
       <button class="bt" id="btRuas">Get roads</button>
-      <div class="fmt avancado" id="nivelRuas" style="margin-top:7px"></div>
-      <div class="avancado">
-      <label class="cmp">Rivers to show</label>
-      <div class="fmt" id="nivelRios"></div>
-      <label class="cmp">Shortest river kept — <span id="lblRioMin"></span></label>
-      <input type="range" id="rioMin" min="0" max="120" step="1" value="45">
-      <label class="cmp">Smallest lake kept — <span id="lblAguaMin"></span></label>
-      <input type="range" id="aguaMin" min="0" max="600" step="10" value="120">
-      <label class="cmp">Narrowest water kept — <span id="lblAguaLarg"></span></label>
-      <input type="range" id="aguaLarg" min="0" max="15" step="0.5" value="3.5">
-      </div>
+      
+      
       <div id="camadas" style="margin-top:4px"></div>
       <div class="nota" id="notaReg">Terrain comes from open elevation data and becomes contour steps —
         each step is one printed layer. Water comes from OpenStreetMap.</div>
-      <div class="avancado">
-      <label class="cmp">Surrounding area — <span id="lblMargem"></span></label>
-      <input type="range" id="margem" min="0" max="400" step="10" value="35">
-      <div class="nota">How much land shows beyond the route. Increase it to reach the sea, a lake
-        or the next town — the route shrinks by the same amount.</div>
-      <label class="cmp">Terrain steps — <span id="lblDeg"></span></label>
-      <input type="range" id="deg" min="4" max="26" step="1" value="14">
-      </div>
+      
     </div>
 
     <div class="bloco">
       <h2>View</h2>
       <div class="fmt tres" id="vista"></div>
-      <div class="avancado">
-      <label class="cmp">Tilt — <span id="lblTilt"></span></label>
-      <input type="range" id="tilt" min="0" max="78" step="1" value="26">
-      <label class="cmp">On-screen size — <span id="lblZoom"></span></label>
-      <input type="range" id="zoom" min="2.5" max="7.5" step="0.1" value="4.4">
-      <label class="cmp">Rotation — <span id="lblGiro"></span></label>
-      <input type="range" id="giro" min="-180" max="180" step="1" value="0">
-      <label class="cmp">Route height — <span id="lblRel"></span></label>
-      <input type="range" id="rel" min="0.6" max="6" step="0.2" value="2">
-      </div>
+      
     </div>
 
-    <div class="bloco avancado">
-      <h2>Shape and size</h2>
-      <div class="fmt tres" id="forma"></div>
-      <div class="fmt" id="fmt" style="margin-top:8px"></div>
-      <label class="cmp">Border width — <span id="lblMold"></span></label>
-      <input type="range" id="mold" min="6" max="22" step="1" value="13">
-      <label class="cmp">Route detail — <span id="lblPts"></span></label>
-      <input type="range" id="det" min="80" max="900" step="20" value="420">
-      <label class="cmp">Border height (mm)</label>
-      <input type="range" id="altMoldura" min="1.5" max="8" step="0.1" value="3.5">
-      <label class="cmp">Terrain height (mm)</label>
-      <input type="range" id="altTerreno" min="1" max="6" step="0.2" value="3">
-      <label class="cmp">Route width (mm)</label>
-      <input type="range" id="largTraco" min="0.8" max="4" step="0.1" value="1.4">
-    </div>
+    
 
-    <div class="bloco avancado">
-      <h2>Typography</h2>
-      <label class="cmp">Font</label>
-      <select id="fonte" style="width:100%;padding:8px 10px;border:1px solid var(--line);
-        border-radius:9px;font:inherit;font-size:13.5px;background:#fff">
-        <option value="Helvetica,Arial">Helvetica</option>
-        <option value="&quot;Arial Black&quot;,Arial">Arial Black</option>
-        <option value="Impact,Arial">Impact</option>
-        <option value="Georgia,serif">Georgia</option>
-        <option value="&quot;Courier New&quot;,monospace">Courier New</option>
-      </select>
-      <label class="cmp">Title size (mm)</label>
-      <input type="range" id="tamTitulo" min="3" max="14" step="0.5" value="8">
-      <label class="cmp">Other text size (mm)</label>
-      <input type="range" id="tamTexto" min="2" max="10" step="0.5" value="5.5">
-      <label class="cmp">Text relief (mm)</label>
-      <input type="range" id="altTexto" min="0" max="2.5" step="0.1" value="0.9">
-    </div>
+    
 
-    <div class="bloco avancado">
-      <h2>Border text</h2>
-      <div id="lados"></div>
-    </div>
+    
 
-    <div class="bloco avancado">
-      <h2>Colours</h2>
-      <label class="cmp">Border</label><div class="cores" id="corMold"></div>
-      <label class="cmp">Route</label><div class="cores" id="corTraco"></div>
-      <label class="cmp">Terrain</label><div class="cores" id="corTerr"></div>
-    </div>
+    
+
+    
 
     <div class="bloco">
       <h2>Project</h2>
@@ -215,6 +162,7 @@
       <input type="text" id="nomeProj" placeholder="e.g. Pedro plate — Ottawa half">
       <div class="bt" style="display:none"></div>
       <button class="bt" id="btSalvar" style="margin-top:9px">Save project</button>
+      <button class="bt" id="btPedir" style="display:none">Order this plate</button>
       <button class="bt" id="btAbrir">Open saved project</button>
       <button class="bt" id="btImagem">Save image (PNG)</button>
       <input type="file" id="arqProj" accept=".json,application/json" hidden>
@@ -222,27 +170,20 @@
         The image is what you send the customer for approval.</div>
     </div>
 
-    <div class="bloco avancado">
-      <h2>Printing · Bambu Lab</h2>
-      <div id="tec"></div>
-      <div class="nota" id="notaTec"></div>
-      <div class="avancado">
-      <label class="cmp">Model type</label>
-      <div class="fmt tres" id="separar"></div>
-      <label class="cmp">Mesh quality</label>
-      <div class="fmt tres" id="qualidade"></div>
-      </div>
-      <button class="bt" id="bt3mf" style="margin-top:9px">Generate 3MF</button>
-      <div class="nota" id="nota3mf"><b>3 plates</b> exports the base with the race details, the terrain
-        with the water, and the route on its own, as three loose objects — one per plate.
-        Finer quality means a heavier file and a longer wait.</div>
-    </div>
+    
   </div>
 </main>
 
 <script>
 const DEMO = {"nome":"Challenge 64k running","data":"2026-06-13","km":64.9,"seg":36742,"n":35930,"pts":[[45.30805,-65.97467],[45.3076,-65.97648],[45.30714,-65.97667],[45.30636,-65.97621],[45.30587,-65.9776],[45.30528,-65.97773],[45.30501,-65.97554],[45.30436,-65.97455],[45.30392,-65.97302],[45.30546,-65.97024],[45.30584,-65.96703],[45.30555,-65.96635],[45.30452,-65.96611],[45.30427,-65.96506],[45.30544,-65.96373],[45.30624,-65.96328],[45.30792,-65.96392],[45.30932,-65.96343],[45.31001,-65.96356],[45.31008,-65.96381],[45.30889,-65.97191],[45.30826,-65.97292],[45.3079,-65.97596],[45.30732,-65.97668],[45.30633,-65.97623],[45.30602,-65.97733],[45.30552,-65.97784],[45.30513,-65.97747],[45.30501,-65.97553],[45.30436,-65.97456],[45.30393,-65.97309],[45.30549,-65.97025],[45.30584,-65.96698],[45.30552,-65.96633],[45.30447,-65.96602],[45.30427,-65.96499],[45.30542,-65.96376],[45.30624,-65.96329],[45.30792,-65.96394],[45.30875,-65.96349],[45.31006,-65.96364],[45.3089,-65.97189],[45.30826,-65.97291],[45.3079,-65.97593],[45.30728,-65.97669],[45.30631,-65.97623],[45.30601,-65.97735],[45.30553,-65.97783],[45.3051,-65.97744],[45.30504,-65.97566],[45.30432,-65.97453],[45.30392,-65.97307],[45.30543,-65.97034],[45.30583,-65.96698],[45.30555,-65.96638],[45.30448,-65.96608],[45.30427,-65.96502],[45.30543,-65.96373],[45.30622,-65.96329],[45.3068,-65.96332],[45.30792,-65.96394],[45.30877,-65.96349],[45.31007,-65.96367],[45.3089,-65.97189],[45.30825,-65.97294],[45.30789,-65.97602],[45.3073,-65.97669],[45.30634,-65.97621],[45.30588,-65.97757],[45.30529,-65.97774],[45.30498,-65.97548],[45.30433,-65.97453],[45.30392,-65.97308],[45.30547,-65.97023],[45.30583,-65.96703],[45.3055,-65.96632],[45.30448,-65.96606],[45.30426,-65.96509],[45.30542,-65.96374],[45.30624,-65.96328],[45.30792,-65.96394],[45.30937,-65.96342],[45.31,-65.96356],[45.31007,-65.96388],[45.30909,-65.97064],[45.30857,-65.97103],[45.30847,-65.97148],[45.30874,-65.97204],[45.30904,-65.97205],[45.30845,-65.97174],[45.30857,-65.97237],[45.30825,-65.97299],[45.3079,-65.97594],[45.3073,-65.97669],[45.30635,-65.97622],[45.30589,-65.97757],[45.30529,-65.97775],[45.30496,-65.97535],[45.30435,-65.97452],[45.30392,-65.9731],[45.30548,-65.97025],[45.30584,-65.96701],[45.30554,-65.96633],[45.30454,-65.9661],[45.30427,-65.96501],[45.3054,-65.96377],[45.30623,-65.96329],[45.30792,-65.96394],[45.30927,-65.96344],[45.31008,-65.96376],[45.3089,-65.97189],[45.30826,-65.97293],[45.3079,-65.97598],[45.30731,-65.97669],[45.30634,-65.97622],[45.30602,-65.97736],[45.30548,-65.97783],[45.30509,-65.97735],[45.30497,-65.97536],[45.30435,-65.97454],[45.30393,-65.97308],[45.30549,-65.97028],[45.30585,-65.96708],[45.30556,-65.96635],[45.30448,-65.96603],[45.30426,-65.96507],[45.30543,-65.96374],[45.30626,-65.96327],[45.30793,-65.96393],[45.30929,-65.96344],[45.31008,-65.96376],[45.30889,-65.97193],[45.30825,-65.97291],[45.3079,-65.97597],[45.30732,-65.97669],[45.30631,-65.97624],[45.306,-65.97738],[45.30548,-65.97784],[45.30509,-65.97741],[45.30497,-65.97535],[45.30436,-65.97454],[45.30394,-65.97312],[45.30548,-65.97028],[45.30586,-65.967],[45.30555,-65.9663],[45.30449,-65.96604],[45.30428,-65.96501],[45.30546,-65.96374],[45.30626,-65.9633],[45.30792,-65.96394],[45.30874,-65.96342],[45.30998,-65.96355],[45.31008,-65.96378],[45.30888,-65.97197],[45.30824,-65.97296],[45.30789,-65.97598],[45.3073,-65.97669],[45.30633,-65.97623],[45.30601,-65.97734],[45.30551,-65.97783],[45.30509,-65.97739],[45.30497,-65.97536],[45.30435,-65.97456],[45.30393,-65.97309],[45.30549,-65.97022],[45.30586,-65.967],[45.30553,-65.96633],[45.30449,-65.96606],[45.30428,-65.96501],[45.30622,-65.96329],[45.30685,-65.96333],[45.30792,-65.96395],[45.30877,-65.96349],[45.31007,-65.96366],[45.30913,-65.97043],[45.30854,-65.97112],[45.30789,-65.97599],[45.30732,-65.97669],[45.30636,-65.97621],[45.30591,-65.97752],[45.3053,-65.97776],[45.30495,-65.97538],[45.30432,-65.97456],[45.30391,-65.97303],[45.30546,-65.97027],[45.30583,-65.96703],[45.30554,-65.96636],[45.30447,-65.96606],[45.30427,-65.96501],[45.30541,-65.96374],[45.30621,-65.96328],[45.30681,-65.96331],[45.30793,-65.96394],[45.30871,-65.9635],[45.31007,-65.96369],[45.30889,-65.97188],[45.30825,-65.97293],[45.30791,-65.97596],[45.30732,-65.97668],[45.30634,-65.97622],[45.30597,-65.97743],[45.3055,-65.97784],[45.3051,-65.97737],[45.30498,-65.97541],[45.30434,-65.97456],[45.30391,-65.97307],[45.30548,-65.97022],[45.30584,-65.96702],[45.30554,-65.96635],[45.30473,-65.96627],[45.30439,-65.96593],[45.30427,-65.96496],[45.30541,-65.96375],[45.30627,-65.96328],[45.30792,-65.96393],[45.30933,-65.96343],[45.30999,-65.96355],[45.31008,-65.96381],[45.3091,-65.97069],[45.30859,-65.97102],[45.30847,-65.97151],[45.30877,-65.97205],[45.30905,-65.97205],[45.30846,-65.97172],[45.3079,-65.97594],[45.30733,-65.97666],[45.30634,-65.97622],[45.30599,-65.97739],[45.3055,-65.97783],[45.3051,-65.97731],[45.30497,-65.97536],[45.30435,-65.97452],[45.30393,-65.97311],[45.30548,-65.97025],[45.30584,-65.96702],[45.30556,-65.96635],[45.3045,-65.96605],[45.30428,-65.96499],[45.30544,-65.96374],[45.30624,-65.96329],[45.30681,-65.96332],[45.30792,-65.96395],[45.30879,-65.96348],[45.31006,-65.96367],[45.3089,-65.97193],[45.30826,-65.97295],[45.3079,-65.97601],[45.3073,-65.9767],[45.30635,-65.97623],[45.30593,-65.97752],[45.30548,-65.97784],[45.30509,-65.97734],[45.30497,-65.97542],[45.30438,-65.97459],[45.30392,-65.97306],[45.30546,-65.97026],[45.30584,-65.96707],[45.30552,-65.96635],[45.30453,-65.96611],[45.30425,-65.96506],[45.30539,-65.96376],[45.30616,-65.9633],[45.30678,-65.96331],[45.30792,-65.96395],[45.30931,-65.96343],[45.31008,-65.96375],[45.30911,-65.97058],[45.30855,-65.97111],[45.3079,-65.976],[45.30732,-65.97669],[45.30634,-65.97623],[45.30601,-65.97737],[45.3055,-65.97783],[45.30507,-65.97733],[45.30495,-65.97535],[45.30433,-65.97456],[45.30391,-65.97312],[45.30545,-65.97021],[45.30583,-65.96698],[45.30554,-65.96635],[45.30456,-65.96614],[45.30428,-65.96499],[45.30541,-65.96375],[45.30621,-65.96329],[45.30682,-65.96333],[45.3079,-65.96396],[45.30878,-65.96348],[45.31006,-65.96367],[45.30888,-65.97189],[45.30825,-65.97291],[45.3079,-65.97591],[45.30729,-65.97669],[45.30633,-65.97623],[45.30597,-65.97744],[45.30548,-65.97784],[45.30508,-65.97733],[45.30496,-65.97537],[45.30435,-65.97457],[45.30392,-65.97309],[45.30547,-65.97019],[45.30583,-65.967],[45.30554,-65.96637],[45.3045,-65.96607],[45.30427,-65.965],[45.3062,-65.96329],[45.30678,-65.96331],[45.3079,-65.96394],[45.30877,-65.96349],[45.31006,-65.9637],[45.30911,-65.97051],[45.30854,-65.9711],[45.3079,-65.97595],[45.30731,-65.97669],[45.30633,-65.97622],[45.30598,-65.97739],[45.3055,-65.97783],[45.30508,-65.97737],[45.30495,-65.97534],[45.30436,-65.97456],[45.30392,-65.97308],[45.30549,-65.97017],[45.30584,-65.96702],[45.30553,-65.96633],[45.3045,-65.96606],[45.30427,-65.96501],[45.3054,-65.96375],[45.30622,-65.96328],[45.30792,-65.96393],[45.3087,-65.96349],[45.31007,-65.96366],[45.30889,-65.97192],[45.30824,-65.97296],[45.30791,-65.97588],[45.30729,-65.97669],[45.30633,-65.97622],[45.30595,-65.97746],[45.30548,-65.97783],[45.30509,-65.97736],[45.30494,-65.97533],[45.30432,-65.97447],[45.30391,-65.97307],[45.30546,-65.97028],[45.30583,-65.96707],[45.30554,-65.96635],[45.30472,-65.96629],[45.30442,-65.96598],[45.30426,-65.965],[45.30543,-65.96371],[45.30623,-65.96328],[45.30791,-65.96393],[45.3088,-65.96347],[45.31008,-65.96369],[45.30908,-65.97068],[45.30857,-65.97103],[45.30846,-65.9715],[45.30851,-65.97183],[45.30903,-65.97208],[45.30848,-65.97172],[45.3079,-65.97597],[45.3073,-65.97669],[45.30634,-65.97621],[45.30598,-65.97741],[45.30551,-65.97782],[45.3051,-65.97744],[45.30499,-65.97548],[45.30434,-65.97456],[45.30392,-65.97308],[45.30548,-65.97022],[45.30583,-65.96699],[45.30554,-65.96636],[45.30456,-65.96615],[45.30427,-65.965],[45.30624,-65.96327],[45.30793,-65.96393],[45.30934,-65.96342],[45.31008,-65.96378],[45.30889,-65.97194],[45.30825,-65.97293],[45.30789,-65.97599],[45.3073,-65.9767],[45.30634,-65.97622],[45.30597,-65.97744],[45.30538,-65.97781],[45.30507,-65.97728],[45.30497,-65.97543],[45.30438,-65.97461],[45.3039,-65.9731],[45.30547,-65.97024],[45.30583,-65.96701],[45.30553,-65.96634],[45.30454,-65.9661],[45.30424,-65.96506],[45.30617,-65.96331],[45.30676,-65.96329],[45.3079,-65.96395],[45.30933,-65.96343],[45.31,-65.96357],[45.31006,-65.96384],[45.30908,-65.97065],[45.30852,-65.9712],[45.30789,-65.97597],[45.30731,-65.9767],[45.30632,-65.97624],[45.30598,-65.9774],[45.30543,-65.97783],[45.30508,-65.97741],[45.30494,-65.97534],[45.30436,-65.97458],[45.30391,-65.9731],[45.30547,-65.97025],[45.30584,-65.96701],[45.3055,-65.96632],[45.3045,-65.96609],[45.30426,-65.96508],[45.30609,-65.96336],[45.30674,-65.96331],[45.30796,-65.96395],[45.3086,-65.96351],[45.31005,-65.96361],[45.30918,-65.96998]]};
-const q = s => document.querySelector(s);
+/* MODO_FIXO é reescrito pelo montar_versoes.py. Na cópia pública ele
+   vale 'cliente' e os blocos do Studio são APAGADOS do HTML — não
+   estão escondidos, não estão lá. Por isso q() devolve um elemento
+   solto quando o alvo não existe: o resto do código segue escrevendo
+   nele sem quebrar, e nada aparece na tela.                       */
+const MODO_FIXO = 'cliente';
+const SOLTO = () => document.createElement('input');
+const q = s => document.querySelector(s) || SOLTO();
 const rad = g => g*Math.PI/180;
 
 /* ═══════ geodésia ═══════ */
@@ -1215,8 +1156,15 @@ function salvarProjeto(){
 function abrirProjeto(file){
   const fr=new FileReader();
   fr.onload=()=>{
-    try{
-      const p=JSON.parse(fr.result);
+    try{ carregarProjeto(JSON.parse(fr.result)) }
+    catch(e){ q('#notaProj').textContent='Could not open: '+e.message }
+  };
+  fr.readAsText(file);
+}
+
+function carregarProjeto(p){
+  {
+    {
       if(!p.bruto||!p.bruto.length) throw new Error('file has no route');
       ST.bruto=p.bruto; ST.meta=p.meta||{};
       CAMPOS.forEach(k=>{ if(p.cfg && p.cfg[k]!==undefined) ST[k]=p.cfg[k] });
@@ -1234,9 +1182,84 @@ function abrirProjeto(file){
       q('#notaProj').innerHTML = p.temRelevo
         ? 'Project opened. It had terrain — tap <b>Get terrain relief</b> to bring it back.'
         : 'Project opened.';
-    }catch(e){ q('#notaProj').textContent='Could not open: '+e.message }
-  };
-  fr.readAsText(file);
+    }
+  }
+}
+
+/* ═══════ Studio · fila de pedidos ═══════
+   Não existe servidor: o cliente monta a peça, aperta "Order this
+   plate" e recebe um .json. Ele te manda por WhatsApp ou e-mail, você
+   solta o arquivo aqui e ele vira um trabalho na fila, com estágio.
+
+   O que fica guardado no navegador é a versão leve: percurso, ajustes
+   e dados da prova. Relevo, rios e ruas ficam de fora — são megabytes
+   e voltam com um clique nos botões da região.                     */
+const ETAPAS=['New','Approved','Printing','Done'];
+let PED=[];
+function pedEnxuto(o){
+  const c=Object.assign({},o);
+  c.proj=Object.assign({},o.proj,{agua:null,rios:null,costa:null,ilhas:null,ruas:null});
+  return c;
+}
+function pedGravar(){
+  try{ localStorage.setItem('qp.pedidos', JSON.stringify(PED.map(pedEnxuto))); return true }
+  catch(e){ return false }
+}
+function pedCarregar(){
+  try{ PED=JSON.parse(localStorage.getItem('qp.pedidos')||'[]') }catch(e){ PED=[] }
+}
+function pedListar(){
+  const el=q('#listaPedidos'); if(!el.parentNode) return;
+  if(!PED.length){
+    el.innerHTML='';
+    q('#notaPedidos').innerHTML='No orders yet. Your customer designs the plate, taps '+
+      '<b>Order this plate</b> and sends you the .json — drop it here and it becomes a job.';
+    return;
+  }
+  const abertos=PED.filter(o=>o.etapa!=='Done').length;
+  q('#notaPedidos').innerHTML='<b>'+PED.length+'</b> order'+(PED.length>1?'s':'')+
+    ' · <b>'+abertos+'</b> still open.'+
+    (pedGravar()?' Saved in this browser.':' <b>Not saved</b> — this browser blocks storage, so the list lasts only while the page is open.');
+  el.innerHTML=PED.map((o,i)=>{
+    const m=o.proj.meta||{};
+    return '<div class="ped"><b>'+esc(o.titulo||'Untitled plate')+'</b>'+
+      '<small>'+[m.km?m.km.toFixed(2)+' km':'', m.data||'', 'received '+(o.recebido||'').slice(0,10)]
+        .filter(Boolean).join(' · ')+'</small>'+
+      '<div class="acoes">'+
+        ETAPAS.map(e=>'<button data-et="'+i+'|'+e+'"'+(o.etapa===e?' class="on"':'')+'>'+e+'</button>').join('')+
+        '<button class="abrir" data-abrir="'+i+'">Open</button>'+
+        '<button data-apagar="'+i+'">Remove</button>'+
+      '</div></div>';
+  }).join('');
+  el.querySelectorAll('[data-et]').forEach(b=>b.onclick=()=>{
+    const [i,e]=b.dataset.et.split('|'); PED[+i].etapa=e; pedGravar(); pedListar();
+  });
+  el.querySelectorAll('[data-abrir]').forEach(b=>b.onclick=()=>{
+    const o=PED[+b.dataset.abrir];
+    try{ carregarProjeto(o.proj); q('#notaProj').innerHTML='Order <b>'+esc(o.titulo)+'</b> opened.' }
+    catch(err){ q('#notaProj').textContent='Could not open: '+err.message }
+  });
+  el.querySelectorAll('[data-apagar]').forEach(b=>b.onclick=()=>{
+    PED.splice(+b.dataset.apagar,1); pedGravar(); pedListar();
+  });
+}
+const esc = t => String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function pedAdicionar(files){
+  let lidos=0, total=files.length;
+  [...files].forEach(f=>{
+    const fr=new FileReader();
+    fr.onload=()=>{
+      try{
+        const pr=JSON.parse(fr.result);
+        if(!pr.bruto||!pr.bruto.length) throw 0;
+        const topo=(pr.cfg&&pr.cfg.lados||[]).find(t=>t&&t.trim());
+        PED.unshift({titulo: topo || (pr.meta&&pr.meta.nome) || f.name.replace(/\.json$/i,''),
+          recebido: pr.salvoEm || new Date().toISOString(), etapa:'New', proj:pr});
+      }catch(e){}
+      if(++lidos===total){ pedGravar(); pedListar() }
+    };
+    fr.readAsText(f);
+  });
 }
 
 function salvarImagem(){
@@ -1279,11 +1302,15 @@ function parearNumeros(){
 
 const MODOS=[{id:'cliente',n:'Customer'},{id:'estudio',n:'Studio'}];
 function aplicarModo(){
+  if(MODO_FIXO) ST.modo=MODO_FIXO;
   const cli = ST.modo==='cliente';
   document.querySelectorAll('.avancado').forEach(el=>el.style.display=cli?'none':'');
   q('#subtitulo').textContent = cli
     ? 'drop your GPX · 20 cm hex plate · drag to orbit'
-    : 'studio mode · every setting exposed';
+    : 'studio · orders, settings and print files';
+  q('#btPedir').style.display = cli ? '' : 'none';
+  q('#btSalvar').style.display = cli ? 'none' : '';
+  if(!cli) pedListar();
   if(cli){                       /* o cliente não escolhe medida */
     ST.forma='hexL'; ST.fmt='h2'; ST.separar='s'; ST.qual='m'; ST.rioNivel='p'; ST.ruasNivel='p';
     if(ST.largTraco<1.6) ST.largTraco=1.6;   /* 4x o bico de 0,4 */
@@ -1329,7 +1356,7 @@ function montar(){
     q(alvo).innerHTML=lista.map(f=>`<button data-x="${f.id}" class="${f.id===ST[chave]?'on':''}">${f.n}</button>`).join('');
     q(alvo).querySelectorAll('[data-x]').forEach(b=>b.onclick=()=>{ST[chave]=b.dataset.x;if(extra)extra();montar();desenhar()});
   };
-  grupo('#modo',MODOS,'modo',aplicarModo);
+  if(!MODO_FIXO) grupo('#modo',MODOS,'modo',aplicarModo);
   grupo('#vista',VISTAS,'vista',()=>{ ST.tilt=VISTAS.find(v=>v.id===ST.vista).t;
     const rt=q('#tilt'); if(rt) rt.value=ST.tilt });
   grupo('#nivelRuas',NIVEIS,'ruasNivel');
@@ -1406,6 +1433,15 @@ function ler(file){const fr=new FileReader();
 q('#priv').addEventListener('input',desenhar);
 [['#det','det'],['#giro','giro'],['#rel','relevo'],['#mold','mold'],['#deg','deg'],['#zoom','zoom'],['#margem','margem'],['#tilt','tilt'],['#rioMin','rioMin'],['#aguaMin','aguaMin'],['#aguaLarg','aguaLarg'],['#altMoldura','altMoldura'],['#altTerreno','altTerreno'],['#largTraco','largTraco'],['#tamTitulo','tamTitulo'],['#tamTexto','tamTexto'],['#altTexto','altTexto']].forEach(([sel,ch])=>
   q(sel).addEventListener('input',e=>{ST[ch]=+e.target.value;desenhar()}));
+q('#btPedidos').onclick=()=>q('#arqPedidos').click();
+q('#arqPedidos').onchange=e=>{ if(e.target.files.length) pedAdicionar(e.target.files); e.target.value='' };
+q('#btPedir').onclick=()=>{
+  if(!ST.bruto.length){ q('#notaProj').textContent='Load your GPX first.'; return }
+  salvarProjeto();
+  q('#notaProj').innerHTML='Your order file was downloaded. Send it to us on WhatsApp or by '+
+    'e-mail and we will confirm the price and the printing time. Tap <b>Save image (PNG)</b> '+
+    'if you would like a picture of the design too.';
+};
 q('#btRelevo').onclick=buscarRelevo;
 q('#btAgua').onclick=buscarAgua;
 q('#fonte').onchange=e=>{ST.fonte=e.target.value; cache.sig=null; desenhar()};
@@ -1442,6 +1478,7 @@ const exemplo=()=>aplicar({pts:DEMO.pts,
 q('#btExemplo').onclick=exemplo;
 
 /* abre vazio: o percurso é do cliente, não meu */
+pedCarregar();
 montar(); desenhar();
 </script>
 </body>
