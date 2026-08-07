@@ -123,10 +123,12 @@
       <button class="bt" id="btAgua">Get lakes and rivers</button>
       <button class="bt" id="btRuas">Get roads</button>
       <div class="fmt" id="nivelRuas" style="margin-top:7px"></div>
+      <div class="avancado">
       <label class="cmp">Rivers to show</label>
       <div class="fmt" id="nivelRios"></div>
       <label class="cmp">Minimum river length (m)</label>
       <input type="range" id="rioMin" min="0" max="3000" step="100" value="400">
+      </div>
       <div id="camadas" style="margin-top:4px"></div>
       <div class="nota" id="notaReg">Terrain comes from open elevation data and becomes contour steps —
         each step is one printed layer. Water comes from OpenStreetMap.</div>
@@ -215,7 +217,7 @@
         The image is what you send the customer for approval.</div>
     </div>
 
-    <div class="bloco">
+    <div class="bloco avancado">
       <h2>Printing · Bambu Lab</h2>
       <div id="tec"></div>
       <div class="nota" id="notaTec"></div>
@@ -226,8 +228,8 @@
       <div class="fmt tres" id="qualidade"></div>
       </div>
       <button class="bt" id="bt3mf" style="margin-top:9px">Generate 3MF</button>
-      <div class="nota" id="nota3mf"><b>Split by colour</b> exports border, text, terrain,
-        water, roads and route as separate parts — assign a filament to each in Bambu Studio.
+      <div class="nota" id="nota3mf"><b>3 plates</b> exports the base with the race details, the terrain
+        with the water, and the route on its own, as three loose objects — one per plate.
         Finer quality means a heavier file and a longer wait.</div>
     </div>
   </div>
@@ -1211,7 +1213,7 @@ function aplicarModo(){
     ? 'drop your GPX · 20 cm hex plate · drag to orbit'
     : 'studio mode · every setting exposed';
   if(cli){                       /* o cliente não escolhe medida */
-    ST.forma='hexL'; ST.fmt='h2'; ST.separar='s'; ST.qual='m';
+    ST.forma='hexL'; ST.fmt='h2'; ST.separar='s'; ST.qual='m'; ST.rioNivel='p';
     if(ST.largTraco<1.6) ST.largTraco=1.6;   /* 4x o bico de 0,4 */
   }
 }
