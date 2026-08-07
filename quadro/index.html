@@ -152,6 +152,8 @@
       <input type="range" id="mold" min="6" max="22" step="1" value="13">
       <label class="cmp">Route detail — <span id="lblPts"></span></label>
       <input type="range" id="det" min="80" max="900" step="20" value="420">
+      <label class="cmp">Border height (mm)</label>
+      <input type="range" id="altMoldura" min="1.5" max="8" step="0.1" value="3.5">
       <label class="cmp">Terrain height (mm)</label>
       <input type="range" id="altTerreno" min="1" max="6" step="0.2" value="3">
       <label class="cmp">Route width (mm)</label>
@@ -256,7 +258,7 @@ const P_TRACO=['#e0342c','#c9f24e','#ffffff','#f18701','#0d7ac4','#111418'];
 const P_TERR=['#0f8f70','#2e7d32','#4a6741','#6b5b3e','#3a5f7d','#5a4a6b'];
 
 let ST={bruto:[],meta:{},forma:'hexL',fmt:'h2',vista:'p',giro:0,relevo:2,det:420,
-  mold:13,deg:14,zoom:4.4,margem:35,nomeProj:'',qual:'m',mapaAltura:null,rioNivel:'p',altTerreno:3,largTraco:1.4,fonte:'Helvetica,Arial',tamTitulo:8,tamTexto:5.5,altTexto:0.9,ver:{dem:true,agua:true,ruas:true},rios:null,ilhas:null,costa:null,temMar:0,ruas:null,ruasNivel:'p',lados:['','','','','',''],
+  mold:13,deg:14,zoom:4.4,margem:35,nomeProj:'',qual:'m',mapaAltura:null,altMoldura:3.5,rioNivel:'p',altTerreno:3,largTraco:1.4,fonte:'Helvetica,Arial',tamTitulo:8,tamTexto:5.5,altTexto:0.9,ver:{dem:true,agua:true,ruas:true},rios:null,ilhas:null,costa:null,temMar:0,ruas:null,ruasNivel:'p',lados:['','','','','',''],
   mCor:'#111418',tCor:'#e0342c',terrCor:'#0f8f70',agua:null,dem:null};
 
 /* ═══════ GPX ═══════ */
@@ -521,8 +523,18 @@ async function buscarRuas(){
    chapadas de cor.                                                    */
 let mapa=null, cache={sig:null,val:null};
 
-const ALT_BASE=0, ALT_MOLD=6.2, ALT_TERR0=1.6, ALT_AGUA=1.2;
-const topoTerreno = () => ALT_TERR0 + ST.altTerreno;
+/* Alturas em mm, de baixo para cima. A moldura virou uma bandeja baixa
+   e o mapa é um platô que sobe acima dela — o inverso de antes, em que
+   o terreno ficava afundado dentro de uma moldura alta.
+       0             fundo da peça
+       altMoldura    topo da moldura, onde ficam os textos
+       + altTerreno  topo do relevo
+       + relevo      traçado da rota, o ponto mais alto                */
+const bordaAlt   = () => ST.altMoldura;
+const terrBase   = () => bordaAlt();
+const topoTerreno= () => terrBase() + ST.altTerreno;
+const aguaAlt    = () => terrBase() + 0.4;
+const altMax     = () => Math.max(bordaAlt()+ST.altTexto, topoTerreno()+ST.relevo) + 0.4;
 
 function montarPeca(G, p, mx, my){
   const bx0=-G.W/2, by0=-G.H/2, bw=G.W, bh=G.H;
@@ -535,17 +547,18 @@ function montarPeca(G, p, mx, my){
   const [cCor,xc]=mk(), [cAlt,xa]=mk();
 
   const cam=(x,v)=>{x.beginPath();v.forEach(([a,b],i)=>i?x.lineTo(a,b):x.moveTo(a,b));x.closePath()};
-  const cinza=h=>`rgb(${Math.round(h/ALT_MOLD*255)},${Math.round(h/ALT_MOLD*255)},${Math.round(h/ALT_MOLD*255)})`;
+  const AM=altMax();
+  const cinza=h=>{const v=Math.round(Math.max(0,Math.min(1,h/AM))*255);return `rgb(${v},${v},${v})`};
 
   /* moldura */
   cam(xc,G.v); xc.fillStyle=ST.mCor; xc.fill();
-  cam(xa,G.v); xa.fillStyle=cinza(ALT_MOLD); xa.fill();
+  cam(xa,G.v); xa.fillStyle=cinza(bordaAlt()); xa.fill();
 
   /* miolo */
   xc.save(); cam(xc,G.vi); xc.clip();
   xa.save(); cam(xa,G.vi); xa.clip();
   xc.fillStyle=sombra(ST.terrCor,.68); xc.fill();
-  xa.fillStyle=cinza(ALT_TERR0); xa.fillRect(bx0,by0,bw,bh);
+  xa.fillStyle=cinza(terrBase()); xa.fillRect(bx0,by0,bw,bh);
 
   if(ST.dem && ST.ver.dem) relevoNasCamadas(xc,xa,G,ppm);
 
@@ -583,7 +596,7 @@ function montarPeca(G, p, mx, my){
   }
 
   if(ST.agua && ST.ver.agua){
-    xc.fillStyle='#2f95dd'; xa.fillStyle=cinza(ALT_AGUA);
+    xc.fillStyle='#2f95dd'; xa.fillStyle=cinza(aguaAlt());
     ST.agua.forEach(w=>{
       [xc,xa].forEach(x=>{ x.beginPath();
         w.forEach((c,i)=>{const[X,Y]=mapa.mm(c[0],c[1]); i?x.lineTo(X,Y):x.moveTo(X,Y)});
@@ -592,7 +605,7 @@ function montarPeca(G, p, mx, my){
   }
 
   if(ST.ilhas && ST.ver.agua){
-    xc.fillStyle=sombra(ST.terrCor,.82); xa.fillStyle=cinza(ALT_TERR0+0.6);
+    xc.fillStyle=sombra(ST.terrCor,.82); xa.fillStyle=cinza(terrBase()+0.6);
     ST.ilhas.forEach(w=>{
       [xc,xa].forEach(x=>{ x.beginPath();
         w.forEach((c,i)=>{const[X,Y]=mapa.mm(c[0],c[1]); i?x.lineTo(X,Y):x.moveTo(X,Y)});
@@ -602,7 +615,7 @@ function montarPeca(G, p, mx, my){
 
   /* traçado, dentro do miolo */
   const larg=ST.largTraco;
-  [[xc,ST.tCor],[xa,cinza(Math.min(ALT_MOLD,topoTerreno()+ST.relevo))]].forEach(([x,cor])=>{
+  [[xc,ST.tCor],[xa,cinza(Math.min(bordaAlt(),topoTerreno()+ST.relevo))]].forEach(([x,cor])=>{
     x.beginPath();
     p.forEach((_,i)=>{ const X=mx(i),Y=my(i); i?x.lineTo(X,Y):x.moveTo(X,Y) });
     x.lineJoin='round'; x.lineCap='round'; x.lineWidth=larg; x.strokeStyle=cor; x.stroke();
@@ -611,7 +624,7 @@ function montarPeca(G, p, mx, my){
 
   /* textos da moldura, em relevo */
   const corTxt=claro(ST.mCor)?'#14181f':'#ffffff';
-  [[xc,corTxt],[xa,cinza(ALT_MOLD+ST.altTexto)]].forEach(([x,cor])=>{
+  [[xc,corTxt],[xa,cinza(bordaAlt()+ST.altTexto)]].forEach(([x,cor])=>{
     x.textAlign='center'; x.textBaseline='middle'; x.fillStyle=cor;
     const info=ladosInfo(G);
     for(let i=0;i<G.v.length;i++){
@@ -633,7 +646,7 @@ function montarPeca(G, p, mx, my){
   const mmPx=bw/W;
   const Lx=-0.55, Ly=-0.72, Lz=0.86, Ln=Math.hypot(Lx,Ly,Lz);
   const alt=(i,j)=>{ i=Math.max(0,Math.min(W-1,i)); j=Math.max(0,Math.min(H-1,j));
-    const k=(j*W+i)*4; return da.data[k+3] ? da.data[k]/255*ALT_MOLD : 0 };
+    const k=(j*W+i)*4; return da.data[k+3] ? da.data[k]/255*AM : 0 };
   for(let j=0;j<H;j++) for(let i=0;i<W;i++){
     const k=(j*W+i)*4;
     if(!dc.data[k+3]){ out.data[k+3]=0; continue }
@@ -650,7 +663,7 @@ function montarPeca(G, p, mx, my){
   }
   xc.setTransform(1,0,0,1,0,0); xc.putImageData(out,0,0);
   /* o mesmo mapa de alturas que gerou a luz vira a malha na exportação */
-  ST.mapaAltura={d:da.data, W, H, bx0, by0, bw, bh};
+  ST.mapaAltura={d:da.data, W, H, bx0, by0, bw, bh, AM};
   return {cv:cCor, bx0, by0, bw, bh, larg};
 }
 
@@ -684,7 +697,7 @@ function relevoNasCamadas(xc, xa, G, ppm){
     if(isNaN(v)){ ic.data[o+3]=0; ia.data[o+3]=0; continue }
     if(v<=0){                                   /* mar */
       ic.data[o]=42; ic.data[o+1]=118; ic.data[o+2]=176; ic.data[o+3]=255;
-      const zm=ALT_AGUA/ALT_MOLD*255;
+      const zm=aguaAlt()/bordaAlt()*255;
       ia.data[o]=ia.data[o+1]=ia.data[o+2]=zm; ia.data[o+3]=255;
       continue;
     }
@@ -693,7 +706,7 @@ function relevoNasCamadas(xc, xa, G, ppm){
     const f=.58+nivel*.7;
     ic.data[o]=Math.min(255,R*f); ic.data[o+1]=Math.min(255,Gc*f);
     ic.data[o+2]=Math.min(255,B*f); ic.data[o+3]=255;
-    const z=(ALT_TERR0+nivel*(topoTerreno()-ALT_TERR0))/ALT_MOLD*255;
+    const z=(terrBase()+nivel*(topoTerreno()-terrBase()))/bordaAlt()*255;
     ia.data[o]=ia.data[o+1]=ia.data[o+2]=z; ia.data[o+3]=255;
   }
   if(nMar) ST.temMar=Math.round(nMar/(larg*altp)*100);
@@ -733,11 +746,11 @@ function desenhar(){
   const mx=i=>uni[i][0]*s, my=i=>uni[i][1]*s;
 
   const sig=JSON.stringify([ST.forma,ST.fmt,ST.mold,ST.deg,ST.relevo,ST.det,
-    ST.mCor,ST.tCor,ST.terrCor,ST.lados,ST.margem,ST.rioNivel,ST.altTerreno,ST.largTraco,ST.fonte,ST.tamTitulo,ST.tamTexto,ST.altTexto,ST.ver.dem,ST.ver.agua,ST.ver.ruas,q('#priv').checked,!!ST.dem,ST.agua?ST.agua.length:0,ST.ruas?ST.ruas.length:0,ST.costa?ST.costa.length:0,ST.rios?ST.rios.length:0,ST.ilhas?ST.ilhas.length:0,p.length]);
+    ST.mCor,ST.tCor,ST.terrCor,ST.lados,ST.margem,ST.rioNivel,ST.altMoldura,ST.altTerreno,ST.largTraco,ST.fonte,ST.tamTitulo,ST.tamTexto,ST.altTexto,ST.ver.dem,ST.ver.agua,ST.ver.ruas,q('#priv').checked,!!ST.dem,ST.agua?ST.agua.length:0,ST.ruas?ST.ruas.length:0,ST.costa?ST.costa.length:0,ST.rios?ST.rios.length:0,ST.ilhas?ST.ilhas.length:0,p.length]);
   if(cache.sig!==sig){ cache.val=montarPeca(G,p,mx,my); cache.sig=sig }
   const peca=cache.val;
 
-  const esp=6;
+  const esp=bordaAlt();
   const cantos=[]; G.v.forEach(([x,y])=>{cantos.push(PR.p(x,y,0));cantos.push(PR.p(x,y,-esp))});
   const sx0=Math.min(...cantos.map(c=>c[0])),sx1=Math.max(...cantos.map(c=>c[0]));
   const sy0=Math.min(...cantos.map(c=>c[1])),sy1=Math.max(...cantos.map(c=>c[1]));
@@ -794,7 +807,7 @@ function painel(G,p,largura){
     <div class="linha"><span>Points on plate</span><b>${p.length}</b></div>
     <div class="linha"><span>Route</span><b class="${ok?'ok':'alerta'}">${largura.toFixed(1)} mm × ${ST.relevo.toFixed(1)} mm</b></div>
     <div class="linha"><span>Border</span><b>${ST.mold} mm</b></div>
-    <div class="linha"><span>Plate</span><b>${Math.round(G.W)} × ${Math.round(G.H)} × 6 mm</b></div>
+    <div class="linha"><span>Plate</span><b>${Math.round(G.W)} × ${Math.round(G.H)} × ${altMax().toFixed(1)} mm</b></div>
     <div class="linha"><span>Terrain relief</span><b>${ST.dem&&ST.ver.dem?ST.deg+' steps':'—'}</b></div>`;
   q('#notaTec').innerHTML = ok
     ? `Route <b>${largura.toFixed(1)} mm</b> wide: two perimeters on a 0.4 nozzle.
@@ -831,7 +844,7 @@ function alturaEm(x,y){
   const i=Math.round((x-M.bx0)/M.bw*(M.W-1)), j=Math.round((y-M.by0)/M.bh*(M.H-1));
   if(i<0||j<0||i>=M.W||j>=M.H) return NaN;
   const k=(j*M.W+i)*4;
-  return M.d[k+3] ? M.d[k]/255*ALT_MOLD : NaN;
+  return M.d[k+3] ? M.d[k]/255*M.AM : NaN;
 }
 
 function gerarMalha(passo){
@@ -952,7 +965,7 @@ async function gerar3MF(){
    abrir eu busco de novo — leva os mesmos segundos da primeira vez. */
 const CAMPOS=['forma','fmt','vista','giro','relevo','det','mold','deg','zoom','margem',
               'lados','mCor','tCor','terrCor','ruasNivel','ver','nomeProj','rioNivel',
-              'altTerreno','largTraco','fonte','tamTitulo','tamTexto','altTexto','qual'];
+              'altMoldura','altTerreno','largTraco','fonte','tamTitulo','tamTexto','altTexto','qual'];
 
 function baixar(nome, conteudo, tipo){
   const b = conteudo instanceof Blob ? conteudo : new Blob([conteudo],{type:tipo});
@@ -1002,7 +1015,7 @@ function abrirProjeto(file){
       ST.ilhas=p.ilhas||null; ST.ruas=p.ruas||null; ST.dem=null; ST.temMar=0;
       if(!ST.ver) ST.ver={dem:true,agua:true,ruas:true};
       /* devolve os controles ao que estava salvo */
-      ['det','giro','rel','mold','deg','zoom','margem','altTerreno','largTraco',
+      ['det','giro','rel','mold','deg','zoom','margem','altMoldura','altTerreno','largTraco',
        'tamTitulo','tamTexto','altTexto'].forEach(id=>{
         const el=q('#'+id); const ch={rel:'relevo'}[id]||id;
         if(el && ST[ch]!==undefined) el.value=ST[ch];
@@ -1153,7 +1166,7 @@ function ler(file){const fr=new FileReader();
   fr.onload=()=>{try{aplicar(lerGPX(fr.result))}catch(err){alert('Could not read: '+err.message)}};
   fr.readAsText(file)}
 q('#priv').addEventListener('input',desenhar);
-[['#det','det'],['#giro','giro'],['#rel','relevo'],['#mold','mold'],['#deg','deg'],['#zoom','zoom'],['#margem','margem'],['#altTerreno','altTerreno'],['#largTraco','largTraco'],['#tamTitulo','tamTitulo'],['#tamTexto','tamTexto'],['#altTexto','altTexto']].forEach(([sel,ch])=>
+[['#det','det'],['#giro','giro'],['#rel','relevo'],['#mold','mold'],['#deg','deg'],['#zoom','zoom'],['#margem','margem'],['#altMoldura','altMoldura'],['#altTerreno','altTerreno'],['#largTraco','largTraco'],['#tamTitulo','tamTitulo'],['#tamTexto','tamTexto'],['#altTexto','altTexto']].forEach(([sel,ch])=>
   q(sel).addEventListener('input',e=>{ST[ch]=+e.target.value;desenhar()}));
 q('#btRelevo').onclick=buscarRelevo;
 q('#btAgua').onclick=buscarAgua;
