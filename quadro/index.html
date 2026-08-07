@@ -102,6 +102,16 @@
       <input type="file" id="arq" accept=".gpx" hidden>
       <label class="sw"><input type="checkbox" id="priv" checked>
         Apagar os primeiros e últimos 200 m</label>
+
+      <div id="dadosProva" style="display:none">
+        <label class="cmp">Título</label><input type="text" id="dTitulo">
+        <label class="cmp">Distância</label><input type="text" id="dDist">
+        <label class="cmp">Tempo</label><input type="text" id="dTempo">
+        <label class="cmp">Data</label><input type="text" id="dData">
+        <label class="cmp">Ritmo</label><input type="text" id="dPace">
+        <div class="nota">Vêm do arquivo e podem ser corrigidos. Cada um vai para
+          uma borda do hexágono — ajuste fino na seção <b>Textos da moldura</b>.</div>
+      </div>
     </div>
 
     <div class="bloco">
@@ -756,6 +766,22 @@ function painel(G,p,largura){
     : `<b>Atenção:</b> traçado fino demais para o bico de 0,4 mm. Aumente a peça.`;
 }
 
+/* Os quatro dados da prova vão para bordas fixas do hexágono. É o
+   padrão que o cliente entende: ele corrige "Distância", não "aresta 5". */
+const DESTINO=[['dTitulo','topo'],['dDist','Sup. direito'],
+               ['dTempo','Sup. esquerdo'],['dData','Base'],['dPace','Inf. direito']];
+
+function aplicarDados(){
+  const inf=ladosInfo(geometria());
+  DESTINO.forEach(([id,onde])=>{
+    const el=q('#'+id); if(!el) return;
+    const alvo = onde==='topo' ? inf.find(x=>x.topo)
+               : inf.find(x=>x.nome===onde) || inf.find(x=>x.nome===onde.replace('Sup.','Inf.'));
+    if(alvo) ST.lados[alvo.i]=el.value;
+  });
+  sugerirNome(); montar(); desenhar();
+}
+
 /* ═══════ projeto ═══════
    Guardo o percurso, os ajustes e as camadas vetoriais já baixadas.
    O relevo NÃO entra: são milhões de pixels de altitude, o arquivo
@@ -910,10 +936,18 @@ function aplicar(d){
   const topo=inf.find(x=>x.topo), base=por('Base')||inf.reduce((a,b)=>b.my>a.my?b:a);
   const supD=por('Sup. direito')||por('Inf. direito');
   const supE=por('Sup. esquerdo')||por('Inf. esquerdo');
-  if(topo) ST.lados[topo.i]=d.meta.nome;
-  if(base) ST.lados[base.i]=dataEN(d.meta.data);
-  if(supD) ST.lados[supD.i]=d.meta.km.toFixed(2)+' km';
-  if(supE) ST.lados[supE.i]=paceDe(d.meta);
+  q('#dTitulo').value=d.meta.nome||'';
+  q('#dDist').value=d.meta.km?d.meta.km.toFixed(2)+' km':'';
+  q('#dTempo').value=d.meta.seg?hms(d.meta.seg):'';
+  q('#dData').value=dataEN(d.meta.data);
+  q('#dPace').value=paceDe(d.meta);
+  q('#dadosProva').style.display='block';
+  if(topo) ST.lados[topo.i]=q('#dTitulo').value;
+  if(base) ST.lados[base.i]=q('#dData').value;
+  if(supD) ST.lados[supD.i]=q('#dDist').value;
+  if(supE) ST.lados[supE.i]=q('#dTempo').value;
+  const infD=inf.find(x=>x.nome==='Inf. direito');
+  if(infD) ST.lados[infD.i]=q('#dPace').value;
   ST.nomeProj=''; q('#nomeProj').value='';
   q('#btRelevo').textContent='Buscar relevo do terreno';
   q('#btAgua').textContent='Buscar lagos e rios';
@@ -934,6 +968,8 @@ q('#priv').addEventListener('input',desenhar);
 q('#btRelevo').onclick=buscarRelevo;
 q('#btAgua').onclick=buscarAgua;
 q('#btRuas').onclick=buscarRuas;
+['dTitulo','dDist','dTempo','dData','dPace'].forEach(id=>
+  q('#'+id).addEventListener('input', aplicarDados));
 q('#btSalvar').onclick=salvarProjeto;
 q('#btImagem').onclick=salvarImagem;
 q('#btAbrir').onclick=()=>q('#arqProj').click();
