@@ -137,6 +137,7 @@
       <div id="camadas" style="margin-top:4px"></div>
       <div class="nota" id="notaReg">Terrain comes from open elevation data and becomes contour steps —
         each step is one printed layer. Water comes from OpenStreetMap.</div>
+      <div class="nota" id="notaAgua"></div>
       
     </div>
 
@@ -349,22 +350,47 @@ async function buscarRelevo(){
     const cv=document.createElement('canvas');
     cv.width=nx*256; cv.height=ny*256;
     const c=cv.getContext('2d', {willReadFrequently:true});
-    await Promise.all([].concat(...[...Array(nx)].map((_,i)=>[...Array(ny)].map((_,j)=>
-      new Promise(res=>{
-        const im=new Image(); im.crossOrigin='anonymous';
-        im.onload=()=>{ c.drawImage(im,i*256,j*256); res() };
-        im.onerror=()=>res();
-        im.src=`https://s3.amazonaws.com/elevation-tiles-prod/terrarium/${z}/${x0+i}/${y0+j}.png`;
-      })))));
+    /* Três endereços do mesmo acervo aberto da AWS. Busco por fetch e
+       não por <img>: com <img> um bloqueio de CORS suja o canvas e o
+       erro só aparece lá na frente, sem dizer de onde veio. Com fetch
+       o problema aparece na hora e com nome.                        */
+    const ESPELHOS=[
+      z=>`https://s3.amazonaws.com/elevation-tiles-prod/terrarium/${z}`,
+      z=>`https://elevation-tiles-prod.s3.amazonaws.com/terrarium/${z}`,
+      z=>`https://s3.dualstack.us-east-1.amazonaws.com/elevation-tiles-prod/terrarium/${z}`
+    ];
+    let ok=0, falhas=[];
+    await Promise.all([].concat(...[...Array(nx)].map((_,i)=>[...Array(ny)].map(async(_,j)=>{
+      for(const base of ESPELHOS){
+        const url=`${base(z)}/${x0+i}/${y0+j}.png`;
+        try{
+          const r=await fetch(url,{mode:'cors',cache:'force-cache'});
+          if(!r.ok){ falhas.push('HTTP '+r.status); continue }
+          const bm=await createImageBitmap(await r.blob());
+          c.drawImage(bm,i*256,j*256); ok++; return;
+        }catch(e){ falhas.push(e.name==='TypeError'?'blocked':e.name) }
+      }
+    }))));
+    if(!ok){
+      const porque=[...new Set(falhas)].join(', ')||'no answer';
+      throw new Error('none of the '+(nx*ny)+' elevation tiles could be read ('+porque+')');
+    }
     const d=c.getImageData(0,0,cv.width,cv.height).data;
+    ST.demOk=[ok,nx*ny];
     ST.dem={z,x0,y0,nx,ny,d,w:cv.width,h:cv.height};
     ST.ver.dem=true; montar(); desenhar();
-    nota.innerHTML='Terrain loaded. Each colour band is one elevation step — and one printed layer.'
+    const [g,tot]=ST.demOk;
+    nota.innerHTML='Terrain loaded — <b>'+g+' of '+tot+'</b> elevation tiles. Each colour band '+
+      'is one elevation step, and one printed layer.'
+      + (g<tot ? ' The missing tiles show as blank patches; tap the button again to retry them.' : '')
       + (ST.temMar ? ` Found <b>sea</b> across ${ST.temMar}% of the area: everything at or below zero was painted as water.` : '');
     bt.textContent='Terrain — fetch again';
     desenhar();
   }catch(e){
-    nota.textContent='Could not read elevation: '+e.message+'. The server may not allow direct reading.';
+    nota.innerHTML='<b style="color:var(--aviso)">Could not read elevation.</b> '+e.message+
+      '. The elevation data comes from a free public archive that has no uptime guarantee — '+
+      'if this keeps up, it is the archive that is down, not your file. Everything else '+
+      '(route, water, roads, texts, 3MF) still works without it.';
     bt.textContent='Terrain — try again';
   }
   bt.disabled=false;
@@ -844,11 +870,12 @@ function desenhar(){
   q('#lblRioMin').textContent=ST.rioMin?ST.rioMin+' mm on the plate':'keep every river';
   q('#lblAguaMin').textContent=ST.aguaMin?ST.aguaMin+' mm²':'keep every lake';
   q('#lblAguaLarg').textContent=ST.aguaLarg?ST.aguaLarg.toFixed(1)+' mm wide':'keep every thread';
+  /* este contador tem caixa própria: escrevendo em #notaReg ele
+     apagava o aviso do relevo, e uma falha na altitude ficava muda. */
   const ct=ST.corte;
-  if(ct) q('#notaReg').innerHTML='Terrain comes from open elevation data. Water comes from '+
-    'OpenStreetMap, filtered for printing: <b>'+(ct.lago||0)+'</b> water bodies kept, <b>'+
-    (ct.lagoFora||0)+'</b> dropped · <b>'+(ct.rio||0)+'</b> rivers kept, <b>'+
-    (ct.rioFora||0)+'</b> dropped.';
+  if(ct) q('#notaAgua').innerHTML='Water filtered for printing: <b>'+(ct.lago||0)+
+    '</b> bodies kept, <b>'+(ct.lagoFora||0)+'</b> dropped · <b>'+(ct.rio||0)+
+    '</b> rivers kept, <b>'+(ct.rioFora||0)+'</b> dropped.';
   q('#lblZoom').textContent=Math.round(G.W*ST.zoom)+' px';
   q('#lblRel').textContent=ST.relevo.toFixed(1)+' mm';
   q('#lblMold').textContent=ST.mold+' mm';
