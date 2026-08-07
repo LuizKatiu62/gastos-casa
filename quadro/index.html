@@ -349,7 +349,8 @@ async function buscarRelevo(){
   try{
     const cv=document.createElement('canvas');
     cv.width=nx*256; cv.height=ny*256;
-    const c=cv.getContext('2d', {willReadFrequently:true});
+    const c=cv.getContext('2d', {willReadFrequently:true, colorSpace:'srgb'});
+    c.imageSmoothingEnabled=false;
     /* Três endereços do mesmo acervo aberto da AWS. Busco por fetch e
        não por <img>: com <img> um bloqueio de CORS suja o canvas e o
        erro só aparece lá na frente, sem dizer de onde veio. Com fetch
@@ -360,13 +361,29 @@ async function buscarRelevo(){
       z=>`https://s3.dualstack.us-east-1.amazonaws.com/elevation-tiles-prod/terrarium/${z}`
     ];
     let ok=0, falhas=[];
+    /* ATENÇÃO ao mexer aqui: este PNG não é uma foto, é uma TABELA.
+       A altitude está codificada nos bytes R, G e B. Qualquer coisa
+       que "melhore" a imagem — perfil de cor, alfa pré-multiplicado,
+       suavização — estraga o número e o terreno vira mancha.
+
+       Foi exatamente o que aconteceu quando troquei <img> por
+       createImageBitmap sem desligar a conversão de cor. Voltei ao
+       <img>, que o navegador não gerencia, e deixei o fetch só para
+       o caso de o <img> falhar — aí ele diz o motivo.              */
+    const porImagem = url => new Promise(res=>{
+      const im=new Image(); im.crossOrigin='anonymous';
+      im.onload=()=>res(im); im.onerror=()=>res(null); im.src=url;
+    });
     await Promise.all([].concat(...[...Array(nx)].map((_,i)=>[...Array(ny)].map(async(_,j)=>{
       for(const base of ESPELHOS){
         const url=`${base(z)}/${x0+i}/${y0+j}.png`;
+        const im=await porImagem(url);
+        if(im){ c.drawImage(im,i*256,j*256); ok++; return }
         try{
-          const r=await fetch(url,{mode:'cors',cache:'force-cache'});
+          const r=await fetch(url,{mode:'cors'});
           if(!r.ok){ falhas.push('HTTP '+r.status); continue }
-          const bm=await createImageBitmap(await r.blob());
+          const bm=await createImageBitmap(await r.blob(),
+            {colorSpaceConversion:'none', premultiplyAlpha:'none'});
           c.drawImage(bm,i*256,j*256); ok++; return;
         }catch(e){ falhas.push(e.name==='TypeError'?'blocked':e.name) }
       }
