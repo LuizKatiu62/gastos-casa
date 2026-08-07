@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Quadro de Percurso · protótipo</title>
+<title>Route Plate · prototype</title>
 <style>
   :root{--bg:#f4f5f7;--card:#fff;--ink:#14181f;--ink2:#5b6675;--line:#e3e7ed;
         --acc:#1a7f5a;--acc-wash:#e8f5ef}
@@ -76,8 +76,8 @@
 <body>
 
 <header><div class="in">
-  <b>Quadro de Percurso</b>
-  <span>protótipo · arraste o GPX · arraste o desenho para girar</span>
+  <b>Route Plate</b>
+  <span>prototype · drop your GPX · drag the plate to rotate</span>
 </div></header>
 
 <main>
@@ -85,82 +85,82 @@
     <canvas id="tela"></canvas>
     <div id="semDados">
       <div class="ic">⬡</div>
-      <b>Nenhum percurso carregado</b>
-      <span>Arraste um arquivo GPX na caixa ao lado, ou clique nela para escolher.<br>
-        O arquivo é lido aqui no seu computador — nada é enviado para servidor nenhum.</span>
-      <button class="bt" id="btExemplo" style="max-width:220px;margin:18px auto 0">Ver um exemplo</button>
+      <b>No route loaded</b>
+      <span>Drop a GPX file in the box to the right, or click it to choose one.<br>
+        The file is read here on your computer — nothing is sent to any server.</span>
+      <button class="bt" id="btExemplo" style="max-width:220px;margin:18px auto 0">See an example</button>
     </div>
   </div>
 
   <div class="lado">
     <div class="bloco">
-      <h2>Arquivo</h2>
+      <h2>File</h2>
       <div class="solta" id="solta">
-        <b>Arraste o GPX aqui</b>
-        <span>ou clique para escolher · nada sai do seu computador</span>
+        <b>Drop your GPX here</b>
+        <span>or click to choose · nothing leaves your computer</span>
       </div>
       <input type="file" id="arq" accept=".gpx" hidden>
       <label class="sw"><input type="checkbox" id="priv" checked>
-        Apagar os primeiros e últimos 200 m</label>
+        Trim the first and last 200 m</label>
 
       <div id="dadosProva" style="display:none">
-        <label class="cmp">Título</label><input type="text" id="dTitulo">
-        <label class="cmp">Distância</label><input type="text" id="dDist">
-        <label class="cmp">Tempo</label><input type="text" id="dTempo">
-        <label class="cmp">Data</label><input type="text" id="dData">
-        <label class="cmp">Ritmo</label><input type="text" id="dPace">
-        <div class="nota">Vêm do arquivo e podem ser corrigidos. Cada um vai para
-          uma borda do hexágono — ajuste fino na seção <b>Textos da moldura</b>.</div>
+        <label class="cmp">Title</label><input type="text" id="dTitulo">
+        <label class="cmp">Distance</label><input type="text" id="dDist">
+        <label class="cmp">Time</label><input type="text" id="dTempo">
+        <label class="cmp">Date</label><input type="text" id="dData">
+        <label class="cmp">Pace</label><input type="text" id="dPace">
+        <div class="nota">Taken from the file and editable. Each one goes to a border of the
+          hexagon — fine tuning under <b>Border text</b>.</div>
       </div>
     </div>
 
     <div class="bloco">
-      <h2>Região</h2>
-      <button class="bt" id="btRelevo">Buscar relevo do terreno</button>
-      <button class="bt" id="btAgua">Buscar lagos e rios</button>
-      <button class="bt" id="btRuas">Buscar ruas</button>
+      <h2>Region</h2>
+      <button class="bt" id="btRelevo">Get terrain relief</button>
+      <button class="bt" id="btAgua">Get lakes and rivers</button>
+      <button class="bt" id="btRuas">Get roads</button>
       <div class="fmt" id="nivelRuas" style="margin-top:7px"></div>
-      <label class="cmp">Rios a mostrar</label>
+      <label class="cmp">Rivers to show</label>
       <div class="fmt" id="nivelRios"></div>
       <div id="camadas" style="margin-top:4px"></div>
-      <div class="nota" id="notaReg">O relevo vem de dados abertos de altitude e vira
-        curvas de nível — cada degrau é uma camada de impressão. A água vem do OpenStreetMap.</div>
-      <label class="cmp">Área ao redor — <span id="lblMargem"></span></label>
+      <div class="nota" id="notaReg">Terrain comes from open elevation data and becomes contour steps —
+        each step is one printed layer. Water comes from OpenStreetMap.</div>
+      <label class="cmp">Surrounding area — <span id="lblMargem"></span></label>
       <input type="range" id="margem" min="0" max="400" step="10" value="35">
-      <div class="nota">Quanto de região aparece além do percurso. Aumente para
-        alcançar o mar, um lago ou a cidade vizinha — o traçado encolhe na mesma medida.</div>
-      <label class="cmp">Degraus do relevo — <span id="lblDeg"></span></label>
+      <div class="nota">How much land shows beyond the route. Increase it to reach the sea, a lake
+        or the next town — the route shrinks by the same amount.</div>
+      <label class="cmp">Terrain steps — <span id="lblDeg"></span></label>
       <input type="range" id="deg" min="4" max="26" step="1" value="14">
     </div>
 
     <div class="bloco">
-      <h2>Vista</h2>
+      <h2>View</h2>
       <div class="fmt tres" id="vista"></div>
-      <label class="cmp">Tamanho na tela — <span id="lblZoom"></span></label>
+      <label class="cmp">On-screen size — <span id="lblZoom"></span></label>
       <input type="range" id="zoom" min="2.5" max="7.5" step="0.1" value="4.4">
-      <label class="cmp">Giro — <span id="lblGiro"></span></label>
+      <label class="cmp">Rotation — <span id="lblGiro"></span></label>
       <input type="range" id="giro" min="-180" max="180" step="1" value="0">
-      <label class="cmp">Altura do traçado — <span id="lblRel"></span></label>
+      <label class="cmp">Route height — <span id="lblRel"></span></label>
       <input type="range" id="rel" min="0.6" max="6" step="0.2" value="2">
     </div>
 
     <div class="bloco">
-      <h2>Forma e tamanho</h2>
+      <h2>Shape and size</h2>
       <div class="fmt tres" id="forma"></div>
       <div class="fmt" id="fmt" style="margin-top:8px"></div>
-      <label class="cmp">Largura da moldura — <span id="lblMold"></span></label>
+      <label class="cmp">Border width — <span id="lblMold"></span></label>
       <input type="range" id="mold" min="6" max="22" step="1" value="13">
-      <label class="cmp">Detalhe do traçado — <span id="lblPts"></span></label>
+      <label class="cmp">Route detail — <span id="lblPts"></span></label>
       <input type="range" id="det" min="80" max="900" step="20" value="420">
-      <label class="cmp">Altura do terreno (mm)</label>
+      <label class="cmp">Terrain height (mm)</label>
       <input type="range" id="altTerreno" min="1" max="6" step="0.2" value="3">
-      <label class="cmp">Largura do traçado (mm)</label>
+      <label class="cmp">Route width (mm)</label>
       <input type="range" id="largTraco" min="0.8" max="4" step="0.1" value="1.4">
     </div>
 
     <div class="bloco">
-      <h2>Tipografia</h2>
-      <label class="cmp">Fonte</label>
+      <h2>Typography</h2>
+      <label class="cmp">Font</label>
       <select id="fonte" style="width:100%;padding:8px 10px;border:1px solid var(--line);
         border-radius:9px;font:inherit;font-size:13.5px;background:#fff">
         <option value="Helvetica,Arial">Helvetica</option>
@@ -169,41 +169,41 @@
         <option value="Georgia,serif">Georgia</option>
         <option value="&quot;Courier New&quot;,monospace">Courier New</option>
       </select>
-      <label class="cmp">Tamanho do título (mm)</label>
+      <label class="cmp">Title size (mm)</label>
       <input type="range" id="tamTitulo" min="3" max="14" step="0.5" value="8">
-      <label class="cmp">Tamanho dos demais (mm)</label>
+      <label class="cmp">Other text size (mm)</label>
       <input type="range" id="tamTexto" min="2" max="10" step="0.5" value="5.5">
-      <label class="cmp">Relevo do texto (mm)</label>
+      <label class="cmp">Text relief (mm)</label>
       <input type="range" id="altTexto" min="0" max="2.5" step="0.1" value="0.9">
     </div>
 
     <div class="bloco">
-      <h2>Textos da moldura</h2>
+      <h2>Border text</h2>
       <div id="lados"></div>
     </div>
 
     <div class="bloco">
-      <h2>Cores</h2>
-      <label class="cmp">Moldura</label><div class="cores" id="corMold"></div>
-      <label class="cmp">Traçado</label><div class="cores" id="corTraco"></div>
-      <label class="cmp">Terreno</label><div class="cores" id="corTerr"></div>
+      <h2>Colours</h2>
+      <label class="cmp">Border</label><div class="cores" id="corMold"></div>
+      <label class="cmp">Route</label><div class="cores" id="corTraco"></div>
+      <label class="cmp">Terrain</label><div class="cores" id="corTerr"></div>
     </div>
 
     <div class="bloco">
-      <h2>Projeto</h2>
-      <label class="cmp">Nome do arquivo</label>
-      <input type="text" id="nomeProj" placeholder="ex.: quadro do Pedro — meia de Ottawa">
+      <h2>Project</h2>
+      <label class="cmp">File name</label>
+      <input type="text" id="nomeProj" placeholder="e.g. Pedro plate — Ottawa half">
       <div class="bt" style="display:none"></div>
-      <button class="bt" id="btSalvar" style="margin-top:9px">Salvar projeto</button>
-      <button class="bt" id="btAbrir">Abrir projeto salvo</button>
-      <button class="bt" id="btImagem">Salvar imagem (PNG)</button>
+      <button class="bt" id="btSalvar" style="margin-top:9px">Save project</button>
+      <button class="bt" id="btAbrir">Open saved project</button>
+      <button class="bt" id="btImagem">Save image (PNG)</button>
       <input type="file" id="arqProj" accept=".json,application/json" hidden>
-      <div class="nota" id="notaProj">O projeto guarda o percurso, todos os ajustes e as
-        camadas já baixadas. A imagem serve para mandar ao cliente aprovar.</div>
+      <div class="nota" id="notaProj">The project keeps the route, every setting and the layers already fetched.
+        The image is what you send the customer for approval.</div>
     </div>
 
     <div class="bloco">
-      <h2>Impressão · Bambu Lab</h2>
+      <h2>Printing · Bambu Lab</h2>
       <div id="tec"></div>
       <div class="nota" id="notaTec"></div>
     </div>
@@ -240,12 +240,12 @@ const aparar=(p,m)=>{ const anda=s=>{let a=0;for(let i=0;i<s.length-1;i++){a+=ha
   return p.slice(anda(p), p.length-anda([...p].reverse())) };
 
 /* ═══════ estado ═══════ */
-const FORMAS=[{id:'hexL',n:'Hex ⬢',off:0},{id:'hexP',n:'Hex ▲',off:-90},{id:'ret',n:'Retângulo',off:null}];
+const FORMAS=[{id:'hexL',n:'Hex ⬢',off:0},{id:'hexP',n:'Hex ▲',off:-90},{id:'ret',n:'Rectangle',off:null}];
 const TAMANHOS={
   hex:[{id:'h1',n:'16 cm',R:80},{id:'h2',n:'20 cm',R:100},{id:'h3',n:'24 cm',R:120},{id:'h4',n:'28 cm',R:140}],
   ret:[{id:'r1',n:'15 × 20 cm',w:150,h:200},{id:'q',n:'20 × 20 cm',w:200,h:200},
        {id:'r2',n:'20 × 30 cm',w:200,h:300},{id:'p',n:'30 × 20 cm',w:300,h:200}]};
-const VISTAS=[{id:'p',n:'Plana',t:0},{id:'m',n:'3D',t:48},{id:'a',n:'3D raso',t:26}];
+const VISTAS=[{id:'p',n:'Flat',t:0},{id:'m',n:'3D',t:48},{id:'a',n:'3D low',t:26}];
 const P_MOLD=['#111418','#2b2f36','#f5f5f0','#7a4a2b','#1a2b45'];
 const P_TRACO=['#e0342c','#c9f24e','#ffffff','#f18701','#0d7ac4','#111418'];
 const P_TERR=['#0f8f70','#2e7d32','#4a6741','#6b5b3e','#3a5f7d','#5a4a6b'];
@@ -258,7 +258,7 @@ let ST={bruto:[],meta:{},forma:'hexL',fmt:'h2',vista:'p',giro:0,relevo:2,det:420
 function lerGPX(t){
   const doc=new DOMParser().parseFromString(t,'text/xml');
   let nos=[...doc.querySelectorAll('trkpt')]; if(!nos.length) nos=[...doc.querySelectorAll('rtept')];
-  if(!nos.length) throw new Error('Não achei pontos de percurso.');
+  if(!nos.length) throw new Error('No route points found in this file.');
   const pts=nos.map(n=>[+n.getAttribute('lat'),+n.getAttribute('lon')]);
   const tempos=[...doc.querySelectorAll('time')].map(x=>x.textContent);
   const nome=doc.querySelector('trk > name')||doc.querySelector('name');
@@ -266,7 +266,7 @@ function lerGPX(t){
   let seg=0;
   if(tempos.length>1){const a=new Date(tempos[1]||tempos[0]),b=new Date(tempos[tempos.length-1]);
     if(!isNaN(a)&&!isNaN(b)) seg=Math.max(0,(b-a)/1000)}
-  return {pts,meta:{nome:nome?nome.textContent.trim().replace(/\.$/,''):'Meu percurso',
+  return {pts,meta:{nome:nome?nome.textContent.trim().replace(/\.$/,''):'My route',
     data:tempos.length?(tempos[0]||'').slice(0,10):'',km:dist/1000,seg,n:pts.length}};
 }
 const hms=s=>{s=Math.round(s);const h=Math.floor(s/3600),m=Math.floor(s%3600/60);
@@ -358,7 +358,7 @@ async function buscarRelevo(){
   while(z>10 && (tx(E,z)-tx(W,z)+1)*(ty(S,z)-ty(N,z)+1) > 12) z--;
   const x0=tx(W,z), x1=tx(E,z), y0=ty(N,z), y1=ty(S,z);
   const nx=x1-x0+1, ny=y1-y0+1;
-  bt.disabled=true; bt.textContent='Buscando altitude…';
+  bt.disabled=true; bt.textContent='Fetching elevation…';
   try{
     const cv=document.createElement('canvas');
     cv.width=nx*256; cv.height=ny*256;
@@ -373,13 +373,13 @@ async function buscarRelevo(){
     const d=c.getImageData(0,0,cv.width,cv.height).data;
     ST.dem={z,x0,y0,nx,ny,d,w:cv.width,h:cv.height};
     ST.ver.dem=true; montar(); desenhar();
-    nota.innerHTML='Relevo carregado. Cada faixa de cor é um degrau de altitude — e uma camada na impressão.'
-      + (ST.temMar ? ` Encontrei <b>mar</b> em ${ST.temMar}% da área: tudo que está no nível zero ou abaixo foi pintado como água.` : '');
-    bt.textContent='Relevo — buscar de novo';
+    nota.innerHTML='Terrain loaded. Each colour band is one elevation step — and one printed layer.'
+      + (ST.temMar ? ` Found <b>sea</b> across ${ST.temMar}% of the area: everything at or below zero was painted as water.` : '');
+    bt.textContent='Terrain — fetch again';
     desenhar();
   }catch(e){
-    nota.textContent='Não consegui ler a altitude: '+e.message+'. Talvez o servidor não permita leitura direta.';
-    bt.textContent='Relevo — tentar de novo';
+    nota.textContent='Could not read elevation: '+e.message+'. The server may not allow direct reading.';
+    bt.textContent='Terrain — try again';
   }
   bt.disabled=false;
 }
@@ -420,7 +420,7 @@ async function buscarAgua(){
   bt.disabled=true;
   let erro='';
   for(let i=0;i<ESPELHOS.length;i++){
-    bt.textContent=`Tentando servidor ${i+1} de ${ESPELHOS.length}…`;
+    bt.textContent=`Trying server ${i+1} of ${ESPELHOS.length}…`;
     try{
       const ctrl=new AbortController(); const to=setTimeout(()=>ctrl.abort(),30000);
       const r=await fetch(ESPELHOS[i],{method:'POST',signal:ctrl.signal,
@@ -458,21 +458,21 @@ async function buscarAgua(){
       const achou=pol.length+costa.length+rios.length;
       const nRel=relPol.length;
       nota.innerHTML=achou
-        ? `<b>${pol.length}</b> áreas de água${nRel?` (<b>${nRel}</b> de corpos grandes)`:''}, <b>${rios.length}</b> rios e córregos${costa.length?`, <b>${costa.length}</b> trechos de costa`:''}.
+        ? `<b>${pol.length}</b> water areas${nRel?` (<b>${nRel}</b> from large bodies)`:''}, <b>${rios.length}</b> rivers and streams${costa.length?`, <b>${costa.length}</b> coastline stretches`:''}.
            O mar em si não vem daqui: ele é preenchido pela altitude, no botão do relevo.
            Dados do OpenStreetMap — a licença ODbL exige o crédito
            "© OpenStreetMap contributors" na peça, na embalagem ou na página.`
-        : 'Nenhum lago, rio ou costa mapeado nesta área.';
-      bt.textContent=achou?'Água — buscar de novo':'Água — nada encontrado';
+        : 'No lake, river or coastline mapped in this area.';
+      bt.textContent=achou?'Water — fetch again':'Water — nothing found';
       bt.disabled=false; montar(); desenhar(); return;
     }catch(e){ erro=e.message }
   }
-  nota.innerHTML='Os três servidores do OpenStreetMap recusaram ('+erro+'). '+
-    'Eles são gratuitos e vivem congestionados — tente de novo em alguns minutos.';
-  bt.textContent='Água — tentar de novo'; bt.disabled=false;
+  nota.innerHTML='All three OpenStreetMap servers refused ('+erro+'). '+
+    'They are free and often congested — try again in a few minutes.';
+  bt.textContent='Water — try again'; bt.disabled=false;
 }
 
-const NIVEIS=[{id:'p',n:'Principais'},{id:'t',n:'Todas'}];
+const NIVEIS=[{id:'p',n:'Main only'},{id:'t',n:'All'}];
 const CLASSES={p:'motorway|trunk|primary|secondary|tertiary',
                t:'motorway|trunk|primary|secondary|tertiary|residential|unclassified|living_street'};
 const ESPESSURA={motorway:1.7,trunk:1.6,primary:1.4,secondary:1.2,tertiary:1.0};
@@ -485,7 +485,7 @@ async function buscarRuas(){
   bt.disabled=true;
   let erro='';
   for(let i=0;i<ESPELHOS.length;i++){
-    bt.textContent=`Tentando servidor ${i+1} de ${ESPELHOS.length}…`;
+    bt.textContent=`Trying server ${i+1} of ${ESPELHOS.length}…`;
     try{
       const ctrl=new AbortController(); const to=setTimeout(()=>ctrl.abort(),30000);
       const r=await fetch(ESPELHOS[i],{method:'POST',signal:ctrl.signal,
@@ -498,15 +498,15 @@ async function buscarRuas(){
         .map(e=>({cls:(e.tags&&e.tags.highway)||'', pts:e.geometry.map(g=>[g.lat,g.lon])}));
       ST.ruas=vias.length?vias:null;
       nota.innerHTML=vias.length
-        ? `<b>${vias.length}</b> vias desenhadas. Se ficar denso demais para imprimir,
-           volte para <b>Principais</b> — cada linha precisa de 0,8 mm para sair no bico de 0,4.`
-        : 'Nenhuma via desse tipo mapeada aqui. Tente o nível Todas.';
-      bt.textContent=vias.length?'Ruas — buscar de novo':'Ruas — nada encontrado';
+        ? `<b>${vias.length}</b> roads drawn. If it gets too dense to print, go back to
+           <b>Main only</b> — each line needs 0.8 mm to survive a 0.4 nozzle.`
+        : 'No roads of this kind mapped here. Try the All level.';
+      bt.textContent=vias.length?'Roads — fetch again':'Roads — nothing found';
       bt.disabled=false; montar(); desenhar(); return;
     }catch(e){ erro=e.message }
   }
-  nota.innerHTML='Os três servidores recusaram ('+erro+'). Eles são gratuitos e vivem congestionados.';
-  bt.textContent='Ruas — tentar de novo'; bt.disabled=false;
+  nota.innerHTML='All three servers refused ('+erro+'). They are free and often congested.';
+  bt.textContent='Roads — try again'; bt.disabled=false;
 }
 
 /* ═══════ desenho ═══════
@@ -769,12 +769,12 @@ function desenhar(){
   ctx.restore();
 
   painel(G,p,peca.larg);
-  q('#lblPts').textContent=p.length+' pontos';
+  q('#lblPts').textContent=p.length+' points';
   q('#lblGiro').textContent=ST.giro+'°';
   q('#lblZoom').textContent=Math.round(G.W*ST.zoom)+' px';
   q('#lblRel').textContent=ST.relevo.toFixed(1)+' mm';
   q('#lblMold').textContent=ST.mold+' mm';
-  q('#lblDeg').textContent=ST.deg+' degraus';
+  q('#lblDeg').textContent=ST.deg+' steps';
   const av=areaVisivel();
   const kmL=(av.E-av.W)*111*Math.cos(rad((av.N+av.S)/2)), kmA=(av.N-av.S)*111;
   q('#lblMargem').textContent=ST.margem+'% · '+kmL.toFixed(1)+' × '+kmA.toFixed(1)+' km';
@@ -783,29 +783,29 @@ function desenhar(){
 function painel(G,p,largura){
   const ok=largura>=0.8;
   q('#tec').innerHTML=`
-    <div class="linha"><span>Pontos no arquivo</span><b>${ST.meta.n.toLocaleString('pt-BR')}</b></div>
-    <div class="linha"><span>Pontos na peça</span><b>${p.length}</b></div>
-    <div class="linha"><span>Traçado</span><b class="${ok?'ok':'alerta'}">${largura.toFixed(1)} mm × ${ST.relevo.toFixed(1)} mm</b></div>
-    <div class="linha"><span>Moldura</span><b>${ST.mold} mm</b></div>
-    <div class="linha"><span>Peça</span><b>${Math.round(G.W)} × ${Math.round(G.H)} × 6 mm</b></div>
-    <div class="linha"><span>Relevo do terreno</span><b>${ST.dem&&ST.ver.dem?ST.deg+' degraus':'—'}</b></div>`;
+    <div class="linha"><span>Points in file</span><b>${ST.meta.n.toLocaleString('pt-BR')}</b></div>
+    <div class="linha"><span>Points on plate</span><b>${p.length}</b></div>
+    <div class="linha"><span>Route</span><b class="${ok?'ok':'alerta'}">${largura.toFixed(1)} mm × ${ST.relevo.toFixed(1)} mm</b></div>
+    <div class="linha"><span>Border</span><b>${ST.mold} mm</b></div>
+    <div class="linha"><span>Plate</span><b>${Math.round(G.W)} × ${Math.round(G.H)} × 6 mm</b></div>
+    <div class="linha"><span>Terrain relief</span><b>${ST.dem&&ST.ver.dem?ST.deg+' steps':'—'}</b></div>`;
   q('#notaTec').innerHTML = ok
-    ? `Traçado com <b>${largura.toFixed(1)} mm</b> de largura: dois perímetros no bico de 0,4.
-       Com a AMS, moldura, terreno, água e traçado saem numa impressão só, trocando cor por altura.`
-    : `<b>Atenção:</b> traçado fino demais para o bico de 0,4 mm. Aumente a peça.`;
+    ? `Route <b>${largura.toFixed(1)} mm</b> wide: two perimeters on a 0.4 nozzle.
+       With the AMS, border, terrain, water and route print in one go, swapping colour by height.`
+    : `<b>Careful:</b> the route is too thin for a 0.4 mm nozzle. Make the plate bigger.`;
 }
 
 /* Os quatro dados da prova vão para bordas fixas do hexágono. É o
    padrão que o cliente entende: ele corrige "Distância", não "aresta 5". */
-const DESTINO=[['dTitulo','topo'],['dDist','Sup. direito'],
-               ['dTempo','Sup. esquerdo'],['dData','Base'],['dPace','Inf. direito']];
+const DESTINO=[['dTitulo','topo'],['dDist','Upper right'],
+               ['dTempo','Upper left'],['dData','Bottom'],['dPace','Lower right']];
 
 function aplicarDados(){
   const inf=ladosInfo(geometria());
   DESTINO.forEach(([id,onde])=>{
     const el=q('#'+id); if(!el) return;
     const alvo = onde==='topo' ? inf.find(x=>x.topo)
-               : inf.find(x=>x.nome===onde) || inf.find(x=>x.nome===onde.replace('Sup.','Inf.'));
+               : inf.find(x=>x.nome===onde) || inf.find(x=>x.nome===onde.replace('Upper','Lower'));
     if(alvo) ST.lados[alvo.i]=el.value;
   });
   sugerirNome(); montar(); desenhar();
@@ -827,8 +827,8 @@ function baixar(nome, conteudo, tipo){
   document.body.appendChild(a); a.click();
   setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove() }, 1000);
 }
-const limpo = s => (s||'projeto').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
-  .replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-|-$/g,'').toLowerCase() || 'projeto';
+const limpo = s => (s||'project').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+  .replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-|-$/g,'').toLowerCase() || 'project';
 /* Ordem de prioridade para nomear o arquivo:
      1. o que você digitou no campo de nome
      2. o TÍTULO DA PEÇA — o texto do topo da moldura
@@ -853,7 +853,7 @@ function salvarProjeto(){
     temRelevo:!!ST.dem };
   const nome=nomeArquivo('.json');
   baixar(nome, JSON.stringify(proj), 'application/json');
-  q('#notaProj').innerHTML='Salvo como <b>'+nome+'</b> na sua pasta de downloads.';
+  q('#notaProj').innerHTML='Saved as <b>'+nome+'</b> in your downloads folder.';
 }
 
 function abrirProjeto(file){
@@ -861,7 +861,7 @@ function abrirProjeto(file){
   fr.onload=()=>{
     try{
       const p=JSON.parse(fr.result);
-      if(!p.bruto||!p.bruto.length) throw new Error('arquivo sem percurso');
+      if(!p.bruto||!p.bruto.length) throw new Error('file has no route');
       ST.bruto=p.bruto; ST.meta=p.meta||{};
       CAMPOS.forEach(k=>{ if(p.cfg && p.cfg[k]!==undefined) ST[k]=p.cfg[k] });
       ST.agua=p.agua||null; ST.rios=p.rios||null; ST.costa=p.costa||null;
@@ -876,9 +876,9 @@ function abrirProjeto(file){
       q('#nomeProj').value=ST.nomeProj||'';
       cache.sig=null; montar(); desenhar();
       q('#notaProj').innerHTML = p.temRelevo
-        ? 'Projeto aberto. Ele tinha relevo — toque em <b>Buscar relevo do terreno</b> para trazê-lo de volta.'
-        : 'Projeto aberto.';
-    }catch(e){ q('#notaProj').textContent='Não consegui abrir: '+e.message }
+        ? 'Project opened. It had terrain — tap <b>Get terrain relief</b> to bring it back.'
+        : 'Project opened.';
+    }catch(e){ q('#notaProj').textContent='Could not open: '+e.message }
   };
   fr.readAsText(file);
 }
@@ -888,14 +888,14 @@ function salvarImagem(){
   cv.toBlob(b=>{
     const nome=nomeArquivo('.png');
     baixar(nome, b);
-    q('#notaProj').innerHTML='Salvo como <b>'+nome+'</b> — '+cv.width+' × '+cv.height+' pixels.';
+    q('#notaProj').innerHTML='Saved as <b>'+nome+'</b> — '+cv.width+' × '+cv.height+' pixels.';
   },'image/png');
 }
 
 function sugerirNome(){
   const el=q('#nomeProj'); if(!el) return;
   const base=tituloDaPeca()||ST.meta.nome||'';
-  el.placeholder = base ? limpo(base)+'  (padrão)' : 'nome do arquivo';
+  el.placeholder = base ? limpo(base)+'  (default)' : 'file name';
 }
 
 /* Cada régua ganha uma caixa numérica ao lado: dá para ver o valor exato
@@ -933,14 +933,14 @@ function ladosInfo(G){
     const dx=b[0]-a[0], dy=b[1]-a[1];
     const mx=(a[0]+b[0])/2, my=(a[1]+b[1])/2;
     let nome;
-    if(Math.abs(dy) < Math.abs(dx)*0.4)      nome = my<0 ? 'Topo' : 'Base';
-    else if(Math.abs(dx) < Math.abs(dy)*0.4) nome = mx<0 ? 'Esquerda' : 'Direita';
-    else nome = (my<0?'Sup. ':'Inf. ') + (mx<0?'esquerdo':'direito');
+    if(Math.abs(dy) < Math.abs(dx)*0.4)      nome = my<0 ? 'Top' : 'Bottom';
+    else if(Math.abs(dx) < Math.abs(dy)*0.4) nome = mx<0 ? 'Left' : 'Right';
+    else nome = (my<0?'Upper ':'Lower ') + (mx<0?'left':'right');
     return {i, nome, mx, my, topo:false};
   });
   /* o destaque vai para a aresta de cima; sem aresta horizontal,
      para a que estiver mais alta na tela */
-  let alvo = info.find(x=>x.nome==='Topo');
+  let alvo = info.find(x=>x.nome==='Top');
   if(!alvo) alvo = info.reduce((a,b)=>b.my<a.my?b:a);
   alvo.topo = true;
   return info;
@@ -953,7 +953,7 @@ function montar(){
   };
   grupo('#vista',VISTAS,'vista');
   grupo('#nivelRuas',NIVEIS,'ruasNivel');
-  grupo('#nivelRios',[{id:'p',n:'Só os maiores'},{id:'t',n:'Todos'}],'rioNivel');
+  grupo('#nivelRios',[{id:'p',n:'Largest only'},{id:'t',n:'All'}],'rioNivel');
   grupo('#forma',FORMAS,'forma',()=>{const hex=ST.forma.startsWith('hex');
     if(hex!==(ST.fmt[0]==='h')) ST.fmt=hex?'h2':'r2'});
   grupo('#fmt',ST.forma.startsWith('hex')?TAMANHOS.hex:TAMANHOS.ret,'fmt');
@@ -962,12 +962,12 @@ function montar(){
     q(alvo).querySelectorAll('[data-c]').forEach(el=>el.onclick=()=>{ST[chave]=el.dataset.c;montar();desenhar()});
   };
   cores('#corMold',P_MOLD,'mCor'); cores('#corTraco',P_TRACO,'tCor'); cores('#corTerr',P_TERR,'terrCor');
-  const cam=[['dem','Relevo do terreno',!!ST.dem],
-             ['agua','Água, rios e costa',!!(ST.agua||ST.rios||ST.costa)],
-             ['ruas','Ruas',!!ST.ruas]].filter(c=>c[2]);
+  const cam=[['dem','Terrain relief',!!ST.dem],
+             ['agua','Water, rivers and coast',!!(ST.agua||ST.rios||ST.costa)],
+             ['ruas','Roads',!!ST.ruas]].filter(c=>c[2]);
   q('#camadas').innerHTML = cam.length
     ? cam.map(([k,n])=>`<label class="sw"><input type="checkbox" data-ver="${k}"
-        ${ST.ver[k]?'checked':''}> Mostrar ${n.toLowerCase()}</label>`).join('')
+        ${ST.ver[k]?'checked':''}> Show ${n.toLowerCase()}</label>`).join('')
     : '';
   q('#camadas').querySelectorAll('[data-ver]').forEach(el=>el.onchange=()=>{
     ST.ver[el.dataset.ver]=el.checked; desenhar();
@@ -984,13 +984,13 @@ function montar(){
 
 function aplicar(d){
   ST.bruto=d.pts; ST.meta=d.meta; ST.agua=null; ST.dem=null; ST.ruas=null; ST.costa=null; ST.rios=null; ST.ilhas=null; ST.temMar=0; ST.ver={dem:true,agua:true,ruas:true};
-  q('#btRuas').textContent='Buscar ruas';
+  q('#btRuas').textContent='Get roads';
   const inf=ladosInfo(geometria());
   ST.lados=new Array(inf.length).fill('');
   const por=n=>inf.find(x=>x.nome===n);
-  const topo=inf.find(x=>x.topo), base=por('Base')||inf.reduce((a,b)=>b.my>a.my?b:a);
-  const supD=por('Sup. direito')||por('Inf. direito');
-  const supE=por('Sup. esquerdo')||por('Inf. esquerdo');
+  const topo=inf.find(x=>x.topo), base=por('Bottom')||inf.reduce((a,b)=>b.my>a.my?b:a);
+  const supD=por('Upper right')||por('Lower right');
+  const supE=por('Upper left')||por('Lower left');
   q('#dTitulo').value=d.meta.nome||'';
   q('#dDist').value=d.meta.km?d.meta.km.toFixed(2)+' km':'';
   q('#dTempo').value=d.meta.seg?hms(d.meta.seg):'';
@@ -1001,11 +1001,11 @@ function aplicar(d){
   if(base) ST.lados[base.i]=q('#dData').value;
   if(supD) ST.lados[supD.i]=q('#dDist').value;
   if(supE) ST.lados[supE.i]=q('#dTempo').value;
-  const infD=inf.find(x=>x.nome==='Inf. direito');
+  const infD=inf.find(x=>x.nome==='Lower right');
   if(infD) ST.lados[infD.i]=q('#dPace').value;
   ST.nomeProj=''; q('#nomeProj').value='';
-  q('#btRelevo').textContent='Buscar relevo do terreno';
-  q('#btAgua').textContent='Buscar lagos e rios';
+  q('#btRelevo').textContent='Get terrain relief';
+  q('#btAgua').textContent='Get lakes and rivers';
   montar(); desenhar();
 }
 
@@ -1015,7 +1015,7 @@ q('#arq').onchange=e=>{const f=e.target.files[0];if(f)ler(f)};
 ['dragleave','drop'].forEach(ev=>q('#solta').addEventListener(ev,e=>{e.preventDefault();q('#solta').classList.remove('over')}));
 q('#solta').addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(f)ler(f)});
 function ler(file){const fr=new FileReader();
-  fr.onload=()=>{try{aplicar(lerGPX(fr.result))}catch(err){alert('Não consegui ler: '+err.message)}};
+  fr.onload=()=>{try{aplicar(lerGPX(fr.result))}catch(err){alert('Could not read: '+err.message)}};
   fr.readAsText(file)}
 q('#priv').addEventListener('input',desenhar);
 [['#det','det'],['#giro','giro'],['#rel','relevo'],['#mold','mold'],['#deg','deg'],['#zoom','zoom'],['#margem','margem'],['#altTerreno','altTerreno'],['#largTraco','largTraco'],['#tamTitulo','tamTitulo'],['#tamTexto','tamTexto'],['#altTexto','altTexto']].forEach(([sel,ch])=>
