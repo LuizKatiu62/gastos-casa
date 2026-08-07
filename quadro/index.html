@@ -112,8 +112,9 @@
         <label class="cmp">Time</label><input type="text" id="dTempo">
         <label class="cmp">Date</label><input type="text" id="dData">
         <label class="cmp">Pace</label><input type="text" id="dPace">
+        <label class="cmp">Elevation gain</label><input type="text" id="dElev">
         <div class="nota">Taken from the file and editable. Each one goes to a border of the
-          hexagon — fine tuning under <b>Border text</b>.</div>
+          hexagon, one per side. Leave a field empty and that side stays clean.</div>
       </div>
     </div>
 
@@ -292,11 +293,26 @@ function lerGPX(t){
   const tempos=[...doc.querySelectorAll('time')].map(x=>x.textContent);
   const nome=doc.querySelector('trk > name')||doc.querySelector('name');
   let dist=0; for(let i=0;i<pts.length-1;i++) dist+=hav(pts[i],pts[i+1]);
+  /* Ganho acumulado. Somar toda variação positiva ponto a ponto dá
+     número de fantasia: o Challenge 64k, que oscila 10 m do começo ao
+     fim, apareceria com 701 m de escalada, tudo ruído do GPS. Suavizo
+     a série numa janela de 15 pontos e só conto subidas de 3 m para
+     cima — é o que relógio e Strava fazem sem barômetro. */
+  const cru=nos.map(n=>{const e=n.querySelector('ele'); return e?+e.textContent:NaN})
+               .filter(v=>!isNaN(v));
+  let ganho=0;
+  if(cru.length>2){
+    const J=7, alt=cru.map((_,i)=>{ let t=0,c=0;
+      for(let k=Math.max(0,i-J);k<=Math.min(cru.length-1,i+J);k++){ t+=cru[k]; c++ }
+      return t/c });
+    let ref=alt[0];
+    for(const v of alt){ if(v>ref+3){ ganho+=v-ref; ref=v } else if(v<ref) ref=v }
+  }
   let seg=0;
   if(tempos.length>1){const a=new Date(tempos[1]||tempos[0]),b=new Date(tempos[tempos.length-1]);
     if(!isNaN(a)&&!isNaN(b)) seg=Math.max(0,(b-a)/1000)}
   return {pts,meta:{nome:nome?nome.textContent.trim().replace(/\.$/,''):'My route',
-    data:tempos.length?(tempos[0]||'').slice(0,10):'',km:dist/1000,seg,n:pts.length}};
+    data:tempos.length?(tempos[0]||'').slice(0,10):'',km:dist/1000,seg,n:pts.length,ganho:Math.round(ganho)}};
 }
 const hms=s=>{s=Math.round(s);const h=Math.floor(s/3600),m=Math.floor(s%3600/60);
   return h?h+'h'+String(m).padStart(2,'0'):m+' min'};
@@ -919,7 +935,8 @@ function painel(G,p,largura){
 /* Os quatro dados da prova vão para bordas fixas do hexágono. É o
    padrão que o cliente entende: ele corrige "Distância", não "aresta 5". */
 const DESTINO=[['dTitulo','topo'],['dDist','Upper right'],
-               ['dTempo','Upper left'],['dData','Bottom'],['dPace','Lower right']];
+               ['dTempo','Upper left'],['dData','Bottom'],['dPace','Lower right'],
+               ['dElev','Lower left']];
 
 function aplicarDados(){
   const inf=ladosInfo(geometria());
@@ -1362,6 +1379,7 @@ function aplicar(d){
   q('#dTempo').value=d.meta.seg?hms(d.meta.seg):'';
   q('#dData').value=dataEN(d.meta.data);
   q('#dPace').value=paceDe(d.meta);
+  q('#dElev').value=d.meta.ganho?'+'+d.meta.ganho+' m':'';
   q('#dadosProva').style.display='block';
   if(topo) ST.lados[topo.i]=q('#dTitulo').value;
   if(base) ST.lados[base.i]=q('#dData').value;
@@ -1369,6 +1387,8 @@ function aplicar(d){
   if(supE) ST.lados[supE.i]=q('#dTempo').value;
   const infD=inf.find(x=>x.nome==='Lower right');
   if(infD) ST.lados[infD.i]=q('#dPace').value;
+  const infE=inf.find(x=>x.nome==='Lower left')||inf.find(x=>x.nome==='Left');
+  if(infE) ST.lados[infE.i]=q('#dElev').value;
   ST.nomeProj=''; q('#nomeProj').value='';
   q('#btRelevo').textContent='Get terrain relief';
   q('#btAgua').textContent='Get lakes and rivers';
@@ -1391,7 +1411,7 @@ q('#btAgua').onclick=buscarAgua;
 q('#fonte').onchange=e=>{ST.fonte=e.target.value; cache.sig=null; desenhar()};
 parearNumeros();
 q('#btRuas').onclick=buscarRuas;
-['dTitulo','dDist','dTempo','dData','dPace'].forEach(id=>
+['dTitulo','dDist','dTempo','dData','dPace','dElev'].forEach(id=>
   q('#'+id).addEventListener('input', aplicarDados));
 q('#bt3mf').onclick=gerar3MF;
 q('#btSalvar').onclick=salvarProjeto;
@@ -1418,7 +1438,7 @@ q('#arqProj').onchange=e=>{const f=e.target.files[0]; if(f) abrirProjeto(f); e.t
 })();
 
 const exemplo=()=>aplicar({pts:DEMO.pts,
-  meta:{nome:DEMO.nome,data:DEMO.data,km:DEMO.km,seg:DEMO.seg,n:DEMO.n}});
+  meta:{nome:DEMO.nome,data:DEMO.data,km:DEMO.km,seg:DEMO.seg,n:DEMO.n,ganho:DEMO.ganho||0}});
 q('#btExemplo').onclick=exemplo;
 
 /* abre vazio: o percurso é do cliente, não meu */
