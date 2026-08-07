@@ -1,6 +1,6 @@
 /* ══════════════════════════════════════════════════════════════════
    fix.js — correções da v2
-   Versão 2026-08-07k · seis correções e o plano da maratona.
+   Versão 2026-08-07l · seis correções e o plano da maratona.
 
    MUDANÇA DESTA VERSÃO: antes as seis partes eram blocos soltos no
    mesmo arquivo. Um erro em qualquer uma derrubava todas as outras,
@@ -23,9 +23,11 @@
       e incluir treino em dia de descanso ou cancelado
    7) Plano PEI Marathon 18/10/2026 — índice para Boston 2028
    8) Linha do tempo do ciclo, com o percentual cumprido de verdade
+   9) Sincronia iPhone ↔ Mac: relê ao voltar o foco e mescla em vez
+      de sobrescrever
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '01k';
+const FIX_VERSAO = '01l';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -1276,6 +1278,141 @@ PARTE('linha do tempo', function(){
 });
 
 
+
+/* ═══════════════════ 9. SINCRONIA ENTRE APARELHOS ═══════════════════
+   Dois problemas do jeito que estava:
+
+   1) O app só lia o Firebase quando ABRIA. Marcar um treino no iPhone
+      não aparecia no Mac que já estava aberto.
+   2) O salvarCoach() grava o pacote INTEIRO de uma vez. Com os dois
+      aparelhos abertos, o último a gravar apagava o trabalho do outro:
+      você marcava o longo no iPhone à tarde, mexia em qualquer coisa
+      no Mac à noite, e o Mac gravava por cima o estado que carregou
+      de manhã. O longo sumia.
+
+   Aqui: relê ao voltar o foco, e MESCLA em vez de sobrescrever.
+   Treino marcado em qualquer aparelho continua marcado.
+
+   O caso difícil é DESmarcar: sem carimbo de hora por item não dá
+   para saber se o outro aparelho está desatualizado ou se você mudou
+   de ideia. Resolvo guardando o que foi desmarcado nas últimas 24 h
+   neste aparelho — dentro dessa janela, a desmarcação vence.
+   ══════════════════════════════════════════════════════════════════ */
+
+PARTE('sincronia entre aparelhos', function(){
+  if(typeof ST !== 'object') throw new Error('sem ST');
+  if(typeof window.salvarCoach !== 'function' || typeof window.lerCoach !== 'function')
+    throw new Error('app sem salvarCoach/lerCoach');
+
+  const RM = 'bq.desmarcadas', JANELA = 24 * 3600 * 1000;
+
+  function lerRM(){
+    try{
+      const m = JSON.parse(localStorage.getItem(RM) || '{}'), agora = Date.now(), lim = {};
+      for(const k in m) if(agora - m[k].t < JANELA) lim[k] = m[k];
+      return lim;
+    }catch(e){ return {} }
+  }
+  function gravaRM(m){ try{ localStorage.setItem(RM, JSON.stringify(m)) }catch(e){} }
+
+  /* anota o que VOCÊ desmarcou, para o outro aparelho não ressuscitar */
+  const marcarApp = window.marcarEtapa;
+  if(typeof marcarApp === 'function'){
+    window.marcarEtapa = function(id, etapa){
+      const antes = (ST.feitas && ST.feitas[id] ? ST.feitas[id] : []).slice();
+      const r = marcarApp.apply(this, arguments);
+      const dep = (ST.feitas && ST.feitas[id]) ? ST.feitas[id] : [];
+      const saiu = antes.filter(function(e){ return dep.indexOf(e) < 0 });
+      if(saiu.length){
+        const m = lerRM();
+        m[id] = {t:Date.now(), e:(m[id] && m[id].e ? m[id].e : []).concat(saiu)};
+        gravaRM(m);
+      }
+      return r;
+    };
+  }
+
+  function mesclar(r){
+    if(!r) return 0;
+    let novos = 0;
+    const rm = lerRM();
+
+    if(r.feitas){
+      ST.feitas = ST.feitas || {};
+      for(const k in r.feitas){
+        const remoto = r.feitas[k] || [];
+        const local  = ST.feitas[k] || [];
+        const negado = (rm[k] && rm[k].e) ? rm[k].e : [];
+        const juntos = local.slice();
+        remoto.forEach(function(e){
+          if(juntos.indexOf(e) < 0 && negado.indexOf(e) < 0){ juntos.push(e); novos++ }
+        });
+        if(juntos.length) ST.feitas[k] = juntos;
+      }
+    }
+    /* extras e trocas: só entra o que este aparelho não conhece.
+       O que você acabou de fazer aqui nunca é sobrescrito.        */
+    ['extras','trocas'].forEach(function(campo){
+      if(!r[campo]) return;
+      ST[campo] = ST[campo] || {};
+      for(const k in r[campo]) if(!(k in ST[campo])){ ST[campo][k] = r[campo][k]; novos++ }
+    });
+    return novos;
+  }
+
+  /* ---- gravar: lê o servidor e funde antes de mandar ---- */
+  const salvarApp = window.salvarCoach;
+  let ocupado = false;
+  window.salvarCoach = async function(){
+    if(ocupado) return;
+    ocupado = true;
+    try{ mesclar(await window.lerCoach()) }catch(e){ console.warn('merge antes de gravar:', e) }
+    ocupado = false;
+    return salvarApp.apply(this, arguments);
+  };
+
+  /* ---- ler: sempre que a tela volta ---- */
+  let ultima = 0, pendente = false;
+  async function puxar(){
+    if(pendente || Date.now() - ultima < 4000) return;
+    pendente = true;
+    try{
+      const n = mesclar(await window.lerCoach());
+      ultima = Date.now();
+      if(n){
+        try{ if(typeof rebuild === 'function') rebuild() }catch(e){}
+        try{ if(typeof renderTudo === 'function') renderTudo() }catch(e){}
+        aviso(n);
+      }
+    }catch(e){}
+    pendente = false;
+  }
+
+  function aviso(n){
+    let t = document.getElementById('bqToast');
+    if(!t){
+      t = document.createElement('div');
+      t.id = 'bqToast';
+      t.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:86px;z-index:9999;'
+        + 'background:rgba(20,24,31,.94);color:#fff;font-size:12.5px;font-weight:600;'
+        + 'padding:9px 15px;border-radius:20px;box-shadow:0 6px 22px rgba(0,0,0,.35);'
+        + 'opacity:0;transition:opacity .25s;pointer-events:none';
+      document.body.appendChild(t);
+    }
+    t.textContent = n === 1 ? 'Sincronizado · 1 registro do outro aparelho'
+                            : 'Sincronizado · ' + n + ' registros do outro aparelho';
+    t.style.opacity = '1';
+    clearTimeout(aviso._t);
+    aviso._t = setTimeout(function(){ t.style.opacity = '0' }, 3200);
+  }
+
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden) puxar() });
+  window.addEventListener('focus', puxar);
+  window.addEventListener('online', puxar);
+  window.bqSync = puxar;
+});
+
+
 /* ─────────── selo de diagnóstico ─────────── */
 (function(){
   function montar(){
@@ -1293,7 +1430,7 @@ PARTE('linha do tempo', function(){
     s.onclick = function(){
       if(ok && window.planoBQ){
         var l = window.planoBQ.ligado();
-        if(confirm('fix.js ' + FIX_VERSAO + ' — as oito partes carregaram.\n\n'
+        if(confirm('fix.js ' + FIX_VERSAO + ' — as nove partes carregaram.\n\n'
           + 'Plano PEI Marathon: ' + (l ? 'LIGADO' : 'desligado')
           + '\n\nOK ' + (l ? 'desliga o plano e volta ao automático do app.'
                              : 'liga o plano da maratona.'))){
@@ -1302,7 +1439,7 @@ PARTE('linha do tempo', function(){
         return;
       }
       alert(ok
-        ? 'fix.js ' + FIX_VERSAO + ' — as oito partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
+        ? 'fix.js ' + FIX_VERSAO + ' — as nove partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
         : 'fix.js ' + FIX_VERSAO + '\n\nFalharam:\n\n' + FIX_FALHAS.join('\n\n'));
     };
     barra.insertBefore(s, barra.firstChild.nextSibling);
