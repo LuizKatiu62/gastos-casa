@@ -129,11 +129,31 @@ def semana_iso(data_str):
 
 
 def firebase_token():
-    url  = f"https://identitytoolkit.googleapis.com/v1/accounts:signUp?key={FIREBASE_KEY}"
-    body = json.dumps({"returnSecureToken": True}).encode()
+    """Entra como VOCE, nao como anonimo.
+
+    accounts:signUp criava um usuario anonimo NOVO a cada execucao.
+    Enquanto a regra fosse "auth != null" isso passava — e passava
+    tambem para qualquer estranho que achasse a chave no codigo-fonte.
+    Com a regra auth.uid === 'seu-uid' a conta anonima e barrada e a
+    sincronia pararia. Por isso agora entra com e-mail e senha, vindos
+    dos secrets FIREBASE_EMAIL e FIREBASE_PASSWORD do GitHub."""
+    email = os.environ.get("FIREBASE_EMAIL", "").strip()
+    senha = os.environ.get("FIREBASE_PASSWORD", "")
+    if not email or not senha:
+        log("ERRO: faltam os secrets FIREBASE_EMAIL / FIREBASE_PASSWORD no GitHub.")
+        sys.exit(1)
+    url  = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={FIREBASE_KEY}"
+    body = json.dumps({"email": email, "password": senha,
+                       "returnSecureToken": True}).encode()
     req  = urlreq.Request(url, data=body, headers={"Content-Type": "application/json"})
-    with urlreq.urlopen(req, timeout=10) as r:
-        return json.loads(r.read()).get("idToken", "")
+    try:
+        with urlreq.urlopen(req, timeout=15) as r:
+            j = json.loads(r.read())
+        log(f"Firebase: autenticado como {email} (uid {j.get('localId','?')})")
+        return j.get("idToken", "")
+    except Exception as e:
+        log(f"ERRO no login do Firebase: {e}")
+        sys.exit(1)
 
 
 def firebase_put(path, data, token):
