@@ -1,6 +1,6 @@
 /* ══════════════════════════════════════════════════════════════════
    fix.js — correções da v2
-   Versão 2026-08-08w · seis correções e o plano da maratona.
+   Versão 2026-08-08x · seis correções e o plano da maratona.
 
    MUDANÇA DESTA VERSÃO: antes as seis partes eram blocos soltos no
    mesmo arquivo. Um erro em qualquer uma derrubava todas as outras,
@@ -35,9 +35,10 @@
       em inglês
   14) Step Speed Loss do HRM 600, na aba Índices junto da mecânica
   15) Números em cima das barras da Saúde e tabela de fases do sono
+  16) Painel de objetivos recolhido quando já há prova escolhida
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '01w';
+const FIX_VERSAO = '01x';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -2232,6 +2233,42 @@ PARTE('rotulos e sono detalhado', function(){
 });
 
 
+
+/* ═══════ 16. PAINEL DE OBJETIVOS FECHADO POR PADRÃO ═══════
+   O app já sabe recolher esse painel: a classe .on em #objPainel é
+   quem o mantém aberto, e o botão "Trocar" alterna. Só que o
+   renderObjetivo() ADICIONA .on quando não há objetivo e nunca a
+   remove quando passa a haver. Resultado: uma vez aberto, fica aberto
+   para sempre, com as sete provas ocupando meia tela sem motivo.
+
+   Aqui eu fecho UMA VEZ, no arranque, quando já existe objetivo com
+   data. Depois disso não encosto mais: o "Trocar" volta a mandar, e
+   se você abrir para ver as opções, fica aberto.
+   ══════════════════════════════════════════════════════════════════ */
+
+PARTE('objetivos recolhidos', function(){
+  let jaFechei = false;
+
+  function fechar(){
+    if(jaFechei) return;
+    const p = document.getElementById('objPainel');
+    if(!p) return;
+    let temAlvo = false;
+    try{
+      const o = (typeof objetivoAtivo === 'function') ? objetivoAtivo() : null;
+      temAlvo = !!(o && o.data);
+    }catch(e){ return }
+    if(!temAlvo) return;              /* sem objetivo, o painel deve abrir mesmo */
+    p.classList.remove('on');
+    jaFechei = true;
+  }
+
+  setTimeout(fechar, 3000);
+  setTimeout(fechar, 7000);
+  setTimeout(fechar, 11000);
+});
+
+
 /* ─────────── selo de diagnóstico ─────────── */
 (function(){
   function montar(){
@@ -2249,7 +2286,7 @@ PARTE('rotulos e sono detalhado', function(){
     s.onclick = function(){
       if(ok && window.planoBQ){
         var l = window.planoBQ.ligado();
-        if(confirm('fix.js ' + FIX_VERSAO + ' — as quinze partes carregaram.\n\n'
+        if(confirm('fix.js ' + FIX_VERSAO + ' — as dezesseis partes carregaram.\n\n'
           + 'Plano PEI Marathon: ' + (l ? 'LIGADO' : 'desligado')
           + '\n\nOK ' + (l ? 'desliga o plano e volta ao automático do app.'
                              : 'liga o plano da maratona.'))){
@@ -2258,7 +2295,7 @@ PARTE('rotulos e sono detalhado', function(){
         return;
       }
       alert(ok
-        ? 'fix.js ' + FIX_VERSAO + ' — as quinze partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
+        ? 'fix.js ' + FIX_VERSAO + ' — as dezesseis partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
         : 'fix.js ' + FIX_VERSAO + '\n\nFalharam:\n\n' + FIX_FALHAS.join('\n\n'));
     };
     barra.insertBefore(s, barra.firstChild.nextSibling);
