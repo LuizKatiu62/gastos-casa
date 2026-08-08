@@ -339,6 +339,9 @@ def main():
                 "leve":     round((dto.get("lightSleepSeconds", 0) or 0) / 3600, 1),
                 "rem":      round((dto.get("remSleepSeconds",   0) or 0) / 3600, 1),
                 "score":    overall.get("value", 0) if isinstance(overall, dict) else 0,
+                # tempo acordado durante a noite — o Garmin Connect mostra
+                # como quarta fase e faltava aqui
+                "acordado": round((dto.get("awakeSleepSeconds", 0) or 0) / 3600, 2),
             }
 
         # HRV
