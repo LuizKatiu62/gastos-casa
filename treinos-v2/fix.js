@@ -1,6 +1,6 @@
 /* ══════════════════════════════════════════════════════════════════
    fix.js — correções da v2
-   Versão 2026-08-08t · seis correções e o plano da maratona.
+   Versão 2026-08-08u · seis correções e o plano da maratona.
 
    MUDANÇA DESTA VERSÃO: antes as seis partes eram blocos soltos no
    mesmo arquivo. Um erro em qualquer uma derrubava todas as outras,
@@ -36,7 +36,7 @@
   14) Step Speed Loss do HRM 600: onde você está, o alvo e a alavanca
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '01t';
+const FIX_VERSAO = '01u';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -1931,6 +1931,29 @@ PARTE('step speed loss', function(){
     return km ? a.reduce(function(s,x){ return s + x.pct * x.km }, 0) / km : 0;
   };
 
+  /* O conselho muda conforme onde você está. Cadência é a alavanca de
+     quem corre abaixo de 170 ppm; acima disso, forçar mais deixa a
+     passada frenética e ganha pouco. Perto do alvo, o que sobra é
+     consistência e comparar terreno com terreno.                    */
+  function conselho(pct, cad){
+    if(pct <= 7.0)
+      return 'Está no nível que eu chamaria de excelente. Aqui não se persegue mais número: '
+           + 'mantenha, e use este painel só para perceber se algo piorar.';
+    if(cad && cad < 170)
+      return '<b style="color:var(--acc)">Sua alavanca é a cadência.</b> A ' + Math.round(cad)
+           + ' ppm a passada está longa e o pé cai à frente do quadril — cada aterrissagem '
+           + 'dessas é um freio. Suba para ' + Math.round(cad*1.04) + '–' + Math.round(cad*1.05)
+           + ' ppm nas rodagens, sem mudar o ritmo. O passo encurta sozinho.';
+    if(pct <= 8.0)
+      return 'Cadência de ' + Math.round(cad) + ' ppm já é adequada — forçar mais deixa a passada '
+           + 'frenética e ganha pouco. Daqui em diante o ganho é lento: toque leve (corra tentando '
+           + 'fazer menos barulho) e a pliometria das semanas 5 a 7. Compare sempre terreno com '
+           + 'terreno: descida infla este número por natureza.';
+    return 'Com ' + Math.round(cad) + ' ppm a cadência não é o problema. Olhe para o toque: '
+         + 'aterrissar leve, com o pé debaixo do quadril, e evitar estender a perna para alcançar '
+         + 'o chão. A pliometria das semanas 5 a 7 ataca exatamente isso.';
+  }
+
   function montar(){
     const alvoEl = document.getElementById('bqLinha') || document.getElementById('objBox');
     if(!alvoEl || !alvoEl.parentNode) return;
@@ -1957,9 +1980,10 @@ PARTE('step speed loss', function(){
 
     let tendencia = '';
     if(a0){
-      const txt = dif < -0.05 ? '▼ ' + Math.abs(dif).toFixed(2) + ' melhor'
-                : dif >  0.05 ? '▲ ' + dif.toFixed(2) + ' pior'
-                : 'estável';
+      /* abaixo de 0,3 ponto é ruído de terreno, não mudança de mecânica */
+      const txt = dif < -0.30 ? '▼ ' + Math.abs(dif).toFixed(2) + ' melhor'
+                : dif >  0.30 ? '▲ ' + dif.toFixed(2) + ' pior'
+                : 'estável (' + (dif >= 0 ? '+' : '') + dif.toFixed(2) + ', dentro do ruído)';
       tendencia = '<span style="font-size:11.5px;opacity:.7;margin-left:auto">'
                 + txt + ' que as 8 anteriores</span>';
     }
@@ -1987,12 +2011,7 @@ PARTE('step speed loss', function(){
       + '<div class="nota" style="margin-top:11px">Média das últimas <b>' + hoje.length
       +   '</b> corridas, ponderada por distância · cadência média <b>'
       +   Math.round(cad) + '</b> ppm'
-      + (cad && cad < 172
-          ? '<br><b style="color:var(--acc)">Sua alavanca é a cadência.</b> Passada mais curta '
-            + 'faz o pé cair debaixo do quadril em vez de à frente dele — é isso que reduz a freada. '
-            + 'Suba de ' + Math.round(cad) + ' para ' + Math.round(cad*1.04) + '–' + Math.round(cad*1.06)
-            + ' ppm nas rodagens, sem mudar o ritmo. O passo encurta sozinho.'
-          : '<br>Cadência já está boa. Trabalhe o toque leve: corra tentando fazer menos barulho.')
+      + '<br>' + conselho(a1, cad)
       + '</div>';
   }
 
