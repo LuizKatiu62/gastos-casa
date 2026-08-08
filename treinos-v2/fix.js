@@ -1,6 +1,6 @@
 /* ══════════════════════════════════════════════════════════════════
    fix.js — correções da v2
-   Versão 2026-08-08u · seis correções e o plano da maratona.
+   Versão 2026-08-08v · seis correções e o plano da maratona.
 
    MUDANÇA DESTA VERSÃO: antes as seis partes eram blocos soltos no
    mesmo arquivo. Um erro em qualquer uma derrubava todas as outras,
@@ -33,10 +33,10 @@
   12) Login de verdade no Firebase, no lugar da conta anônima
   13) Força como 2º treino do dia, com envio ao MOTRA e exercícios
       em inglês
-  14) Step Speed Loss do HRM 600: onde você está, o alvo e a alavanca
+  14) Step Speed Loss do HRM 600, na aba Índices junto da mecânica
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '01u';
+const FIX_VERSAO = '01v';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -1954,8 +1954,18 @@ PARTE('step speed loss', function(){
          + 'o chão. A pliometria das semanas 5 a 7 ataca exatamente isso.';
   }
 
+  /* Vive na aba ÍNDICES, logo depois do card "Mecânica de corrida" —
+     é ali que moram cadência, contato com o solo e oscilação, que são
+     os vizinhos naturais desta métrica. Estava no Coach por preguiça
+     minha: era onde eu já tinha um card para me pendurar.          */
+  function ondeVou(){
+    const mec = document.getElementById('iMec');
+    if(mec && mec.closest) { const c = mec.closest('.card'); if(c) return c }
+    return document.getElementById('iZonas') || document.getElementById('iCards') || null;
+  }
+
   function montar(){
-    const alvoEl = document.getElementById('bqLinha') || document.getElementById('objBox');
+    const alvoEl = ondeVou();
     if(!alvoEl || !alvoEl.parentNode) return;
     const C = corridas();
     let box = document.getElementById('bqSSL');
@@ -2015,14 +2025,18 @@ PARTE('step speed loss', function(){
       + '</div>';
   }
 
-  const coachApp = window.renderCoach;
-  if(typeof coachApp === 'function'){
-    window.renderCoach = function(){
-      const r = coachApp.apply(this, arguments);
+  const indicesApp = window.renderIndices;
+  if(typeof indicesApp === 'function'){
+    window.renderIndices = function(){
+      const r = indicesApp.apply(this, arguments);
       try{ montar() }catch(e){ console.warn('ssl:', e) }
       return r;
     };
   }
+  /* a aba Índices só é desenhada quando você entra nela */
+  document.addEventListener('click', function(){ setTimeout(function(){
+    try{ montar() }catch(e){}
+  }, 120) }, true);
   setTimeout(function(){ try{ montar() }catch(e){} }, 3500);
   setTimeout(function(){ try{ montar() }catch(e){} }, 8000);
   window.bqSSL = {corridas:corridas, montar:montar};
