@@ -1,6 +1,6 @@
 /* ══════════════════════════════════════════════════════════════════
    fix.js — correções da v2
-   Versão 2026-08-08s · seis correções e o plano da maratona.
+   Versão 2026-08-08t · seis correções e o plano da maratona.
 
    MUDANÇA DESTA VERSÃO: antes as seis partes eram blocos soltos no
    mesmo arquivo. Um erro em qualquer uma derrubava todas as outras,
@@ -33,9 +33,10 @@
   12) Login de verdade no Firebase, no lugar da conta anônima
   13) Força como 2º treino do dia, com envio ao MOTRA e exercícios
       em inglês
+  14) Step Speed Loss do HRM 600: onde você está, o alvo e a alavanca
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '01s';
+const FIX_VERSAO = '01t';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -1882,6 +1883,133 @@ PARTE('força no motra', function(){
 });
 
 
+
+/* ═══════════ 14. STEP SPEED LOSS (HRM 600) ═══════════
+   Quanto de velocidade você perde a cada aterrissagem. O relógio mede
+   a diferença entre a sua velocidade no instante em que o pé toca o
+   chão e a menor velocidade durante o apoio. Menor é melhor: significa
+   que você freia menos e gasta menos energia para reacelerar.
+
+   Vem em duas formas. O valor bruto em cm/s sobe naturalmente quando
+   você corre mais rápido, então serve pouco para comparar treinos. O
+   PERCENTUAL normaliza pela velocidade — é ele que diz se a sua
+   mecânica melhorou, e é ele que eu uso como número principal.
+
+   Leio direto de RAW.atividades, que é onde ficam os campos crus do
+   Garmin. O mapAtividade() do app descarta o que não conhece.
+
+   Aviso honesto: o Garmin não publica tabela de referência. As faixas
+   abaixo saem da física da coisa e do que se observa na prática, não
+   de um padrão oficial. Use a SUA tendência como juiz, não o número
+   absoluto de outra pessoa.
+   ══════════════════════════════════════════════════════════════════ */
+
+PARTE('step speed loss', function(){
+  const ALVO = 7.5;                 /* % — meta de trabalho para o ciclo */
+
+  const FAIXAS = [
+    {ate:7.0,  n:'excelente', c:'#2fbf71'},
+    {ate:8.5,  n:'bom',       c:'#7fbf5a'},
+    {ate:10.0, n:'médio',     c:'#e0a33f'},
+    {ate:99,   n:'alto',      c:'#e0714f'}
+  ];
+  const faixa = p => FAIXAS.find(f => p <= f.ate);
+
+  function corridas(){
+    const R = (typeof RAW === 'object' && RAW && RAW.atividades) ? RAW.atividades : [];
+    return R.filter(function(a){
+      const km = +a.distancia || 0;
+      return a.esporte === 'corrida' && km >= 3 && +a.sslPct > 0;
+    }).map(function(a){
+      return {d:a.data, km:+a.distancia, pct:+a.sslPct, ssl:+a.ssl || 0,
+              cad:+a.cadencia || 0, gct:+a.contatoSolo || 0, nome:a.notas || ''};
+    }).sort(function(x,y){ return x.d < y.d ? 1 : -1 });
+  }
+
+  const medPond = a => {
+    const km = a.reduce(function(s,x){ return s + x.km }, 0);
+    return km ? a.reduce(function(s,x){ return s + x.pct * x.km }, 0) / km : 0;
+  };
+
+  function montar(){
+    const alvoEl = document.getElementById('bqLinha') || document.getElementById('objBox');
+    if(!alvoEl || !alvoEl.parentNode) return;
+    const C = corridas();
+    let box = document.getElementById('bqSSL');
+
+    if(!C.length){
+      if(box) box.innerHTML = '<span class="kicker">Step Speed Loss</span>'
+        + '<div class="nota">Nenhuma corrida com o dado ainda. Ele precisa da cinta '
+        + 'HRM 600 e chega junto com a próxima sincronia do Garmin.</div>';
+      return;
+    }
+    if(!box){
+      box = document.createElement('section');
+      box.className = 'card'; box.id = 'bqSSL';
+      alvoEl.parentNode.insertBefore(box, alvoEl.nextSibling);
+    }
+
+    const hoje = C.slice(0, 8), antes = C.slice(8, 16);
+    const a1 = medPond(hoje), a0 = antes.length ? medPond(antes) : 0;
+    const dif = a0 ? a1 - a0 : 0;
+    const F = faixa(a1);
+    const cad = hoje.filter(x=>x.cad).reduce(function(s,x,_,A){ return s + x.cad/A.length }, 0);
+
+    let tendencia = '';
+    if(a0){
+      const txt = dif < -0.05 ? '▼ ' + Math.abs(dif).toFixed(2) + ' melhor'
+                : dif >  0.05 ? '▲ ' + dif.toFixed(2) + ' pior'
+                : 'estável';
+      tendencia = '<span style="font-size:11.5px;opacity:.7;margin-left:auto">'
+                + txt + ' que as 8 anteriores</span>';
+    }
+
+    /* barra de 5 a 12%, com a marca do alvo */
+    const pos = v => Math.max(0, Math.min(100, (v - 5) / 7 * 100));
+
+    box.innerHTML =
+      '<span class="kicker">Step Speed Loss · freada a cada passada</span>'
+      + '<div style="display:flex;align-items:baseline;gap:9px;margin:2px 0 3px">'
+      +   '<span style="font-size:30px;font-weight:800;color:' + F.c + ';line-height:1">'
+      +     a1.toFixed(2) + '<small style="font-size:14px;font-weight:600">%</small></span>'
+      +   '<span style="font-size:12px;color:' + F.c + ';font-weight:700">' + F.n + '</span>'
+      +   tendencia
+      + '</div>'
+      + '<div style="position:relative;height:10px;border-radius:5px;margin:12px 0 6px;'
+      +   'background:linear-gradient(90deg,#2fbf71 0%,#7fbf5a 29%,#e0a33f 57%,#e0714f 100%);opacity:.85">'
+      +   '<i style="position:absolute;left:' + pos(ALVO) + '%;top:-4px;width:2px;height:18px;'
+      +     'background:var(--tx,#fff);opacity:.9"></i>'
+      +   '<i style="position:absolute;left:' + pos(a1) + '%;top:-5px;width:12px;height:20px;'
+      +     'margin-left:-6px;border-radius:6px;background:#fff;border:2px solid ' + F.c + '"></i>'
+      + '</div>'
+      + '<div style="display:flex;justify-content:space-between;font-size:10.5px;opacity:.55">'
+      +   '<span>5%</span><span>alvo ' + ALVO + '%</span><span>12%</span></div>'
+      + '<div class="nota" style="margin-top:11px">Média das últimas <b>' + hoje.length
+      +   '</b> corridas, ponderada por distância · cadência média <b>'
+      +   Math.round(cad) + '</b> ppm'
+      + (cad && cad < 172
+          ? '<br><b style="color:var(--acc)">Sua alavanca é a cadência.</b> Passada mais curta '
+            + 'faz o pé cair debaixo do quadril em vez de à frente dele — é isso que reduz a freada. '
+            + 'Suba de ' + Math.round(cad) + ' para ' + Math.round(cad*1.04) + '–' + Math.round(cad*1.06)
+            + ' ppm nas rodagens, sem mudar o ritmo. O passo encurta sozinho.'
+          : '<br>Cadência já está boa. Trabalhe o toque leve: corra tentando fazer menos barulho.')
+      + '</div>';
+  }
+
+  const coachApp = window.renderCoach;
+  if(typeof coachApp === 'function'){
+    window.renderCoach = function(){
+      const r = coachApp.apply(this, arguments);
+      try{ montar() }catch(e){ console.warn('ssl:', e) }
+      return r;
+    };
+  }
+  setTimeout(function(){ try{ montar() }catch(e){} }, 3500);
+  setTimeout(function(){ try{ montar() }catch(e){} }, 8000);
+  window.bqSSL = {corridas:corridas, montar:montar};
+});
+
+
 /* ─────────── selo de diagnóstico ─────────── */
 (function(){
   function montar(){
@@ -1899,7 +2027,7 @@ PARTE('força no motra', function(){
     s.onclick = function(){
       if(ok && window.planoBQ){
         var l = window.planoBQ.ligado();
-        if(confirm('fix.js ' + FIX_VERSAO + ' — as treze partes carregaram.\n\n'
+        if(confirm('fix.js ' + FIX_VERSAO + ' — as quatorze partes carregaram.\n\n'
           + 'Plano PEI Marathon: ' + (l ? 'LIGADO' : 'desligado')
           + '\n\nOK ' + (l ? 'desliga o plano e volta ao automático do app.'
                              : 'liga o plano da maratona.'))){
@@ -1908,7 +2036,7 @@ PARTE('força no motra', function(){
         return;
       }
       alert(ok
-        ? 'fix.js ' + FIX_VERSAO + ' — as treze partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
+        ? 'fix.js ' + FIX_VERSAO + ' — as quatorze partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
         : 'fix.js ' + FIX_VERSAO + '\n\nFalharam:\n\n' + FIX_FALHAS.join('\n\n'));
     };
     barra.insertBefore(s, barra.firstChild.nextSibling);
