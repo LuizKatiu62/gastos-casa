@@ -146,11 +146,31 @@ def firebase_token():
     body = json.dumps({"email": email, "password": senha,
                        "returnSecureToken": True}).encode()
     req  = urlreq.Request(url, data=body, headers={"Content-Type": "application/json"})
+    log(f"Firebase: tentando entrar como '{email}' (senha com {len(senha)} caracteres)")
     try:
         with urlreq.urlopen(req, timeout=15) as r:
             j = json.loads(r.read())
         log(f"Firebase: autenticado como {email} (uid {j.get('localId','?')})")
         return j.get("idToken", "")
+    except urlreq.HTTPError as e:
+        # o corpo da resposta traz o motivo exato; sem ler isto so sobra
+        # "400 Bad Request", que nao ajuda ninguem
+        try:
+            detalhe = json.loads(e.read()).get("error", {}).get("message", "")
+        except Exception:
+            detalhe = ""
+        explica = {
+            "EMAIL_NOT_FOUND":  "esse e-mail nao existe no Authentication do projeto",
+            "INVALID_PASSWORD": "a senha nao confere",
+            "INVALID_LOGIN_CREDENTIALS": "e-mail ou senha nao conferem",
+            "MISSING_PASSWORD": "o secret FIREBASE_PASSWORD chegou vazio",
+            "INVALID_EMAIL":    "o secret FIREBASE_EMAIL nao parece um e-mail",
+            "USER_DISABLED":    "essa conta esta desativada no console",
+            "TOO_MANY_ATTEMPTS_TRY_LATER": "muitas tentativas seguidas; espere alguns minutos",
+        }.get(detalhe.split(":")[0].strip(), "")
+        log(f"ERRO no login do Firebase: HTTP {e.code} · {detalhe or 'sem detalhe'}"
+            + (f" — {explica}" if explica else ""))
+        sys.exit(1)
     except Exception as e:
         log(f"ERRO no login do Firebase: {e}")
         sys.exit(1)
