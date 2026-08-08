@@ -115,6 +115,11 @@ def garmin_to_treino(act):
         "efAerobico":   round(float(act.get("trainingEffect", 0) or 0), 1),
         "efAnaerobico": round(float(act.get("anaerobicTrainingEffect", 0) or 0), 1),
         "vo2max":       round(float(act.get("vO2MaxValue", 0) or 0), 1),
+        # Step Speed Loss (HRM 600): quanto de velocidade voce perde a
+        # cada aterrissagem. O Garmin devolve em m/s; guardo em cm/s,
+        # que e como o relogio mostra. Menor e melhor.
+        "ssl":          round(float(act.get("avgStepSpeedLoss", 0) or 0) * 100, 1),
+        "sslPct":       round(float(act.get("avgStepSpeedLossPercent", 0) or 0), 2),
         "notas":        act.get("activityName", ""),
         "garminId":     str(act.get("activityId", "")),
     }
@@ -247,6 +252,30 @@ def main():
         sys.exit(1)
 
     treinos   = [t for a in raw if (t := garmin_to_treino(a))]
+
+    # O resumo da atividade nem sempre traz o Step Speed Loss; os splits
+    # tipados sempre trazem. Busco so nas corridas dos ultimos 90 dias
+    # que estao sem o dado — o resto nao vale a chamada extra.
+    limite_ssl = (hoje - timedelta(days=90)).strftime("%Y-%m-%d")
+    faltando = [t for t in treinos
+                if t["esporte"] == "corrida" and not t["ssl"] and t["data"] >= limite_ssl]
+    if faltando:
+        log(f"Buscando Step Speed Loss em {len(faltando)} corridas...")
+        achou = 0
+        for t in faltando:
+            sp = safe_get(api, api.get_activity_typed_splits, t["garminId"], delay=0.4)
+            if not sp:
+                continue
+            trechos = [x for x in (sp.get("splits") or [])
+                       if x.get("stepSpeedLoss") and x.get("distance", 0) > 200]
+            if not trechos:
+                continue
+            # media ponderada pela distancia de cada trecho
+            dist = sum(x["distance"] for x in trechos)
+            t["ssl"]    = round(sum(x["stepSpeedLoss"] * x["distance"] for x in trechos) / dist * 100, 1)
+            t["sslPct"] = round(sum(x["stepSpeedLossPercent"] * x["distance"] for x in trechos) / dist, 2)
+            achou += 1
+        log(f"Step Speed Loss encontrado em {achou} de {len(faltando)}")
     ignorados = len(raw) - len(treinos)
     log(f"{len(treinos)} treinos para sincronizar | {ignorados} ignorados")
 
