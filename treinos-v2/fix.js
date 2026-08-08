@@ -1,6 +1,6 @@
 /* ══════════════════════════════════════════════════════════════════
    fix.js — correções da v2
-   Versão 2026-08-08v · seis correções e o plano da maratona.
+   Versão 2026-08-08w · seis correções e o plano da maratona.
 
    MUDANÇA DESTA VERSÃO: antes as seis partes eram blocos soltos no
    mesmo arquivo. Um erro em qualquer uma derrubava todas as outras,
@@ -34,9 +34,10 @@
   13) Força como 2º treino do dia, com envio ao MOTRA e exercícios
       em inglês
   14) Step Speed Loss do HRM 600, na aba Índices junto da mecânica
+  15) Números em cima das barras da Saúde e tabela de fases do sono
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '01v';
+const FIX_VERSAO = '01w';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -2043,6 +2044,194 @@ PARTE('step speed loss', function(){
 });
 
 
+
+/* ═══════ 15. RÓTULOS NAS BARRAS E SONO DETALHADO ═══════
+   Duas queixas justas:
+
+   1) Barras sem número obrigam a mirar na grade para adivinhar o
+      valor. Agora cada barra leva o número em cima. Só no modo
+      diário — agrupado por semana as barras ficam juntas demais e o
+      rótulo vira borrão. A densidade também se ajusta: até 12 barras
+      rotula todas, até 22 rotula uma sim uma não, acima disso marca
+      só a maior, a menor e a última.
+
+   2) O gráfico de sono mostrava as fases empilhadas sem dizer quanto
+      de cada uma. Agora vem a tabela com horas, percentual e a faixa
+      de referência, para a última noite e para a média do período.
+
+   As faixas são da fisiologia do sono em adultos, NÃO um padrão do
+   Garmin. E vale saber: a concordância das fases do Garmin com
+   polissonografia fica em torno de 40 a 50%. Use a TENDÊNCIA de
+   semanas, não a fase de uma noite isolada.
+   ══════════════════════════════════════════════════════════════════ */
+
+PARTE('rotulos e sono detalhado', function(){
+  const W=380, H=270, ML=42, MR=14, MT=22, MB=40;
+  const IW=W-ML-MR, IH=H-MT-MB, LIM=26;
+
+  const css=document.createElement('style');
+  css.textContent = `
+  .bqrot{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;
+    font-weight:700;fill:var(--tx);paint-order:stroke;stroke:var(--bg);
+    stroke-width:3px;stroke-linejoin:round}
+  #bqSono .lin{display:grid;grid-template-columns:74px 1fr 58px 66px;gap:8px;
+    align-items:center;padding:7px 0;font-size:12px}
+  #bqSono .lin+.lin{border-top:1px solid var(--line)}
+  #bqSono .bar{height:8px;border-radius:4px;background:var(--s2);overflow:hidden;position:relative}
+  #bqSono .bar i{display:block;height:100%;border-radius:4px}
+  #bqSono .bar u{position:absolute;top:-2px;height:12px;width:2px;background:var(--tx3);opacity:.55}
+  #bqSono b.v{font-variant-numeric:tabular-nums;text-align:right}
+  #bqSono .ok{color:var(--ok)} #bqSono .fora{color:var(--warn)}`;
+  document.head.appendChild(css);
+
+  /* quais índices rotular, conforme quantas barras cabem */
+  function quais(n, vals){
+    if(n<=12) return vals.map((_,i)=>i);
+    if(n<=22) return vals.map((_,i)=>i).filter(i=>i%2===0 || i===n-1);
+    let mx=0, mn=0;
+    vals.forEach((v,i)=>{ if(v>vals[mx]) mx=i; if(v<vals[mn]) mn=i });
+    return [...new Set([mx,mn,n-1])];
+  }
+
+  function rotular(host, vals, fmt){
+    if(!host) return;
+    const sv = host.querySelector('svg'); if(!sv) return;
+    if(sv.querySelector('.bqrot')) return;
+    const n = vals.length;
+    const passo = IW/n, x = i => ML + passo*i + passo/2;
+    const topo = Math.max.apply(null, vals);
+    let txt='';
+    quais(n, vals).forEach(function(i){
+      const v = vals[i];
+      const y = MT + IH - (v/topo)*IH;
+      const anc = i===0 ? 'start' : i===n-1 ? 'end' : 'middle';
+      const px = i===0 ? ML : i===n-1 ? W-MR : x(i);
+      txt += '<text class="bqrot" x="'+px.toFixed(1)+'" y="'+Math.max(MT+9, y-6).toFixed(1)
+           + '" text-anchor="'+anc+'">'+fmt(v)+'</text>';
+    });
+    sv.insertAdjacentHTML('beforeend', txt);
+  }
+
+  /* ── Body Battery ── */
+  const bbApp = window.grafBodyBattery;
+  if(typeof bbApp === 'function'){
+    window.grafBodyBattery = function(bb){
+      const r = bbApp.apply(this, arguments);
+      try{
+        if(bb && bb.length >= 2 && bb.length <= LIM){
+          /* a escala do BB é fixa de 0 a 100, então normalizo por 100 */
+          const host = document.querySelector('#sBB'), sv = host && host.querySelector('svg');
+          if(sv && !sv.querySelector('.bqrot')){
+            const n=bb.length, passo=IW/n, x=i=>ML+passo*i+passo/2;
+            let t='';
+            quais(n, bb.map(b=>b.max)).forEach(function(i){
+              const v=bb[i].max, y=MT+IH-(v/100)*IH;
+              const anc=i===0?'start':i===n-1?'end':'middle';
+              const px=i===0?ML:i===n-1?W-MR:x(i);
+              t+='<text class="bqrot" x="'+px.toFixed(1)+'" y="'+Math.max(MT+9,y-6).toFixed(1)
+                +'" text-anchor="'+anc+'">'+Math.round(v)+'</text>';
+            });
+            sv.insertAdjacentHTML('beforeend', t);
+          }
+        }
+      }catch(e){ console.warn('rotulo bb:', e) }
+      return r;
+    };
+  }
+
+  /* ── Sono: rótulos + tabela de fases ── */
+  const FAIXAS = [
+    {k:'profundo', n:'Profundo', c:'var(--acc)',  lo:13, hi:23,
+     d:'Recupera músculo e consolida a adaptação ao treino. É a fase que o treino forte mais exige.'},
+    {k:'rem',      n:'REM',      c:'var(--swim)', lo:20, hi:25,
+     d:'Memória e regulação do humor. Cai quando você dorme pouco, porque vem mais no fim da noite.'},
+    {k:'leve',     n:'Leve',     c:'var(--s3)',   lo:50, hi:60,
+     d:'A maior parte da noite. Não é sono ruim: é o tecido que liga as outras fases.'},
+    {k:'acordado', n:'Acordado', c:'var(--warn)', lo:0,  hi:5,
+     d:'Despertares curtos são normais. Muito acima de 5% costuma indicar álcool, calor ou treino tarde demais.'}
+  ];
+
+  function fases(n){
+    const dur = +n.duracao || 0;
+    if(!dur) return null;
+    const prof = +n.profundo||0, rem = +n.rem||0, ac = +n.acordado||0;
+    const leve = (n.leve != null) ? +n.leve : Math.max(0, dur - prof - rem);
+    return {duracao:dur, profundo:prof, rem:rem, leve:leve, acordado:ac,
+            score:+n.score||0, base:prof+rem+leve || dur};
+  }
+
+  function tabela(arr){
+    const host = document.querySelector('#sSono');
+    if(!host || !host.parentNode) return;
+    const card = host.closest ? host.closest('.card') : null;
+    const onde = card || host;
+    let box = document.getElementById('bqSono');
+    if(!box){
+      box = document.createElement('section');
+      box.className='card'; box.id='bqSono';
+      onde.parentNode.insertBefore(box, onde.nextSibling);
+    }
+    const F = arr.map(fases).filter(Boolean);
+    if(!F.length){ box.innerHTML=''; return }
+    const ult = F[F.length-1];
+    const med = {};
+    ['duracao','profundo','rem','leve','acordado','score'].forEach(function(k){
+      med[k] = F.reduce(function(s,x){ return s+x[k] },0)/F.length;
+    });
+    med.base = med.profundo+med.rem+med.leve || med.duracao;
+
+    const hm = h => Math.floor(h)+'h'+String(Math.round((h%1)*60)).padStart(2,'0');
+
+    const linha = (f, base, ref) => FAIXAS.map(function(x){
+      const v = f[x.k] || 0;
+      const pct = base ? v/base*100 : 0;
+      const dentro = pct >= x.lo && pct <= x.hi;
+      return '<div class="lin">'
+        + '<span>'+x.n+'</span>'
+        + '<span class="bar"><i style="width:'+Math.min(100,pct).toFixed(0)+'%;background:'+x.c+'"></i>'
+        +   '<u style="left:'+x.lo+'%"></u><u style="left:'+Math.min(100,x.hi)+'%"></u></span>'
+        + '<b class="v">'+hm(v)+'</b>'
+        + '<b class="v '+(dentro?'ok':'fora')+'">'+pct.toFixed(0)+'%'
+        +   '<span style="opacity:.45;font-weight:400"> /'+x.lo+'–'+x.hi+'</span></b>'
+        + '</div>';
+    }).join('');
+
+    box.innerHTML =
+      '<span class="kicker">Fases do sono · última noite</span>'
+      + '<div style="display:flex;align-items:baseline;gap:10px;margin:2px 0 10px">'
+      +   '<span style="font-size:26px;font-weight:800;line-height:1">'+hm(ult.duracao)+'</span>'
+      +   (ult.score ? '<span style="font-size:12px;opacity:.7">score '+Math.round(ult.score)+'</span>' : '')
+      +   '<span style="font-size:11.5px;opacity:.6;margin-left:auto">média do período '
+      +     hm(med.duracao)+'</span></div>'
+      + linha(ult, ult.base)
+      + '<div class="nota" style="margin-top:12px">As duas marcas em cada barra são a faixa de '
+      + 'referência para adultos. Média do período: profundo <b>'
+      + (med.profundo/med.base*100).toFixed(0)+'%</b>, REM <b>'
+      + (med.rem/med.base*100).toFixed(0)+'%</b>, leve <b>'
+      + (med.leve/med.base*100).toFixed(0)+'%</b>.<br><br>'
+      + 'Duas ressalvas honestas: essas faixas são da fisiologia do sono, não um padrão do Garmin. '
+      + 'E a concordância das fases medidas por relógio com um exame de sono fica em torno de '
+      + '40 a 50% — leia a tendência de semanas, nunca a fase de uma noite isolada.</div>';
+  }
+
+  const sonoApp = window.grafSono;
+  if(typeof sonoApp === 'function'){
+    window.grafSono = function(sono){
+      const r = sonoApp.apply(this, arguments);
+      try{
+        if(sono && sono.length >= 2){
+          if(sono.length <= LIM)
+            rotular(document.querySelector('#sSono'), sono.map(n=>+n.duracao||0),
+                    v => v.toFixed(1));
+          tabela(sono);
+        }
+      }catch(e){ console.warn('sono detalhado:', e) }
+      return r;
+    };
+  }
+});
+
+
 /* ─────────── selo de diagnóstico ─────────── */
 (function(){
   function montar(){
@@ -2060,7 +2249,7 @@ PARTE('step speed loss', function(){
     s.onclick = function(){
       if(ok && window.planoBQ){
         var l = window.planoBQ.ligado();
-        if(confirm('fix.js ' + FIX_VERSAO + ' — as quatorze partes carregaram.\n\n'
+        if(confirm('fix.js ' + FIX_VERSAO + ' — as quinze partes carregaram.\n\n'
           + 'Plano PEI Marathon: ' + (l ? 'LIGADO' : 'desligado')
           + '\n\nOK ' + (l ? 'desliga o plano e volta ao automático do app.'
                              : 'liga o plano da maratona.'))){
@@ -2069,7 +2258,7 @@ PARTE('step speed loss', function(){
         return;
       }
       alert(ok
-        ? 'fix.js ' + FIX_VERSAO + ' — as quatorze partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
+        ? 'fix.js ' + FIX_VERSAO + ' — as quinze partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
         : 'fix.js ' + FIX_VERSAO + '\n\nFalharam:\n\n' + FIX_FALHAS.join('\n\n'));
     };
     barra.insertBefore(s, barra.firstChild.nextSibling);
