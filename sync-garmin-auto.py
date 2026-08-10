@@ -194,47 +194,26 @@ def pace_seg(txt):
 
 
 def resumo_publico(treinos):
-    """So numeros, para o site publico.
+    """So os totais de corrida, bike e natacao desde a cirurgia.
 
-    NAO entra aqui nada de sono, estresse, HRV ou coordenada. Esses
-    ficam no no protegido, que exige login. O que vai para o ar e o
-    que qualquer pessoa poderia ver no Strava: quanto, quando e quao
-    rapido."""
+    Nada de sono, estresse, HRV ou coordenada — esses ficam no no
+    protegido, que exige login. Aqui vai o que qualquer um veria no
+    Strava: quanto de cada esporte."""
     desde = [t for t in treinos if t["data"] >= CIRURGIA]
     if not desde:
         return None
 
-    meses = {}
-    for t in desde:
-        if t["esporte"] != "corrida" or t["tipo"] == "caminhada":
-            continue
-        m = t["data"][:7]
-        d = meses.setdefault(m, {"km": 0.0, "n": 0, "_ps": [], "_pk": 0.0})
-        d["km"] += t["distancia"]
-        d["n"] += 1
-        ps = pace_seg(t.get("pace"))
-        if ps and t["distancia"] >= 3:          # media ponderada por distancia
-            d["_ps"].append(ps * t["distancia"])
-            d["_pk"] += t["distancia"]
-    for m, d in meses.items():
-        d["km"] = round(d["km"], 1)
-        d["pace"] = round(sum(d["_ps"]) / d["_pk"]) if d["_pk"] else 0
-        del d["_ps"], d["_pk"]
+    def soma(esporte, fora=()):
+        a = [t for t in desde if t["esporte"] == esporte and t["tipo"] not in fora]
+        return {"km": round(sum(t["distancia"] for t in a), 1), "n": len(a)}
 
-    corridas = [t for t in desde if t["esporte"] == "corrida" and t["tipo"] != "caminhada"]
-    vo2 = [t["vo2max"] for t in desde if t.get("vo2max")]
     hoje = datetime.today()
-
     return {
         "desde":      CIRURGIA,
         "atualizado": hoje.strftime("%Y-%m-%dT%H:%M:%S"),
-        "dias":       (hoje - datetime.strptime(CIRURGIA, "%Y-%m-%d")).days,
-        "km":         round(sum(t["distancia"] for t in corridas), 1),
-        "treinos":    len(corridas),
-        "atividades": len(desde),
-        "vo2max":     vo2[-1] if vo2 else 0,
-        "meses":      dict(sorted(meses.items())),
-        "maiorLongo": round(max([t["distancia"] for t in corridas], default=0), 1),
+        "corrida":    soma("corrida", ("caminhada",)),
+        "bike":       soma("bike"),
+        "natacao":    soma("natacao"),
     }
 
 
@@ -441,8 +420,8 @@ def main():
         pub = resumo_publico(treinos)
         if pub:
             if firebase_put("blog/evolucao", pub, token):
-                log(f"Evolucao publica: {pub['km']} km em {pub['treinos']} treinos "
-                    f"desde {CIRURGIA} ({len(pub['meses'])} meses)")
+                log(f"Evolucao publica: corrida {pub['corrida']['km']} km · "
+                    f"bike {pub['bike']['km']} km · natacao {pub['natacao']['km']} km")
             else:
                 log("ERRO ao salvar a evolucao publica")
     except Exception as e:
