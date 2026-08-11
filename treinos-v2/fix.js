@@ -1,6 +1,6 @@
 /* ══════════════════════════════════════════════════════════════════
    fix.js — correções da v2
-   Versão 2026-08-10 · 02c · seis correções e o plano da maratona.
+   Versão 2026-08-10 · 02d · seis correções e o plano da maratona.
 
    MUDANÇA DESTA VERSÃO: antes as seis partes eram blocos soltos no
    mesmo arquivo. Um erro em qualquer uma derrubava todas as outras,
@@ -39,7 +39,7 @@
   17) Mover e cancelar treino deixam de duplicar e passam a durar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '02c';
+const FIX_VERSAO = '02d';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -1372,6 +1372,21 @@ PARTE('sincronia entre aparelhos', function(){
     };
   }
 
+  /* Passa a lápide por cima do estado, seja de onde ele tenha vindo:
+     do servidor no arranque, de uma sincronia, ou de um backup. Antes
+     eu só protegia a mesclagem — e o restaurar() do arranque, que
+     SUBSTITUI os extras pelo que está no servidor, passava por fora. */
+  window.bqLimparApagados = function(){
+    let n = 0;
+    ['extras','trocas'].forEach(function(campo){
+      const o = ST[campo]; if(!o) return;
+      Object.keys(o).forEach(function(k){
+        if(window.bqFoiApagado(campo, k)){ delete o[k]; n++ }
+      });
+    });
+    return n;
+  };
+
   function mesclar(r){
     if(!r) return 0;
     let novos = 0;
@@ -1401,18 +1416,27 @@ PARTE('sincronia entre aparelhos', function(){
         ST[campo][k] = r[campo][k]; novos++;
       }
     });
+    window.bqLimparApagados();
     return novos;
   }
 
   /* ---- gravar: lê o servidor e funde antes de mandar ---- */
   const salvarApp = window.salvarCoach;
-  let ocupado = false;
+  let ocupado = false, naFila = false;
   window.salvarCoach = async function(){
-    if(ocupado) return;
+    /* Antes eu devolvia sem fazer nada quando havia outra gravação em
+       curso. A gravação seguinte — justamente a que carregava o que
+       você acabou de apagar — sumia sem aviso. Agora ela fica na fila
+       e roda logo depois. */
+    if(ocupado){ naFila = true; return }
     ocupado = true;
     try{ mesclar(await window.lerCoach()) }catch(e){ console.warn('merge antes de gravar:', e) }
-    ocupado = false;
-    return salvarApp.apply(this, arguments);
+    window.bqLimparApagados();
+    let r;
+    try{ r = await salvarApp.apply(this, arguments) }
+    finally{ ocupado = false }
+    if(naFila){ naFila = false; setTimeout(function(){ window.salvarCoach() }, 250) }
+    return r;
   };
 
   /* ---- ler: sempre que a tela volta ---- */
@@ -1449,6 +1473,20 @@ PARTE('sincronia entre aparelhos', function(){
     clearTimeout(aviso._t);
     aviso._t = setTimeout(function(){ t.style.opacity = '0' }, 3200);
   }
+
+  /* o restaurar() do arranque substitui extras e trocas pelo que está
+     no servidor; passo a lápide por cima logo depois dele */
+  const restaurarApp = window.restaurar;
+  if(typeof restaurarApp === 'function'){
+    window.restaurar = async function(){
+      const r = await restaurarApp.apply(this, arguments);
+      try{ window.bqLimparApagados() }catch(e){}
+      return r;
+    };
+  }
+  [1500, 4000, 8000].forEach(function(ms){
+    setTimeout(function(){ try{ window.bqLimparApagados() }catch(e){} }, ms);
+  });
 
   document.addEventListener('visibilitychange', function(){ if(!document.hidden) puxar() });
   window.addEventListener('focus', puxar);
