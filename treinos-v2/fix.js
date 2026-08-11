@@ -1,6 +1,6 @@
 /* ══════════════════════════════════════════════════════════════════
    fix.js — correções da v2
-   Versão 2026-08-10y · seis correções e o plano da maratona.
+   Versão 2026-08-10z · seis correções e o plano da maratona.
 
    MUDANÇA DESTA VERSÃO: antes as seis partes eram blocos soltos no
    mesmo arquivo. Um erro em qualquer uma derrubava todas as outras,
@@ -39,7 +39,7 @@
   17) Mover e cancelar treino deixam de duplicar e passam a durar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '01y';
+const FIX_VERSAO = '01z';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -2325,6 +2325,14 @@ PARTE('mover e cancelar', function(){
       const t = T[k];
       if(!t) return;
       if(t.__vazio){ delete ST.plano[k]; return }
+      /* cancelado: o dia continua existindo, marcado como descanso,
+         para você poder voltar atrás. Marco eu mesmo, sem depender da
+         ordem em que as funções do app rodam. */
+      if(t.__cancelado || t.cancelado){
+        if(ST.plano[k]) ST.plano[k] = Object.assign({}, ST.plano[k],
+          {cancelado:true, trocado:true, id:k, data:k});
+        return;
+      }
       if(t.mod || t.foco || t.titulo || t.km !== undefined){
         const antes = ST.plano[k];
         if(antes && antes.prova) return;             /* prova não se mexe */
@@ -2349,6 +2357,15 @@ PARTE('mover e cancelar', function(){
     Object.keys(ST.trocas).forEach(function(k){ dias[k] = 1 });
 
     Object.keys(dias).forEach(function(k){
+      /* dia cancelado tem marca própria: não deixo o registrador
+         trocá-la por uma cópia da sessão, senão o cancelamento se
+         perde na volta. */
+      const marca = ST.trocas[k];
+      if(marca && (marca.__cancelado || marca.cancelado)){
+        if(!(ST.plano || {})[k] || !ST.plano[k].cancelado) delete ST.trocas[k];
+        else ST.trocas[k] = {__cancelado:true};
+        return;
+      }
       const noBase  = limpo(B[k]);
       const naTela  = limpo((ST.plano || {})[k]);
       if(noBase && !naTela){ ST.trocas[k] = {__vazio:true}; return }
@@ -2365,6 +2382,28 @@ PARTE('mover e cancelar', function(){
     window.persistir = function(){
       try{ registrar() }catch(e){ console.warn('registrar trocas:', e) }
       return persistirApp.apply(this, arguments);
+    };
+  }
+
+  /* o cancelar do app grava {cancelado:true}; passo a gravar a minha
+     marca, que a minha aplicarTrocas entende sem ambiguidade */
+  const cancelarApp = window.cancelarPrincipal;
+  if(typeof cancelarApp === 'function'){
+    window.cancelarPrincipal = function(k){
+      const r = cancelarApp.apply(this, arguments);
+      setTimeout(function(){
+        const b = document.getElementById('cSim');
+        if(!b || b.dataset.bq) return;
+        b.dataset.bq = '1';
+        const antes = b.onclick;
+        b.onclick = function(){
+          ST.trocas[k] = {__cancelado:true};
+          if(typeof antes === 'function') antes.call(this);
+          ST.trocas[k] = {__cancelado:true};
+          try{ rebuild(); renderCoach(); persistir() }catch(e){}
+        };
+      }, 30);
+      return r;
     };
   }
 
