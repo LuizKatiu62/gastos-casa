@@ -1,6 +1,6 @@
 /* ══════════════════════════════════════════════════════════════════
    fix.js — correções da v2
-   Versão 2026-08-10 · 02a · seis correções e o plano da maratona.
+   Versão 2026-08-10 · 02b · seis correções e o plano da maratona.
 
    MUDANÇA DESTA VERSÃO: antes as seis partes eram blocos soltos no
    mesmo arquivo. Um erro em qualquer uma derrubava todas as outras,
@@ -39,7 +39,7 @@
   17) Mover e cancelar treino deixam de duplicar e passam a durar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '02a';
+const FIX_VERSAO = '02b';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -2360,12 +2360,11 @@ PARTE('mover e cancelar', function(){
       /* dia cancelado tem marca própria: não deixo o registrador
          trocá-la por uma cópia da sessão, senão o cancelamento se
          perde na volta. */
+      /* marca posta por mim no toque: só o desfazer explícito a tira.
+         Antes eu deixava o registrador reavaliá-la, e ela morria entre
+         uma reconstrução e outra. */
       const marca = ST.trocas[k];
-      if(marca && (marca.__cancelado || marca.cancelado)){
-        if(!(ST.plano || {})[k] || !ST.plano[k].cancelado) delete ST.trocas[k];
-        else ST.trocas[k] = {__cancelado:true};
-        return;
-      }
+      if(marca && (marca.__cancelado || marca.__vazio || marca.cancelado)) return;
       const noBase  = limpo(B[k]);
       const naTela  = limpo((ST.plano || {})[k]);
       if(noBase && !naTela){ ST.trocas[k] = {__vazio:true}; return }
@@ -2373,7 +2372,7 @@ PARTE('mover e cancelar', function(){
       /* voltou a ser igual ao original: não precisa mais guardar */
       if(!noBase && !naTela){ delete ST.trocas[k]; return }
       const t = ST.trocas[k];
-      if(t && (t.__vazio || t.id === k)) delete ST.trocas[k];
+      if(t && t.id === k) delete ST.trocas[k];
     });
   }
 
@@ -2385,27 +2384,52 @@ PARTE('mover e cancelar', function(){
     };
   }
 
-  /* o cancelar do app grava {cancelado:true}; passo a gravar a minha
-     marca, que a minha aplicarTrocas entende sem ambiguidade */
-  const cancelarApp = window.cancelarPrincipal;
-  if(typeof cancelarApp === 'function'){
-    window.cancelarPrincipal = function(k){
-      const r = cancelarApp.apply(this, arguments);
-      setTimeout(function(){
-        const b = document.getElementById('cSim');
-        if(!b || b.dataset.bq) return;
-        b.dataset.bq = '1';
-        const antes = b.onclick;
-        b.onclick = function(){
-          ST.trocas[k] = {__cancelado:true};
-          if(typeof antes === 'function') antes.call(this);
-          ST.trocas[k] = {__cancelado:true};
-          try{ rebuild(); renderCoach(); persistir() }catch(e){}
-        };
-      }, 30);
-      return r;
-    };
+  /* ── c) anotar no toque ──
+     As funções de cancelar e mover vivem dentro de blocos fechados do
+     app; não dá para envelopá-las de fora. Mas os botões passam pelo
+     documento, e aí eu chego. Escuto o clique na fase de captura,
+     anoto a intenção na hora, e só depois deixo o app fazer o dele.
+     Assim nada depende da ordem em que as funções rodam. */
+  function diaAberto(){
+    return ST.sel || (ST.plano && Object.keys(ST.plano).find(function(k){
+      return ST.plano[k] && ST.plano[k].aberto })) || null;
   }
+
+  document.addEventListener('click', function(e){
+    const alvo = e.target && e.target.closest ? e.target : null;
+    if(!alvo) return;
+
+    /* confirmação de cancelar */
+    if(alvo.closest('#cSim')){
+      const k = diaAberto();
+      if(k){
+        ST.trocas[k] = {__cancelado:true};
+        setTimeout(function(){
+          ST.trocas[k] = {__cancelado:true};
+          try{ rebuild(); renderCoach() }catch(err){}
+          try{ persistirApp() }catch(err){}
+        }, 120);
+      }
+      return;
+    }
+
+    /* escolha do dia de destino ao mover */
+    const mv = alvo.closest('[data-mv]');
+    if(mv){
+      const origem = diaAberto(), destino = mv.dataset.mv;
+      if(origem && destino){
+        setTimeout(function(){
+          const s = (ST.plano || {})[destino];
+          if(s){
+            ST.trocas[destino] = limpo(s);
+            if(origem !== destino && !(ST.plano || {})[origem])
+              ST.trocas[origem] = {__vazio:true};
+          }
+          try{ persistirApp() }catch(err){}
+        }, 150);
+      }
+    }
+  }, true);
 
   /* Diagnóstico: o que está realmente guardado, agora. Sem isso eu
      fico adivinhando de fora e fazendo você perder tempo. */
@@ -2419,7 +2443,7 @@ PARTE('mover e cancelar', function(){
         + '    plano: ' + (p ? (p.titulo || p.foco) + (p.cancelado ? ' [CANCELADO]' : '') : 'vazio')
         + (E[k] ? ' + extra' : '') + '\n';
     });
-    s += '\ncancelarPrincipal global: ' + (typeof window.cancelarPrincipal);
+    s += '\nescuta no toque: instalada';
     s += '\naplicarTrocas minha: ' + (String(window.aplicarTrocas).indexOf('__vazio') > 0);
     s += '\npersistir minha: ' + (String(window.persistir).indexOf('registrar') > 0);
     s += '\ndias no plano: ' + Object.keys(P).length + ' · extras: ' + Object.keys(E).length;
