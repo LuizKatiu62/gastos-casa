@@ -1,6 +1,6 @@
 /* ══════════════════════════════════════════════════════════════════
    fix.js — correções da v2
-   Versão 2026-08-10 · 02b · seis correções e o plano da maratona.
+   Versão 2026-08-10 · 02c · seis correções e o plano da maratona.
 
    MUDANÇA DESTA VERSÃO: antes as seis partes eram blocos soltos no
    mesmo arquivo. Um erro em qualquer uma derrubava todas as outras,
@@ -39,7 +39,7 @@
   17) Mover e cancelar treino deixam de duplicar e passam a durar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '02b';
+const FIX_VERSAO = '02c';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -1325,6 +1325,26 @@ PARTE('sincronia entre aparelhos', function(){
     throw new Error('app sem salvarCoach/lerCoach');
 
   const RM = 'bq.desmarcadas', JANELA = 24 * 3600 * 1000;
+  const TUM = 'bq.apagados';
+
+  /* Lápides. A sincronia traz do servidor tudo que falta aqui — e é
+     exatamente isso que ressuscita o que você acabou de apagar. Quem
+     apaga em um aparelho registra aqui, e por 24 h a sincronia
+     respeita. Vale para o segundo treino do dia e para as trocas. */
+  window.bqApagar = function(tipo, chave){
+    try{
+      const m = JSON.parse(localStorage.getItem(TUM) || '{}');
+      m[tipo + '|' + chave] = Date.now();
+      localStorage.setItem(TUM, JSON.stringify(m));
+    }catch(e){}
+  };
+  window.bqFoiApagado = function(tipo, chave){
+    try{
+      const m = JSON.parse(localStorage.getItem(TUM) || '{}');
+      const t = m[tipo + '|' + chave];
+      return !!t && (Date.now() - t) < JANELA;
+    }catch(e){ return false }
+  };
 
   function lerRM(){
     try{
@@ -1375,7 +1395,11 @@ PARTE('sincronia entre aparelhos', function(){
     ['extras','trocas'].forEach(function(campo){
       if(!r[campo]) return;
       ST[campo] = ST[campo] || {};
-      for(const k in r[campo]) if(!(k in ST[campo])){ ST[campo][k] = r[campo][k]; novos++ }
+      for(const k in r[campo]){
+        if(k in ST[campo]) continue;
+        if(window.bqFoiApagado(campo, k)) continue;   /* você apagou: fica apagado */
+        ST[campo][k] = r[campo][k]; novos++;
+      }
     });
     return novos;
   }
@@ -1865,6 +1889,7 @@ PARTE('força no motra', function(){
       const sid = MAPA[P[k].forca];
       if(!sid) continue;
       if(feitas.indexOf(k) >= 0) continue;      /* você já apagou: respeito */
+      if(window.bqFoiApagado && window.bqFoiApagado('extras', k)) continue;
       feitas.push(k);
       if(ST.extras[k]) continue;                /* já existe algo aí */
       ST.extras[k] = {id:k+'-forca', data:k, mod:'forca', foco:'forca',
@@ -2399,11 +2424,28 @@ PARTE('mover e cancelar', function(){
     const alvo = e.target && e.target.closest ? e.target : null;
     if(!alvo) return;
 
+    /* remover o segundo treino do dia (a força) */
+    const rx = alvo.closest('[data-remex]');
+    if(rx){
+      const k = rx.dataset.remex || diaAberto();
+      if(k){
+        if(window.bqApagar) window.bqApagar('extras', k);
+        setTimeout(function(){
+          if(ST.extras) delete ST.extras[k];
+          if(window.bqApagar) window.bqApagar('extras', k);
+          try{ renderCoach() }catch(err){}
+          try{ persistirApp() }catch(err){}
+        }, 120);
+      }
+      return;
+    }
+
     /* confirmação de cancelar */
     if(alvo.closest('#cSim')){
       const k = diaAberto();
       if(k){
         ST.trocas[k] = {__cancelado:true};
+        if(window.bqApagar) window.bqApagar('trocas', k);
         setTimeout(function(){
           ST.trocas[k] = {__cancelado:true};
           try{ rebuild(); renderCoach() }catch(err){}
@@ -2443,7 +2485,10 @@ PARTE('mover e cancelar', function(){
         + '    plano: ' + (p ? (p.titulo || p.foco) + (p.cancelado ? ' [CANCELADO]' : '') : 'vazio')
         + (E[k] ? ' + extra' : '') + '\n';
     });
-    s += '\nescuta no toque: instalada';
+    let lap = 0;
+    try{ lap = Object.keys(JSON.parse(localStorage.getItem('bq.apagados') || '{}')).length }catch(e){}
+    s += '\napagados guardados: ' + lap;
+    s += '\ndia aberto: ' + (ST.sel || '?');
     s += '\naplicarTrocas minha: ' + (String(window.aplicarTrocas).indexOf('__vazio') > 0);
     s += '\npersistir minha: ' + (String(window.persistir).indexOf('registrar') > 0);
     s += '\ndias no plano: ' + Object.keys(P).length + ' · extras: ' + Object.keys(E).length;
