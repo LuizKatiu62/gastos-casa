@@ -1,6 +1,6 @@
 /* ══════════════════════════════════════════════════════════════════
    fix.js — correções da v2
-   Versão 2026-08-10 · 02d · seis correções e o plano da maratona.
+   Versão 2026-08-10 · 02e · seis correções e o plano da maratona.
 
    MUDANÇA DESTA VERSÃO: antes as seis partes eram blocos soltos no
    mesmo arquivo. Um erro em qualquer uma derrubava todas as outras,
@@ -39,7 +39,7 @@
   17) Mover e cancelar treino deixam de duplicar e passam a durar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '02d';
+const FIX_VERSAO = '02e';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -1917,7 +1917,13 @@ PARTE('força no motra', function(){
 
   function semeadas(){ try{ return JSON.parse(localStorage.getItem(SEM)||'[]') }catch(e){ return [] } }
 
+  const OFF = 'bq.forcaOff';
+  const desligada = function(){
+    try{ return localStorage.getItem(OFF) === '1' }catch(e){ return false }
+  };
+
   function semear(){
+    if(desligada()) return 0;
     if(!window.planoBQ || !window.planoBQ.ligado()) return 0;
     if(typeof ST !== 'object') return 0;
     ST.extras = ST.extras || {};
@@ -1942,10 +1948,47 @@ PARTE('força no motra', function(){
     return novas;
   }
 
+  /* Varre e remove tudo que EU criei, sempre que a força estiver
+     desligada. É a rede de baixo: mesmo que alguma coisa ressuscite
+     uma sessão, ela sai de novo na próxima passada. */
+  function varrer(){
+    if(!desligada() || typeof ST !== 'object' || !ST.extras) return 0;
+    let n = 0;
+    Object.keys(ST.extras).forEach(function(k){
+      const x = ST.extras[k];
+      if(x && x.mod === 'forca' && String(x.sessao || '').indexOf('BQ_') === 0){
+        delete ST.extras[k]; n++;
+        if(window.bqApagar) window.bqApagar('extras', k);
+      }
+    });
+    if(n){
+      try{ renderTudo() }catch(e){}
+      try{ persistir() }catch(e){}
+    }
+    return n;
+  }
+
   setTimeout(semear, 4000);
   setTimeout(semear, 9000);
-  window.bqForca = {semear:semear, resetar:function(){
-    try{ localStorage.removeItem(SEM) }catch(e){}; return semear() }};
+  [1200, 3000, 6000, 12000].forEach(function(ms){ setTimeout(varrer, ms) });
+  document.addEventListener('visibilitychange', function(){
+    if(!document.hidden) setTimeout(varrer, 400);
+  });
+
+  window.bqForca = {
+    semear:semear, varrer:varrer, desligada:desligada,
+    desligar:function(){
+      try{ localStorage.setItem(OFF, '1') }catch(e){}
+      const n = varrer();
+      try{ renderTudo() }catch(e){}
+      return n;
+    },
+    ligar:function(){
+      try{ localStorage.removeItem(OFF); localStorage.removeItem(SEM) }catch(e){}
+      return semear();
+    },
+    resetar:function(){ try{ localStorage.removeItem(SEM) }catch(e){}; return semear() }
+  };
 });
 
 
@@ -2562,6 +2605,20 @@ PARTE('mover e cancelar', function(){
           + '\n\nOK ' + (l ? 'desliga o plano e volta ao automático do app.'
                              : 'liga o plano da maratona.'))){
           l ? window.planoBQ.desligar() : window.planoBQ.ligar();
+          return;
+        }
+        /* recusou a primeira: ofereço o interruptor da força */
+        if(window.bqForca){
+          var f = window.bqForca.desligada();
+          if(confirm('Sessões de força automáticas: ' + (f ? 'DESLIGADAS' : 'ligadas')
+            + '\n\n' + (f
+              ? 'OK volta a criar a força como segundo treino nos dias do plano.'
+              : 'OK desliga e remove todas as sessões de força que eu criei. '
+              + 'Elas param de voltar. Seus treinos de corrida não mudam.'))){
+            if(f){ var n = window.bqForca.ligar(); alert(n + ' sessões de força recriadas.') }
+            else { var m = window.bqForca.desligar(); alert(m + ' sessões de força removidas.\n\n'
+                   + 'Elas não voltam mais.') }
+          }
         }
         return;
       }
