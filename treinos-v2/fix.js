@@ -1,6 +1,6 @@
 /* ══════════════════════════════════════════════════════════════════
    fix.js — correções da v2
-   Versão 2026-08-10z · seis correções e o plano da maratona.
+   Versão 2026-08-10 · 02a · seis correções e o plano da maratona.
 
    MUDANÇA DESTA VERSÃO: antes as seis partes eram blocos soltos no
    mesmo arquivo. Um erro em qualquer uma derrubava todas as outras,
@@ -39,7 +39,7 @@
   17) Mover e cancelar treino deixam de duplicar e passam a durar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '01z';
+const FIX_VERSAO = '02a';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -2407,6 +2407,25 @@ PARTE('mover e cancelar', function(){
     };
   }
 
+  /* Diagnóstico: o que está realmente guardado, agora. Sem isso eu
+     fico adivinhando de fora e fazendo você perder tempo. */
+  window.bqDiag = function(){
+    const T = ST.trocas || {}, P = ST.plano || {}, E = ST.extras || {};
+    const ks = Object.keys(T).sort();
+    let s = 'trocas: ' + ks.length + '\n';
+    ks.slice(-6).forEach(function(k){
+      const t = T[k], p = P[k];
+      s += k + ' → ' + JSON.stringify(t).slice(0, 60) + '\n'
+        + '    plano: ' + (p ? (p.titulo || p.foco) + (p.cancelado ? ' [CANCELADO]' : '') : 'vazio')
+        + (E[k] ? ' + extra' : '') + '\n';
+    });
+    s += '\ncancelarPrincipal global: ' + (typeof window.cancelarPrincipal);
+    s += '\naplicarTrocas minha: ' + (String(window.aplicarTrocas).indexOf('__vazio') > 0);
+    s += '\npersistir minha: ' + (String(window.persistir).indexOf('registrar') > 0);
+    s += '\ndias no plano: ' + Object.keys(P).length + ' · extras: ' + Object.keys(E).length;
+    return s;
+  };
+
   window.bqTrocas = {registrar:registrar, base:base,
     limpar:function(){ ST.trocas = {}; try{ rebuild(); renderTudo() }catch(e){} }};
 });
@@ -2429,8 +2448,10 @@ PARTE('mover e cancelar', function(){
     s.onclick = function(){
       if(ok && window.planoBQ){
         var l = window.planoBQ.ligado();
+        var diag = '';
+        try{ diag = window.bqDiag ? '\n\n── diagnóstico ──\n' + window.bqDiag() : '' }catch(e){}
         if(confirm('fix.js ' + FIX_VERSAO + ' — as dezessete partes carregaram.\n\n'
-          + 'Plano PEI Marathon: ' + (l ? 'LIGADO' : 'desligado')
+          + 'Plano PEI Marathon: ' + (l ? 'LIGADO' : 'desligado') + diag
           + '\n\nOK ' + (l ? 'desliga o plano e volta ao automático do app.'
                              : 'liga o plano da maratona.'))){
           l ? window.planoBQ.desligar() : window.planoBQ.ligar();
