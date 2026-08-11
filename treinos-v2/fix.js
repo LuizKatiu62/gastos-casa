@@ -1,6 +1,6 @@
 /* ══════════════════════════════════════════════════════════════════
    fix.js — correções da v2
-   Versão 2026-08-08x · seis correções e o plano da maratona.
+   Versão 2026-08-10y · seis correções e o plano da maratona.
 
    MUDANÇA DESTA VERSÃO: antes as seis partes eram blocos soltos no
    mesmo arquivo. Um erro em qualquer uma derrubava todas as outras,
@@ -36,9 +36,10 @@
   14) Step Speed Loss do HRM 600, na aba Índices junto da mecânica
   15) Números em cima das barras da Saúde e tabela de fases do sono
   16) Painel de objetivos recolhido quando já há prova escolhida
+  17) Mover e cancelar treino deixam de duplicar e passam a durar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '01x';
+const FIX_VERSAO = '01y';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -2269,6 +2270,109 @@ PARTE('objetivos recolhidos', function(){
 });
 
 
+
+/* ═══════ 17. MOVER E CANCELAR QUE NÃO VOLTAM SOZINHOS ═══════
+   O app monta o plano do zero a cada rebuild(), a partir do gerador.
+   O que você muda à mão vive só em ST.plano — que NÃO é gravado.
+   Mover um treino altera ST.plano e chama persistir(), mas persistir
+   salva ST.trocas, ST.feitas e ST.extras; ST.plano não vai junto.
+
+   Resultado: no próximo rebuild o treino reaparece no dia de origem,
+   enquanto a cópia do dia de destino também segue lá. Um vira dois.
+   E rebuild acontece bastante — ao sincronizar, ao voltar o foco, ao
+   trocar de objetivo.
+
+   Conserto em duas pontas:
+
+   a) Antes de cada gravação, comparo o plano que está na tela com o
+      plano recém-gerado e guardo a DIFERENÇA em ST.trocas — inclusive
+      os dias que ficaram vazios, marcados com __vazio.
+
+   b) aplicarTrocas() passa a entender __vazio (apaga o dia) e objetos
+      completos (põe o treino no dia), além do que já fazia.
+
+   Assim mover, cancelar e incluir sobrevivem a qualquer rebuild, e
+   viajam entre iPhone e Mac como o resto.
+   ══════════════════════════════════════════════════════════════════ */
+
+PARTE('mover e cancelar', function(){
+  if(typeof ST !== 'object') throw new Error('sem ST');
+  if(typeof window.gerarPlano !== 'function' || typeof window.aplicarTrocas !== 'function')
+    throw new Error('app sem gerarPlano/aplicarTrocas');
+
+  const igual = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const limpo = s => {
+    if(!s) return null;
+    const c = {};
+    Object.keys(s).sort().forEach(function(k){
+      if(k === 'trocado' || k === 'cache') return;
+      c[k] = s[k];
+    });
+    return c;
+  };
+
+  /* plano como o gerador o entrega, sem nada aplicado por cima */
+  function base(){
+    try{ return window.gerarPlano() || {} }catch(e){ return {} }
+  }
+
+  /* ── b) aplicar ── */
+  const aplicarApp = window.aplicarTrocas;
+  window.aplicarTrocas = function(){
+    const T = ST.trocas || {};
+    let sobrou = false;
+    Object.keys(T).forEach(function(k){
+      const t = T[k];
+      if(!t) return;
+      if(t.__vazio){ delete ST.plano[k]; return }
+      if(t.mod || t.foco || t.titulo || t.km !== undefined){
+        const antes = ST.plano[k];
+        if(antes && antes.prova) return;             /* prova não se mexe */
+        ST.plano[k] = Object.assign({}, antes || {}, t, {id:k, data:k, trocado:true});
+        return;
+      }
+      sobrou = true;
+    });
+    if(sobrou){ try{ aplicarApp.call(this) }catch(e){} }
+  };
+
+  /* ── a) registrar ── */
+  function registrar(){
+    const B = base();
+    ST.trocas = ST.trocas || {};
+    /* olho os três conjuntos: o plano original, o que está na tela e
+       o que já estava anotado. Sem o terceiro, um dia que sai dos dois
+       primeiros ficaria anotado para sempre e voltaria a cada rebuild. */
+    const dias = {};
+    Object.keys(B).forEach(function(k){ dias[k] = 1 });
+    Object.keys(ST.plano || {}).forEach(function(k){ dias[k] = 1 });
+    Object.keys(ST.trocas).forEach(function(k){ dias[k] = 1 });
+
+    Object.keys(dias).forEach(function(k){
+      const noBase  = limpo(B[k]);
+      const naTela  = limpo((ST.plano || {})[k]);
+      if(noBase && !naTela){ ST.trocas[k] = {__vazio:true}; return }
+      if(naTela && !igual(noBase, naTela)){ ST.trocas[k] = naTela; return }
+      /* voltou a ser igual ao original: não precisa mais guardar */
+      if(!noBase && !naTela){ delete ST.trocas[k]; return }
+      const t = ST.trocas[k];
+      if(t && (t.__vazio || t.id === k)) delete ST.trocas[k];
+    });
+  }
+
+  const persistirApp = window.persistir;
+  if(typeof persistirApp === 'function'){
+    window.persistir = function(){
+      try{ registrar() }catch(e){ console.warn('registrar trocas:', e) }
+      return persistirApp.apply(this, arguments);
+    };
+  }
+
+  window.bqTrocas = {registrar:registrar, base:base,
+    limpar:function(){ ST.trocas = {}; try{ rebuild(); renderTudo() }catch(e){} }};
+});
+
+
 /* ─────────── selo de diagnóstico ─────────── */
 (function(){
   function montar(){
@@ -2286,7 +2390,7 @@ PARTE('objetivos recolhidos', function(){
     s.onclick = function(){
       if(ok && window.planoBQ){
         var l = window.planoBQ.ligado();
-        if(confirm('fix.js ' + FIX_VERSAO + ' — as dezesseis partes carregaram.\n\n'
+        if(confirm('fix.js ' + FIX_VERSAO + ' — as dezessete partes carregaram.\n\n'
           + 'Plano PEI Marathon: ' + (l ? 'LIGADO' : 'desligado')
           + '\n\nOK ' + (l ? 'desliga o plano e volta ao automático do app.'
                              : 'liga o plano da maratona.'))){
@@ -2295,7 +2399,7 @@ PARTE('objetivos recolhidos', function(){
         return;
       }
       alert(ok
-        ? 'fix.js ' + FIX_VERSAO + ' — as dezesseis partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
+        ? 'fix.js ' + FIX_VERSAO + ' — as dezessete partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
         : 'fix.js ' + FIX_VERSAO + '\n\nFalharam:\n\n' + FIX_FALHAS.join('\n\n'));
     };
     barra.insertBefore(s, barra.firstChild.nextSibling);
