@@ -1,6 +1,6 @@
 /* ══════════════════════════════════════════════════════════════════
    fix.js — correções da v2
-   Versão 2026-08-10 · 02h · seis correções e o plano da maratona.
+   Versão 2026-08-12 · 02i · dezenove partes; a nova compara feito x planejado.
 
    MUDANÇA DESTA VERSÃO: antes as seis partes eram blocos soltos no
    mesmo arquivo. Um erro em qualquer uma derrubava todas as outras,
@@ -37,9 +37,13 @@
   15) Números em cima das barras da Saúde e tabela de fases do sono
   16) Painel de objetivos recolhido quando já há prova escolhida
   17) Mover e cancelar treino deixam de duplicar e passam a durar
+  18) Apagar que dura: a remoção viaja entre iPhone e Mac
+  19) Análise feito x planejado no fim da aba Coach: veredito do bloco,
+      último treino comparado, projeção da maratona e propostas de
+      mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '02h';
+const FIX_VERSAO = '02i';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -2708,6 +2712,581 @@ PARTE('apagar que dura', function(){
 });
 
 
+
+/* ───────────── 19. ANÁLISE: FEITO x PLANEJADO ─────────────
+   Depois que o Garmin sincroniza, cada dia do plano é cruzado com o
+   que realmente aconteceu. O painel fica no fim da aba Coach.
+
+   O que ele julga e o que ele NÃO julga:
+
+   · Rodagem fácil, recuperação e longo são esforços continuos. O pace
+     médio da atividade significa alguma coisa, então esses são
+     comparados por pace e por FC.
+   · Limiar, intervalado e ritmo têm aquecimento e desaquecimento
+     dentro da mesma atividade. O pace médio dessa sessão NÃO é
+     comparável ao pace dos tiros — comparar seria mentira. Nessas eu
+     julgo por distância e por FC média, e mostro o pace só como
+     informação.
+
+   Nenhuma proposta muda o plano sozinha. Só o botão Aplicar mexe.
+   E o motor só reescreve sessões contínuas: um treino de tiro nunca
+   é reescrito por mim, porque o texto das séries é específico.
+   ───────────────────────────────────────────────────────────── */
+PARTE('analise feito x planejado', function(){
+
+  if(typeof ST !== 'object' || typeof sessaoDe !== 'function')
+    throw new Error('app antigo: sem ST/sessaoDe');
+
+  const K_DISPENSA = 'bq.analise.dispensadas';
+  const K_HIST     = 'bq.analise.aplicadas';
+  const JANELA     = 21;               // dias olhados para trás
+  const ALVO_SEG   = 327;              // 5:27/km — alvo da maratona
+  const ALVO_TXT   = '3:50';
+
+  /* ═══════ utilidades ═══════ */
+  const nz  = v => { const x = parseFloat(v); return isFinite(x) ? x : NaN };
+  const pct = (a, b) => b > 0 ? a / b : NaN;
+  const dataDe = r => iso(addD(HOJE, -r.d));
+  const hojeIso = () => iso(HOJE);
+
+  function hms(seg){
+    seg = Math.round(seg);
+    const h = Math.floor(seg / 3600), m = Math.floor((seg % 3600) / 60), s = seg % 60;
+    return h + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+  }
+  function hm(seg){
+    seg = Math.round(seg);
+    return Math.floor(seg / 3600) + ':' + String(Math.floor((seg % 3600) / 60)).padStart(2, '0');
+  }
+  function pc(seg){                      // pace em s/km -> "5:27"
+    seg = Math.round(seg);
+    return Math.floor(seg / 60) + ':' + String(seg % 60).padStart(2, '0');
+  }
+  function alvoSeg(s){                   // pace alvo da sessão, em s/km
+    if(!s) return NaN;
+    if(typeof s.pace === 'string' && s.pace.indexOf(':') > 0){
+      const [a, b] = s.pace.split(':').map(Number);
+      return a * 60 + b;
+    }
+    const p = nz(s.pace);
+    if(isFinite(p) && p > 60) return p;
+    if(s.km > 0 && s.min > 0) return s.min * 60 / s.km;
+    return NaN;
+  }
+  function brev(k){ const d = dt(k); return String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') }
+
+  function guardar(chave, obj){ try{ localStorage.setItem(chave, JSON.stringify(obj)) }catch(e){} }
+  function ler(chave){ try{ return JSON.parse(localStorage.getItem(chave) || '{}') || {} }catch(e){ return {} } }
+
+  /* pr(), fcr() e MOD vivem no index.html. Se um dia mudarem de lugar,
+     a análise inteira cairia por causa de um rótulo. Não vale o risco. */
+  const faixaP  = z => typeof pr  === 'function' ? pr(z)  : pc(Z[z].p[0]) + '–' + pc(Z[z].p[1]) + '/km';
+  const faixaFC = z => typeof fcr === 'function' ? fcr(z) : Z[z].fc[0] + '–' + Z[z].fc[1] + ' bpm';
+  const nomeMod = m => (typeof MOD === 'object' && MOD[m]) ? MOD[m].n.toLowerCase() : m;
+
+  /* ═══════ classificação do foco ═══════ */
+  const CONTINUO = {facil:1, longo:1, rec:1, regenerativo:1, rodagem:1};
+  const continuo = f => !!CONTINUO[f];
+
+  /* ═══════ o que aconteceu num dia ═══════ */
+  function atividades(k, mod){
+    mod = mod || 'corrida';
+    return (ST.runs || []).filter(function(r){
+      return dataDe(r) === k && (r.mod || 'corrida') === mod && !r.walk;
+    });
+  }
+  function juntar(acts){                 // duas corridas no mesmo dia viram uma
+    if(!acts.length) return null;
+    const km  = acts.reduce((a, r) => a + (+r.km || 0), 0);
+    const dur = acts.reduce((a, r) => a + (+r.dur || (r.km * r.pace) || 0), 0);
+    const cf  = acts.filter(r => isFinite(r.fc) && r.fc > 80);
+    const fc  = cf.length ? cf.reduce((a, r) => a + r.fc, 0) / cf.length : NaN;
+    const cc  = acts.filter(r => isFinite(r.cad) && r.cad > 120);
+    const cad = cc.length ? cc.reduce((a, r) => a + r.cad, 0) / cc.length : NaN;
+    return {km: km, dur: dur, pace: km > 0 ? dur / km : NaN, fc: fc, cad: cad, n: acts.length};
+  }
+
+  /* ═══════ veredito de uma sessão ═══════ */
+  /* devolve {classe:'bom'|'atencao'|'ruim'|'info', txt:'…'} */
+  function julgar(s, f){
+    if(!s) return null;
+    if(s.mod !== 'corrida')
+      return {classe:'bom', txt:'Sessão de ' + nomeMod(s.mod) + ' registrada.'};
+
+    const alvo = alvoSeg(s), difKm = f.km - (+s.km || 0);
+    const faixaFC = Z[s.foco === 'longo' ? 'long' : 'faci'].fc;
+    const pisoQual = Z.faci.fc[1];   // media da sessao de tiro tem que passar do teto da zona facil
+
+    if(!continuo(s.foco)){
+      /* sessão de qualidade: pace médio inclui aquecimento, não julgo por ele */
+      const partes = [];
+      if(Math.abs(difKm) <= Math.max(1, s.km * 0.12)) partes.push('distância cumprida');
+      else if(difKm < 0) partes.push('faltaram ' + Math.abs(difKm).toFixed(1) + ' km');
+      else partes.push('passou ' + difKm.toFixed(1) + ' km do previsto');
+
+      if(isFinite(f.fc)){
+        if(f.fc >= pisoQual) partes.push('FC média ' + Math.round(f.fc) + ' bpm, a intensidade aconteceu');
+        else partes.push('FC média ' + Math.round(f.fc) + ' bpm, abaixo de ' + pisoQual + ' — os trechos fortes podem ter ficado leves');
+      }
+      const bom = Math.abs(difKm) <= Math.max(1, s.km * 0.12) && (!isFinite(f.fc) || f.fc >= pisoQual);
+      return {classe: bom ? 'bom' : 'atencao', txt: partes.join(' · ')};
+    }
+
+    /* esforço continuo: aqui o pace médio vale */
+    const dif = isFinite(alvo) ? f.pace - alvo : NaN;   // negativo = mais rápido
+    if(!isFinite(dif))
+      return {classe:'info', txt:'Sem pace alvo para comparar.'};
+
+    if(dif < -25)
+      return {classe:'atencao', txt:'Correu ' + Math.round(-dif) + ' s/km mais rápido que o pedido. '
+              + 'Rodagem fácil rápida demais é o erro clássico: ela cansa como treino forte e não rende como treino forte.'};
+    if(dif > 60)
+      return {classe:'atencao', txt:'Correu ' + Math.round(dif) + ' s/km mais devagar que o pedido. '
+              + 'Uma vez é cansaço ou calor. Repetido, é sinal de carga acumulada.'};
+    if(difKm < -Math.max(1.5, s.km * 0.15))
+      return {classe:'atencao', txt:'Pace certo, mas faltaram ' + Math.abs(difKm).toFixed(1) + ' km.'};
+    return {classe:'bom', txt:'No ritmo e na distância pedidos.'};
+  }
+
+  /* ═══════ agregados do bloco ═══════ */
+  function bloco(){
+    const ini = iso(addD(HOJE, -JANELA)), hoje = hojeIso();
+    const chaves = Object.keys(ST.plano || {}).filter(k => k >= ini && k < hoje).sort();
+
+    let plan = 0, done = 0, kmPlan = 0, kmFeito = 0;
+    let facilN = 0, facilOk = 0, facilRapida = 0;
+    let qualN = 0, qualOk = 0;
+    let longoN = 0, longoOk = 0, longoPlan = 0;
+    const detalhes = [];
+
+    chaves.forEach(function(k){
+      const s = sessaoDe(k);
+      if(!s || s.prova) return;
+      const acts = atividades(k, s.mod);
+      const f = juntar(acts);
+      plan++;
+      if(s.mod === 'corrida') kmPlan += (+s.km || 0);
+      if(s.mod === 'corrida' && s.foco === 'longo') longoPlan++;
+      if(f){
+        done++;
+        if(s.mod === 'corrida') kmFeito += f.km;
+        const v = julgar(s, f);
+        detalhes.push({k: k, s: s, f: f, v: v});
+        if(s.mod === 'corrida'){
+          if(s.foco === 'longo'){ longoN++; if(v.classe === 'bom') longoOk++ }
+          else if(continuo(s.foco)){
+            facilN++;
+            const d = f.pace - alvoSeg(s);
+            if(d < -25) facilRapida++; else if(v.classe === 'bom') facilOk++;
+          } else { qualN++; if(v.classe === 'bom') qualOk++ }
+        }
+      } else if(concluida(s)){
+        done++;
+      }
+      /* segundo treino do dia (força, natação) */
+      const x = extraDe(k);
+      if(x){ plan++; if(atividades(k, x.mod).length || concluida(x)) done++ }
+    });
+
+    /* eficiência aeróbica: metros por minuto para cada batimento.
+       Só rodagens contínuas com FC válida — tiro não entra. */
+    function efDe(de, ate){
+      const v = (ST.runs || []).filter(function(r){
+        return r.d >= de && r.d < ate && !r.walk && (r.mod || 'corrida') === 'corrida'
+            && r.km >= 5 && isFinite(r.fc) && r.fc > 90 && r.pace > PERFIL.paceLimiar + 25;
+      });
+      if(v.length < 2) return null;
+      const m = v.map(r => (60000 / r.pace) / r.fc);
+      return {v: m.reduce((a, b) => a + b, 0) / m.length, n: v.length};
+    }
+    const efAgora = efDe(0, JANELA), efAntes = efDe(JANELA, JANELA * 2);
+    const efDelta = (efAgora && efAntes) ? (efAgora.v / efAntes.v - 1) : null;
+
+    /* carga aguda sobre crônica */
+    const somaKm = d => (ST.runs || [])
+      .filter(r => r.d < d && !r.walk && (r.mod || 'corrida') === 'corrida')
+      .reduce((a, r) => a + (+r.km || 0), 0);
+    const km7 = somaKm(7), km28 = somaKm(28);
+    const acwr = km28 > 0 ? km7 / (km28 / 4) : null;
+
+    return {
+      plan: plan, done: done, kmPlan: kmPlan, kmFeito: kmFeito,
+      pctSessoes: pct(done, plan), pctKm: pct(kmFeito, kmPlan),
+      facilN: facilN, facilOk: facilOk, facilRapida: facilRapida, longoPlan: longoPlan,
+      qualN: qualN, qualOk: qualOk, longoN: longoN, longoOk: longoOk,
+      efDelta: efDelta, efN: efAgora ? efAgora.n : 0,
+      km7: km7, km28: km28, acwr: acwr,
+      detalhes: detalhes
+    };
+  }
+
+  /* ═══════ projeção da maratona ═══════
+     Riegel a partir do melhor esforço longo recente. Dois expoentes:
+     1,06 para quem tem base sólida, 1,12 para primeira maratona.
+     A verdade fica entre os dois. */
+  function projecao(){
+    const cand = (ST.runs || []).filter(function(r){
+      /* so esforcos de verdade: um longao em ritmo facil projeta uma
+         maratona assustadora que nao significa nada */
+      return r.d <= 75 && !r.walk && (r.mod || 'corrida') === 'corrida'
+          && r.km >= 14 && r.pace > 200 && r.pace <= PERFIL.paceLimiar + 45;
+    });
+    if(!cand.length) return null;
+    let melhor = null;
+    cand.forEach(function(r){
+      const t = r.km * r.pace;
+      const otim = t * Math.pow(42.195 / r.km, 1.06);
+      if(!melhor || otim < melhor.otim)
+        melhor = {r: r, otim: otim, pess: t * Math.pow(42.195 / r.km, 1.12)};
+    });
+    melhor.alvo = 42.195 * ALVO_SEG;
+    return melhor;
+  }
+
+  /* ═══════ reescrever uma sessão contínua ═══════ */
+  function passosDe(foco, km, paceTxt, motivo){
+    const longo = foco === 'longo';
+    return [
+      {t:'Aquecimento', d:'8 minutos bem leves. Se as pernas estiverem pesadas, comece caminhando 3 minutos.',
+       tags:[{t:'8 min'}, {t:faixaP('rec'), c:'z'}]},
+      {t:'Parte principal',
+       d: longo
+          ? km + ' km continuos. Primeiros ' + Math.round(km * 0.6) + ' km em rodagem, últimos '
+            + Math.round(km * 0.4) + ' km um pouco mais firmes, sem chegar a difícil.'
+          : km + ' km em ritmo de conversa. Se não consegue falar uma frase inteira, está rápido demais.',
+       tags:[{t: km + ' km'}, {t: paceTxt + '/km', c:'z'}, {t: faixaFC(longo ? 'long' : 'faci'), c:'hr'}]},
+      {t:'Desaquecimento', d:'5 minutos de trote muito leve, depois 5 minutos de mobilidade: panturrilha, posterior, quadril e tornozelo.',
+       tags:[{t:'10 min'}]},
+      {t:'Por que mudou', d: motivo, tags:[{t:'ajuste'}]}
+    ];
+  }
+  function reescrever(s, novoKm, motivo){
+    const p = alvoSeg(s), paceTxt = isFinite(p) ? pc(p) : (s.pace || '6:35');
+    const km = Math.max(4, Math.round(novoKm));
+    return Object.assign({}, s, {
+      km: km,
+      min: isFinite(p) ? Math.round(km * p / 60) : s.min,
+      detalhe: (s.foco === 'longo' ? 'Longo de ' : 'Rodagem de ') + km + ' km a ' + paceTxt + '/km. ' + motivo,
+      passos: passosDe(s.foco, km, paceTxt, motivo),
+      bqAjuste: motivo
+    });
+  }
+
+  /* ═══════ propostas ═══════ */
+  function futuros(dias){
+    const de = iso(addD(HOJE, 1)), ate = iso(addD(HOJE, dias + 1));
+    return Object.keys(ST.plano || {}).filter(k => k >= de && k < ate).sort();
+  }
+  function cortar(fator, titulo, porque, incluirLongo){
+    const muda = [];
+    futuros(7).forEach(function(k){
+      const s = sessaoDe(k);
+      if(!s || s.prova || s.mod !== 'corrida') return;
+      if(!continuo(s.foco)) return;
+      if(s.foco === 'longo' && !incluirLongo) return;
+      const novo = Math.max(4, Math.round(s.km * (1 - fator)));
+      if(novo < s.km) muda.push({data: k, de: s.km, para: novo, s: s});
+    });
+    if(!muda.length) return null;
+    return {id:'corte' + Math.round(fator * 100), classe:'atencao', titulo: titulo, porque: porque, muda: muda};
+  }
+
+  function propostas(b, proj){
+    const out = [];
+
+    /* 1 · carga subindo rápido demais */
+    if(b.acwr && b.acwr > 1.45){
+      const p = cortar(0.15,
+        'Tirar 15% das rodagens fáceis da próxima semana',
+        'Você correu ' + Math.round(b.km7) + ' km nos últimos 7 dias contra uma média de '
+        + Math.round(b.km28 / 4) + ' km por semana no último mês. A razão está em ' + b.acwr.toFixed(2)
+        + '. Acima de 1,5 é a faixa onde a lesão aparece — e aos 64 anos o tendão avisa depois, não durante. '
+        + 'O longo fica intacto: ele é o treino que constrói a maratona.', false);
+      if(p) out.push(p);
+    }
+
+    /* 2 · plano grande demais para a vida real */
+    else if(b.plan >= 8 && isFinite(b.pctKm) && b.pctKm < 0.78){
+      const falta = Math.round((1 - b.pctKm) * 100);
+      const p = cortar(Math.min(0.18, 1 - b.pctKm),
+        'Encolher a próxima semana para o volume que você realmente cumpre',
+        'Nos últimos ' + JANELA + ' dias o plano pediu ' + Math.round(b.kmPlan) + ' km e você fez '
+        + Math.round(b.kmFeito) + ' km, ou seja, ' + falta + '% a menos. '
+        + 'Um plano que não se cumpre não treina ninguém — ele só gera culpa. '
+        + 'Melhor um volume menor cumprido inteiro do que um volume grande cumprido pela metade.', false);
+      if(p) out.push(p);
+    }
+
+    /* 3 · perdeu o longo */
+    if(b.longoPlan >= 2 && b.longoN === 0){
+      const prox = futuros(9).map(sessaoDe).filter(s => s && s.foco === 'longo' && s.mod === 'corrida')[0];
+      if(prox && prox.km > 16){
+        const alvo = Math.round(prox.km * 0.82);
+        out.push({id:'longo', classe:'atencao',
+          titulo:'Encurtar o próximo longo de ' + prox.km + ' para ' + alvo + ' km',
+          porque:'Você não completou nenhum longo nos últimos ' + JANELA + ' dias. '
+            + 'Voltar direto no número cheio é como o corredor se machuca depois de uma pausa. '
+            + 'Este longo menor recoloca o degrau e a progressão retoma na semana seguinte.',
+          muda:[{data: prox.data || prox.id, de: prox.km, para: alvo, s: prox}]});
+      }
+    }
+
+    /* 4 · indo bem: um degrau a mais no longo */
+    if(b.plan >= 8 && b.pctSessoes >= 0.9 && b.pctKm >= 0.95 && b.longoOk >= 2
+       && (b.efDelta === null || b.efDelta >= 0) && (!b.acwr || b.acwr < 1.3)){
+      const prox = futuros(9).map(sessaoDe).filter(s => s && s.foco === 'longo' && s.mod === 'corrida')[0];
+      if(prox && prox.km < 32){
+        const alvo = Math.min(32, prox.km + 2);
+        out.push({id:'sobe', classe:'bom',
+          titulo:'Somar 2 km ao próximo longo, de ' + prox.km + ' para ' + alvo + ' km',
+          porque:'Você cumpriu ' + Math.round(b.pctSessoes * 100) + '% das sessões, '
+            + Math.round(b.pctKm * 100) + '% do volume, fechou ' + b.longoOk + ' longos no ritmo'
+            + (b.efDelta > 0 ? ' e sua eficiência aeróbica subiu ' + (b.efDelta * 100).toFixed(1) + '%' : '')
+            + '. O corpo está absorvendo. Dois quilômetros é um degrau pequeno o bastante para ser seguro '
+            + 'e grande o bastante para contar até 18 de outubro.',
+          muda:[{data: prox.data || prox.id, de: prox.km, para: alvo, s: prox}]});
+      }
+    }
+
+    const disp = ler(K_DISPENSA);
+    return out.filter(p => !disp[p.id + '|' + iso(addD(HOJE, -dow(HOJE) + 1))]);
+  }
+
+  /* ═══════ avisos (sem botão, só verdade) ═══════ */
+  function avisos(b, proj){
+    const a = [];
+    if(b.facilN >= 3 && b.facilRapida / b.facilN >= 0.5)
+      a.push({classe:'atencao', t:'Rodagem fácil rápida demais',
+        d: b.facilRapida + ' das ' + b.facilN + ' rodagens fáceis saíram bem acima do ritmo pedido. '
+          + 'Isso não é falta de disciplina, é o erro mais comum de quem corre há anos: o corpo já sabe '
+          + 'aquele ritmo e vai sozinho. O custo aparece no limiar e no longo, que chegam com a perna gasta. '
+          + 'Segure em ' + faixaP('faci') + '.'});
+
+    if(b.qualN >= 2 && b.qualOk / b.qualN < 0.5)
+      a.push({classe:'atencao', t:'Sessões fortes não estão saindo',
+        d: 'Só ' + b.qualOk + ' de ' + b.qualN + ' treinos de qualidade bateram distância e FC. '
+          + 'Se as pernas não respondem no dia forte, quase sempre a causa está no dia anterior.'});
+
+    if(b.efDelta !== null && b.efDelta <= -0.03)
+      a.push({classe:'atencao', t:'Eficiência aeróbica caindo',
+        d:'No mesmo batimento você está correndo ' + Math.abs(b.efDelta * 100).toFixed(1) + '% mais devagar '
+          + 'do que há três semanas. Isso costuma ser sono, calor ou carga acumulada — não perda de forma.'});
+
+    if(b.efDelta !== null && b.efDelta >= 0.02)
+      a.push({classe:'bom', t:'Eficiência aeróbica subindo',
+        d:'No mesmo batimento você está ' + (b.efDelta * 100).toFixed(1) + '% mais rápido do que há três semanas. '
+          + 'É exatamente o que a fase de base deveria produzir.'});
+
+    if(proj){
+      const dif = proj.otim - proj.alvo;
+      if(dif > 8 * 60)
+        a.push({classe:'info', t:'A projeção ainda está acima de ' + ALVO_TXT,
+          d:'Pelo seu melhor esforço longo recente (' + proj.r.km.toFixed(1) + ' km a ' + pc(proj.r.pace) + '/km), '
+            + 'a maratona sai hoje entre ' + hm(proj.otim) + ' e ' + hm(proj.pess) + '. '
+            + 'Isso é esperado: faltam as semanas de ritmo específico, que é justamente onde esse tempo cai. '
+            + 'O número a acompanhar não é este, é se ele encolhe a cada bloco.'});
+      else
+        a.push({classe:'bom', t:'A projeção já cabe no alvo',
+          d:'Seu melhor esforço recente projeta entre ' + hm(proj.otim) + ' e ' + hm(proj.pess)
+            + ' na maratona, contra o alvo de ' + ALVO_TXT + '.'});
+    }
+    return a;
+  }
+
+  /* ═══════ veredito geral ═══════ */
+  function veredito(b, props){
+    if(!b.plan) return {classe:'info', t:'Sem histórico ainda', d:'Assim que houver treinos do plano já passados, a análise aparece aqui.'};
+    if(b.acwr && b.acwr > 1.45)
+      return {classe:'ruim', t:'Segure a carga',
+        d:'O volume subiu rápido demais nos últimos 7 dias. A prioridade agora é chegar inteiro em outubro, não ganhar uma semana.'};
+    if(b.pctSessoes < 0.7)
+      return {classe:'ruim', t:'O plano está passando por cima de você',
+        d:'Menos de 70% das sessões saíram. Ou a semana está grande demais, ou a vida está grande demais. Os dois têm conserto — o plano é que tem que ceder.'};
+    if(b.pctSessoes >= 0.9 && b.pctKm >= 0.9 && (b.efDelta === null || b.efDelta >= 0))
+      return {classe:'bom', t:'Indo bem',
+        d:'Aderência alta, volume cumprido e a resposta do corpo está estável ou melhorando. É assim que se chega em 18 de outubro.'};
+    return {classe:'atencao', t:'No caminho, com pontos a corrigir',
+      d:'Nada grave, mas há detalhes que cobram juros lá na frente. Estão listados abaixo.'};
+  }
+
+  /* ═══════ pintura ═══════ */
+  const CSS = `
+  #bqAn{padding:15px 13px 14px}
+  .bqa-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px}
+  .bqa-v{border-radius:12px;padding:11px 12px;margin-bottom:12px;border:1px solid}
+  .bqa-v b{display:block;font-size:15px;margin-bottom:3px}
+  .bqa-v span{font-size:12.5px;line-height:1.45;opacity:.88}
+  .bqa-bom{background:rgba(46,182,125,.10);border-color:rgba(46,182,125,.35)}
+  .bqa-atencao{background:rgba(232,163,54,.10);border-color:rgba(232,163,54,.35)}
+  .bqa-ruim{background:rgba(226,86,86,.10);border-color:rgba(226,86,86,.35)}
+  .bqa-info{background:rgba(255,255,255,.045);border-color:rgba(255,255,255,.13)}
+  .bqa-g{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+  .bqa-c{background:rgba(255,255,255,.04);border-radius:10px;padding:9px 10px}
+  .bqa-c i{display:block;font-style:normal;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;opacity:.55;margin-bottom:3px}
+  .bqa-c b{font-size:16px;font-variant-numeric:tabular-nums}
+  .bqa-c u{display:block;text-decoration:none;font-size:11px;opacity:.6;margin-top:2px}
+  .bqa-t{font-size:11px;letter-spacing:.07em;text-transform:uppercase;opacity:.55;margin:14px 0 7px}
+  .bqa-u{background:rgba(255,255,255,.04);border-radius:10px;padding:10px 11px;font-size:12.5px;line-height:1.5}
+  .bqa-u em{font-style:normal;opacity:.6}
+  .bqa-p{border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:11px 12px;margin-bottom:9px}
+  .bqa-p h4{margin:0 0 5px;font-size:13.5px;line-height:1.35}
+  .bqa-p p{margin:0 0 8px;font-size:12.5px;line-height:1.5;opacity:.85}
+  .bqa-m{font-size:12px;font-variant-numeric:tabular-nums;opacity:.75;margin-bottom:9px}
+  .bqa-m span{display:inline-block;margin-right:9px}
+  .bqa-b{display:flex;gap:8px}
+  .bqa-b button{flex:0 0 auto;border:0;border-radius:9px;padding:8px 15px;font-size:12.5px;font-weight:600;cursor:pointer}
+  .bqa-ap{background:var(--ok,#2eb67d);color:#06231a}
+  .bqa-di{background:rgba(255,255,255,.08);color:inherit}
+  .bqa-nada{font-size:12.5px;line-height:1.5;opacity:.7}`;
+
+  (function(){
+    if(document.getElementById('bqa-css')) return;
+    const st = document.createElement('style');
+    st.id = 'bqa-css'; st.textContent = CSS;
+    document.head.appendChild(st);
+  })();
+
+  function caixa(){
+    let el = document.getElementById('bqAn');
+    if(el) return el;
+    const alvo = document.getElementById('v-coach');
+    if(!alvo) return null;
+    el = document.createElement('section');
+    el.className = 'card'; el.id = 'bqAn';
+    alvo.appendChild(el);
+    return el;
+  }
+
+  let ULTIMAS = [];      // propostas da pintura corrente
+
+  function pintar(){
+    const el = caixa();
+    if(!el) return;
+    if(!ST.plano || !Object.keys(ST.plano).length){ el.style.display = 'none'; return }
+    el.style.display = '';
+
+    const b = bloco(), proj = projecao(), props = propostas(b, proj), av = avisos(b, proj), v = veredito(b, props);
+    ULTIMAS = props;
+
+    const num = (x, s) => isFinite(x) ? Math.round(x * 100) + '%' : '—';
+    const ult = b.detalhes[b.detalhes.length - 1];
+
+    let h = '<div class="bqa-h"><span class="kicker">Feito x planejado</span>'
+          + '<span class="v" style="opacity:.6;font-size:11.5px">últimos ' + JANELA + ' dias</span></div>';
+
+    h += '<div class="bqa-v bqa-' + v.classe + '"><b>' + v.t + '</b><span>' + v.d + '</span></div>';
+
+    h += '<div class="bqa-g">'
+      + '<div class="bqa-c"><i>Sessões</i><b>' + b.done + '/' + b.plan + '</b><u>' + num(b.pctSessoes) + ' do plano</u></div>'
+      + '<div class="bqa-c"><i>Volume</i><b>' + Math.round(b.kmFeito) + ' km</b><u>de ' + Math.round(b.kmPlan) + ' km · ' + num(b.pctKm) + '</u></div>'
+      + '<div class="bqa-c"><i>Carga 7d ÷ média</i><b>' + (b.acwr ? b.acwr.toFixed(2) : '—') + '</b><u>'
+        + (b.acwr ? (b.acwr > 1.45 ? 'subindo rápido' : b.acwr < 0.8 ? 'caindo' : 'faixa segura') : 'sem dados') + '</u></div>'
+      + '<div class="bqa-c"><i>Eficiência aeróbica</i><b>'
+        + (b.efDelta === null ? '—' : (b.efDelta >= 0 ? '+' : '') + (b.efDelta * 100).toFixed(1) + '%')
+        + '</b><u>' + (b.efDelta === null ? 'faltam corridas com FC' : 'contra as 3 semanas antes') + '</u></div>'
+      + '</div>';
+
+    if(!proj){
+      h += '<div class="bqa-t">Projeção para 18 de outubro</div>'
+         + '<div class="bqa-u">Ainda não há esforço recente forte o bastante para projetar. '
+         + 'Rodagem fácil não serve: ela diz como você recupera, não a que ritmo você aguenta 42 km. '
+         + 'O próximo limiar longo ou um trecho em ritmo dentro do longão já dá o número.</div>';
+    }
+    if(proj){
+      h += '<div class="bqa-t">Projeção para 18 de outubro</div>'
+         + '<div class="bqa-u"><b style="font-size:15px">' + hm(proj.otim) + ' – ' + hm(proj.pess) + '</b> '
+         + '<em>· alvo ' + ALVO_TXT + ' (' + pc(ALVO_SEG) + '/km)</em><br>'
+         + '<em>a partir de ' + proj.r.km.toFixed(1) + ' km a ' + pc(proj.r.pace) + '/km em ' + brev(dataDe(proj.r)) + '</em></div>';
+    }
+
+    if(ult){
+      h += '<div class="bqa-t">Último treino comparado</div>'
+         + '<div class="bqa-u"><b>' + brev(ult.k) + ' · ' + (ult.s.titulo || ult.s.foco) + '</b><br>'
+         + '<em>planejado</em> ' + (ult.s.km || '—') + ' km a ' + (isFinite(alvoSeg(ult.s)) ? pc(alvoSeg(ult.s)) : '—') + '/km'
+         + ' &nbsp;·&nbsp; <em>feito</em> ' + ult.f.km.toFixed(1) + ' km a ' + pc(ult.f.pace) + '/km'
+         + (isFinite(ult.f.fc) ? ' · FC ' + Math.round(ult.f.fc) : '') + '<br><br>' + ult.v.txt + '</div>';
+    }
+
+    if(av.length){
+      h += '<div class="bqa-t">O que os números dizem</div>';
+      av.forEach(a => { h += '<div class="bqa-v bqa-' + a.classe + '"><b>' + a.t + '</b><span>' + a.d + '</span></div>' });
+    }
+
+    h += '<div class="bqa-t">Mudanças propostas</div>';
+    if(!props.length){
+      h += '<div class="bqa-nada">Nada a mudar. O plano das próximas semanas continua adequado ao que você vem entregando. '
+         + 'Quando eu achar que ele deve mudar, a proposta aparece aqui com o motivo e você decide.</div>';
+    } else {
+      props.forEach(function(p, i){
+        h += '<div class="bqa-p"><h4>' + p.titulo + '</h4><p>' + p.porque + '</p><div class="bqa-m">'
+           + p.muda.map(m => '<span>' + brev(m.data) + ' &nbsp;' + m.de + ' → <b>' + m.para + ' km</b></span>').join('')
+           + '</div><div class="bqa-b"><button class="bqa-ap" data-bqap="' + i + '">Aplicar</button>'
+           + '<button class="bqa-di" data-bqdi="' + i + '">Dispensar</button></div></div>';
+      });
+    }
+    el.innerHTML = h;
+  }
+
+  /* ═══════ aplicar e dispensar ═══════ */
+  function aplicar(p){
+    if(!p || !p.muda.length) return;
+    p.muda.forEach(function(m){
+      const k = m.data;
+      const s = sessaoDe(k) || m.s;
+      if(!s || s.prova) return;
+      ST.trocas[k] = reescrever(s, m.para, p.titulo + '. ' + p.porque.split('.')[0] + '.');
+    });
+    const hist = ler(K_HIST);
+    hist[Date.now()] = {id: p.id, titulo: p.titulo, dias: p.muda.map(m => m.data)};
+    guardar(K_HIST, hist);
+    try{ rebuild() }catch(e){}
+    try{ renderCoach() }catch(e){}
+    try{ persistir() }catch(e){}
+  }
+  function dispensar(p){
+    const d = ler(K_DISPENSA);
+    d[p.id + '|' + iso(addD(HOJE, -dow(HOJE) + 1))] = 1;   // volta a perguntar na semana seguinte
+    guardar(K_DISPENSA, d);
+    pintar();
+  }
+
+  document.addEventListener('click', function(e){
+    const alvo = e.target;
+    if(!alvo || !alvo.closest) return;
+    const a = alvo.closest('[data-bqap]');
+    if(a){
+      const p = ULTIMAS[+a.dataset.bqap];
+      if(p && confirm(p.titulo + '\n\n' + p.muda.length + ' treino(s) mudam. Você pode desfazer cada um no próprio dia.\n\nAplicar?'))
+        aplicar(p);
+      return;
+    }
+    const d = alvo.closest('[data-bqdi]');
+    if(d){ const p = ULTIMAS[+d.dataset.bqdi]; if(p) dispensar(p) }
+  });
+
+  /* ═══════ engate ═══════ */
+  const renderCoachApp = window.renderCoach;
+  if(typeof renderCoachApp === 'function'){
+    window.renderCoach = function(){
+      const r = renderCoachApp.apply(this, arguments);
+      try{ pintar() }catch(err){ console.error('fix.js · análise:', err) }
+      return r;
+    };
+  }
+  setTimeout(function(){ try{ pintar() }catch(e){} }, 3000);
+  setTimeout(function(){ try{ pintar() }catch(e){} }, 7000);
+
+  /* console: window.bqAnalise.ver() devolve os números crus */
+  window.bqAnalise = {
+    aplicar: aplicar,
+    reescrever: reescrever,
+    ver   : function(){ const b = bloco(), pj = projecao();
+                        return {bloco: b, projecao: pj, propostas: propostas(b, pj), avisos: avisos(b, pj), veredito: veredito(b)} },
+    pintar: pintar
+  };
+});
+
+
 /* ─────────── selo de diagnóstico ─────────── */
 (function(){
   function montar(){
@@ -2727,7 +3306,7 @@ PARTE('apagar que dura', function(){
         var l = window.planoBQ.ligado();
         var diag = '';
         try{ diag = window.bqDiag ? '\n\n── diagnóstico ──\n' + window.bqDiag() : '' }catch(e){}
-        if(confirm('fix.js ' + FIX_VERSAO + ' — as dezoito partes carregaram.\n\n'
+        if(confirm('fix.js ' + FIX_VERSAO + ' — as dezenove partes carregaram.\n\n'
           + 'Plano PEI Marathon: ' + (l ? 'LIGADO' : 'desligado') + diag
           + '\n\nOK ' + (l ? 'desliga o plano e volta ao automático do app.'
                              : 'liga o plano da maratona.'))){
@@ -2750,7 +3329,7 @@ PARTE('apagar que dura', function(){
         return;
       }
       alert(ok
-        ? 'fix.js ' + FIX_VERSAO + ' — as dezoito partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
+        ? 'fix.js ' + FIX_VERSAO + ' — as dezenove partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
         : 'fix.js ' + FIX_VERSAO + '\n\nFalharam:\n\n' + FIX_FALHAS.join('\n\n'));
     };
     barra.insertBefore(s, barra.firstChild.nextSibling);
