@@ -1026,7 +1026,7 @@ const PERFIL = {
   nome:'Luiz Silva', idade:64,
   dias:[1,2,3,5,6],          // 1=seg … 7=dom — 5 dias por semana
   fcMax:163, fcRep:58, vo2:48, paceLimiar:340,
-  marcoData:'2025-06-13', marcoNome:'Dia da cirurgia',
+  marcoData:'2025-06-11', marcoNome:'Dia da cirurgia',
 };
 const MOD = {
   corrida:{n:'Corrida', c:'var(--run)'},
@@ -1809,6 +1809,7 @@ function mapAtividade(a){
   const dur = durSeg(a.duracao);
   if((!isFinite(pace) || pace < 60) && isFinite(dur) && km > 0) pace = dur/km;
   const mod = espParaMod(a.esporte, a.tipo);
+  const esp = String(a.esporte||'').toLowerCase();
   if(!isFinite(pace) || pace <= 0){
     if(!isFinite(dur) || dur <= 0) return null;
     pace = dur / Math.max(km, 0.01);
@@ -1821,7 +1822,14 @@ function mapAtividade(a){
     dur: isFinite(dur)?dur:km*pace,
     fc:n(a.fcMed), cad:n(a.cadencia), osc:n(a.oscilacao), gct:n(a.contatoSolo),
     vr:n(a.razaoVertical), bal:n(a.balanco), vo2:n(a.vo2max),
-    walk: mod==='corrida' && pace >= 840   // 14:00/km ou mais lento = caminhada
+    // O que conta como corrida vem do esporte gravado no sync, nao do ritmo.
+    // A regra antiga (pace >= 840, ou seja 14:00/km) descartava trilha lenta
+    // que era corrida de verdade e, ao mesmo tempo, deixava entrar caminhada
+    // rapida. Era a causa da diferenca contra o site.
+    // So corrida, bike e natacao contam. Se o sync gravou um esporte e ele
+    // nao e corrida, fica de fora — mesmo criterio que o site usa.
+    // Treino manual vem sem esporte e continua contando como corrida.
+    walk: mod==='corrida' && !!esp && esp!=='corrida'
   };
 }
 function absorver(d){
@@ -3977,6 +3985,5 @@ function montarCapa(){
   new MutationObserver(coloca).observe(document.body, {childList:true, subtree:true});
 })();
 </script>
-  <script src="./fix.js"></script>
 </body>
 </html>
