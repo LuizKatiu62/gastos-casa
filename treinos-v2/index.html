@@ -1898,10 +1898,15 @@ async function salvarCoach(){
 }
 async function lerCoach(){
   const t = await fbToken(); if(!t) return null;
+  // Com timeout: sem ele, se o Firebase nao respondesse, o boot() ficava
+  // parado para sempre e o app abria vazio, sem dados e sem botoes.
+  const ctrl = new AbortController();
+  const relogio = setTimeout(()=>ctrl.abort(), 8000);
   try{
-    const r = await fetch(`${FB_DB}/${FB_COACH}.json?auth=${t}`);
+    const r = await fetch(`${FB_DB}/${FB_COACH}.json?auth=${t}`, {signal:ctrl.signal});
     return r.ok ? await r.json() : null;
   }catch(e){ return null }
+  finally{ clearTimeout(relogio) }
 }
 
 /* ---- Sync Garmin: dispara o workflow garmin-sync.yml ---- */
@@ -3836,6 +3841,10 @@ function irPara(v){
 
 (async function boot(){
   q('#abSub').textContent='Carregando…';
+  // A capa e a tela que aparece enquanto o resto carrega, entao ela tem
+  // que ser montada ANTES dos awaits. Se ficar no fim, qualquer demora
+  // na rede deixa o app aberto numa capa sem botao.
+  try{ montarCapa() }catch(e){ console.warn('capa:',e.message) }
   let fonte='';
   try{
     await puxarFirebase();
@@ -3985,5 +3994,8 @@ function montarCapa(){
   new MutationObserver(coloca).observe(document.body, {childList:true, subtree:true});
 })();
 </script>
+<!-- Camada de correcoes da v2 (botao Comecar, mascara de pace, graficos,
+     aba Coach, plano PEI Marathon). Fica em treinos-v2/fix.js. -->
+<script src="./fix.js"></script>
 </body>
 </html>
