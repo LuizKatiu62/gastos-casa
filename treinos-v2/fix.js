@@ -1,6 +1,6 @@
 /* ══════════════════════════════════════════════════════════════════
    fix.js — correções da v2
-   Versão 2026-08-12 · 02i · dezenove partes; a nova compara feito x planejado.
+   Versão 2026-08-12 · 02j · a análise passa a incluir o treino de hoje.
 
    MUDANÇA DESTA VERSÃO: antes as seis partes eram blocos soltos no
    mesmo arquivo. Um erro em qualquer uma derrubava todas as outras,
@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '02i';
+const FIX_VERSAO = '02j';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -2851,7 +2851,10 @@ PARTE('analise feito x planejado', function(){
   /* ═══════ agregados do bloco ═══════ */
   function bloco(){
     const ini = iso(addD(HOJE, -JANELA)), hoje = hojeIso();
-    const chaves = Object.keys(ST.plano || {}).filter(k => k >= ini && k < hoje).sort();
+    /* hoje entra na conta. Se o treino de hoje já apareceu, ele é
+       analisado na hora; se ainda não apareceu, o dia não conta como
+       falta — o dia não acabou. */
+    const chaves = Object.keys(ST.plano || {}).filter(k => k >= ini && k <= hoje).sort();
 
     let plan = 0, done = 0, kmPlan = 0, kmFeito = 0;
     let facilN = 0, facilOk = 0, facilRapida = 0;
@@ -2864,6 +2867,7 @@ PARTE('analise feito x planejado', function(){
       if(!s || s.prova) return;
       const acts = atividades(k, s.mod);
       const f = juntar(acts);
+      if(k === hoje && !f && !concluida(s)) return;   // o dia ainda não acabou
       plan++;
       if(s.mod === 'corrida') kmPlan += (+s.km || 0);
       if(s.mod === 'corrida' && s.foco === 'longo') longoPlan++;
@@ -2886,6 +2890,17 @@ PARTE('analise feito x planejado', function(){
       /* segundo treino do dia (força, natação) */
       const x = extraDe(k);
       if(x){ plan++; if(atividades(k, x.mod).length || concluida(x)) done++ }
+    });
+
+    /* corridas em dias que o plano não previa: não somem, viram extra */
+    let kmExtra = 0, nExtra = 0;
+    (ST.runs || []).forEach(function(r){
+      const k = dataDe(r);
+      if(k < ini || k > hoje) return;
+      if((r.mod || 'corrida') !== 'corrida' || r.walk) return;
+      const s = sessaoDe(k);
+      if(s && s.mod === 'corrida') return;
+      kmExtra += (+r.km || 0); nExtra++;
     });
 
     /* eficiência aeróbica: metros por minuto para cada batimento.
@@ -2915,7 +2930,8 @@ PARTE('analise feito x planejado', function(){
       facilN: facilN, facilOk: facilOk, facilRapida: facilRapida, longoPlan: longoPlan,
       qualN: qualN, qualOk: qualOk, longoN: longoN, longoOk: longoOk,
       efDelta: efDelta, efN: efAgora ? efAgora.n : 0,
-      km7: km7, km28: km28, acwr: acwr,
+      km7: km7, km28: km28, acwr: acwr, kmExtra: kmExtra, nExtra: nExtra,
+      inicio: chaves.length ? chaves[0] : null,
       detalhes: detalhes
     };
   }
@@ -3095,7 +3111,16 @@ PARTE('analise feito x planejado', function(){
 
   /* ═══════ veredito geral ═══════ */
   function veredito(b, props){
-    if(!b.plan) return {classe:'info', t:'Sem histórico ainda', d:'Assim que houver treinos do plano já passados, a análise aparece aqui.'};
+    if(!b.plan)
+      return {classe:'info', t:'Nenhum treino do plano avaliado ainda',
+        d:'Ou o plano começou hoje, ou o treino de hoje ainda não chegou do Garmin. '
+        + 'A sincronia roda de hora em hora — quando a atividade aparecer na aba Evolução, ela aparece aqui também.'};
+    if(b.plan < 4)
+      return {classe:'info', t:'Poucos dias para julgar o bloco',
+        d:'O plano tem ' + b.plan + (b.plan === 1 ? ' dia avaliado' : ' dias avaliados') + ' até agora. '
+        + 'Dá para comparar treino por treino, e é o que está logo abaixo. Mas aderência, carga e tendência '
+        + 'só significam alguma coisa com duas ou três semanas de plano rodado. '
+        + 'Prefiro te dizer isso a inventar um veredito em cima de três pontos.'};
     if(b.acwr && b.acwr > 1.45)
       return {classe:'ruim', t:'Segure a carga',
         d:'O volume subiu rápido demais nos últimos 7 dias. A prioridade agora é chegar inteiro em outubro, não ganhar uma semana.'};
@@ -3199,12 +3224,34 @@ PARTE('analise feito x planejado', function(){
          + '<em>a partir de ' + proj.r.km.toFixed(1) + ' km a ' + pc(proj.r.pace) + '/km em ' + brev(dataDe(proj.r)) + '</em></div>';
     }
 
-    if(ult){
+    if(ult && b.plan < 4 && b.detalhes.length > 1){
+      h += '<div class="bqa-t">Treinos comparados</div>';
+      b.detalhes.slice().reverse().forEach(function(x){
+        h += '<div class="bqa-u" style="margin-bottom:7px"><b>' + brev(x.k) + ' · ' + (x.s.titulo || x.s.foco) + '</b><br>'
+           + '<em>planejado</em> ' + (x.s.km || '—') + ' km a ' + (isFinite(alvoSeg(x.s)) ? pc(alvoSeg(x.s)) : '—') + '/km'
+           + ' &nbsp;·&nbsp; <em>feito</em> ' + x.f.km.toFixed(1) + ' km a ' + pc(x.f.pace) + '/km'
+           + (isFinite(x.f.fc) ? ' · FC ' + Math.round(x.f.fc) : '') + '<br><br>' + x.v.txt + '</div>';
+      });
+    } else if(ult){
       h += '<div class="bqa-t">Último treino comparado</div>'
          + '<div class="bqa-u"><b>' + brev(ult.k) + ' · ' + (ult.s.titulo || ult.s.foco) + '</b><br>'
          + '<em>planejado</em> ' + (ult.s.km || '—') + ' km a ' + (isFinite(alvoSeg(ult.s)) ? pc(alvoSeg(ult.s)) : '—') + '/km'
          + ' &nbsp;·&nbsp; <em>feito</em> ' + ult.f.km.toFixed(1) + ' km a ' + pc(ult.f.pace) + '/km'
          + (isFinite(ult.f.fc) ? ' · FC ' + Math.round(ult.f.fc) : '') + '<br><br>' + ult.v.txt + '</div>';
+    }
+
+    const sHoje = sessaoDe(hojeIso());
+    if(sHoje && sHoje.mod === 'corrida' && !atividades(hojeIso(), 'corrida').length){
+      h += '<div class="bqa-t">Hoje</div><div class="bqa-u"><b>' + (sHoje.titulo || sHoje.foco) + '</b> · '
+         + (sHoje.km || '—') + ' km a ' + (isFinite(alvoSeg(sHoje)) ? pc(alvoSeg(sHoje)) : '—') + '/km<br>'
+         + '<em>Ainda não chegou nenhuma corrida de hoje do Garmin. Se você já treinou, a sincronia roda de hora '
+         + 'em hora: espere o relógio subir a atividade e puxe a tela para baixo.</em></div>';
+    }
+
+    if(b.kmExtra > 0){
+      h += '<div class="bqa-t">Fora do plano</div><div class="bqa-u">'
+         + b.nExtra + (b.nExtra === 1 ? ' corrida' : ' corridas') + ' em dias que o plano não previa, somando '
+         + b.kmExtra.toFixed(1) + ' km. Contam para a carga, mesmo não contando para a aderência.</div>';
     }
 
     if(av.length){
