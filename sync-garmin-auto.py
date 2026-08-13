@@ -74,11 +74,7 @@ TIPO_MAP = {
 ESPORTE_MAP = {
     "running": "corrida", "trail_running": "corrida", "ultra_run": "corrida",
     "treadmill_running": "corrida",
-    # Caminhada a pe NAO e corrida. Antes as duas viravam "corrida" e so o
-    # site filtrava, pelo tipo "caminhada" — o que deixava hiking passar,
-    # porque hiking tinha tipo "trilha". Resultado: o site somava 7,06 km a
-    # mais que o app. Agora sao um esporte proprio e os dois lados ignoram.
-    "walking": "caminhada", "hiking": "caminhada",
+    # walking e hiking NAO entram: veja IGNORAR, mais abaixo.
     "indoor_running": "corrida", "virtual_run": "corrida", "track_running": "corrida",
     "obstacle_run": "corrida",
     "cycling": "bike", "road_biking": "bike", "gravel_cycling": "bike",
@@ -93,12 +89,30 @@ ESPORTE_MAP = {
     "multi_sport": "duathlon", "multisport": "duathlon",
     "duathlon": "duathlon", "triathlon": "triathlon",
 }
-IGNORAR = {"yoga", "elliptical", "rowing", "incident_detected"}
+# O app so acompanha corrida, bike e natacao (mais forca, que aparece a
+# parte). Caminhada a pe, trilha a pe e esportes de inverno nao entram —
+# antes viravam "corrida" ou "outro" e cada lado contava de um jeito, que
+# era a causa da diferenca de km entre o site e o app.
+IGNORAR = {
+    "yoga", "elliptical", "rowing", "incident_detected",
+    "walking", "hiking", "casual_walking", "speed_walking",
+    "mountaineering", "backcountry_skiing", "resort_skiing",
+    "resort_skiing_snowboarding", "snowboarding", "cross_country_skiing",
+    "skate_skiing", "snowshoeing", "ice_skating",
+}
+
+# Vale para os dois lados: so estes esportes sao gravados no Firebase.
+ESPORTES_ACEITOS = {"corrida", "bike", "natacao", "academia",
+                    "duathlon", "triathlon"}
 
 
 def garmin_to_treino(act):
     tipo_g = (act.get("activityType") or {}).get("typeKey", "running").lower()
     if tipo_g in IGNORAR:
+        return None
+    # Tipo desconhecido do Garmin cairia em "outro" e entraria como corrida
+    # no app. Melhor deixar de fora do que contar errado.
+    if ESPORTE_MAP.get(tipo_g, "outro") not in ESPORTES_ACEITOS:
         return None
     dist_m   = act.get("distance", 0) or 0
     dur_secs = act.get("duration", 0) or 0
