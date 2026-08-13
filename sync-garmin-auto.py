@@ -11,7 +11,11 @@ GARMIN_EMAIL    = "lcdsilva@hotmail.com"
 FIREBASE_DB     = "https://gastos-casa-7f431-default-rtdb.firebaseio.com"
 FIREBASE_PATH   = "treinos/luiz"
 FIREBASE_KEY    = "AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU"
-DIAS_ATIVIDADES = 365
+CIRURGIA_DATA   = "2025-06-11"   # marco do projeto: dia da cirurgia
+# A janela precisa cobrir desde a cirurgia, senao o total do site comeca a
+# encolher sozinho quando o projeto passar de um ano. Antes era fixo em 365.
+DIAS_ATIVIDADES = max(365, (datetime.today() -
+                            datetime.strptime(CIRURGIA_DATA, "%Y-%m-%d")).days + 30)
 DIAS_SAUDE      = 180
 SESSION_DIR     = os.path.expanduser("~/.garth")
 LOG_FILE        = os.path.expanduser("~/gastos-casa/sync.log")
@@ -52,7 +56,7 @@ def calc_pace(dist_m, dur_secs):
 TIPO_MAP = {
     "running": "facil", "trail_running": "trilha", "ultra_run": "trilha",
     "treadmill_running": "esteira", "walking": "caminhada",
-    "hiking": "trilha", "indoor_running": "esteira",
+    "hiking": "caminhada", "indoor_running": "esteira",
     "virtual_run": "virtual", "track_running": "intervalado",
     "obstacle_run": "intervalado",
     "cycling": "bike", "road_biking": "bike", "gravel_cycling": "bike",
@@ -69,7 +73,12 @@ TIPO_MAP = {
 }
 ESPORTE_MAP = {
     "running": "corrida", "trail_running": "corrida", "ultra_run": "corrida",
-    "treadmill_running": "corrida", "walking": "corrida", "hiking": "corrida",
+    "treadmill_running": "corrida",
+    # Caminhada a pe NAO e corrida. Antes as duas viravam "corrida" e so o
+    # site filtrava, pelo tipo "caminhada" — o que deixava hiking passar,
+    # porque hiking tinha tipo "trilha". Resultado: o site somava 7,06 km a
+    # mais que o app. Agora sao um esporte proprio e os dois lados ignoram.
+    "walking": "caminhada", "hiking": "caminhada",
     "indoor_running": "corrida", "virtual_run": "corrida", "track_running": "corrida",
     "obstacle_run": "corrida",
     "cycling": "bike", "road_biking": "bike", "gravel_cycling": "bike",
@@ -181,7 +190,69 @@ def firebase_token():
         sys.exit(1)
 
 
-CIRURGIA = "2025-06-13"
+CIRURGIA = CIRURGIA_DATA
+
+
+# Gravacoes que misturam esportes numa atividade so. O Garmin salva tudo com
+# um tipo unico, entao a quilometragem cai no balde errado. Aqui a atividade
+# original vira a parte do esporte dominante e o restante sai como registro
+# separado. Sem isso o duatlo de 26/04/2026 joga 16 km de corrida na bike.
+AJUSTES_MULTISPORT = {
+    "22667741915": {  # 26/04/2026 — "8k bike + 16k running + 8k bike"
+        "esporte_extra": "corrida",
+        "tipo_extra":    "facil",
+        "km_original":   16.23,
+        "km_extra":      16.23,
+        "nota":          "Duatlo 26/04/2026 - parte de corrida (divisao 50/50)",
+    },
+}
+
+
+def dur_seg(txt):
+    """'2:51:07' ou '48:12' -> segundos. 0 se nao der para ler."""
+    try:
+        p = [int(x) for x in str(txt).split(":")]
+    except Exception:
+        return 0
+    if len(p) == 3: return p[0] * 3600 + p[1] * 60 + p[2]
+    if len(p) == 2: return p[0] * 60 + p[1]
+    return 0
+
+
+def aplicar_ajustes(treinos):
+    """Divide as atividades multiesporte listadas em AJUSTES_MULTISPORT.
+
+    A duracao tambem e repartida, proporcional a distancia de cada trecho.
+    Se ficasse inteira nos dois registros o total de horas de treino
+    dobraria nesse dia."""
+    extras = []
+    for t in treinos:
+        aj = AJUSTES_MULTISPORT.get(t.get("garminId"))
+        if not aj:
+            continue
+        total_seg = dur_seg(t.get("duracao"))
+        km_tot    = aj["km_original"] + aj["km_extra"]
+        seg_orig  = int(total_seg * aj["km_original"] / km_tot) if km_tot else 0
+        seg_extra = total_seg - seg_orig
+
+        novo = dict(t)
+        novo["id"]        = t["id"] + "-x"
+        novo["garminId"]  = t["garminId"] + "-x"
+        novo["esporte"]   = aj["esporte_extra"]
+        novo["tipo"]      = aj["tipo_extra"]
+        novo["distancia"] = aj["km_extra"]
+        novo["duracao"]   = fmt_dur(seg_extra)
+        novo["pace"]      = calc_pace(aj["km_extra"] * 1000, seg_extra)
+        novo["notas"]     = aj["nota"]
+        extras.append(novo)
+
+        t["distancia"] = aj["km_original"]
+        t["duracao"]   = fmt_dur(seg_orig)
+        t["pace"]      = calc_pace(aj["km_original"] * 1000, seg_orig)
+
+        log(f"Ajuste multiesporte em {t['garminId']}: "
+            f"{aj['km_original']} km {t['esporte']} + {aj['km_extra']} km {aj['esporte_extra']}")
+    return treinos + extras
 
 
 def pace_seg(txt):
@@ -288,6 +359,7 @@ def main():
         sys.exit(1)
 
     treinos   = [t for a in raw if (t := garmin_to_treino(a))]
+    treinos   = aplicar_ajustes(treinos)
 
     # O resumo da atividade nem sempre traz o Step Speed Loss; os splits
     # tipados sempre trazem. Busco so nas corridas dos ultimos 90 dias
