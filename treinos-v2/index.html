@@ -1819,6 +1819,7 @@ function mapAtividade(a){
     d, km:+km.toFixed(2), pace:Math.round(pace), mod,
     titulo: (a.notas && a.notas!=='Treino manual') ? String(a.notas).slice(0,60) : '',
     manual: !a.garminId || /motra/i.test(String(a.notas||'')),
+    gid: String(a.garminId || a.id || ''),
     dur: isFinite(dur)?dur:km*pace,
     fc:n(a.fcMed), cad:n(a.cadencia), osc:n(a.oscilacao), gct:n(a.contatoSolo),
     vr:n(a.razaoVertical), bal:n(a.balanco), vo2:n(a.vo2max),
@@ -1836,10 +1837,17 @@ function absorver(d){
   RAW = d;
   const ativ = Array.isArray(d.atividades) ? d.atividades : [];
   const mapeadas = ativ.map(mapAtividade).filter(Boolean).sort((a,b)=>a.d-b.d);
-  // remove duplicados do mesmo dia e mesma distância
+  // Remove duplicados. Quando a atividade vem do Garmin ela tem um id
+  // proprio, e so ele decide — e o unico criterio que nao erra.
+  // A regra antiga era dia + esporte + km com UMA casa decimal, e por isso
+  // apagava treino de verdade: duas corridas no mesmo dia, uma de 10,06 km
+  // e outra de 10,11 km, viravam as duas "10,1" e a segunda sumia.
+  // Era exatamente a diferenca de 10 km entre o app e o site.
+  // Sem id (treino manual, importacao de planilha) vale a regra antiga,
+  // agora com duas casas.
   const vistos = new Set(), limpo = [];
   mapeadas.forEach(r=>{
-    const k = r.d+'|'+r.mod+'|'+r.km.toFixed(1);
+    const k = r.gid ? 'id:'+r.gid : r.d+'|'+r.mod+'|'+r.km.toFixed(2);
     if(vistos.has(k)) return;
     vistos.add(k); limpo.push(r);
   });
@@ -3903,7 +3911,9 @@ function irPara(v){
   calcSplits(); calcEstrategia();
 
   irPara('coach');
-  q('#abSub').textContent=fonte;
+  // Selo de versao do index.html. Sem ele nao da para saber, olhando o
+  // celular, se a versao nova subiu ou se o aparelho abriu a antiga.
+  q('#abSub').textContent = fonte + ' · app 13ago-b';
   montarCapa();
   registrarSW();
 })();
