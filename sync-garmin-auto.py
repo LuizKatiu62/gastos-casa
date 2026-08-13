@@ -168,8 +168,17 @@ def firebase_token():
     email = os.environ.get("FIREBASE_EMAIL", "").strip()
     senha = os.environ.get("FIREBASE_PASSWORD", "")
     if not email or not senha:
-        log("ERRO: faltam os secrets FIREBASE_EMAIL / FIREBASE_PASSWORD no GitHub.")
-        sys.exit(1)
+        # Os secrets ainda nao foram criados (Etapa 2 da seguranca). Ate la,
+        # entra como anonimo, que e como o sync sempre funcionou. Sem este
+        # retorno o sync abortaria e nenhum dado seria atualizado.
+        log("AVISO: sem os secrets FIREBASE_EMAIL / FIREBASE_PASSWORD. "
+            "Entrando como anonimo, como antes.")
+        url  = f"https://identitytoolkit.googleapis.com/v1/accounts:signUp?key={FIREBASE_KEY}"
+        body = json.dumps({"returnSecureToken": True}).encode()
+        req  = urlreq.Request(url, data=body,
+                              headers={"Content-Type": "application/json"})
+        with urlreq.urlopen(req, timeout=10) as r:
+            return json.loads(r.read()).get("idToken", "")
     url  = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={FIREBASE_KEY}"
     body = json.dumps({"email": email, "password": senha,
                        "returnSecureToken": True}).encode()
