@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '02j';
+const FIX_VERSAO = '02k';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -3334,6 +3334,76 @@ PARTE('analise feito x planejado', function(){
 });
 
 
+/* ═══════════════════ 20. CANCELAR DE VERDADE ═══════════════════
+   Sintoma: em um dia cujo treino JA TINHA SIDO TROCADO, o botao
+   "Cancelar este treino" abria a pergunta, voce confirmava, a janela
+   fechava — e o treino continuava na tela.
+
+   Por que: existem duas rotinas cuidando de cancelamento, escritas em
+   momentos diferentes. Uma APAGA o dia do plano; a outra o MANTEM,
+   apenas marcado como cancelado, para dar o desfazer. Num dia trocado
+   as duas se cruzam e o dia sobra no plano. Como a tela pergunta
+   "existe treino neste dia?" olhando o plano, ela continua achando que
+   sim e desenha o treino de novo.
+
+   Conserto: em vez de disputar com elas, ponho uma peneira na frente de
+   cada desenho de tela. Antes de renderizar qualquer coisa, todo dia
+   marcado como cancelado sai do plano. Nao importa qual das duas
+   rotinas o repos: quando a tela for desenhada, ele nao esta la.
+
+   Nada se perde: o plano e refeito do zero a cada rebuild, e a marca de
+   cancelado mora em ST.trocas, que vai para o Firebase. O desfazer
+   continua funcionando — apaga a marca e o dia volta.
+   ══════════════════════════════════════════════════════════════════ */
+
+PARTE('cancelar de verdade', function(){
+  if(typeof ST !== 'object') throw new Error('sem ST');
+
+  const foiCancelado = function(k){
+    const t = ST.trocas && ST.trocas[k];
+    return !!(t && (t.cancelado || t.__cancelado));
+  };
+
+  /* tira do plano todo dia que voce cancelou */
+  function peneirar(){
+    if(!ST.plano || !ST.trocas) return 0;
+    let n = 0;
+    Object.keys(ST.trocas).forEach(function(k){
+      if(foiCancelado(k) && ST.plano[k]){ delete ST.plano[k]; n++ }
+    });
+    return n;
+  }
+
+  /* a peneira roda antes de cada desenho de tela */
+  ['renderCoach', 'renderDia', 'renderSemana', 'renderCal'].forEach(function(nome){
+    const orig = window[nome];
+    if(typeof orig !== 'function') return;
+    window[nome] = function(){
+      try{ peneirar() }catch(e){ console.warn('cancelar:', e.message) }
+      return orig.apply(this, arguments);
+    };
+  });
+
+  peneirar();
+
+  /* console, para conferir sem adivinhar */
+  window.bqCancelar = {
+    peneirar:   peneirar,
+    cancelados: function(){
+      return Object.keys(ST.trocas || {}).filter(foiCancelado).sort();
+    },
+    desfazer: function(k){
+      if(!ST.trocas || !ST.trocas[k]) return 'nada marcado em ' + k;
+      delete ST.trocas[k];
+      if(typeof rebuild === 'function') rebuild();
+      if(typeof renderCoach === 'function') renderCoach();
+      if(typeof persistir === 'function') persistir();
+      return 'treino de ' + k + ' devolvido ao plano';
+    }
+  };
+});
+
+
 /* ─────────── selo de diagnóstico ─────────── */
 (function(){
   function montar(){
@@ -3353,7 +3423,7 @@ PARTE('analise feito x planejado', function(){
         var l = window.planoBQ.ligado();
         var diag = '';
         try{ diag = window.bqDiag ? '\n\n── diagnóstico ──\n' + window.bqDiag() : '' }catch(e){}
-        if(confirm('fix.js ' + FIX_VERSAO + ' — as dezenove partes carregaram.\n\n'
+        if(confirm('fix.js ' + FIX_VERSAO + ' — as vinte partes carregaram.\n\n'
           + 'Plano PEI Marathon: ' + (l ? 'LIGADO' : 'desligado') + diag
           + '\n\nOK ' + (l ? 'desliga o plano e volta ao automático do app.'
                              : 'liga o plano da maratona.'))){
@@ -3376,7 +3446,7 @@ PARTE('analise feito x planejado', function(){
         return;
       }
       alert(ok
-        ? 'fix.js ' + FIX_VERSAO + ' — as dezenove partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
+        ? 'fix.js ' + FIX_VERSAO + ' — as vinte partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
         : 'fix.js ' + FIX_VERSAO + '\n\nFalharam:\n\n' + FIX_FALHAS.join('\n\n'));
     };
     barra.insertBefore(s, barra.firstChild.nextSibling);
