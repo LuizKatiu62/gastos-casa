@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '02k';
+const FIX_VERSAO = '02l';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -3404,6 +3404,161 @@ PARTE('cancelar de verdade', function(){
 });
 
 
+/* ═══════ 21. CALENDARIO MAIOR E TREINO FECHADO POR PADRAO ═══════
+   Duas mudancas na aba Coach, pedidas em 15/08/2026:
+
+   1) O treino do dia nao abre mais sozinho. No lugar dele fica uma
+      faixa fina com o essencial — "Hoje · Longo na bike · 110 min".
+      Toque na faixa, ou num dia do calendario, e o treino inteiro abre.
+      Para fechar: toque de novo no mesmo dia do calendario, ou no x no
+      canto do treino.
+
+   2) Os quadradinhos do calendario vao de 34 para 46 pixels de altura,
+      com mais folga entre eles e numero maior. A Apple recomenda 44
+      como minimo para o dedo; 34 estava abaixo disso, e por isso era
+      facil errar o dia. O mes inteiro continua cabendo sem rolar.
+
+   Nada disso mexe no index.html nem nos dados.
+   ══════════════════════════════════════════════════════════════════ */
+
+PARTE('calendario maior e treino fechado', function(){
+  if(typeof ST !== 'object') throw new Error('sem ST');
+  if(typeof window.renderDia !== 'function' || typeof window.renderCal !== 'function')
+    throw new Error('app sem renderDia/renderCal');
+
+  const css = document.createElement('style');
+  css.textContent = `
+/* ── calendario com alvo maior para o dedo ── */
+.grid{gap:4px!important}
+.day{height:46px!important;border-radius:11px!important;gap:4px!important}
+.day .dn{font-size:15px!important}
+.day .dot{width:5px!important;height:5px!important}
+.dow{gap:4px!important;margin-bottom:5px!important}
+.dow span{font-size:10px!important}
+
+/* ── faixa do treino fechado ── */
+.sessbar{width:100%;display:flex;align-items:center;gap:11px;padding:13px 14px;
+  background:var(--s1);border:1px solid var(--line);border-radius:var(--r-md);
+  text-align:left;margin-bottom:10px;transition:.15s}
+.sessbar:hover{background:var(--s2)}
+.sessbar .pt{width:9px;height:9px;border-radius:50%;flex:none}
+.sessbar .tx{flex:1;min-width:0}
+.sessbar .tx b{display:block;font-size:14px;font-weight:700;letter-spacing:-.01em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sessbar .tx span{display:block;font-size:11px;color:var(--tx2);margin-top:2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sessbar .ch{color:var(--tx3);font-size:12px;flex:none;transition:.2s}
+.sessbar.aberta .ch{transform:rotate(180deg)}
+
+/* ── x para fechar o treino aberto ── */
+#sess{position:relative}
+.fechar-dia{position:absolute;top:11px;right:11px;width:32px;height:32px;border-radius:50%;
+  background:var(--s2);color:var(--tx2);font-size:17px;line-height:1;z-index:4;
+  display:flex;align-items:center;justify-content:center}
+.fechar-dia:hover{background:var(--s3);color:var(--tx)}
+`;
+  document.head.appendChild(css);
+
+  let aberto = false;              /* ao abrir o app, fechado */
+
+  const painel = () => document.querySelector('#sess');
+
+  /* o que vai na faixa quando o treino esta fechado */
+  function resumo(){
+    const k = ST.sel;
+    const s = (typeof sessaoDe === 'function') ? sessaoDe(k) : (ST.plano || {})[k];
+    const x = (ST.extras || {})[k];
+    const d = dt(k);
+    const quando = k === iso(HOJE) ? 'Hoje'
+                 : k === iso(addD(HOJE, 1)) ? 'Amanhã'
+                 : DIA[dow(d)] + ', ' + fmt(k);
+    const alvo = s || x || null;
+    const cor  = alvo ? MOD[alvo.mod].c : 'var(--rest)';
+
+    let titulo = 'Descanso', linha = quando + ' · sem treino';
+    if(alvo){
+      titulo = alvo.titulo || MOD[alvo.mod].n;
+      const p = [quando, MOD[alvo.mod].n];
+      if(alvo.km)     p.push(alvo.km + ' km');
+      if(alvo.metros) p.push(alvo.metros + ' m');
+      if(alvo.min)    p.push(alvo.min + ' min');
+      if(s && x)      p.push('2 treinos');
+      linha = p.join(' · ');
+    }
+    return '<span class="pt" style="background:' + cor + '"></span>' +
+           '<span class="tx"><b>' + titulo + '</b><span>' + linha + '</span></span>' +
+           '<span class="ch">▼</span>';
+  }
+
+  /* mostra ou esconde o painel do dia, conforme o estado */
+  function aplicar(){
+    const el = painel();
+    if(!el || !el.parentNode) return;
+
+    let faixa = document.getElementById('sessBar');
+    if(!faixa){
+      faixa = document.createElement('button');
+      faixa.id = 'sessBar';
+      faixa.type = 'button';
+      faixa.className = 'sessbar';
+      faixa.onclick = function(){ aberto = !aberto; aplicar() };
+      el.parentNode.insertBefore(faixa, el);
+    }
+    faixa.innerHTML = resumo();
+    faixa.classList.toggle('aberta', aberto);
+
+    el.style.display = aberto ? '' : 'none';
+
+    if(aberto && !el.querySelector('.fechar-dia')){
+      const x = document.createElement('button');
+      x.type = 'button';
+      x.className = 'fechar-dia';
+      x.setAttribute('aria-label', 'Fechar o treino');
+      x.textContent = '×';
+      x.onclick = function(){ aberto = false; aplicar() };
+      el.insertBefore(x, el.firstChild);
+    }
+  }
+
+  /* depois de cada desenho do dia, reaplica o estado */
+  const origDia = window.renderDia;
+  window.renderDia = function(){
+    const r = origDia.apply(this, arguments);
+    try{ aplicar() }catch(e){ console.warn('faixa:', e.message) }
+    return r;
+  };
+
+  /* tocar num dia abre; tocar de novo no mesmo dia fecha */
+  function religar(){
+    document.querySelectorAll('#grid [data-d]').forEach(function(b){
+      b.onclick = function(){
+        const k = b.dataset.d;
+        if(k === ST.sel && aberto) aberto = false;
+        else { ST.sel = k; aberto = true }
+        renderCal(); renderDia();
+        if(typeof renderSemana === 'function') renderSemana();
+      };
+    });
+  }
+  const origCal = window.renderCal;
+  window.renderCal = function(){
+    const r = origCal.apply(this, arguments);
+    try{ religar() }catch(e){ console.warn('calendario:', e.message) }
+    return r;
+  };
+
+  window.bqDia = {
+    abrir:  function(){ aberto = true;  aplicar(); return 'aberto' },
+    fechar: function(){ aberto = false; aplicar(); return 'fechado' },
+    estado: function(){ return aberto ? 'aberto' : 'fechado' }
+  };
+
+  if(ST.aba === 'coach' && typeof renderCoach === 'function'){
+    try{ renderCoach() }catch(e){}
+  }
+});
+
+
 /* ─────────── selo de diagnóstico ─────────── */
 (function(){
   function montar(){
@@ -3423,7 +3578,7 @@ PARTE('cancelar de verdade', function(){
         var l = window.planoBQ.ligado();
         var diag = '';
         try{ diag = window.bqDiag ? '\n\n── diagnóstico ──\n' + window.bqDiag() : '' }catch(e){}
-        if(confirm('fix.js ' + FIX_VERSAO + ' — as vinte partes carregaram.\n\n'
+        if(confirm('fix.js ' + FIX_VERSAO + ' — as vinte e uma partes carregaram.\n\n'
           + 'Plano PEI Marathon: ' + (l ? 'LIGADO' : 'desligado') + diag
           + '\n\nOK ' + (l ? 'desliga o plano e volta ao automático do app.'
                              : 'liga o plano da maratona.'))){
@@ -3446,7 +3601,7 @@ PARTE('cancelar de verdade', function(){
         return;
       }
       alert(ok
-        ? 'fix.js ' + FIX_VERSAO + ' — as vinte partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
+        ? 'fix.js ' + FIX_VERSAO + ' — as vinte e uma partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
         : 'fix.js ' + FIX_VERSAO + '\n\nFalharam:\n\n' + FIX_FALHAS.join('\n\n'));
     };
     barra.insertBefore(s, barra.firstChild.nextSibling);
