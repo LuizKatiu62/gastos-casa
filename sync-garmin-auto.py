@@ -473,6 +473,10 @@ def main():
                 # tempo acordado durante a noite — o Garmin Connect mostra
                 # como quarta fase e faltava aqui
                 "acordado": round((dto.get("awakeSleepSeconds", 0) or 0) / 3600, 2),
+                # soneca do dia. O que pesa na recuperacao e o sono das 24
+                # horas, nao so o da noite; sem este campo um cochilo de
+                # duas horas simplesmente sumia do app.
+                "soneca": round((dto.get("napTimeSeconds", 0) or 0) / 3600, 2),
             }
 
         # HRV
