@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '02l';
+const FIX_VERSAO = '02m';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -267,8 +267,10 @@ window.grafSono = function(sono){
     q('#sSonosub').textContent = ''; return;
   }
   const sem = sono.length > LIMITE_SEMANA;
-  const pts = sem ? porSemana(sono, ['duracao','profundo','rem']) : sono;
-  const topo = Math.max(9, Math.ceil(Math.max(...pts.map(n=>n.duracao)) + 0.5));
+  const pts = sem ? porSemana(sono, ['duracao','profundo','rem','soneca']) : sono;
+  /* a barra agora e o sono das 24 h: a noite mais a soneca do dia */
+  const tot = n => (+n.duracao || 0) + (+n.soneca || 0);
+  const topo = Math.max(9, Math.ceil(Math.max(...pts.map(tot)) + 0.5));
   const tk = ticks(0, topo, 4).filter(t=>t<=topo);
   const y = v => MT + IH - (v/topo)*IH;
   const passo = IW/pts.length, x = i => ML + passo*i + passo/2;
@@ -286,25 +288,38 @@ window.grafSono = function(sono){
   pts.forEach((n,i)=>{
     const prof = n.profundo||0, rem = n.rem||0;
     const leve = Math.max(0, n.duracao - prof - rem);
+    const nap  = +n.soneca || 0;
+    /* filtro antes de desenhar: assim o ultimo pedaco da lista e sempre
+       o topo real da barra, e so ele recebe o canto arredondado */
+    const segs = [[prof,'var(--acc)'],[rem,'var(--swim)'],[leve,'var(--s3)'],
+                  [nap,'var(--gym)']].filter(seg => seg[0] > 0.02);
     let base = 0;
-    [[prof,'var(--acc)'],[rem,'var(--swim)'],[leve,'var(--s3)']].forEach(([v,c],k,arr)=>{
-      if(v <= 0.02) return;
+    segs.forEach(([v,c],k)=>{
       const topoY = y(base+v), alt = Math.max(2, y(base)-y(base+v));
-      const r = (k===arr.length-1 || base+v >= n.duracao-0.02) ? Math.min(larg/2,5) : 0;
+      const r = (k === segs.length-1) ? Math.min(larg/2,5) : 0;
       s += `<path d="M${x(i)-larg/2},${topoY+r} a${r},${r} 0 0 1 ${r},${-r} h${larg-2*r} ` +
            `a${r},${r} 0 0 1 ${r},${r} v${alt-r} h${-larg} Z" fill="${c}"/>`;
       base += v;
     });
   });
-  const corS = ult.duracao>=7?'var(--ok)':ult.duracao>=6?'var(--warn)':'var(--bad)';
-  s += selo(ult.duracao.toFixed(1)+' h', corS);
+  const totU = tot(ult);
+  const corS = totU>=7?'var(--ok)':totU>=6?'var(--warn)':'var(--bad)';
+  s += selo(totU.toFixed(1)+' h', corS);
   s += eixoX(pts, x);
   host.innerHTML = svg('Fases do sono por '+(sem?'semana':'noite'), s);
 
   const md = +(sono.reduce((a,b)=>a+b.duracao,0)/sono.length).toFixed(1);
-  const boas = sono.filter(n=>n.duracao>=7).length;
+  const boas = sono.filter(n=>tot(n)>=7).length;
+  const comNap = sono.filter(n=>(+n.soneca||0) > 0.02);
+  const mdNap = comNap.length
+    ? +(comNap.reduce((a,b)=>a+(+b.soneca||0),0)/comNap.length).toFixed(1) : 0;
   q('#sSonosub').innerHTML = `${sem?'Cada barra é a média de uma semana. ':''}` +
-    `Média de <b>${md} h</b> por noite. <b>${boas}</b> de ${sono.length} noites acima de 7 h. ` +
+    `Média de <b>${md} h</b> por noite. <b>${boas}</b> de ${sono.length} ` +
+    `${sem?'semanas':'dias'} acima de 7 h somando noite e soneca. ` +
+    (comNap.length
+      ? `O pedaço laranja no alto é a soneca: <b>${comNap.length}</b> ` +
+        `${comNap.length===1?'dia':'dias'} com cochilo, média de <b>${mdNap} h</b>. `
+      : '') +
     `A faixa verde clara é onde a recuperação acontece.`;
 };
 
@@ -2281,6 +2296,7 @@ PARTE('rotulos e sono detalhado', function(){
     const prof = +n.profundo||0, rem = +n.rem||0, ac = +n.acordado||0;
     const leve = (n.leve != null) ? +n.leve : Math.max(0, dur - prof - rem);
     return {duracao:dur, profundo:prof, rem:rem, leve:leve, acordado:ac,
+            soneca:+n.soneca||0,
             score:+n.score||0, base:prof+rem+leve || dur};
   }
 
@@ -2328,6 +2344,12 @@ PARTE('rotulos e sono detalhado', function(){
       +   '<span style="font-size:11.5px;opacity:.6;margin-left:auto">média do período '
       +     hm(med.duracao)+'</span></div>'
       + linha(ult, ult.base)
+      + (ult.soneca > 0.02
+          ? '<div class="nota" style="margin-top:10px">Mais <b>'+hm(ult.soneca)+'</b> de soneca '
+            + 'nesse dia, fora da noite. Somando as duas, <b>'+hm(ult.duracao+ult.soneca)+'</b> '
+            + 'de sono em 24 h. As porcentagens acima são só da noite, que é onde o relógio '
+            + 'mede as fases.</div>'
+          : '')
       + '<div class="nota" style="margin-top:12px">As duas marcas em cada barra são a faixa de '
       + 'referência para adultos. Média do período: profundo <b>'
       + (med.profundo/med.base*100).toFixed(0)+'%</b>, REM <b>'
@@ -2345,7 +2367,8 @@ PARTE('rotulos e sono detalhado', function(){
       try{
         if(sono && sono.length >= 2){
           if(sono.length <= LIM)
-            rotular(document.querySelector('#sSono'), sono.map(n=>+n.duracao||0),
+            rotular(document.querySelector('#sSono'),
+                    sono.map(n=>(+n.duracao||0)+(+n.soneca||0)),
                     v => v.toFixed(1));
           tabela(sono);
         }
