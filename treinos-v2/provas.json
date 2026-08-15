@@ -1,0 +1,161 @@
+{
+  "_leia": "Lista de provas do app Treinos v-2. O app junta este arquivo ao catalogo que ja vem no codigo: id igual substitui, id novo entra. Para tirar uma prova da lista, ponha o id dela em 'remover'. Nao precisa mexer no index.html nem no fix.js.",
+  "atualizado": "2026-08-15",
+  "fontes": [
+    "RunNB — calendario oficial: https://secure.runnb.ca/calendar/",
+    "Blue Nose 2027: https://raceroster.com/events/2027/112559/medavie-blue-nose-marathon",
+    "Fredericton 2027: https://frederictonmarathon.com"
+  ],
+  "remover": [],
+  "provas": [
+    {"id":"renee-ago26","nome":"August Run for Renee 5k","cidade":"Quispamsis, NB","regiao":"atlantic",
+     "data":"2026-08-16","dists":[5],"estado":"aberta",
+     "url":"https://secure.runnb.ca/event/august-run-for-renee-5k/494667/",
+     "nota":"Serie de 7 provas de 5 km em Quispamsis, com pontuacao. Percurso certificado. Sem medalha nem chip — inscricao barata, renda para a Kidney Foundation."},
+
+    {"id":"renee-set26","nome":"September Run for Renee 5k","cidade":"Quispamsis, NB","regiao":"atlantic",
+     "data":"2026-09-20","dists":[5],"estado":"aberta",
+     "url":"https://secure.runnb.ca/event/september-run-for-renee-5k/494668/",
+     "nota":"Etapa de setembro da serie. Percurso certificado."},
+
+    {"id":"renee-out26","nome":"October Run for Renee 5k","cidade":"Quispamsis, NB","regiao":"atlantic",
+     "data":"2026-10-25","dists":[5],"estado":"aberta",
+     "url":"https://secure.runnb.ca/event/october-run-for-renee-5k/494669/",
+     "nota":"Ultima etapa da serie, com premiacao da pontuacao geral. Percurso certificado."},
+
+    {"id":"miramichi-mile26","nome":"Sylvio Bourque Miramichi Mile Race","cidade":"Miramichi, NB","regiao":"atlantic",
+     "data":"2026-08-16","dists":[1.6],"estado":"aberta",
+     "url":"https://secure.runnb.ca/event/sylvio-bourque-miramichi-mile-race/494646/",
+     "nota":"Uma milha de rua. Vale para a Youth Series."},
+
+    {"id":"tidal100-26","nome":"Tidal Force Ultra 100 (Night Run)","cidade":"Riverview, NB","regiao":"atlantic",
+     "data":"2026-08-22","dists":[100],"estado":"aberta",
+     "url":"https://secure.runnb.ca/event/tidal-force-ultra-100-night-run/1004891/",
+     "nota":"Ultra de 100 km em duas partes, 22 e 23 de agosto, com largada a noite."},
+
+    {"id":"worrypas26","nome":"Worry Pas Relay 2026","cidade":"Moncton, NB","regiao":"atlantic",
+     "data":"2026-08-23","dists":[],"estado":"aberta",
+     "url":"https://secure.runnb.ca/event/worry-pas-relay-2026/494677/",
+     "nota":"Revezamento em equipe. Distancia por atleta depende da formacao — confira no site."},
+
+    {"id":"stfrancois26","nome":"Demi-Marathon Saint-Francois","cidade":"Saint-Francois, NB","regiao":"atlantic",
+     "data":"2026-09-06","dists":[21.1],"estado":"aberta",
+     "url":"https://secure.runnb.ca/event/demi-marathon-saint-francois/494553/",
+     "nota":"Etapa da SuperSeries do RunNB."},
+
+    {"id":"acadie467","nome":"467e Demi-marathon de l'Acadie","cidade":"Tracadie-Sheila, NB","regiao":"atlantic",
+     "data":"2026-09-06","dists":[21.1],"estado":"aberta",
+     "url":"https://secure.runnb.ca/event/467e-demi-marathon-de-lacadie/1004844/",
+     "nota":"Meia maratona mensal de Tracadie. Prova simples, so a distancia."},
+
+    {"id":"chaleur26","nome":"Trail Run Chaleur","cidade":"Bathurst, NB","regiao":"atlantic",
+     "data":"2026-09-12","dists":[],"estado":"aberta",
+     "url":"https://secure.runnb.ca/event/trail-run-chaleur/1004874/",
+     "nota":"Prova de trilha. Distancias no site."},
+
+    {"id":"fredmile26","nome":"Fredericton Mile by Run with the REDS","cidade":"Fredericton, NB","regiao":"atlantic",
+     "data":"2026-09-13","dists":[1.6],"estado":"aberta",
+     "url":"https://secure.runnb.ca/event/fredericton-mile-by-run-with-the-reds/494590/",
+     "nota":"Uma milha de rua, etapa da SuperSeries."},
+
+    {"id":"mrr5k-set26","nome":"Miramichi River Runners 5k","cidade":"Miramichi, NB","regiao":"atlantic",
+     "data":"2026-09-13","dists":[5],"estado":"aberta",
+     "url":"https://secure.runnb.ca/event/miramichi-river-runners-5k/494647/",
+     "nota":"Etapa de setembro da serie do clube de Miramichi."},
+
+    {"id":"hampton5mi26","nome":"Hampton 5 Miler","cidade":"Hampton, NB","regiao":"atlantic",
+     "data":"2026-09-13","dists":[8.05],"estado":"aberta",
+     "url":"https://secure.runnb.ca/event/hampton-5-miler/494662/",
+     "nota":"Cinco milhas, 8,05 km. Percurso certificado, SuperSeries e campeonato provincial — a mais forte perto de Saint John."},
+
+    {"id":"bellebaie26","nome":"La Boucle Belle-Baie","cidade":"Belle-Baie, NB","regiao":"atlantic",
+     "data":"2026-09-19","dists":[],"estado":"aberta",
+     "url":"https://secure.runnb.ca/event/la-boucle-belle-baie/1004818/",
+     "nota":"Distancias no site."},
+
+    {"id":"lasttide26","nome":"Backyard Ultra: Last Tide Standing","cidade":"Riverview, NB","regiao":"atlantic",
+     "data":"2026-09-19","dists":[],"estado":"aberta",
+     "url":"https://secure.runnb.ca/event/backyard-ultra-last-tide-standing/1004890/",
+     "nota":"Formato backyard: 6,7 km a cada hora, ate sobrar um. Nao tem distancia fixa."},
+
+    {"id":"tracadie10k26","nome":"10km de Tracadie","cidade":"Tracadie, NB","regiao":"atlantic",
+     "data":"2026-09-20","dists":[10],"estado":"aberta",
+     "url":"https://secure.runnb.ca/event/10km-de-tracadie-presented-by-les-amis-de-zero-excuse-sports-inc/1004813/",
+     "nota":"Percurso certificado e etapa da SuperSeries."},
+
+    {"id":"miramichixc26","nome":"Miramichi Cross Country 5km","cidade":"Miramichi, NB","regiao":"atlantic",
+     "data":"2026-09-26","dists":[5],"estado":"aberta",
+     "url":"https://secure.runnb.ca/event/miramichi-cross-country-5km-saturday/494648/",
+     "nota":"Cross country, no sabado."},
+
+    {"id":"fundytrail26","nome":"27th Annual Fundy Trail Cancer Walk and Run","cidade":"St Martins, NB","regiao":"atlantic",
+     "data":"2026-09-26","dists":[],"estado":"aberta",
+     "url":"https://secure.runnb.ca/event/27th-annual-fundy-trail-cancer-walk-and-run/494687/",
+     "nota":"Caminhada e corrida beneficente na Fundy Trail. Distancias no site."},
+
+    {"id":"kvbeer26","nome":"KV Beer Run 2026","cidade":"Rothesay, NB","regiao":"atlantic",
+     "data":"2026-09-26","dists":[],"estado":"aberta",
+     "url":"https://secure.runnb.ca/event/kv-beer-run-2026/1004895/",
+     "nota":"Prova descontraida no Kennebecasis Valley, ao lado de casa. Distancias no site."},
+
+    {"id":"fredfall26","nome":"Fredericton Fall Classic","cidade":"Fredericton, NB","regiao":"atlantic",
+     "data":"2026-09-27","dists":[],"estado":"aberta",
+     "url":"https://secure.runnb.ca/event/fredericton-fall-classic/494683/",
+     "nota":"Percurso certificado, SuperSeries e campeonato provincial. Distancias no site."},
+
+    {"id":"mrr5k-out26","nome":"Miramichi River Runners 5k","cidade":"Miramichi, NB","regiao":"atlantic",
+     "data":"2026-10-04","dists":[5],"estado":"aberta",
+     "url":"https://secure.runnb.ca/event/miramichi-river-runners-5k/494649/",
+     "nota":"Etapa de outubro da serie do clube."},
+
+    {"id":"acadie468","nome":"468e Demi-marathon de l'Acadie","cidade":"Tracadie-Sheila, NB","regiao":"atlantic",
+     "data":"2026-10-04","dists":[21.1],"estado":"aberta",
+     "url":"https://secure.runnb.ca/event/468e-demi-marathon-de-lacadie/1004845/",
+     "nota":"Meia maratona mensal de Tracadie."},
+
+    {"id":"trailsgiving26","nome":"Trails-Giving 5k","cidade":"Dieppe, NB","regiao":"atlantic",
+     "data":"2026-10-12","dists":[5],"estado":"aberta",
+     "url":"https://secure.runnb.ca/event/trails-giving-5k-la-course-des-sentiers/1004885/",
+     "nota":"Cinco quilometros em trilha, no feriado de Acao de Gracas."},
+
+    {"id":"normbrown26","nome":"Norm Brown Cross Country 5km","cidade":"Miramichi, NB","regiao":"atlantic",
+     "data":"2026-10-17","dists":[5],"estado":"aberta",
+     "url":"https://secure.runnb.ca/event/norm-brown-cross-country-5km-saturday/494650/",
+     "nota":"Cross country, no sabado."},
+
+    {"id":"acadie469","nome":"469e Demi-marathon de l'Acadie","cidade":"Tracadie-Sheila, NB","regiao":"atlantic",
+     "data":"2026-11-01","dists":[21.1],"estado":"aberta",
+     "url":"https://secure.runnb.ca/event/469e-demi-marathon-de-lacadie/1004846/",
+     "nota":"Meia maratona mensal de Tracadie."},
+
+    {"id":"donaher26","nome":"Miramichi Arlene Donaher 5k","cidade":"Miramichi, NB","regiao":"atlantic",
+     "data":"2026-11-08","dists":[5],"estado":"aberta",
+     "url":"https://secure.runnb.ca/event/miramichi-arlene-donaher-5k/494651/",
+     "nota":"Ultima etapa da serie do clube de Miramichi."},
+
+    {"id":"barachois26","nome":"Les Petits Barachois de Cap-Acadie","cidade":"Barachois, NB","regiao":"atlantic",
+     "data":"2026-11-15","dists":[],"estado":"aberta",
+     "url":"https://secure.runnb.ca/event/les-petits-barachois-de-cap-acadie/1004897/",
+     "nota":"Distancias no site."},
+
+    {"id":"acadie470","nome":"470e Demi-marathon de l'Acadie","cidade":"Tracadie-Sheila, NB","regiao":"atlantic",
+     "data":"2026-12-06","dists":[21.1],"estado":"aberta",
+     "url":"https://secure.runnb.ca/event/470e-demi-marathon-de-lacadie/1004847/",
+     "nota":"Meia maratona de dezembro. Roupa de frio obrigatoria."},
+
+    {"id":"fred27","nome":"Fredericton Marathon","cidade":"Fredericton, NB","regiao":"atlantic",
+     "data":"2027-05-09","dists":[5,10,21.1,42.2],"estado":"aberta",
+     "url":"https://frederictonmarathon.com",
+     "nota":"Maratona mais antiga das Maritimas e Boston Qualifier. Fim de semana de 7 a 9 de maio de 2027. Confirme a data no site antes de pagar."},
+
+    {"id":"bluenose27","nome":"Medavie Blue Nose Marathon","cidade":"Halifax, NS","regiao":"atlantic",
+     "data":"2027-05-23","dists":[5,10,21.1,42.2],"estado":"aberta",
+     "url":"https://raceroster.com/events/2027/112559/medavie-blue-nose-marathon",
+     "nota":"Fim de semana de 21 a 23 de maio de 2027, com a maratona no domingo. Inscricao de 2027 ja aberta no Race Roster."},
+
+    {"id":"canadaday27","nome":"SUBWAY Canada Day 10 Miler e Grand Bay Guardian 5K","cidade":"Grand Bay-Westfield, NB","regiao":"atlantic",
+     "data":"2027-07-01","dists":[5,16.09],"estado":"aberta",
+     "url":"https://secure.runnb.ca/event/subway-restaurants-canada-day-10-miler-and-grand-bay-guardian-5k/1004900/",
+     "nota":"Unica prova de 2027 ja publicada no calendario do RunNB. Percurso certificado, a 20 minutos de Saint John."}
+  ]
+}

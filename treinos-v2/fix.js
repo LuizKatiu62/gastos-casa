@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '02m';
+const FIX_VERSAO = '02n';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -3582,6 +3582,97 @@ PARTE('calendario maior e treino fechado', function(){
 });
 
 
+/* ═══════════ 22. PROVAS VINDAS DE UM ARQUIVO ═══════════
+   O catalogo de provas estava escrito dentro do index.html. Toda vez que
+   uma prova nova saia, ou uma data mudava, era preciso mexer no codigo do
+   app — e foi assim que o Run for Renee acabou sumindo numa troca de
+   versao.
+
+   Agora existe o arquivo treinos-v2/provas.json. O app le esse arquivo
+   toda vez que abre e junta ao catalogo interno: id igual substitui, id
+   novo entra, e os ids listados em "remover" saem. Atualizar a lista
+   passa a ser trocar um arquivo, sem tocar em codigo.
+
+   Se o arquivo nao existir ou estiver quebrado, nada acontece: o app
+   segue com o catalogo interno, como antes.
+
+   Provas cuja distancia nao esta publicada ficam com a lista vazia. Nesse
+   caso o cartao mostra "distancias no site" e esconde o botao "Treinar
+   para esta" — sem distancia ele montaria um plano no chute.
+   ══════════════════════════════════════════════════════════════════ */
+
+PARTE('provas de arquivo', function(){
+  if(typeof PROVAS_CAT === 'undefined') throw new Error('app sem PROVAS_CAT');
+
+  const css = document.createElement('style');
+  css.textContent =
+    '.pvdists .semdist{background:transparent!important;border:1px dashed var(--line)!important;' +
+    'color:var(--tx3)!important;font-style:italic}';
+  document.head.appendChild(css);
+
+  /* cartao de prova sem distancia publicada */
+  const cardApp = window.cardProva;
+  if(typeof cardApp === 'function'){
+    window.cardProva = function(p){
+      let h = cardApp.apply(this, arguments);
+      if(p && Array.isArray(p.dists) && p.dists.length === 0){
+        h = h.replace('<div class="pvdists"></div>',
+              '<div class="pvdists"><span class="semdist">distâncias no site</span></div>');
+        h = h.replace(/<button class="btmini pri"[^>]*data-treinar[\s\S]*?<\/button>/, '');
+      }
+      return h;
+    };
+  }
+
+  function juntar(dados){
+    if(!dados || !Array.isArray(dados.provas)) throw new Error('arquivo sem a lista "provas"');
+    let novas = 0, trocadas = 0;
+    dados.provas.forEach(function(p){
+      if(!p || !p.id || !p.data) return;
+      if(!Array.isArray(p.dists)) p.dists = [];
+      const i = PROVAS_CAT.findIndex(function(x){ return x.id === p.id });
+      if(i >= 0){ PROVAS_CAT[i] = Object.assign({}, PROVAS_CAT[i], p); trocadas++ }
+      else { PROVAS_CAT.push(p); novas++ }
+    });
+    (dados.remover || []).forEach(function(id){
+      const i = PROVAS_CAT.findIndex(function(x){ return x.id === id });
+      if(i >= 0) PROVAS_CAT.splice(i, 1);
+    });
+    window.bqProvas.info = {novas:novas, trocadas:trocadas,
+                            atualizado:dados.atualizado || '?', total:PROVAS_CAT.length};
+    return window.bqProvas.info;
+  }
+
+  window.bqProvas = {
+    info: null,
+    juntar: juntar,
+    recarregar: function(){ return carregar() },
+    lista: function(){
+      return PROVAS_CAT.slice().sort(function(a,b){ return a.data.localeCompare(b.data) })
+        .map(function(p){ return p.data + '  ' + p.nome + '  (' + p.cidade + ')' });
+    }
+  };
+
+  function carregar(){
+    /* cache:'reload' obriga a ir ao servidor; sem isso o Safari serve a
+       copia velha e a lista nova nao aparece */
+    return fetch('./provas.json', {cache:'reload'})
+      .then(function(r){ if(!r.ok) throw new Error('HTTP ' + r.status); return r.json() })
+      .then(function(d){
+        const info = juntar(d);
+        if(typeof ST === 'object' && ST.aba === 'provas' && typeof renderProvas === 'function')
+          renderProvas();
+        console.log('provas.json de ' + info.atualizado + ': ' + info.novas +
+                    ' novas, ' + info.trocadas + ' atualizadas, ' + info.total + ' no total');
+        return info;
+      })
+      .catch(function(e){ console.warn('provas.json:', e.message); return null });
+  }
+
+  carregar();
+});
+
+
 /* ─────────── selo de diagnóstico ─────────── */
 (function(){
   function montar(){
@@ -3601,7 +3692,7 @@ PARTE('calendario maior e treino fechado', function(){
         var l = window.planoBQ.ligado();
         var diag = '';
         try{ diag = window.bqDiag ? '\n\n── diagnóstico ──\n' + window.bqDiag() : '' }catch(e){}
-        if(confirm('fix.js ' + FIX_VERSAO + ' — as vinte e uma partes carregaram.\n\n'
+        if(confirm('fix.js ' + FIX_VERSAO + ' — as vinte e duas partes carregaram.\n\n'
           + 'Plano PEI Marathon: ' + (l ? 'LIGADO' : 'desligado') + diag
           + '\n\nOK ' + (l ? 'desliga o plano e volta ao automático do app.'
                              : 'liga o plano da maratona.'))){
@@ -3624,7 +3715,7 @@ PARTE('calendario maior e treino fechado', function(){
         return;
       }
       alert(ok
-        ? 'fix.js ' + FIX_VERSAO + ' — as vinte e uma partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
+        ? 'fix.js ' + FIX_VERSAO + ' — as vinte e duas partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
         : 'fix.js ' + FIX_VERSAO + '\n\nFalharam:\n\n' + FIX_FALHAS.join('\n\n'));
     };
     barra.insertBefore(s, barra.firstChild.nextSibling);
