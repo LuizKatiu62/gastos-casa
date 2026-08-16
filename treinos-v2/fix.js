@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '02s';
+const FIX_VERSAO = '02t';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -4418,36 +4418,40 @@ PARTE('seis etapas da sessao', function(){
 
 /* ═══════════════ 25. ABA KPI — EVOLUCAO ATE A PROVA ═══════════════
 
-   Uma aba nova na barra de baixo, com seis indicadores medidos semana a
-   semana desde o inicio do ciclo. A analise que ja existia responde
-   "como foi o treino de hoje"; esta tela responde "estou melhorando?".
+   Uma aba propria na barra de baixo, com seis indicadores medidos
+   semana a semana desde o inicio do ciclo. A analise que ja existia
+   responde "como foi o treino de hoje"; esta tela responde
+   "estou melhorando?".
 
-   OS SEIS, E POR QUE CADA UM:
+   SOBRE OS GRAFICOS (segunda versao)
+   A primeira tentativa era barra simples e nao dizia nada: voce via um
+   numero por semana sem saber se aquilo era bom, e sem enxergar para
+   onde a coisa ia. O que mudou:
 
-   1. ADERENCIA — quanto do plano voce cumpriu, em km, semana a semana.
-      De todos os numeros que existem, e o que melhor prevê resultado em
-      prova longa. Nao adianta o plano perfeito no papel.
+   - Todo grafico com valor planejado mostra o planejado como barra
+     FANTASMA atras e o realizado como barra solida na frente. Num
+     relance da para ver o buraco, sem precisar comparar numeros.
+   - As linhas ganharam area preenchida em degrade e RETA DE TENDENCIA,
+     por minimos quadrados. A reta e o que responde "para onde vai".
+   - O ultimo ponto de cada linha leva um balao com o valor.
+   - Na previsao, a area pintada entre a sua linha e a linha do alvo E o
+     indicador: quanto menor a mancha, mais perto voce esta de 3:50.
+   - O risco virou faixa com agulha, em vez de numero solto.
 
-   2. CONSISTENCIA — quantas semanas seguidas voce fechou 85% ou mais.
-      Sequencia importa mais que uma semana heroica isolada.
+   OS SEIS INDICADORES, E POR QUE CADA UM
 
-   3. VOLUME — km realizados contra planejados, semana a semana.
-      Separado da aderencia porque da para cumprir 100% de um plano
-      pequeno, ou 70% de um plano grande e ainda assim correr mais.
-
-   4. LONGAO — o maior treino de cada semana e a distancia que falta
-      para o pico do ciclo. Numa maratona, e o treino que decide.
-
-   5. PREVISAO — a cada semana, o melhor esforco das seis semanas
-      anteriores e projetado para 42,195 km pela formula de Riegel
-      (T2 = T1 x (D2/D1)^1,06). A linha do alvo aparece junto.
-
-   6. EFICIENCIA AEROBICA E RISCO — eficiencia e quantos metros por
-      minuto voce percorre por batimento cardiaco, nas rodagens leves.
-      Subir essa linha e a definicao de evoluir: mesmo esforco do
-      coracao, mais velocidade. O risco e a razao entre a carga dos
-      ultimos 7 dias e a media das ultimas 4 semanas — acima de 1,5 a
-      literatura associa a mais lesao.
+   1. ADERENCIA   quanto do plano voce cumpriu, em km. De todos os
+                  numeros, e o que melhor prevê resultado em prova longa.
+   2. VOLUME      km realizados contra planejados, semana a semana.
+   3. LONGAO      o maior treino de cada semana ate o pico do ciclo.
+                  Numa maratona, e o treino que decide.
+   4. PREVISAO    o melhor esforco das seis semanas anteriores projetado
+                  para 42,195 km por Riegel (T2 = T1 x (D2/D1)^1,06).
+   5. EFICIENCIA  metros por minuto por batimento, nas rodagens leves.
+                  Subir essa linha e a definicao de evoluir: mesmo
+                  esforco do coracao, mais velocidade.
+   6. RISCO       carga dos ultimos 7 dias sobre a media de 28. Acima de
+                  1,5 a literatura associa a mais lesao.
 
    TUDO SO LEITURA: nada aqui grava, altera plano ou toca no Firebase.
    ══════════════════════════════════════════════════════════════════ */
@@ -4455,127 +4459,214 @@ PARTE('seis etapas da sessao', function(){
 PARTE('aba kpi', function(){
   if(typeof ST !== 'object' || typeof irPara !== 'function') throw new Error('app sem ST/irPara');
 
-  var ALVO_SEG = 327;          /* 5:27/km, alvo de 3:50 na maratona */
-  var W = 320, H = 118, ML = 34, MR = 8, MT = 12, MB = 20;
+  var ALVO_SEG = 327;                     /* 5:27/km, alvo de 3:50 */
+  var W = 340, H = 172, ML = 34, MR = 14, MT = 20, MB = 26;
   var IW = W - ML - MR, IH = H - MT - MB;
+  var uid = 0;
 
-  /* ---------- estilo ---------- */
   var css = document.createElement('style');
   css.textContent = [
-'#v-kpi .kcard{background:var(--s1);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px}',
-'#v-kpi .kcab{display:flex;align-items:baseline;gap:8px;margin-bottom:2px}',
-'#v-kpi .kcab h3{margin:0;font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--tx3)}',
-'#v-kpi .kbig{font-size:30px;font-weight:800;letter-spacing:-.03em;line-height:1.05;margin:6px 0 2px}',
-'#v-kpi .kbig small{font-size:14px;font-weight:600;color:var(--tx2);margin-left:5px;letter-spacing:0}',
-'#v-kpi .ksub{font-size:12.5px;color:var(--tx2);line-height:1.5;margin:2px 0 0}',
-'#v-kpi .ksub b{color:var(--tx)}',
-'#v-kpi svg{display:block;width:100%;height:auto;margin-top:10px}',
-'#v-kpi .kfoot{margin:10px 0 0;font-size:11.5px;color:var(--tx3);line-height:1.5}',
-'#v-kpi .khero{background:linear-gradient(160deg,var(--acc-wash),transparent);',
-'  border:1px solid var(--line);border-radius:18px;padding:18px;margin-bottom:14px}',
-'#v-kpi .khero .d{font-size:40px;font-weight:800;letter-spacing:-.03em;line-height:1}',
-'#v-kpi .khero .t{font-size:12.5px;color:var(--tx2);margin-top:5px}',
-'#v-kpi .kzona{display:flex;gap:3px;margin-top:9px}',
-'#v-kpi .kzona i{flex:1;height:6px;border-radius:3px;opacity:.28}',
-'#v-kpi .kzona i.on{opacity:1}',
-'#v-kpi .vazio{padding:26px 4px;text-align:center;color:var(--tx3);font-size:13px}'
+'#v-kpi{padding-bottom:30px}',
+'#v-kpi .kcard{background:var(--s1);border:1px solid var(--line);border-radius:18px;padding:17px 16px 14px;margin-bottom:12px}',
+'#v-kpi .kcab{display:flex;align-items:center;gap:8px;margin-bottom:9px}',
+'#v-kpi .kcab h3{margin:0;font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--tx3);flex:1}',
+'#v-kpi .delta{font-size:11px;font-weight:800;padding:3px 8px;border-radius:999px;white-space:nowrap}',
+'#v-kpi .delta.up{background:rgba(63,217,138,.16);color:var(--ok)}',
+'#v-kpi .delta.dn{background:rgba(242,104,92,.16);color:var(--bad)}',
+'#v-kpi .delta.fl{background:var(--s3);color:var(--tx2)}',
+'#v-kpi .kbig{font-size:33px;font-weight:800;letter-spacing:-.035em;line-height:1;margin:0 0 5px;font-variant-numeric:tabular-nums}',
+'#v-kpi .kbig small{display:block;font-size:12.5px;font-weight:500;color:var(--tx2);margin-top:6px;letter-spacing:0;line-height:1.45}',
+'#v-kpi .ksub{font-size:12.5px;color:var(--tx2);line-height:1.55;margin:9px 0 0}',
+'#v-kpi .ksub b{color:var(--tx);font-weight:700}',
+'#v-kpi svg{display:block;width:100%;height:auto;margin-top:12px;overflow:visible}',
+'#v-kpi .leg{display:flex;flex-wrap:wrap;gap:12px;margin-top:9px}',
+'#v-kpi .leg span{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--tx3);font-weight:600}',
+'#v-kpi .leg i{width:11px;height:8px;border-radius:2px;display:block}',
+'#v-kpi .leg i.gh{border:1px dashed var(--tx3);background:transparent}',
+'#v-kpi .leg i.ln{height:2px;border-radius:1px}',
+'#v-kpi .kfoot{margin:11px 0 0;padding-top:9px;border-top:1px solid var(--line);',
+'  font-size:11.5px;color:var(--tx3);line-height:1.55}',
+'#v-kpi .khero{position:relative;overflow:hidden;background:var(--s1);',
+'  border:1px solid var(--line);border-radius:20px;padding:20px 18px;margin-bottom:14px}',
+'#v-kpi .khero::after{content:"";position:absolute;inset:0;',
+'  background:radial-gradient(120% 100% at 100% 0%,var(--acc-wash),transparent 60%);pointer-events:none}',
+'#v-kpi .khero .d{font-size:46px;font-weight:800;letter-spacing:-.04em;line-height:.95;font-variant-numeric:tabular-nums}',
+'#v-kpi .khero .t{font-size:13px;color:var(--tx2);margin-top:7px}',
+'#v-kpi .khero .t b{color:var(--tx)}',
+'#v-kpi .kbar{display:flex;gap:3px;margin-top:13px;position:relative;z-index:1}',
+'#v-kpi .kbar i{flex:1;height:5px;border-radius:3px;background:var(--s3)}',
+'#v-kpi .kbar i.on{background:var(--acc)}',
+'#v-kpi .kbar i.hoje{background:var(--tx)}',
+'#v-kpi .vazio{padding:30px 6px;text-align:center;color:var(--tx3);font-size:13px;line-height:1.6}'
   ].join('\n');
   document.head.appendChild(css);
 
-  /* ---------- desenho ---------- */
-  function eixoY(max, fmt){
+  /* ═══════ desenho ═══════ */
+
+  function grade(max, min, fmtY){
     var s = '', n = 4;
     for(var i = 0; i <= n; i++){
-      var v = max * i / n, y = MT + IH - (v / (max || 1)) * IH;
-      s += '<line x1="' + ML + '" x2="' + (W - MR) + '" y1="' + y.toFixed(1) + '" y2="' + y.toFixed(1) +
-           '" stroke="var(--line)" stroke-width="1"/>' +
-           '<text x="' + (ML - 5) + '" y="' + (y + 3.5).toFixed(1) + '" text-anchor="end" ' +
-           'font-size="8" fill="var(--tx3)">' + fmt(v) + '</text>';
-    }
-    return s;
-  }
-  function rotX(n, rotulo){
-    var s = '', passo = IW / Math.max(1, n);
-    for(var i = 0; i < n; i++){
-      if(n > 8 && i % 2) continue;
-      s += '<text x="' + (ML + passo * i + passo / 2).toFixed(1) + '" y="' + (H - 5) +
-           '" text-anchor="middle" font-size="8" fill="var(--tx3)">' + rotulo(i) + '</text>';
-    }
-    return s;
-  }
-  function barras(vals, max, cor, alvos){
-    var s = '', passo = IW / Math.max(1, vals.length);
-    var larg = Math.max(4, Math.min(20, passo * 0.62));
-    vals.forEach(function(v, i){
-      var x = ML + passo * i + passo / 2;
-      if(v > 0){
-        var alt = Math.max(2, (v / (max || 1)) * IH);
-        var y = MT + IH - alt;
-        var c = typeof cor === 'function' ? cor(v, i) : cor;
-        s += '<rect x="' + (x - larg/2).toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + larg +
-             '" height="' + alt.toFixed(1) + '" rx="3" fill="' + c + '"/>';
-      }
-      if(alvos && alvos[i] > 0){
-        var ya = MT + IH - (alvos[i] / (max || 1)) * IH;
-        s += '<line x1="' + (x - larg/2 - 2).toFixed(1) + '" x2="' + (x + larg/2 + 2).toFixed(1) +
-             '" y1="' + ya.toFixed(1) + '" y2="' + ya.toFixed(1) +
-             '" stroke="var(--tx2)" stroke-width="1.6" stroke-dasharray="3 2"/>';
-      }
-    });
-    return s;
-  }
-  function linha(vals, min, max, cor){
-    var pts = [], passo = IW / Math.max(1, vals.length);
-    vals.forEach(function(v, i){
-      if(v == null || !isFinite(v)) return;
-      var x = ML + passo * i + passo / 2;
+      var v = min + (max - min) * i / n;
       var y = MT + IH - ((v - min) / ((max - min) || 1)) * IH;
-      pts.push([x, y]);
+      s += '<line x1="' + ML + '" x2="' + (W - MR) + '" y1="' + y.toFixed(1) + '" y2="' + y.toFixed(1) +
+           '" stroke="var(--line)" stroke-width="1" stroke-dasharray="1 4" opacity=".8"/>';
+      if(fmtY) s += '<text x="' + (ML - 6) + '" y="' + (y + 3.2).toFixed(1) +
+           '" text-anchor="end" font-size="8.5" fill="var(--tx3)">' + fmtY(v) + '</text>';
+    }
+    return s;
+  }
+  function eixoX(n, rotulo){
+    var s = '', passo = IW / Math.max(1, n), salto = n > 9 ? 2 : 1;
+    for(var i = 0; i < n; i++){
+      if(i % salto) continue;
+      s += '<text x="' + (ML + passo*i + passo/2).toFixed(1) + '" y="' + (H - MB + 14) +
+           '" text-anchor="middle" font-size="8.5" fill="var(--tx3)">' + rotulo(i) + '</text>';
+    }
+    return s;
+  }
+  /* barra com o topo arredondado */
+  function barra(x, larg, alt, cor, op){
+    if(alt <= 0.5) return '';
+    var r = Math.min(larg/2, 4), y = MT + IH - alt;
+    return '<path d="M' + (x-larg/2) + ',' + (MT+IH) + ' V' + (y+r) +
+           ' a' + r + ',' + r + ' 0 0 1 ' + r + ',' + (-r) +
+           ' h' + (larg-2*r) + ' a' + r + ',' + r + ' 0 0 1 ' + r + ',' + r +
+           ' V' + (MT+IH) + ' Z" fill="' + cor + '"' + (op ? ' opacity="'+op+'"' : '') + '/>';
+  }
+  /* barra fantasma: contorno tracejado do que era para ter sido feito */
+  function fantasma(x, larg, alt){
+    if(alt <= 0.5) return '';
+    var y = MT + IH - alt;
+    return '<rect x="' + (x-larg/2) + '" y="' + y.toFixed(1) + '" width="' + larg + '" height="' + alt.toFixed(1) +
+           '" rx="4" fill="none" stroke="var(--tx3)" stroke-width="1" stroke-dasharray="2 2.5" opacity=".65"/>';
+  }
+  function paresDeBarras(reais, planos, max, cor){
+    var s = '', passo = IW / Math.max(1, reais.length);
+    var larg = Math.max(6, Math.min(24, passo * 0.66));
+    for(var i = 0; i < reais.length; i++){
+      var x = ML + passo*i + passo/2;
+      if(planos && planos[i] > 0) s += fantasma(x, larg, (planos[i]/(max||1))*IH);
+      var c = typeof cor === 'function' ? cor(reais[i], i) : cor;
+      s += barra(x, larg, (reais[i]/(max||1))*IH, c);
+    }
+    return s;
+  }
+  function pontos(vals, min, max){
+    var p = [], passo = IW / Math.max(1, vals.length);
+    vals.forEach(function(v,i){
+      if(v == null || !isFinite(v)) return;
+      p.push([ML + passo*i + passo/2, MT + IH - ((v-min)/((max-min)||1))*IH, v, i]);
     });
-    if(pts.length < 2) return pts.length
-      ? '<circle cx="' + pts[0][0].toFixed(1) + '" cy="' + pts[0][1].toFixed(1) + '" r="3" fill="' + cor + '"/>' : '';
-    var d = pts.map(function(p, i){ return (i ? 'L' : 'M') + p[0].toFixed(1) + ',' + p[1].toFixed(1) }).join(' ');
-    return '<path d="' + d + '" fill="none" stroke="' + cor + '" stroke-width="2.2" ' +
-           'stroke-linecap="round" stroke-linejoin="round"/>' +
-           pts.map(function(p){ return '<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) +
-             '" r="2.6" fill="' + cor + '"/>' }).join('');
+    return p;
+  }
+  function area(p, cor){
+    if(p.length < 2) return '';
+    var id = 'kg' + (++uid);
+    var d = p.map(function(q,i){ return (i?'L':'M') + q[0].toFixed(1) + ',' + q[1].toFixed(1) }).join(' ');
+    return '<defs><linearGradient id="' + id + '" x1="0" y1="0" x2="0" y2="1">' +
+           '<stop offset="0%" stop-color="' + cor + '" stop-opacity=".30"/>' +
+           '<stop offset="100%" stop-color="' + cor + '" stop-opacity="0"/></linearGradient></defs>' +
+           '<path d="' + d + ' L' + p[p.length-1][0].toFixed(1) + ',' + (MT+IH) +
+           ' L' + p[0][0].toFixed(1) + ',' + (MT+IH) + ' Z" fill="url(#' + id + ')"/>';
+  }
+  function curva(p, cor, largura){
+    if(!p.length) return '';
+    if(p.length === 1) return '<circle cx="' + p[0][0].toFixed(1) + '" cy="' + p[0][1].toFixed(1) + '" r="3.4" fill="' + cor + '"/>';
+    var d = p.map(function(q,i){ return (i?'L':'M') + q[0].toFixed(1) + ',' + q[1].toFixed(1) }).join(' ');
+    return '<path d="' + d + '" fill="none" stroke="' + cor + '" stroke-width="' + (largura||2.4) +
+           '" stroke-linecap="round" stroke-linejoin="round"/>' +
+           p.map(function(q,i){
+             var ult = i === p.length-1;
+             return '<circle cx="' + q[0].toFixed(1) + '" cy="' + q[1].toFixed(1) + '" r="' + (ult?4:2.6) +
+                    '" fill="' + (ult ? cor : 'var(--bg)') + '" stroke="' + cor + '" stroke-width="1.8"/>';
+           }).join('');
+  }
+  /* reta de tendencia por minimos quadrados — responde "para onde vai" */
+  function tendencia(vals, min, max, cor){
+    var xs = [], ys = [];
+    vals.forEach(function(v,i){ if(v != null && isFinite(v)){ xs.push(i); ys.push(v) } });
+    if(xs.length < 3) return {svg:'', incl:0};
+    var n = xs.length, sx = 0, sy = 0, sxy = 0, sxx = 0;
+    for(var i = 0; i < n; i++){ sx += xs[i]; sy += ys[i]; sxy += xs[i]*ys[i]; sxx += xs[i]*xs[i] }
+    var den = n*sxx - sx*sx;
+    if(!den) return {svg:'', incl:0};
+    var a = (n*sxy - sx*sy)/den, b = (sy - a*sx)/n;
+    var passo = IW / Math.max(1, vals.length);
+    var xy = function(i){
+      var v = a*i + b;
+      return [ML + passo*i + passo/2, MT + IH - ((v-min)/((max-min)||1))*IH];
+    };
+    var p0 = xy(xs[0]), p1 = xy(xs[n-1]);
+    return { incl: a,
+      svg: '<line x1="' + p0[0].toFixed(1) + '" y1="' + p0[1].toFixed(1) +
+           '" x2="' + p1[0].toFixed(1) + '" y2="' + p1[1].toFixed(1) +
+           '" stroke="' + cor + '" stroke-width="1.6" stroke-dasharray="4 4" opacity=".85"/>' };
   }
   function refLinha(v, min, max, cor, txt){
-    var y = MT + IH - ((v - min) / ((max - min) || 1)) * IH;
-    if(y < MT || y > MT + IH) return '';
-    return '<line x1="' + ML + '" x2="' + (W - MR) + '" y1="' + y.toFixed(1) + '" y2="' + y.toFixed(1) +
-           '" stroke="' + cor + '" stroke-width="1.5" stroke-dasharray="5 4" opacity=".75"/>' +
-           '<text x="' + (W - MR) + '" y="' + (y - 4).toFixed(1) + '" text-anchor="end" font-size="8" fill="' + cor + '">' + txt + '</text>';
+    var y = MT + IH - ((v-min)/((max-min)||1))*IH;
+    if(y < MT-4 || y > MT+IH+4) return '';
+    return '<line x1="' + ML + '" x2="' + (W-MR) + '" y1="' + y.toFixed(1) + '" y2="' + y.toFixed(1) +
+           '" stroke="' + cor + '" stroke-width="1.5" stroke-dasharray="5 4" opacity=".8"/>' +
+           '<text x="' + (W-MR) + '" y="' + (y-5).toFixed(1) + '" text-anchor="end" font-size="8.5" ' +
+           'font-weight="700" fill="' + cor + '">' + txt + '</text>';
   }
-  function molde(inner){
-    return '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img">' + inner + '</svg>';
+  /* balao com o valor no ultimo ponto */
+  function balao(p, txt, cor){
+    if(!p.length) return '';
+    var q = p[p.length-1], larg = txt.length*5.6 + 12;
+    var x = Math.min(q[0] + 8, W - MR - larg), y = Math.max(MT + 8, q[1] - 4);
+    return '<rect x="' + x.toFixed(1) + '" y="' + (y-10).toFixed(1) + '" width="' + larg.toFixed(1) +
+           '" height="16" rx="8" fill="' + cor + '"/>' +
+           '<text x="' + (x + larg/2).toFixed(1) + '" y="' + (y+1.5).toFixed(1) +
+           '" text-anchor="middle" font-size="9.5" font-weight="800" fill="var(--bg)">' + txt + '</text>';
+  }
+  /* area pintada entre duas linhas — a mancha e o proprio indicador */
+  function entre(pA, valB, min, max, cor){
+    if(pA.length < 2) return '';
+    var yB = MT + IH - ((valB-min)/((max-min)||1))*IH;
+    var id = 'ke' + (++uid);
+    var d = pA.map(function(q,i){ return (i?'L':'M') + q[0].toFixed(1) + ',' + q[1].toFixed(1) }).join(' ');
+    return '<defs><linearGradient id="' + id + '" x1="0" y1="0" x2="0" y2="1">' +
+           '<stop offset="0%" stop-color="' + cor + '" stop-opacity=".26"/>' +
+           '<stop offset="100%" stop-color="' + cor + '" stop-opacity=".05"/></linearGradient></defs>' +
+           '<path d="' + d + ' L' + pA[pA.length-1][0].toFixed(1) + ',' + yB.toFixed(1) +
+           ' L' + pA[0][0].toFixed(1) + ',' + yB.toFixed(1) + ' Z" fill="url(#' + id + ')"/>';
+  }
+  function svgBox(inner){ return '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img">' + inner + '</svg>' }
+  function legenda(itens){
+    return '<div class="leg">' + itens.map(function(it){
+      return '<span><i class="' + (it[2]||'') + '" style="' + (it[1] ? 'background:'+it[1] : '') + '"></i>' + it[0] + '</span>';
+    }).join('') + '</div>';
+  }
+  function chip(v, sufixo, invertido){
+    if(v == null || !isFinite(v)) return '';
+    var bom = invertido ? v < 0 : v > 0;
+    var cls = Math.abs(v) < 0.5 ? 'fl' : (bom ? 'up' : 'dn');
+    var sinal = v > 0 ? '+' : '';
+    return '<span class="delta ' + cls + '">' + sinal + v.toFixed(v % 1 ? 1 : 0) + (sufixo||'') + '</span>';
   }
 
-  /* ---------- contas ---------- */
+  /* ═══════ contas ═══════ */
   function hm(seg){
     seg = Math.round(seg);
     return Math.floor(seg/3600) + ':' + String(Math.floor((seg%3600)/60)).padStart(2,'0');
   }
   function dataDe(r){ return iso(addD(HOJE, -r.d)) }
-  function segunda(d){ var x = new Date(d); return addD(x, -(dow(x) - 1)) }
-
+  function segunda(d){ var x = new Date(d); return addD(x, -(dow(x)-1)) }
   function corridas(){
     return (ST.runs || []).filter(function(r){
       return !r.walk && (r.mod || 'corrida') === 'corrida' && r.km > 0;
     });
   }
 
-  /* monta as semanas do ciclo: do inicio do plano ate a prova */
   function semanas(){
     var o = (typeof objetivoAtivo === 'function') ? objetivoAtivo() : null;
     if(!o || !o.data) return null;
     var chaves = Object.keys(ST.plano || {}).sort();
     if(!chaves.length) return null;
 
-    var ini = segunda(dt(chaves[0]));
-    var fimProva = dt(o.data);
-    var runs = corridas();
-    var sems = [], n = 0;
+    var ini = segunda(dt(chaves[0])), fimProva = dt(o.data);
+    var runs = corridas(), sems = [], n = 0;
 
     for(var d = new Date(ini); d <= fimProva && n < 40; d = addD(d, 7)){
       n++;
@@ -4594,181 +4685,204 @@ PARTE('aba kpi', function(){
         if(k < a || k > b) return;
         feito += r.km; feitoN++;
         if(r.km > longoFeito) longoFeito = r.km;
-        /* eficiencia so em rodagem leve e com FC valida */
         if(r.fc > 60 && r.pace > PERFIL.paceLimiar + 20 && r.pace < 700)
           efs.push((60000 / r.pace) / r.fc);
       });
-      sems.push({
-        n: n, ini: a, fim: b, futura: a > iso(HOJE),
-        planKm: +plan.toFixed(1), planN: planN, longoPlan: +longoPlan.toFixed(1),
-        feitoKm: +feito.toFixed(1), feitoN: feitoN, longoFeito: +longoFeito.toFixed(1),
-        ef: efs.length ? +(efs.reduce(function(s,v){return s+v},0) / efs.length).toFixed(2) : null
-      });
+      sems.push({ n:n, ini:a, fim:b, futura: a > iso(HOJE),
+        planKm:+plan.toFixed(1), planN:planN, longoPlan:+longoPlan.toFixed(1),
+        feitoKm:+feito.toFixed(1), feitoN:feitoN, longoFeito:+longoFeito.toFixed(1),
+        ef: efs.length ? +(efs.reduce(function(s,v){return s+v},0)/efs.length).toFixed(2) : null });
     }
     /* Semanas do fim sem plano nem treino nao dizem nada e esticam todos
        os graficos. Acontece quando o plano acaba antes da data da prova. */
-    while(sems.length && sems[sems.length-1].planKm === 0 && sems[sems.length-1].feitoKm === 0)
-      sems.pop();
-    return { sems: sems, o: o, prova: o.data };
+    while(sems.length && sems[sems.length-1].planKm === 0 && sems[sems.length-1].feitoKm === 0) sems.pop();
+    return { sems:sems, o:o, prova:o.data };
   }
 
-  /* previsao de maratona, semana a semana, pelo melhor esforco das
-     seis semanas anteriores */
   function previsoes(sems){
     var runs = corridas();
     return sems.map(function(w){
       if(w.futura) return null;
-      var fim = w.fim, ini = iso(addD(dt(w.fim), -42));
-      var melhor = null;
+      var fim = w.fim, ini = iso(addD(dt(w.fim), -42)), melhor = null;
       runs.forEach(function(r){
         var k = dataDe(r);
         if(k < ini || k > fim) return;
-        /* Corridas de 8 km ou mais, num ritmo que ainda é esforço.
-           O teto era limiar + 45 s/km, o mesmo da análise — mas ali ele
-           serve para uma projeção pontual, e aqui deixava semanas
-           inteiras sem número nenhum. Com limiar + 75 quase toda semana
-           tem valor, e como o gráfico usa sempre o MELHOR esforço da
-           janela, uma rodagem lenta não puxa a linha para baixo. */
+        /* Corridas de 8 km ou mais, num ritmo que ainda e esforco.
+           O teto era limiar + 45 s/km, o mesmo da analise — mas ali ele
+           serve para uma projecao pontual, e aqui deixava semanas
+           inteiras sem numero. Com limiar + 75 quase toda semana tem
+           valor, e como o grafico usa sempre o MELHOR esforco da janela,
+           uma rodagem lenta nao puxa a linha para baixo. */
         if(r.km < 8 || !(r.pace > 200) || r.pace > PERFIL.paceLimiar + 75) return;
-        var t = r.km * r.pace;
-        var proj = t * Math.pow(42.195 / r.km, 1.06);
-        if(!melhor || proj < melhor) melhor = proj;
+        var proj = (r.km * r.pace) * Math.pow(42.195 / r.km, 1.06);
+        if(melhor == null || proj < melhor) melhor = proj;
       });
       return melhor;
     });
   }
 
-  /* carga aguda x cronica: 7 dias contra a media de 28 */
   function risco(){
-    var runs = corridas();
     var a7 = 0, a28 = 0;
-    runs.forEach(function(r){
+    corridas().forEach(function(r){
       if(r.d < 7) a7 += r.km;
       if(r.d < 28) a28 += r.km;
     });
     var cron = a28 / 4;
-    return { agudo: +a7.toFixed(1), cronico: +cron.toFixed(1),
-             razao: cron > 0 ? +(a7 / cron).toFixed(2) : null };
+    return { agudo:+a7.toFixed(1), cronico:+cron.toFixed(1),
+             razao: cron > 0 ? +(a7/cron).toFixed(2) : null };
   }
 
-  /* ---------- a tela ---------- */
+  /* ═══════ a tela ═══════ */
   function render(){
     var el = document.getElementById('v-kpi');
     if(!el) return;
+    uid = 0;
     var dados = semanas();
     if(!dados){
-      el.innerHTML = '<div class="vazio">Escolha um objetivo na aba Coach para o KPI ter o que medir.</div>';
+      el.innerHTML = '<div class="vazio">Escolha um objetivo na aba Coach<br>para o KPI ter o que medir.</div>';
       return;
     }
     var sems = dados.sems, o = dados.o;
     var passadas = sems.filter(function(w){ return !w.futura });
     var dias = diff(iso(HOJE), dados.prova);
     var atual = passadas.length;
-    var html = '';
+    var h = '';
 
     /* ── cabeçalho ── */
-    html += '<div class="khero"><div class="d">' + Math.max(0, dias) + ' dias</div>' +
-      '<div class="t">para ' + (o.nome || o.n) + ' · semana <b>' + atual + '</b> de <b>' + sems.length + '</b></div></div>';
+    h += '<div class="khero"><div class="d">' + Math.max(0, dias) + ' dias</div>' +
+      '<div class="t">para ' + (o.nome || o.n) + ' · semana <b>' + atual + '</b> de <b>' + sems.length + '</b></div>' +
+      '<div class="kbar">' + sems.map(function(w,i){
+        return '<i class="' + (i === atual-1 ? 'hoje' : (!w.futura ? 'on' : '')) + '"></i>' }).join('') +
+      '</div></div>';
+
+    if(!passadas.length){
+      el.innerHTML = h + '<div class="vazio">O ciclo ainda não começou.<br>Os indicadores aparecem na primeira semana de treino.</div>';
+      return;
+    }
 
     /* ── 1. aderência ── */
     var comPlano = passadas.filter(function(w){ return w.planKm > 0 });
-    var totPlan = comPlano.reduce(function(s,w){ return s + w.planKm }, 0);
-    var totFeito = comPlano.reduce(function(s,w){ return s + w.feitoKm }, 0);
-    var ader = totPlan > 0 ? totFeito / totPlan * 100 : 0;
-    var perSem = comPlano.map(function(w){ return w.planKm > 0 ? w.feitoKm / w.planKm * 100 : 0 });
-
-    /* sequência de semanas fechadas, contando de trás para a frente */
+    var totPlan = comPlano.reduce(function(s,w){ return s+w.planKm }, 0);
+    var totFeito = comPlano.reduce(function(s,w){ return s+w.feitoKm }, 0);
+    var ader = totPlan > 0 ? totFeito/totPlan*100 : 0;
+    var perSem = comPlano.map(function(w){ return w.planKm > 0 ? +(w.feitoKm/w.planKm*100).toFixed(0) : 0 });
     var seq = 0;
-    for(var i = perSem.length - 1; i >= 0; i--){ if(perSem[i] >= 85) seq++; else break }
+    for(var i = perSem.length-1; i >= 0; i--){ if(perSem[i] >= 85) seq++; else break }
+    var corA = function(v){ return v >= 85 ? 'var(--ok)' : v >= 65 ? 'var(--warn)' : 'var(--bad)' };
+    var maxA = Math.max(115, Math.max.apply(null, perSem.concat([100])));
+    var d4 = perSem.length >= 5 ? perSem[perSem.length-1] - perSem[perSem.length-5] : null;
 
-    var corAder = function(v){ return v >= 85 ? 'var(--ok)' : v >= 65 ? 'var(--warn)' : 'var(--bad)' };
-    html += '<div class="kcard"><div class="kcab"><h3>Aderência ao plano</h3></div>' +
-      '<div class="kbig" style="color:' + corAder(ader) + '">' + ader.toFixed(0) + '%<small>do plano cumprido no ciclo</small></div>' +
+    h += '<div class="kcard"><div class="kcab"><h3>Aderência ao plano</h3>' + chip(d4, '% vs S-4') + '</div>' +
+      '<div class="kbig" style="color:' + corA(ader) + '">' + ader.toFixed(0) + '%' +
+        '<small>' + totFeito.toFixed(0) + ' km feitos dos ' + totPlan.toFixed(0) + ' km que o plano pediu até hoje</small></div>' +
+      svgBox(grade(maxA, 0, function(v){ return v.toFixed(0) + '%' }) +
+        refLinha(100, 0, maxA, 'var(--ok)', 'plano cheio') +
+        paresDeBarras(perSem, null, maxA, corA) +
+        eixoX(perSem.length, function(i){ return 'S'+(i+1) })) +
+      legenda([['≥85%','var(--ok)'],['65 a 84%','var(--warn)'],['<65%','var(--bad)']]) +
       '<p class="ksub"><b>' + seq + '</b> ' + (seq === 1 ? 'semana seguida' : 'semanas seguidas') +
         ' fechando 85% ou mais. ' + (seq >= 3 ? 'É a sequência que constrói prova longa.'
           : seq >= 1 ? 'Duas ou três seguidas já mudam o resultado.'
-          : 'Uma semana cheia recoloca a sequência de pé.') + '</p>' +
-      molde(eixoY(Math.max(120, Math.max.apply(null, perSem.concat([100]))), function(v){ return v.toFixed(0) + '%' }) +
-        refLinha(100, 0, Math.max(120, Math.max.apply(null, perSem.concat([100]))), 'var(--ok)', 'plano') +
-        barras(perSem, Math.max(120, Math.max.apply(null, perSem.concat([100]))), corAder) +
-        rotX(perSem.length, function(i){ return 'S' + (i+1) })) +
-      '<p class="kfoot">Cada barra é uma semana, em quilômetros feitos sobre planejados. A linha verde é o plano cheio.</p></div>';
+          : 'Uma semana cheia recoloca a sequência de pé.') + '</p></div>';
 
     /* ── 2. volume ── */
     var vFeito = passadas.map(function(w){ return w.feitoKm });
     var vPlan  = passadas.map(function(w){ return w.planKm });
-    var maxV = Math.max.apply(null, vFeito.concat(vPlan).concat([10]));
-    var ult = passadas.length ? passadas[passadas.length - 1] : null;
-    html += '<div class="kcard"><div class="kcab"><h3>Volume semanal</h3></div>' +
-      '<div class="kbig">' + (ult ? ult.feitoKm.toFixed(0) : 0) + '<small>km na semana atual, de ' +
-        (ult ? ult.planKm.toFixed(0) : 0) + ' planejados</small></div>' +
-      '<p class="ksub">No ciclo até aqui: <b>' + totFeito.toFixed(0) + ' km</b> feitos de <b>' +
-        totPlan.toFixed(0) + ' km</b> planejados.</p>' +
-      molde(eixoY(maxV, function(v){ return v.toFixed(0) }) +
-        barras(vFeito, maxV, 'var(--run)', vPlan) +
-        rotX(vFeito.length, function(i){ return 'S' + (i+1) })) +
-      '<p class="kfoot">Barra é o que você correu; o traço em cima é o que o plano pedia naquela semana.</p></div>';
+    var maxV = Math.max.apply(null, vFeito.concat(vPlan).concat([10])) * 1.12;
+    var ult = passadas[passadas.length-1];
+    var tV = tendencia(vFeito, 0, maxV, 'var(--run)');
+    var dV = vFeito.length >= 5 ? vFeito[vFeito.length-1] - vFeito[vFeito.length-5] : null;
+
+    h += '<div class="kcard"><div class="kcab"><h3>Volume semanal</h3>' + chip(dV, ' km vs S-4') + '</div>' +
+      '<div class="kbig">' + ult.feitoKm.toFixed(0) + '<small>km nesta semana, de ' + ult.planKm.toFixed(0) +
+        ' planejados · a linha tracejada é a tendência do ciclo</small></div>' +
+      svgBox(grade(maxV, 0, function(v){ return v.toFixed(0) }) +
+        paresDeBarras(vFeito, vPlan, maxV, 'var(--run)') +
+        tV.svg +
+        eixoX(vFeito.length, function(i){ return 'S'+(i+1) })) +
+      legenda([['realizado','var(--run)'],['planejado','', 'gh'],['tendência','var(--run)','ln']]) +
+      '<p class="ksub">' + (tV.incl > 0.5 ? 'Seu volume vem <b>subindo</b> ao longo do ciclo, que é o esperado até a semana de pico.'
+        : tV.incl < -0.5 ? 'Seu volume vem <b>caindo</b>. Se ainda não é semana de polimento, vale entender por quê.'
+        : 'Volume <b>estável</b> ao longo do ciclo.') + '</p></div>';
 
     /* ── 3. longão ── */
     var lFeito = passadas.map(function(w){ return w.longoFeito });
     var lPlan  = passadas.map(function(w){ return w.longoPlan });
     var alvoL = o.longoMax || Math.max.apply(null, lPlan.concat([10]));
     var maiorL = Math.max.apply(null, lFeito.concat([0]));
-    var maxL = Math.max(alvoL, maiorL) * 1.1;
-    html += '<div class="kcard"><div class="kcab"><h3>Treino longo</h3></div>' +
-      '<div class="kbig">' + maiorL.toFixed(0) + '<small>km, seu maior até aqui — o pico do ciclo é ' + alvoL.toFixed(0) + ' km</small></div>' +
-      '<p class="ksub">' + (maiorL >= alvoL ? 'Você já passou pelo longão de pico. O que falta é chegar inteiro.'
-        : 'Faltam <b>' + (alvoL - maiorL).toFixed(0) + ' km</b> até o longão de pico do plano.') + '</p>' +
-      molde(eixoY(maxL, function(v){ return v.toFixed(0) }) +
+    var maxL = Math.max(alvoL, maiorL) * 1.18;
+    var pL = pontos(lFeito.map(function(v){ return v > 0 ? v : null }), 0, maxL);
+
+    h += '<div class="kcard"><div class="kcab"><h3>Treino longo</h3>' +
+        '<span class="delta ' + (maiorL >= alvoL ? 'up' : 'fl') + '">' +
+        Math.round(maiorL/alvoL*100) + '% do pico</span></div>' +
+      '<div class="kbig">' + maiorL.toFixed(0) + '<small>km, seu maior até aqui. O pico do ciclo é ' +
+        alvoL.toFixed(0) + ' km</small></div>' +
+      svgBox(grade(maxL, 0, function(v){ return v.toFixed(0) }) +
         refLinha(alvoL, 0, maxL, 'var(--acc)', 'pico ' + alvoL.toFixed(0) + ' km') +
-        barras(lFeito, maxL, 'var(--run)', lPlan) +
-        rotX(lFeito.length, function(i){ return 'S' + (i+1) })) +
-      '<p class="kfoot">O maior treino de cada semana. Numa maratona, é o número que mais decide o dia da prova.</p></div>';
+        paresDeBarras(lFeito, lPlan, maxL, 'rgba(201,242,78,.30)') +
+        area(pL, 'var(--run)') + curva(pL, 'var(--run)') +
+        balao(pL, maiorL.toFixed(0) + ' km', 'var(--run)') +
+        eixoX(lFeito.length, function(i){ return 'S'+(i+1) })) +
+      legenda([['maior treino da semana','var(--run)'],['planejado','', 'gh']]) +
+      '<p class="ksub">' + (maiorL >= alvoL
+        ? 'Você já passou pelo longão de pico. Daqui para frente o trabalho é <b>chegar inteiro</b>, não mais forte.'
+        : 'Faltam <b>' + (alvoL-maiorL).toFixed(0) + ' km</b> até o longão de pico do plano.') + '</p></div>';
 
     /* ── 4. previsão ── */
     var prev = previsoes(passadas);
     var comPrev = prev.filter(function(v){ return v != null });
     var alvoT = 42.195 * ALVO_SEG;
     if(comPrev.length){
-      var pAtual = comPrev[comPrev.length - 1];
-      var minP = Math.min.apply(null, comPrev.concat([alvoT])) * 0.97;
-      var maxP = Math.max.apply(null, comPrev.concat([alvoT])) * 1.03;
-      var difP = pAtual - alvoT;
-      var primeiro = comPrev[0];
-      var ganho = primeiro - pAtual;
-      html += '<div class="kcard"><div class="kcab"><h3>Previsão para os 42 km</h3></div>' +
+      var pAtual = comPrev[comPrev.length-1], pIni = comPrev[0];
+      var minP = Math.min.apply(null, comPrev.concat([alvoT])) * 0.985;
+      var maxP = Math.max.apply(null, comPrev.concat([alvoT])) * 1.015;
+      var pts = pontos(prev, minP, maxP);
+      var tP = tendencia(prev, minP, maxP, 'var(--tx3)');
+      var difP = pAtual - alvoT, ganho = pIni - pAtual;
+
+      h += '<div class="kcard"><div class="kcab"><h3>Previsão para os 42 km</h3>' +
+          '<span class="delta ' + (ganho > 60 ? 'up' : ganho < -60 ? 'dn' : 'fl') + '">' +
+          (ganho > 0 ? '−' : '+') + hm(Math.abs(ganho)) + ' no ciclo</span></div>' +
         '<div class="kbig" style="color:' + (difP <= 0 ? 'var(--ok)' : 'var(--warn)') + '">' + hm(pAtual) +
-          '<small>' + (difP <= 0 ? hm(-difP) + ' abaixo do alvo' : hm(difP) + ' acima do alvo de 3:50') + '</small></div>' +
-        '<p class="ksub">' + (ganho > 60
-          ? 'Desde o começo do ciclo a previsão melhorou <b>' + hm(ganho) + '</b>.'
+          '<small>' + (difP <= 0 ? hm(-difP) + ' abaixo do alvo de 3:50'
+                                 : hm(difP) + ' acima do alvo de 3:50 · a mancha é a distância que falta') + '</small></div>' +
+        svgBox(grade(maxP, minP, function(v){ return hm(v) }) +
+          entre(pts, alvoT, minP, maxP, 'var(--warn)') +
+          refLinha(alvoT, minP, maxP, 'var(--acc)', 'alvo 3:50') +
+          tP.svg + curva(pts, 'var(--run)') +
+          balao(pts, hm(pAtual), 'var(--run)') +
+          eixoX(prev.length, function(i){ return 'S'+(i+1) })) +
+        legenda([['sua previsão','var(--run)'],['alvo','var(--acc)','ln'],['tendência','var(--tx3)','ln']]) +
+        '<p class="ksub">' + (ganho > 60 ? 'A previsão melhorou <b>' + hm(ganho) + '</b> desde o começo do ciclo — a mancha vem encolhendo.'
           : ganho < -60 ? 'A previsão piorou <b>' + hm(-ganho) + '</b> desde o começo do ciclo.'
           : 'A previsão está estável desde o começo do ciclo.') + '</p>' +
-        molde(eixoY(1, function(){ return '' }).replace(/<text[^>]*>[^<]*<\/text>/g, '') +
-          refLinha(alvoT, minP, maxP, 'var(--acc)', 'alvo 3:50') +
-          linha(prev.map(function(v){ return v == null ? null : v }), minP, maxP, 'var(--run)') +
-          rotX(prev.length, function(i){ return 'S' + (i+1) })) +
-        '<p class="kfoot">A cada semana, seu melhor esforço das seis semanas anteriores projetado para 42,195 km pela fórmula de Riegel. ' +
-        'Só entram corridas de 10 km ou mais em ritmo firme — um longão leve projetaria um tempo que não significa nada.</p></div>';
+        '<p class="kfoot">A cada semana, seu melhor esforço das seis anteriores projetado para 42,195 km pela fórmula de Riegel. ' +
+        'Entram corridas de 8 km ou mais em ritmo de esforço — uma rodagem leve não conta.</p></div>';
     }
 
     /* ── 5. eficiência aeróbica ── */
     var efs = passadas.map(function(w){ return w.ef });
     var comEf = efs.filter(function(v){ return v != null });
     if(comEf.length >= 2){
-      var eAtual = comEf[comEf.length - 1], eIni = comEf[0];
-      var varia = (eAtual - eIni) / eIni * 100;
-      var minE = Math.min.apply(null, comEf) * 0.97, maxE = Math.max.apply(null, comEf) * 1.03;
-      html += '<div class="kcard"><div class="kcab"><h3>Eficiência aeróbica</h3></div>' +
-        '<div class="kbig" style="color:' + (varia >= 0 ? 'var(--ok)' : 'var(--warn)') + '">' +
-          eAtual.toFixed(1) + '<small>m/min por batimento · ' + (varia >= 0 ? '+' : '') + varia.toFixed(1) + '% no ciclo</small></div>' +
-        '<p class="ksub">' + (varia >= 2 ? 'Você está correndo mais rápido com o mesmo esforço do coração. É a definição de evoluir.'
-          : varia <= -2 ? 'A linha caiu. Fadiga acumulada, calor ou noites ruins costumam ser a causa antes de perda de forma.'
-          : 'Estável. Em ciclo de pico, manter já é bom sinal.') + '</p>' +
-        molde(eixoY(1, function(){ return '' }).replace(/<text[^>]*>[^<]*<\/text>/g, '') +
-          linha(efs, minE, maxE, 'var(--swim)') +
-          rotX(efs.length, function(i){ return 'S' + (i+1) })) +
-        '<p class="kfoot">Metros por minuto percorridos a cada batimento, só nas rodagens leves com cardíaco medido. ' +
-        'Subir esta linha vale mais que qualquer treino forte isolado.</p></div>';
+      var eAtual = comEf[comEf.length-1], eIni = comEf[0];
+      var varia = (eAtual-eIni)/eIni*100;
+      var minE = Math.min.apply(null, comEf) * 0.985, maxE = Math.max.apply(null, comEf) * 1.015;
+      var ptsE = pontos(efs, minE, maxE);
+      var tE = tendencia(efs, minE, maxE, 'var(--swim)');
+
+      h += '<div class="kcard"><div class="kcab"><h3>Eficiência aeróbica</h3>' + chip(varia, '% no ciclo') + '</div>' +
+        '<div class="kbig" style="color:' + (varia >= 0 ? 'var(--ok)' : 'var(--warn)') + '">' + eAtual.toFixed(1) +
+          '<small>metros por minuto a cada batimento, nas rodagens leves</small></div>' +
+        svgBox(grade(maxE, minE, function(v){ return v.toFixed(1) }) +
+          area(ptsE, 'var(--swim)') + tE.svg + curva(ptsE, 'var(--swim)') +
+          balao(ptsE, eAtual.toFixed(1), 'var(--swim)') +
+          eixoX(efs.length, function(i){ return 'S'+(i+1) })) +
+        legenda([['eficiência','var(--swim)'],['tendência','var(--swim)','ln']]) +
+        '<p class="ksub">' + (varia >= 2 ? 'Você está correndo <b>mais rápido com o mesmo esforço do coração</b>. É a definição de evoluir.'
+          : varia <= -2 ? 'A linha caiu. Fadiga acumulada, calor ou noites ruins costumam explicar antes de perda de forma.'
+          : 'Estável. Em semana de carga alta, manter já é bom sinal.') + '</p>' +
+        '<p class="kfoot">Só entram rodagens leves com cardíaco medido. É o indicador que menos engana: não depende de você ter feito um treino forte na semana.</p></div>';
     }
 
     /* ── 6. risco de carga ── */
@@ -4776,24 +4890,44 @@ PARTE('aba kpi', function(){
     if(rk.razao != null){
       var faixa = rk.razao < 0.8 ? 0 : rk.razao <= 1.3 ? 1 : rk.razao <= 1.5 ? 2 : 3;
       var cores = ['var(--tx3)','var(--ok)','var(--warn)','var(--bad)'];
-      var textos = ['Carga baixa: você está fazendo menos que a média das últimas quatro semanas. Se for semana de polimento, é exatamente o esperado.',
-                    'Faixa boa. A carga desta semana está coerente com o que seu corpo vem aguentando.',
-                    'Carga subindo rápido. Vale segurar o próximo treino forte.',
-                    'Salto grande de carga. É a faixa que a literatura associa a mais lesão — considere reduzir esta semana.'];
-      html += '<div class="kcard"><div class="kcab"><h3>Risco de carga</h3></div>' +
+      var nomes = ['baixa','faixa boa','atenção','alta'];
+      var textos = [
+        'Você está fazendo menos que a média das últimas quatro semanas. Em semana de polimento é exatamente o esperado.',
+        'A carga desta semana está coerente com o que seu corpo vem aguentando.',
+        'Carga subindo rápido. Vale segurar o próximo treino forte.',
+        'Salto grande de carga. É a faixa que a literatura associa a mais lesão — considere reduzir esta semana.'];
+      /* faixa horizontal com agulha, de 0 a 2 */
+      var LW = W - ML - MR, x0 = ML;
+      var limites = [0, 0.8, 1.3, 1.5, 2];
+      var fx = function(v){ return x0 + Math.min(1, Math.max(0, v/2)) * LW };
+      var barraRisco = '<svg viewBox="0 0 ' + W + ' 58" role="img">';
+      for(var z = 0; z < 4; z++){
+        barraRisco += '<rect x="' + fx(limites[z]).toFixed(1) + '" y="18" width="' +
+          (fx(limites[z+1]) - fx(limites[z])).toFixed(1) + '" height="12" rx="6" fill="' + cores[z] +
+          '" opacity="' + (z === faixa ? '1' : '.22') + '"/>';
+      }
+      [0.8, 1.3, 1.5].forEach(function(v){
+        barraRisco += '<text x="' + fx(v).toFixed(1) + '" y="44" text-anchor="middle" font-size="8.5" fill="var(--tx3)">' +
+          String(v).replace('.', ',') + '</text>';
+      });
+      barraRisco += '<path d="M' + fx(rk.razao).toFixed(1) + ',10 l5,-8 l-10,0 Z" fill="var(--tx)"/>' +
+        '<line x1="' + fx(rk.razao).toFixed(1) + '" y1="12" x2="' + fx(rk.razao).toFixed(1) +
+        '" y2="34" stroke="var(--tx)" stroke-width="2"/></svg>';
+
+      h += '<div class="kcard"><div class="kcab"><h3>Risco de carga</h3>' +
+          '<span class="delta ' + (faixa === 1 ? 'up' : faixa >= 2 ? 'dn' : 'fl') + '">' + nomes[faixa] + '</span></div>' +
         '<div class="kbig" style="color:' + cores[faixa] + '">' + rk.razao.toFixed(2) +
-          '<small>7 dias sobre a média de 28</small></div>' +
-        '<div class="kzona">' + cores.map(function(c, i){
-          return '<i class="' + (i === faixa ? 'on' : '') + '" style="background:' + c + '"></i>' }).join('') + '</div>' +
+          '<small>últimos 7 dias sobre a média das últimas 4 semanas</small></div>' +
+        barraRisco +
         '<p class="ksub">' + textos[faixa] + '</p>' +
         '<p class="kfoot">Últimos 7 dias: <b>' + rk.agudo + ' km</b>. Média semanal das últimas 4: <b>' +
           rk.cronico + ' km</b>. A faixa considerada segura vai de 0,80 a 1,30.</p></div>';
     }
 
-    el.innerHTML = html;
+    el.innerHTML = h;
   }
 
-  /* ---------- a aba ---------- */
+  /* ═══════ a aba ═══════ */
   function montar(){
     if(document.getElementById('v-kpi')) return;
     var barra = document.querySelector('.tabbar .in');
