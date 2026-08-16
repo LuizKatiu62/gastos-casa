@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '02q';
+const FIX_VERSAO = '02r';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -4406,7 +4406,7 @@ PARTE('seis etapas da sessao', function(){
   if(typeof renderCoach === 'function'){ try{ renderCoach() }catch(e){} }
 
   window.bqSeis = {
-    videos: VIDEOS.map(function(v){ return v[0] + ' -> ' + CANAL + encodeURIComponent(v[1]) }),
+    guias: VIDEOS.map(function(v){ return v[0] + ' -> ' + GUIA + '#' + v[1] }),
     etapasDe: function(foco){
       return window.etapas(foco || 'facil', 'corrida', {km:8, reps:6, dist:800, rec:'2 min'})
         .map(function(e){ return e.t });
