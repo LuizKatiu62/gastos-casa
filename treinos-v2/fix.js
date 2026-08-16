@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '02n';
+const FIX_VERSAO = '02o';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -3673,6 +3673,562 @@ PARTE('provas de arquivo', function(){
 });
 
 
+
+/* ═══════════ 23. QUESTIONARIO DO CORREDOR (ANAMNESE) ═══════════
+   Ate agora o app so sabia quem voce era porque os seus dados estavam
+   escritos no codigo: idade 64, cinco dias por semana, pace de limiar
+   5:40. Para outra pessoa usar, isso precisa ser perguntado.
+
+   Sao 22 perguntas em cinco telas curtas. Aparece uma vez, na primeira
+   abertura, e depois fica disponivel na aba Dados para refazer quando
+   algo mudar.
+
+   O QUE AS RESPOSTAS MEXEM DE VERDADE:
+
+     dias disponiveis   -> PERFIL.dias, que decide em que dias o plano
+                           poe treino
+     melhor marca       -> PERFIL.paceLimiar, que e a base de TODOS os
+                           ritmos e volumes que o motor calcula
+     idade              -> PERFIL.idade e a FC maxima estimada, quando
+                           a pessoa nao sabe a dela
+     volume atual       -> um fator que encolhe o plano inteiro quando
+                           ele for grande demais para quem esta comecando
+     dor, lesao, PAR-Q  -> travas de seguranca: reduzem carga e trocam
+                           treino forte por rodagem leve
+
+   SOBRE A TRIAGEM DE SAUDE: as perguntas do bloco 5 seguem a ideia do
+   PAR-Q, o questionario de prontidao para atividade fisica. O app NAO
+   diagnostica nada e nao impede ninguem de treinar — ele avisa, com
+   todas as letras, para procurar um medico antes de aumentar carga.
+
+   COMO O PACE DE LIMIAR E CALCULADO: pela formula de Riegel, que
+   projeta o tempo de uma distancia a partir de outra
+   (T2 = T1 x (D2/D1)^1,06). Uso ela para achar quanto a pessoa
+   correria em exatamente uma hora, e esse ritmo e o limiar. E o mesmo
+   principio das tabelas de VDOT, com uma conta que da para conferir.
+   ══════════════════════════════════════════════════════════════════ */
+
+PARTE('questionario do corredor', function(){
+  if(typeof ST !== 'object' || typeof PERFIL !== 'object') throw new Error('app sem ST/PERFIL');
+
+  var DIAS_N = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
+
+  /* ---------- estilo ---------- */
+  var css = document.createElement('style');
+  css.textContent = [
+'#qz{position:fixed;inset:0;z-index:400;background:var(--bg);overflow-y:auto;display:none}',
+'#qz.on{display:block}',
+'.qz-in{max-width:560px;margin:0 auto;padding:calc(22px + env(safe-area-inset-top)) 18px 40px}',
+'.qz-pass{display:flex;gap:5px;margin-bottom:18px}',
+'.qz-pass i{flex:1;height:4px;border-radius:2px;background:var(--s3)}',
+'.qz-pass i.on{background:var(--acc)}',
+'.qz-kick{font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--acc)}',
+'.qz-h{font-size:23px;font-weight:800;letter-spacing:-.02em;margin:6px 0 4px}',
+'.qz-sub{font-size:13.5px;color:var(--tx2);line-height:1.5;margin:0 0 20px}',
+'.qz-q{margin-bottom:18px}',
+'.qz-lb{display:block;font-size:13.5px;font-weight:600;margin-bottom:8px}',
+'.qz-hint{display:block;font-size:11.5px;color:var(--tx3);font-weight:400;margin-top:3px}',
+'.qz-in input[type=text],.qz-in input[type=number]{width:100%;padding:12px 14px;font-size:16px;',
+'  background:var(--s2);border:1px solid var(--line);border-radius:12px;color:var(--tx)}',
+'.qz-opts{display:flex;flex-wrap:wrap;gap:7px}',
+'.qz-opt{padding:9px 14px;font-size:13.5px;font-weight:600;border-radius:999px;',
+'  background:var(--s2);border:1px solid var(--line);color:var(--tx2)}',
+'.qz-opt.on{background:var(--acc-wash);border-color:var(--acc);color:var(--acc)}',
+'.qz-chk{display:flex;align-items:flex-start;gap:10px;padding:11px 12px;margin-bottom:6px;',
+'  background:var(--s2);border:1px solid var(--line);border-radius:12px;text-align:left;width:100%}',
+'.qz-chk .bx{width:19px;height:19px;border-radius:6px;border:1.5px solid var(--line);flex:none;margin-top:1px}',
+'.qz-chk.on .bx{background:var(--acc);border-color:var(--acc)}',
+'.qz-chk span{font-size:13.5px;line-height:1.4}',
+'.qz-pe{display:flex;gap:9px;margin-top:26px}',
+'.qz-bt{flex:1;padding:14px;border-radius:14px;font-size:15px;font-weight:700}',
+'.qz-bt.pri{background:var(--acc);color:var(--bg)}',
+'.qz-bt.sec{background:var(--s2);border:1px solid var(--line);color:var(--tx2)}',
+'.qz-pular{display:block;width:100%;margin-top:14px;padding:10px;font-size:12.5px;color:var(--tx3)}',
+'.qz-res{background:var(--s1);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px}',
+'.qz-res b{color:var(--acc)}',
+'.qz-alerta{background:var(--warn-wash);border:1px solid rgba(245,197,68,.3);border-radius:16px;',
+'  padding:16px;margin-bottom:12px;font-size:13.5px;line-height:1.55}',
+'.qz-alerta.grave{background:var(--bad-wash);border-color:rgba(242,104,92,.35)}',
+'.qz-alerta b{display:block;margin-bottom:5px}',
+'#btQuest{width:100%;margin-top:10px;padding:13px;border-radius:14px;background:var(--s2);',
+'  border:1px solid var(--line);color:var(--tx);font-size:14px;font-weight:600}'
+  ].join('\n');
+  document.head.appendChild(css);
+
+  /* ---------- as perguntas ---------- */
+  var BLOCOS = [
+    { kick:'Bloco 1 de 5', h:'Quem é você',
+      sub:'Idade e peso entram no cálculo de zonas e de carga. Nada disso sai do seu aparelho e do seu Firebase.',
+      qs:[
+        {k:'sexo', t:'Sexo', tipo:'opt', ops:[['m','Masculino'],['f','Feminino'],['x','Prefiro não dizer']]},
+        {k:'idade', t:'Idade', tipo:'num', un:'anos', min:10, max:100},
+        {k:'altura', t:'Altura', tipo:'num', un:'cm', min:120, max:230},
+        {k:'peso', t:'Peso', tipo:'num', un:'kg', min:30, max:250},
+        {k:'fcMax', t:'Frequência cardíaca máxima, se você souber',
+         dica:'Deixe em branco se não souber — eu estimo pela idade.', tipo:'num', un:'bpm', min:120, max:220, opcional:true}
+      ]},
+    { kick:'Bloco 2 de 5', h:'Sua história na corrida',
+      sub:'É daqui que sai o tamanho do plano. Um plano grande demais para quem está começando é a receita da lesão.',
+      qs:[
+        {k:'tempoCorrida', t:'Há quanto tempo você corre?', tipo:'opt',
+         ops:[['<6m','Menos de 6 meses'],['6-12m','6 a 12 meses'],['1-3a','1 a 3 anos'],['3-5a','3 a 5 anos'],['+5a','Mais de 5 anos']]},
+        {k:'vezesSemana', t:'Quantas vezes por semana você corre hoje?', tipo:'opt',
+         ops:[['1','1'],['2','2'],['3','3'],['4','4'],['5','5'],['6','6'],['7','7']]},
+        {k:'kmSemana', t:'Quantos quilômetros por semana, mais ou menos?',
+         dica:'A média das últimas quatro semanas serve.', tipo:'num', un:'km', min:0, max:250},
+        {k:'maiorDist', t:'Maior distância que você já correu de uma vez', tipo:'num', un:'km', min:0, max:300},
+        {k:'jaProva', t:'Já participou de alguma prova?', tipo:'opt',
+         ops:[['nao','Nunca'],['5k','Até 5 km'],['10k','10 km'],['21k','Meia maratona'],['42k','Maratona'],['ultra','Ultra']]}
+      ]},
+    { kick:'Bloco 3 de 5', h:'Seu ritmo',
+      sub:'Esta é a parte que mais muda o plano. Todo ritmo e todo volume que o app calcula sai daqui.',
+      qs:[
+        {k:'marcaDist', t:'Melhor marca dos últimos 12 meses — distância',
+         dica:'Prova ou treino forte, tanto faz. Pule se não tiver.', tipo:'opt', opcional:true,
+         ops:[['','Não tenho'],['5','5 km'],['10','10 km'],['21.1','Meia'],['42.2','Maratona']]},
+        {k:'marcaTempo', t:'Tempo dessa marca', dica:'No formato hh:mm:ss ou mm:ss.',
+         tipo:'txt', ph:'ex.: 55:30', opcional:true},
+        {k:'paceFacil', t:'Seu ritmo de rodagem confortável',
+         dica:'Aquele em que dá para conversar. Uso este se você não tiver marca.',
+         tipo:'txt', ph:'ex.: 6:30', opcional:true}
+      ]},
+    { kick:'Bloco 4 de 5', h:'Rotina e disponibilidade',
+      sub:'O melhor plano é o que cabe na sua semana. Marque só os dias em que você realmente treina.',
+      qs:[
+        {k:'dias', t:'Dias disponíveis para treinar', tipo:'multi',
+         ops:[['1','Seg'],['2','Ter'],['3','Qua'],['4','Qui'],['5','Sex'],['6','Sáb'],['7','Dom']]},
+        {k:'tempoSessao', t:'Tempo disponível por sessão', tipo:'opt',
+         ops:[['30','Até 30 min'],['45','45 min'],['60','1 hora'],['90','1h30 ou mais']]},
+        {k:'forca', t:'Faz musculação ou treino de força?', tipo:'opt',
+         ops:[['0','Não faço'],['1','1× por semana'],['2','2× por semana'],['3','3× ou mais']]},
+        {k:'outros', t:'Pratica outro esporte?', tipo:'multi',
+         ops:[['bike','Bike'],['natacao','Natação'],['futebol','Futebol'],['tenis','Tênis'],['caminhada','Caminhada'],['outro','Outro']]}
+      ]},
+    { kick:'Bloco 5 de 5', h:'Saúde e objetivo',
+      sub:'As perguntas de saúde seguem o PAR-Q, o questionário padrão de prontidão para atividade física. O app não diagnostica nada — ele só avisa quando vale conversar com um médico antes de subir a carga.',
+      qs:[
+        {k:'dor', t:'Sente dor ou desconforto ao correr?', tipo:'opt',
+         ops:[['nao','Não'],['asvezes','Às vezes'],['sim','Sim, quase sempre']]},
+        {k:'ondeDoi', t:'Onde dói?', dica:'Só se você marcou às vezes ou sim.', tipo:'txt',
+         ph:'ex.: joelho direito', opcional:true},
+        {k:'lesao', t:'Teve lesão nos últimos 12 meses?', tipo:'opt',
+         ops:[['nao','Não'],['recuperado','Sim, já recuperado'],['ativa','Sim, ainda incomoda']]},
+        {k:'parq', t:'Alguma destas situações se aplica a você?', tipo:'chk',
+         ops:[
+           ['peito','Já sentiu dor no peito em repouso ou fazendo esforço'],
+           ['tontura','Tem tontura, desmaio ou perda de equilíbrio'],
+           ['pressao','Pressão alta sem acompanhamento médico'],
+           ['coracao','Problema cardíaco diagnosticado'],
+           ['cirurgia','Cirurgia nos últimos 12 meses'],
+           ['medicacao','Toma medicação contínua para coração ou pressão'],
+           ['medico','Um médico já disse para você não fazer exercício'],
+           ['nenhuma','Nenhuma destas']
+         ]},
+        {k:'sono', t:'Quantas horas você dorme por noite, em média?', tipo:'num', un:'h', min:3, max:14},
+        {k:'objetivo', t:'Qual é o seu objetivo principal agora?', tipo:'opt',
+         ops:[['saude','Saúde e condicionamento'],['5k','Correr 5 km'],['10k','Correr 10 km'],
+              ['21k','Meia maratona'],['42k','Maratona'],['ultra','Ultramaratona']]}
+      ]}
+  ];
+
+  /* ---------- contas ---------- */
+
+  /* mm:ss ou hh:mm:ss -> segundos */
+  function paraSeg(txt){
+    var p = String(txt || '').trim().split(':').map(Number);
+    if(p.some(isNaN) || !p.length) return null;
+    if(p.length === 3) return p[0]*3600 + p[1]*60 + p[2];
+    if(p.length === 2) return p[0]*60 + p[1];
+    return null;
+  }
+
+  /* Riegel: quanto essa pessoa correria em exatamente uma hora?
+     Esse ritmo e o limiar. T2 = T1 x (D2/D1)^1,06, resolvido para D2
+     quando T2 = 3600 s. */
+  function limiarPorMarca(km, seg){
+    if(!(km > 0) || !(seg > 0)) return null;
+    var distHora = km * Math.pow(3600 / seg, 1/1.06);
+    if(!(distHora > 0)) return null;
+    return Math.round(3600 / distHora);
+  }
+
+  /* Sem marca, vale a mesma regra que o app ja usa com os dados do
+     Garmin: o limiar fica cerca de 65 s/km abaixo do ritmo facil. */
+  function limiarPorRodagem(segPorKm){
+    if(!(segPorKm > 0)) return null;
+    return Math.round(segPorKm - 65);
+  }
+
+  var trava = function(v){ return Math.min(540, Math.max(210, v)) };
+
+  /* Tanaka: 208 - 0,7 x idade. Mais fiel que os 220 - idade, sobretudo
+     depois dos 50, que e exatamente o caso de quem mais precisa. */
+  function fcMaxEstimada(idade){ return Math.round(208 - 0.7 * idade) }
+
+  /* O fator encolhe o plano inteiro. Nunca aumenta: o motor ja foi
+     calibrado no teto, entao so faz sentido puxar para baixo. */
+  function calcularFator(q, volBaseObjetivo){
+    var motivos = [];
+
+    /* TETO — quanto o corpo desta pessoa aguenta hoje.
+       Regra de bolso das assessorias: o pico do ciclo nao deve passar de
+       uma vez e meia o volume semanal atual. Este teto NAO tem piso: se
+       alguem corre 8 km por semana, nenhum ciclo comeca em 26.  */
+    var teto = 1;
+    var vol = +q.kmSemana || 0;
+    if(vol > 0 && volBaseObjetivo > 0){
+      teto = (vol * 1.5) / volBaseObjetivo;
+      if(teto < 1) motivos.push('seu volume atual de ' + vol + ' km por semana');
+    }
+
+    /* RISCO — o quanto encolher por cima do teto, por dor, lesao ou
+       saude. Aqui existe piso de 0,6: cautela nao pode zerar o treino,
+       senao a pessoa fica sem plano nenhum e abandona.  */
+    var risco = 1;
+    if(q.tempoCorrida === '<6m'){ risco *= 0.85; motivos.push('menos de 6 meses de corrida'); }
+    else if(q.tempoCorrida === '6-12m'){ risco *= 0.92; motivos.push('menos de um ano de corrida'); }
+
+    if(q.dor === 'sim'){ risco *= 0.80; motivos.push('dor ao correr'); }
+    else if(q.dor === 'asvezes'){ risco *= 0.90; motivos.push('desconforto ocasional'); }
+
+    if(q.lesao === 'ativa'){ risco *= 0.80; motivos.push('lesão que ainda incomoda'); }
+    else if(q.lesao === 'recuperado'){ risco *= 0.93; motivos.push('lesão no último ano'); }
+
+    if(parqAcendeu(q)){ risco *= 0.85; motivos.push('a triagem de saúde'); }
+
+    var f = Math.min(1, teto) * Math.max(0.6, risco);
+    return { fator: Math.max(0.15, Math.min(1, f)), motivos: motivos };
+  }
+
+  function parqAcendeu(q){
+    var m = q.parq || [];
+    return m.length > 0 && m.indexOf('nenhuma') < 0;
+  }
+
+  /* Treino forte vira rodagem leve enquanto houver dor ou lesao ativa */
+  function segurarIntensidade(q){
+    return q.dor === 'sim' || q.lesao === 'ativa' || parqAcendeu(q);
+  }
+
+  /* ---------- aplicar no app ---------- */
+  function aplicar(q){
+    if(+q.idade  > 0) PERFIL.idade  = +q.idade;
+    if(+q.altura > 0) PERFIL.altura = +q.altura;
+    if(+q.peso   > 0) PERFIL.peso   = +q.peso;
+    if(q.sexo) PERFIL.sexo = q.sexo;
+
+    PERFIL.fcMax = +q.fcMax > 0 ? +q.fcMax
+                 : (+q.idade > 0 ? fcMaxEstimada(+q.idade) : PERFIL.fcMax);
+
+    if(Array.isArray(q.dias) && q.dias.length >= 2){
+      PERFIL.dias = q.dias.map(Number).sort(function(a,b){ return a-b });
+    }
+
+    var lim = null;
+    if(q.marcaDist && q.marcaTempo) lim = limiarPorMarca(+q.marcaDist, paraSeg(q.marcaTempo));
+    if(lim == null && q.paceFacil)  lim = limiarPorRodagem(paraSeg(q.paceFacil));
+    if(lim != null){
+      PERFIL.paceLimiar = trava(lim);
+      if(typeof zonas === 'function'){ try{ Z = zonas() }catch(e){} }
+    }
+
+    ST.quest = q;
+    if(typeof rebuild === 'function') rebuild();
+    if(typeof renderAll === 'function') { try{ renderAll() }catch(e){} }
+    else if(typeof renderCoach === 'function') { try{ renderCoach() }catch(e){} }
+    if(typeof persistir === 'function') persistir();
+  }
+
+  /* O motor le volBase e longoMax de objetivoAtivo(). Encolher ali
+     encolhe o ciclo inteiro sem tocar em mais nada. */
+  var objApp = window.objetivoAtivo;
+  if(typeof objApp === 'function'){
+    window.objetivoAtivo = function(){
+      var o = objApp.apply(this, arguments);
+      if(!o || !ST.quest) return o;
+      var r = calcularFator(ST.quest, o.volBase || 0);
+      if(r.fator >= 0.999) return o;
+      var novo = Object.assign({}, o);
+      ['volBase','volNat','volBike','longoMax','longNat','longBike'].forEach(function(k){
+        if(typeof novo[k] === 'number') novo[k] = Math.round(novo[k] * r.fator * 10) / 10;
+      });
+      /* o longo nunca deve passar muito da maior distancia ja feita */
+      var maior = +ST.quest.maiorDist || 0;
+      if(maior > 0 && typeof novo.longoMax === 'number'){
+        novo.longoMax = Math.min(novo.longoMax, Math.max(maior * 1.2, 6));
+      }
+      novo.__fator = r.fator;
+      return novo;
+    };
+  }
+
+  /* Com dor, lesao ativa ou PAR-Q aceso, o treino forte da semana vira
+     rodagem leve. Nao e o app decidindo por voce: e nao piorar o que
+     voce mesmo disse que esta doendo. */
+  var sessaoApp = window.montarSessao;
+  if(typeof sessaoApp === 'function'){
+    var FORTES = ['intervalado','sprint','subidas','limiar','fartlek','bikeInt','natInt'];
+    window.montarSessao = function(k, o, r, F, semAte, semanas){
+      if(ST.quest && segurarIntensidade(ST.quest) && r && FORTES.indexOf(r.f) >= 0){
+        r = Object.assign({}, r, { f: r.m === 'corrida' ? 'facil' : 'cross' });
+      }
+      return sessaoApp.call(this, k, o, r, F, semAte, semanas);
+    };
+  }
+
+  /* ---------- a tela ---------- */
+  var passo = 0, resp = {};
+
+  function campo(qq){
+    var v = resp[qq.k];
+    var h = '<div class="qz-q"><label class="qz-lb">' + qq.t +
+            (qq.dica ? '<span class="qz-hint">' + qq.dica + '</span>' : '') + '</label>';
+    if(qq.tipo === 'num'){
+      h += '<input type="number" inputmode="decimal" data-k="' + qq.k + '" value="' +
+           (v == null ? '' : v) + '" placeholder="' + (qq.un || '') + '">';
+    } else if(qq.tipo === 'txt'){
+      h += '<input type="text" data-k="' + qq.k + '" value="' + (v == null ? '' : v) +
+           '" placeholder="' + (qq.ph || '') + '">';
+    } else if(qq.tipo === 'opt' || qq.tipo === 'multi'){
+      h += '<div class="qz-opts">' + qq.ops.map(function(o){
+        var on = qq.tipo === 'multi'
+          ? (Array.isArray(v) && v.indexOf(o[0]) >= 0)
+          : (String(v == null ? '' : v) === o[0]);
+        return '<button type="button" class="qz-opt' + (on ? ' on' : '') +
+               '" data-k="' + qq.k + '" data-v="' + o[0] + '" data-multi="' +
+               (qq.tipo === 'multi' ? 1 : 0) + '">' + o[1] + '</button>';
+      }).join('') + '</div>';
+    } else if(qq.tipo === 'chk'){
+      h += qq.ops.map(function(o){
+        var on = Array.isArray(v) && v.indexOf(o[0]) >= 0;
+        return '<button type="button" class="qz-chk' + (on ? ' on' : '') +
+               '" data-k="' + qq.k + '" data-v="' + o[0] + '" data-multi="1">' +
+               '<span class="bx"></span><span>' + o[1] + '</span></button>';
+      }).join('');
+    }
+    return h + '</div>';
+  }
+
+  function desenhar(){
+    var el = document.getElementById('qz');
+    if(!el) return;
+    if(passo >= BLOCOS.length) return resumo();
+    var b = BLOCOS[passo];
+    el.innerHTML = '<div class="qz-in">' +
+      '<div class="qz-pass">' + BLOCOS.map(function(_,i){
+        return '<i class="' + (i <= passo ? 'on' : '') + '"></i>' }).join('') + '</div>' +
+      '<div class="qz-kick">' + b.kick + '</div>' +
+      '<h1 class="qz-h">' + b.h + '</h1>' +
+      '<p class="qz-sub">' + b.sub + '</p>' +
+      b.qs.map(campo).join('') +
+      '<div class="qz-pe">' +
+        (passo > 0 ? '<button class="qz-bt sec" id="qzVolta">Voltar</button>' : '') +
+        '<button class="qz-bt pri" id="qzSegue">' +
+          (passo === BLOCOS.length - 1 ? 'Ver o resultado' : 'Continuar') + '</button>' +
+      '</div>' +
+      (passo === 0 ? '<button class="qz-pular" id="qzPular">Responder depois</button>' : '') +
+      '</div>';
+
+    el.querySelectorAll('input[data-k]').forEach(function(i){
+      i.oninput = function(){ resp[i.dataset.k] = i.value };
+    });
+    el.querySelectorAll('[data-v]').forEach(function(b2){
+      b2.onclick = function(){
+        var k = b2.dataset.k, v = b2.dataset.v;
+        if(b2.dataset.multi === '1'){
+          var arr = Array.isArray(resp[k]) ? resp[k].slice() : [];
+          var i = arr.indexOf(v);
+          if(i >= 0) arr.splice(i,1); else arr.push(v);
+          /* "nenhuma destas" nao convive com as outras */
+          if(v === 'nenhuma' && arr.indexOf('nenhuma') >= 0) arr = ['nenhuma'];
+          else arr = arr.filter(function(x){ return x !== 'nenhuma' });
+          resp[k] = arr;
+        } else {
+          resp[k] = v;
+        }
+        desenhar();
+      };
+    });
+    var seg = document.getElementById('qzSegue');
+    if(seg) seg.onclick = function(){ passo++; desenhar(); window.scrollTo(0,0) };
+    var vol = document.getElementById('qzVolta');
+    if(vol) vol.onclick = function(){ passo--; desenhar(); window.scrollTo(0,0) };
+    var pul = document.getElementById('qzPular');
+    if(pul) pul.onclick = function(){
+      try{ localStorage.setItem('quest_adiado', '1') }catch(e){}
+      fecharQuest();
+    };
+  }
+
+  function resumo(){
+    var el = document.getElementById('qz');
+    aplicar(resp);
+
+    var q = resp;
+    var o = (typeof objetivoAtivo === 'function') ? objetivoAtivo() : null;
+    var fator = o && o.__fator ? o.__fator : 1;
+    var alertas = [];
+
+    if(parqAcendeu(q)){
+      alertas.push(['grave', 'Converse com um médico antes de aumentar a carga',
+        'Você marcou pelo menos uma situação da triagem de saúde. Isso não quer dizer que você não possa correr — quer dizer que a decisão de subir volume ou intensidade não deveria ser tomada só por um aplicativo. Enquanto isso, o plano fica mais conservador e sem treino forte.']);
+    }
+    if(q.dor === 'sim' || q.lesao === 'ativa'){
+      alertas.push(['', 'Dor não é para ser treinada por cima',
+        'Enquanto você marcar dor ao correr ou lesão que ainda incomoda, os treinos fortes viram rodagem leve e o volume fica reduzido. Refaça o questionário quando melhorar e a intensidade volta sozinha.']);
+    }
+    var alvo = { '5k':5, '10k':10, '21k':21.1, '42k':42.2, 'ultra':50 }[q.objetivo];
+    var maior = +q.maiorDist || 0;
+    if(alvo && maior > 0 && alvo > maior * 2){
+      alertas.push(['', 'O objetivo está longe do que você já fez',
+        'Sua maior distância é ' + maior + ' km e o objetivo é ' + alvo + ' km. Dá para chegar lá, mas não em um ciclo só. Um alvo intermediário primeiro costuma ser o caminho mais curto — e o que menos machuca.']);
+    }
+    if(+q.idade >= 55 && q.forca === '0'){
+      alertas.push(['', 'Falta o treino de força',
+        'Depois dos 55, força duas vezes por semana é o que mais protege a continuidade do plano: previne lesão e melhora a economia de corrida. É o treino com melhor retorno que existe nessa faixa etária.']);
+    }
+    if(+q.sono > 0 && +q.sono < 6){
+      alertas.push(['', 'Sono curto limita a adaptação',
+        'Você dorme ' + q.sono + ' h por noite. É durante o sono que o corpo assimila o treino; abaixo de 6 h o ganho do que você treinou fica pela metade.']);
+    }
+
+    var linhas = [];
+    linhas.push('Dias de treino: <b>' + PERFIL.dias.map(function(d){ return DIAS_N[d-1] }).join(', ') + '</b>');
+    linhas.push('Ritmo de limiar: <b>' + mmss(PERFIL.paceLimiar) + '/km</b>' +
+      (q.marcaDist && q.marcaTempo
+        ? ' — calculado a partir dos seus ' + q.marcaTempo + ' em ' + q.marcaDist + ' km'
+        : (q.paceFacil ? ' — estimado pela sua rodagem de ' + q.paceFacil : ' — mantido como estava')));
+    linhas.push('FC máxima: <b>' + PERFIL.fcMax + ' bpm</b>' +
+      (+q.fcMax > 0 ? ' — a que você informou' : ' — estimada pela idade'));
+    if(fator < 0.999){
+      var r = calcularFator(q, o ? (o.volBase / fator) : 0);
+      linhas.push('Volume do plano: <b>' + Math.round(fator*100) + '% do padrão</b>' +
+        (r.motivos.length ? ' — por causa de ' + r.motivos.join(', ') : ''));
+    } else {
+      linhas.push('Volume do plano: <b>integral</b> — seu histórico comporta o ciclo completo');
+    }
+
+    el.innerHTML = '<div class="qz-in">' +
+      '<div class="qz-pass">' + BLOCOS.map(function(){ return '<i class="on"></i>' }).join('') + '</div>' +
+      '<div class="qz-kick">Pronto</div>' +
+      '<h1 class="qz-h">O que mudou no seu plano</h1>' +
+      '<p class="qz-sub">Estas respostas passam a valer para todos os treinos que o app montar daqui para frente. Dá para refazer quando quiser, na aba Dados.</p>' +
+      '<div class="qz-res">' + linhas.map(function(l){
+        return '<div style="padding:7px 0;border-bottom:1px solid var(--line);font-size:13.5px;line-height:1.5">' + l + '</div>';
+      }).join('') + '</div>' +
+      alertas.map(function(a){
+        return '<div class="qz-alerta' + (a[0] ? ' ' + a[0] : '') + '"><b>' + a[1] + '</b>' + a[2] + '</div>';
+      }).join('') +
+      '<div class="qz-pe"><button class="qz-bt pri" id="qzFim">Ver meus treinos</button></div>' +
+      '</div>';
+    var f = document.getElementById('qzFim');
+    if(f) f.onclick = fecharQuest;
+    window.scrollTo(0,0);
+  }
+
+  function abrirQuest(){
+    var el = document.getElementById('qz');
+    if(!el){
+      el = document.createElement('div');
+      el.id = 'qz';
+      document.body.appendChild(el);
+    }
+    resp = ST.quest ? JSON.parse(JSON.stringify(ST.quest)) : {};
+    passo = 0;
+    el.classList.add('on');
+    document.body.style.overflow = 'hidden';
+    desenhar();
+  }
+  function fecharQuest(){
+    var el = document.getElementById('qz');
+    if(el) el.classList.remove('on');
+    document.body.style.overflow = '';
+  }
+
+  /* ---------- guardar junto com o resto do Coach ---------- */
+  var lerApp = window.lerCoach;
+  if(typeof lerApp === 'function'){
+    window.lerCoach = async function(){
+      var c = await lerApp.apply(this, arguments);
+      if(c && c.quest){ ST.quest = c.quest; try{ aplicarSemRender(c.quest) }catch(e){} }
+      return c;
+    };
+  }
+  function aplicarSemRender(q){
+    if(+q.idade > 0) PERFIL.idade = +q.idade;
+    if(+q.peso  > 0) PERFIL.peso  = +q.peso;
+    if(+q.altura> 0) PERFIL.altura= +q.altura;
+    if(q.sexo) PERFIL.sexo = q.sexo;
+    PERFIL.fcMax = +q.fcMax > 0 ? +q.fcMax : (+q.idade > 0 ? fcMaxEstimada(+q.idade) : PERFIL.fcMax);
+    if(Array.isArray(q.dias) && q.dias.length >= 2)
+      PERFIL.dias = q.dias.map(Number).sort(function(a,b){ return a-b });
+    var lim = null;
+    if(q.marcaDist && q.marcaTempo) lim = limiarPorMarca(+q.marcaDist, paraSeg(q.marcaTempo));
+    if(lim == null && q.paceFacil)  lim = limiarPorRodagem(paraSeg(q.paceFacil));
+    if(lim != null) PERFIL.paceLimiar = trava(lim);
+  }
+
+  var salvarApp = window.salvarCoach;
+  if(typeof salvarApp === 'function'){
+    window.salvarCoach = async function(){
+      var r = await salvarApp.apply(this, arguments);
+      /* PATCH em vez de PUT: acrescenta o questionario sem reescrever o
+         que o app acabou de gravar */
+      try{
+        if(ST.quest){
+          var t = await fbToken();
+          if(t) await fetch(FB_DB + '/' + FB_COACH + '.json?auth=' + t,
+            { method:'PATCH', headers:{'Content-Type':'application/json'},
+              body: JSON.stringify({ quest: ST.quest }) });
+        }
+      }catch(e){ console.warn('quest:', e.message) }
+      return r;
+    };
+  }
+
+  /* ---------- botao na aba Dados ---------- */
+  function poeBotao(){
+    var alvo = document.querySelector('#v-dados') || document.querySelector('#tab-dados');
+    if(!alvo || document.getElementById('btQuest')) return;
+    var b = document.createElement('button');
+    b.id = 'btQuest';
+    b.type = 'button';
+    b.textContent = ST.quest ? '📋 Refazer o questionário do corredor'
+                             : '📋 Responder o questionário do corredor';
+    b.onclick = abrirQuest;
+    alvo.appendChild(b);
+  }
+  poeBotao();
+  var irApp = window.irPara;
+  if(typeof irApp === 'function'){
+    window.irPara = function(v){
+      var r = irApp.apply(this, arguments);
+      try{ poeBotao() }catch(e){}
+      return r;
+    };
+  }
+
+  window.bqQuest = {
+    abrir: abrirQuest,
+    respostas: function(){ return ST.quest || null },
+    fator: function(){
+      var o = (typeof objetivoAtivo === 'function') ? objetivoAtivo() : null;
+      return o && o.__fator ? o.__fator : 1;
+    },
+    limiarPorMarca: limiarPorMarca,
+    fcMaxEstimada: fcMaxEstimada
+  };
+
+  /* Primeira abertura: se nunca houve questionario e o usuario nao
+     pediu para deixar para depois, a tela aparece sozinha. */
+  var adiado = false;
+  try{ adiado = localStorage.getItem('quest_adiado') === '1' }catch(e){}
+  setTimeout(function(){
+    if(!ST.quest && !adiado) abrirQuest();
+  }, 1800);
+});
+
+
 /* ─────────── selo de diagnóstico ─────────── */
 (function(){
   function montar(){
@@ -3692,7 +4248,7 @@ PARTE('provas de arquivo', function(){
         var l = window.planoBQ.ligado();
         var diag = '';
         try{ diag = window.bqDiag ? '\n\n── diagnóstico ──\n' + window.bqDiag() : '' }catch(e){}
-        if(confirm('fix.js ' + FIX_VERSAO + ' — as vinte e duas partes carregaram.\n\n'
+        if(confirm('fix.js ' + FIX_VERSAO + ' — as vinte e tres partes carregaram.\n\n'
           + 'Plano PEI Marathon: ' + (l ? 'LIGADO' : 'desligado') + diag
           + '\n\nOK ' + (l ? 'desliga o plano e volta ao automático do app.'
                              : 'liga o plano da maratona.'))){
@@ -3715,7 +4271,7 @@ PARTE('provas de arquivo', function(){
         return;
       }
       alert(ok
-        ? 'fix.js ' + FIX_VERSAO + ' — as vinte e duas partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
+        ? 'fix.js ' + FIX_VERSAO + ' — as vinte e tres partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
         : 'fix.js ' + FIX_VERSAO + '\n\nFalharam:\n\n' + FIX_FALHAS.join('\n\n'));
     };
     barra.insertBefore(s, barra.firstChild.nextSibling);
