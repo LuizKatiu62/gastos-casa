@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '02o';
+const FIX_VERSAO = '02p';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -4229,6 +4229,187 @@ PARTE('questionario do corredor', function(){
 });
 
 
+
+/* ═══════ 24. AS SEIS ETAPAS DA SESSAO (estrutura do Tiago Mecabo) ═══════
+
+   1. Pre-aquecimento      2. Alongamentos dinamicos    3. Educativos
+   4. Parte principal      5. Desaquecimento            6. Alongamento
+
+   O app ja fazia quatro delas: aquecimento, parte principal,
+   desaquecimento e mobilidade no fim. Faltavam os alongamentos
+   dinamicos como etapa propria e os educativos, que so apareciam no
+   intervalado e no fartlek. Agora as seis entram em TODO treino de
+   corrida, na ordem.
+
+   POR QUE A ORDEM E ESSA, e nao um detalhe de gosto:
+
+   - O alongamento estatico ANTES de correr reduz a producao de forca
+     por algumas dezenas de minutos. Por isso, no comeco, so movimento
+     (dinamico); o estatico vai para o fim, quando o musculo ja esta
+     quente e o objetivo passa a ser amplitude, nao desempenho.
+
+   - Os educativos vem DEPOIS do dinamico e ANTES do principal porque
+     eles nao sao aquecimento: sao tecnica. Feitos com o corpo frio nao
+     ensinam nada, e feitos cansados ensinam o gesto errado.
+
+   - O desaquecimento existe para a frequencia cardiaca cair devagar.
+     Parar de vez depois de treino forte e o que mais causa aquela
+     tontura no fim.
+
+   DURACAO: a sessao passa a durar cerca de 11 minutos a mais. A parte
+   principal nao encolheu — o volume da semana continua o mesmo.
+
+   VIDEOS: cada etapa leva a uma BUSCA dentro do canal do Tiago Mecabo,
+   nao a um video fixo. Endereco de video sai do ar; busca dentro do
+   canal, nao. E sempre traz o material mais recente dele sobre aquilo.
+   ══════════════════════════════════════════════════════════════════ */
+
+PARTE('seis etapas da sessao', function(){
+  if(typeof window.etapas !== 'function') throw new Error('app sem etapas()');
+
+  var CANAL = 'https://www.youtube.com/@TiagoMecabo/search?query=';
+  var VIDEOS = [
+    ['Pré-aquecimento',        'aquecimento corrida'],
+    ['Alongamentos dinâmicos', 'alongamento dinâmico corrida'],
+    ['Educativos',             'educativos de corrida'],
+    ['Desaquecimento',         'desaquecimento corrida'],
+    ['Alongamento',            'alongamento pós treino corrida']
+  ];
+
+  var css = document.createElement('style');
+  css.textContent = [
+'.seisv{margin-top:14px;padding-top:13px;border-top:1px solid var(--line)}',
+'.seisv .cab{font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;',
+'  color:var(--tx3);margin-bottom:9px}',
+'.seisv .lks{display:flex;flex-wrap:wrap;gap:7px}',
+'.seisv a{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:999px;',
+'  background:var(--s2);border:1px solid var(--line);color:var(--tx2);',
+'  font-size:12.5px;font-weight:600;text-decoration:none}',
+'.seisv a:hover{color:var(--tx);border-color:var(--tx3)}',
+'.seisv a i{font-style:normal;color:#FF3B30;font-size:11px}',
+'.seisv .nota{margin:10px 0 0;font-size:11.5px;color:var(--tx3);line-height:1.5}'
+  ].join('\n');
+  document.head.appendChild(css);
+
+  var CHAVES = /^(Aquecimento|Educativos|Desaquecimento|Mobilidade|Alongamento|Pré-aquecimento|Alongamentos dinâmicos)$/;
+  var FORTE  = ['intervalado','fartlek','limiar','subidas','sprint','longo','longo2','prova'];
+
+  var etapasApp = window.etapas;
+  window.etapas = function(foco, mod, p){
+    var orig = etapasApp.apply(this, arguments);
+    if(mod !== 'corrida' || !Array.isArray(orig)) return orig;
+
+    var pesado = FORTE.indexOf(foco) >= 0;
+    var mPre = pesado ? 10 : 8;
+    var mDes = pesado ? 8 : 5;
+
+    /* tudo que nao for aquecimento, educativo, desaquecimento ou
+       mobilidade e conteudo de verdade da sessao — fica no meio */
+    var nucleo = orig.filter(function(e){ return !CHAVES.test(e.t) });
+
+    var zonaRec = [];
+    try { zonaRec = [{t:pr('rec'), c:'z'}, {t:fcr('rec'), c:'hr'}] } catch(e){ zonaRec = [] }
+
+    var seis = [
+      E('1 · Pré-aquecimento',
+        mPre + ' minutos subindo devagar: comece caminhando rápido por 3 minutos e passe a trote muito leve. ' +
+        'O objetivo é só um — aquecer o músculo de verdade. Se você chegar ofegante ao fim disto, foi rápido demais.',
+        zonaRec.concat([{t: mPre + ' min'}])),
+
+      E('2 · Alongamentos dinâmicos',
+        '5 minutos, tudo em movimento, sem segurar em nenhuma posição. Dez repetições de cada: balanço de perna para frente e para trás, ' +
+        'balanço lateral, círculo de quadril, agachamento livre, afundo com rotação de tronco e elevação de joelho andando. ' +
+        'Alongamento parado fica para o fim — feito agora, ele reduz a força que você vai precisar daqui a pouco.',
+        [{t:'5 min'}]),
+
+      E('3 · Educativos',
+        '4 séries de 20 segundos, caminhando 40 segundos entre elas: skipping alto, anfersen, dribles baixos e passada saltada. ' +
+        'Isto não é aquecimento, é técnica: postura, cadência e coordenação. Faça com atenção no gesto, não na velocidade.',
+        [{t:'≈4 min'}])
+    ];
+
+    seis = seis.concat(nucleo);
+
+    seis.push(E('5 · Desaquecimento',
+      mDes + ' minutos de trote muito leve até a respiração normalizar. ' +
+      'Parar de vez depois de treino forte é o que causa aquela tontura — o sangue fica represado na perna.',
+      zonaRec.concat([{t: mDes + ' min'}])));
+
+    seis.push(E('6 · Alongamento',
+      '5 minutos, agora sim parado e segurando 30 segundos em cada: panturrilha, posterior de coxa, quadríceps, ' +
+      'flexor do quadril e glúteo. Sem forçar até doer — a sensação é de tensão, nunca de dor.',
+      [{t:'5 min'}]));
+
+    /* So o primeiro item da parte principal leva o numero 4. Quando o
+       treino tem varios blocos (o longo tem tres), repetir "4 ·" em
+       todos deixa a lista poluida e da a impressao de erro. */
+    if(nucleo.length && !/^\d+ · /.test(seis[3].t)) seis[3].t = '4 · ' + seis[3].t;
+    return seis;
+  };
+
+  /* A sessao ficou ~11 min mais longa: 3 do pre-aquecimento a mais que
+     o aquecimento antigo, 5 do dinamico e 4 dos educativos, menos o que
+     ja estava contado. O volume em km nao muda. */
+  var sessaoApp = window.montarSessao;
+  if(typeof sessaoApp === 'function'){
+    window.montarSessao = function(k, o, r, F, semAte, semanas){
+      var s = sessaoApp.apply(this, arguments);
+      if(s && s.mod === 'corrida' && typeof s.min === 'number'){
+        s.min = s.min + 11;
+        s.__seisEtapas = true;
+      }
+      return s;
+    };
+  }
+
+  /* barra de videos, abaixo das etapas do dia */
+  function poeVideos(){
+    var el = document.querySelector('#sess');
+    if(!el) return;
+    var velho = el.querySelector('.seisv');
+    var s = (typeof sessaoDe === 'function') ? sessaoDe(ST.sel) : null;
+    if(!s || s.mod !== 'corrida'){ if(velho) velho.remove(); return }
+    if(velho) return;
+
+    var box = document.createElement('div');
+    box.className = 'seisv';
+    box.innerHTML =
+      '<div class="cab">Como fazer cada etapa</div>' +
+      '<div class="lks">' + VIDEOS.map(function(v){
+        return '<a href="' + CANAL + encodeURIComponent(v[1]) + '" target="_blank" rel="noopener">' +
+               '<i>▶</i>' + v[0] + '</a>';
+      }).join('') + '</div>' +
+      '<p class="nota">Cada botão abre uma busca no canal do Tiago Mecabô. ' +
+      'Preferi busca a link de vídeo: endereço de vídeo sai do ar, busca não — e sempre traz o material mais novo dele.</p>';
+
+    var acts = el.querySelector('.acts');
+    if(acts) acts.parentNode.insertBefore(box, acts);
+    else el.appendChild(box);
+  }
+
+  var diaApp = window.renderDia;
+  if(typeof diaApp === 'function'){
+    window.renderDia = function(){
+      var r = diaApp.apply(this, arguments);
+      try{ poeVideos() }catch(e){ console.warn('videos:', e.message) }
+      return r;
+    };
+  }
+
+  /* o cache guarda as etapas antigas; limpar faz as seis aparecerem ja */
+  if(ST && ST.cache) ST.cache = {};
+  if(typeof renderCoach === 'function'){ try{ renderCoach() }catch(e){} }
+
+  window.bqSeis = {
+    videos: VIDEOS.map(function(v){ return v[0] + ' -> ' + CANAL + encodeURIComponent(v[1]) }),
+    etapasDe: function(foco){
+      return window.etapas(foco || 'facil', 'corrida', {km:8, reps:6, dist:800, rec:'2 min'})
+        .map(function(e){ return e.t });
+    }
+  };
+});
+
+
 /* ─────────── selo de diagnóstico ─────────── */
 (function(){
   function montar(){
@@ -4248,7 +4429,7 @@ PARTE('questionario do corredor', function(){
         var l = window.planoBQ.ligado();
         var diag = '';
         try{ diag = window.bqDiag ? '\n\n── diagnóstico ──\n' + window.bqDiag() : '' }catch(e){}
-        if(confirm('fix.js ' + FIX_VERSAO + ' — as vinte e tres partes carregaram.\n\n'
+        if(confirm('fix.js ' + FIX_VERSAO + ' — as vinte e quatro partes carregaram.\n\n'
           + 'Plano PEI Marathon: ' + (l ? 'LIGADO' : 'desligado') + diag
           + '\n\nOK ' + (l ? 'desliga o plano e volta ao automático do app.'
                              : 'liga o plano da maratona.'))){
@@ -4271,7 +4452,7 @@ PARTE('questionario do corredor', function(){
         return;
       }
       alert(ok
-        ? 'fix.js ' + FIX_VERSAO + ' — as vinte e tres partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
+        ? 'fix.js ' + FIX_VERSAO + ' — as vinte e quatro partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
         : 'fix.js ' + FIX_VERSAO + '\n\nFalharam:\n\n' + FIX_FALHAS.join('\n\n'));
     };
     barra.insertBefore(s, barra.firstChild.nextSibling);
