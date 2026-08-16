@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Guia de execução — Aquecimento e alongamento · Luiz em Movimento</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#10151C;
+    --ink-2:#46515F;
+    --paper:#EFF2EE;
+    --card:#FFFFFF;
+    --line:#D5DAD3;
+    --go:#0B6E5B;
+    --warn:#A8500B;
+    --radius:14px;
+    --tap:46px;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+    font-size:17px;
+    line-height:1.55;
+  }
+  .wrap{max-width:720px;margin:0 auto;padding:0 18px 64px}
+
+  header{background:var(--ink);color:#fff;padding:34px 0 26px}
+  header .wrap{padding-bottom:0}
+  .eyebrow{
+    font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.16em;
+    text-transform:uppercase;color:#8FB8AE;margin:0 0 10px
+  }
+  h1{
+    font-family:"Barlow Condensed",Impact,sans-serif;font-weight:700;
+    text-transform:uppercase;letter-spacing:.02em;line-height:.95;
+    font-size:clamp(38px,11vw,62px);margin:0 0 12px
+  }
+  .lede{margin:0;color:#C3CBD3;font-size:16px;max-width:48ch}
+
+  .tabs{
+    position:sticky;top:0;z-index:20;background:var(--paper);
+    border-bottom:1px solid var(--line);padding:10px 0;margin-bottom:26px
+  }
+  .tabs .wrap{padding-bottom:0;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .tab{
+    font-family:"Barlow Condensed",sans-serif;font-weight:600;font-size:18px;
+    text-transform:uppercase;letter-spacing:.04em;
+    min-height:var(--tap);padding:0 14px;border:1.5px solid var(--ink);
+    background:transparent;color:var(--ink);border-radius:999px;cursor:pointer;
+    text-decoration:none;display:inline-flex;align-items:center
+  }
+  .tab.on{background:var(--ink);color:#fff}
+  .tab:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid var(--go);outline-offset:2px}
+
+  h2{
+    font-family:"Barlow Condensed",sans-serif;font-weight:700;text-transform:uppercase;
+    font-size:26px;letter-spacing:.03em;margin:34px 0 4px;
+    border-bottom:2px solid var(--ink);padding-bottom:6px;scroll-margin-top:74px
+  }
+  h2 span{font-family:"IBM Plex Mono",monospace;font-size:12px;font-weight:500;
+    letter-spacing:.1em;color:var(--ink-2);text-transform:none;float:right;padding-top:9px}
+  .bloco{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:18px 20px;margin-bottom:18px}
+  .bloco p{margin:0 0 10px}
+  .bloco p:last-child{margin-bottom:0}
+  .porque{border-left:3px solid var(--go);padding:2px 0 2px 12px;color:var(--ink-2);font-size:15.5px}
+
+  .ex{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:18px 20px 20px;margin-bottom:16px
+  }
+  .ex-top{display:flex;align-items:flex-start;gap:14px}
+  .num{
+    font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:30px;line-height:1;
+    color:var(--go);min-width:34px;padding-top:2px
+  }
+  .ex h3{
+    font-family:"Barlow Condensed",sans-serif;font-weight:600;text-transform:uppercase;
+    font-size:26px;line-height:1.05;letter-spacing:.02em;margin:0 0 6px
+  }
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+  .chip{
+    font-family:"IBM Plex Mono",monospace;font-size:12.5px;letter-spacing:.04em;
+    background:#E7ECE6;color:var(--ink);border-radius:6px;padding:4px 9px
+  }
+  .chip.series{background:var(--go);color:#fff}
+  .det h4{
+    font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--ink-2);margin:16px 0 7px;font-weight:500
+  }
+  .det ol{margin:0;padding-left:22px}
+  .det ol li{margin-bottom:7px}
+  .det ul{margin:0;padding-left:20px;list-style:none}
+  .det ul li{margin-bottom:6px;position:relative}
+  .det ul li::before{content:"×";position:absolute;left:-18px;color:var(--warn);font-weight:700}
+  .fix{border-left:3px solid var(--go);padding:2px 0 2px 12px;margin-top:14px;
+    font-size:15.5px;color:var(--ink-2)}
+  .video{
+    display:inline-flex;align-items:center;gap:9px;min-height:var(--tap);
+    margin-top:16px;padding:0 18px;background:var(--ink);color:#fff;
+    border-radius:999px;text-decoration:none;font-weight:500;font-size:15.5px
+  }
+  .video::before{content:"▶";font-size:12px}
+  .video-en{display:block;margin-top:9px;font-size:14px;color:var(--ink-2)}
+
+  .aviso{
+    background:#FBF3E8;border:1px solid #E3CBA6;border-radius:var(--radius);
+    padding:18px 20px;font-size:15.5px;margin-bottom:18px
+  }
+  .aviso strong{display:block;font-family:"Barlow Condensed",sans-serif;
+    text-transform:uppercase;font-size:20px;letter-spacing:.03em;margin-bottom:6px}
+  footer{margin-top:40px;padding-top:18px;border-top:1px solid var(--line);
+    font-size:14px;color:var(--ink-2)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <p class="eyebrow">Corrida · As seis etapas da sessão</p>
+    <h1>Aquecimento<br>e alongamento</h1>
+    <p class="lede">Como fazer cada movimento das etapas 1, 2, 3, 5 e 6 do seu treino, com passo a passo, os erros que mais aparecem e um vídeo para conferir antes de repetir.</p>
+  </div>
+</header>
+
+<nav class="tabs">
+  <div class="wrap">
+    <a class="tab on" href="#pre">1 · Pré</a>
+    <a class="tab" href="#dinamicos">2 · Dinâmicos</a>
+    <a class="tab" href="#educativos">3 · Educativos</a>
+    <a class="tab" href="#desaquecimento">5 · Desaq.</a>
+    <a class="tab" href="#alongamento">6 · Along.</a>
+  </div>
+</nav>
+
+<main class="wrap">
+
+  <div class="bloco">
+    <p><strong>Por que a ordem é essa.</strong> Alongamento parado antes de correr reduz a força que o músculo produz, e o efeito dura algumas dezenas de minutos. Por isso, no começo, só movimento — o alongamento segurando fica para o fim, quando o objetivo passa a ser amplitude e não desempenho.</p>
+    <p class="porque">Os educativos vêm depois do dinâmico e antes da parte principal porque não são aquecimento, são técnica. Com o corpo frio não ensinam nada; feitos no fim, cansado, ensinam o gesto errado.</p>
+  </div>
+
+  <h2 id="pre">1 · Pré-aquecimento <span>8 a 10 min</span></h2>
+
+  <article class="ex">
+    <div class="ex-top">
+      <div class="num">01</div>
+      <div style="flex:1;min-width:0">
+        <h3>Caminhada rápida</h3>
+        <div class="chips"><span class="chip series">3 min</span><span class="chip">circulação · temperatura</span></div>
+        <div class="det">
+          <h4>Como fazer</h4>
+          <ol>
+            <li>Ande num passo firme, mais rápido que o de passear, com os braços acompanhando o movimento.</li>
+            <li>Respire pelo nariz. Se não conseguir, você já está rápido demais para esta parte.</li>
+            <li>Role o pé do calcanhar para a ponta a cada passo, sentindo o tornozelo trabalhar.</li>
+          </ol>
+          <h4>Erros comuns</h4>
+          <ul>
+            <li>Pular esta parte e sair correndo direto do carro ou de casa</li>
+            <li>Andar devagar demais, sem mudar nada na respiração</li>
+          </ul>
+          <p class="fix">Esta etapa parece tempo perdido e não é: é aqui que a temperatura do músculo sobe. Músculo frio é rígido, e rígido é onde a lesão acontece.</p>
+        </div>
+        <a class="video" href="https://www.youtube.com/results?search_query=aquecimento%20antes%20da%20corrida%20como%20fazer" target="_blank" rel="noopener">Ver vídeo da execução</a>
+      </div>
+    </div>
+  </article>
+
+  <article class="ex">
+    <div class="ex-top">
+      <div class="num">02</div>
+      <div style="flex:1;min-width:0">
+        <h3>Trote progressivo</h3>
+        <div class="chips"><span class="chip series">5 a 7 min</span><span class="chip">ritmo bem leve</span></div>
+        <div class="det">
+          <h4>Como fazer</h4>
+          <ol>
+            <li>Comece num trote mais lento que o seu ritmo de rodagem — bem mais lento, sem vergonha disso.</li>
+            <li>Ao longo dos minutos, acelere só um pouco, até chegar perto do ritmo fácil.</li>
+            <li>Passos curtos e frequentes. A passada longa vem depois, quando o quadril já estiver solto.</li>
+            <li>Termine conseguindo falar uma frase inteira sem ofegar.</li>
+          </ol>
+          <h4>Erros comuns</h4>
+          <ul>
+            <li>Começar já no ritmo do treino do dia</li>
+            <li>Terminar o aquecimento ofegante — aí não foi aquecimento, foi treino</li>
+          </ul>
+          <p class="fix">Se as pernas estiverem pesadas, alterne 1 minuto andando com 1 minuto trotando até soltar. Dia ruim pede aquecimento mais longo, não mais curto.</p>
+        </div>
+        <a class="video" href="https://www.youtube.com/results?search_query=trote%20leve%20aquecimento%20corrida" target="_blank" rel="noopener">Ver vídeo da execução</a>
+      </div>
+    </div>
+  </article>
+
+  <h2 id="dinamicos">2 · Alongamentos dinâmicos <span>5 min · 10 rep. cada</span></h2>
+
+  <div class="bloco">
+    <p>Tudo em movimento, sem segurar em posição nenhuma. A amplitude cresce a cada repetição: as primeiras são curtas, as últimas são completas. Nunca force até doer.</p>
+  </div>
+
+  <div id="dinamicos-lista"></div>
+
+  <h2 id="educativos">3 · Educativos <span>4 × 20 s</span></h2>
+
+  <div class="bloco">
+    <p>Vinte segundos de execução, quarenta caminhando de volta. Faça numa reta plana de uns 30 metros. O objetivo aqui é o gesto, não a velocidade — se você estiver ofegante, está fazendo forte demais.</p>
+    <p class="porque">São eles que mudam postura, cadência e coordenação ao longo dos meses. É a parte do treino que mais melhora a economia de corrida sem custar quilômetro nenhum.</p>
+  </div>
+
+  <div id="educativos-lista"></div>
+
+  <h2 id="desaquecimento">5 · Desaquecimento <span>5 a 8 min</span></h2>
+
+  <article class="ex">
+    <div class="ex-top">
+      <div class="num">01</div>
+      <div style="flex:1;min-width:0">
+        <h3>Trote muito leve</h3>
+        <div class="chips"><span class="chip series">4 a 6 min</span><span class="chip">frequência caindo</span></div>
+        <div class="det">
+          <h4>Como fazer</h4>
+          <ol>
+            <li>Assim que terminar a parte principal, siga trotando bem devagar, sem parar de vez.</li>
+            <li>Deixe a respiração normalizar sozinha, sem forçar nada.</li>
+            <li>Termine caminhando 2 ou 3 minutos, até o coração voltar perto do repouso.</li>
+          </ol>
+          <h4>Erros comuns</h4>
+          <ul>
+            <li>Parar de uma vez e sentar no chão logo depois de um treino forte</li>
+            <li>Encerrar o relógio e ir direto para o carro</li>
+          </ul>
+          <p class="fix">Aquela tontura no fim do treino forte tem explicação simples: o sangue fica represado na perna quando a bomba muscular para de repente. O trote leve resolve isso.</p>
+        </div>
+        <a class="video" href="https://www.youtube.com/results?search_query=desaquecimento%20apos%20corrida%20como%20fazer" target="_blank" rel="noopener">Ver vídeo da execução</a>
+      </div>
+    </div>
+  </article>
+
+  <h2 id="alongamento">6 · Alongamento <span>5 min · 30 s cada</span></h2>
+
+  <div class="bloco">
+    <p>Agora sim parado, segurando. Trinta segundos em cada posição, respirando normalmente. A sensação é de tensão que vai cedendo — nunca de dor.</p>
+  </div>
+
+  <div id="alongamento-lista"></div>
+
+  <div class="aviso">
+    <strong>Quando parar</strong>
+    <p>Dor aguda, formigamento, dormência ou dor que irradia para a perna não são alongamento — são sinal de parar. Alongar sobre uma lesão em fase aguda piora o quadro.</p>
+    <p style="margin-bottom:0">Este guia é material de apoio à execução. Se alguma dor aparece sempre no mesmo lugar, ou volta a cada treino, isso é conversa para um fisioterapeuta, não para um aplicativo.</p>
+  </div>
+
+  <footer>
+    Guia das etapas 1, 2, 3, 5 e 6 da sessão de corrida do app Treinos v-2. A estrutura das seis etapas segue o que o treinador Tiago Mecabô ensina; a execução de cada movimento aqui descrita é a padrão da literatura de treinamento, não material dele.
+  </footer>
+</main>
+
+<script>
+function yt(q){ return 'https://www.youtube.com/results?search_query=' + encodeURIComponent(q); }
+
+const DINAMICOS = [
+  { nome:"Balanço de perna à frente e atrás", dose:"10 de cada lado", musc:"posterior · flexor do quadril",
+    passos:[
+      "Apoie uma das mãos numa parede ou poste, de lado para ele.",
+      "Balance a perna de fora para a frente e para trás, como um pêndulo solto.",
+      "Deixe a amplitude crescer sozinha: as primeiras são curtas, as últimas vão o quanto der sem forçar.",
+      "Mantenha o tronco parado — quem balança é a perna, não o corpo."
+    ],
+    erros:["Arquear a lombar para ganhar amplitude","Balançar rápido e sem controle","Dobrar o joelho da perna de apoio"],
+    fix:"Se a lombar começar a se mexer junto, diminua a amplitude. O ganho vem do quadril, não das costas.",
+    pt:"balanço de perna frente e tras aquecimento corrida", en:"leg swings front to back warm up" },
+
+  { nome:"Balanço lateral de perna", dose:"10 de cada lado", musc:"adutores · abdutores · quadril",
+    passos:[
+      "De frente para a parede, as duas mãos apoiadas na altura do peito.",
+      "Balance uma perna cruzando na frente do corpo e depois abrindo para fora.",
+      "Mantenha o pé apontado para a frente o tempo todo, sem girar a perna.",
+      "Aumente a amplitude aos poucos, sem que o quadril desabe para o lado."
+    ],
+    erros:["Girar o pé para fora e virar outro exercício","Inclinar o tronco para o lado oposto","Fazer com o joelho travado com força"],
+    fix:"Este é o que mais solta o quadril, e quadril travado é uma das causas mais comuns de dor no joelho na corrida.",
+    pt:"balanço lateral de perna aquecimento", en:"lateral leg swings warm up" },
+
+  { nome:"Círculo de quadril", dose:"10 para cada lado", musc:"mobilidade de quadril",
+    passos:[
+      "Em pé, mãos na cintura, pés na largura dos ombros.",
+      "Faça círculos grandes com o quadril, como se estivesse desenhando um círculo no chão com ele.",
+      "Cinco voltas para um lado, cinco para o outro.",
+      "Joelhos levemente soltos, pés fixos no chão."
+    ],
+    erros:["Círculos pequenos, quase sem sair do lugar","Mexer só os ombros e deixar o quadril parado"],
+    fix:"Parece bobo e é o movimento que mais rápido acorda a articulação. Faça devagar, sentindo até onde vai.",
+    pt:"circulo de quadril mobilidade aquecimento", en:"hip circles warm up drill" },
+
+  { nome:"Agachamento livre", dose:"10 repetições", musc:"quadríceps · glúteo · tornozelo",
+    passos:[
+      "Pés na largura dos ombros, pontas levemente abertas.",
+      "Desça como quem senta numa cadeira baixa, braços à frente para equilibrar.",
+      "Desça até onde for confortável — não precisa chegar ao chão.",
+      "Suba empurrando o chão, sem pressa. As primeiras são rasas, as últimas mais profundas."
+    ],
+    erros:["Calcanhar saindo do chão","Joelho caindo para dentro","Descer rápido e quicar embaixo"],
+    fix:"Se o calcanhar sobe, seu tornozelo está travado — e tornozelo travado encurta a passada. Faça mais devagar e com menos profundidade por enquanto.",
+    pt:"agachamento livre aquecimento antes de correr", en:"bodyweight squat warm up" },
+
+  { nome:"Afundo com rotação de tronco", dose:"6 de cada lado", musc:"flexor do quadril · tronco",
+    passos:[
+      "Dê um passo largo à frente e desça até o joelho de trás quase encostar no chão.",
+      "Com a perna da frente à frente, gire o tronco para o lado dessa perna, levando os braços junto.",
+      "Volte o tronco ao centro, empurre o chão e traga a perna de trás para o lado da outra.",
+      "Alterne as pernas a cada repetição, avançando pelo caminho."
+    ],
+    erros:["Passo curto, que joga toda a carga no joelho da frente","Girar só os braços, sem levar o tronco","Deixar o joelho da frente passar muito da ponta do pé"],
+    fix:"É o movimento mais completo dos seis: solta quadril, tronco e tornozelo de uma vez. Se o equilíbrio faltar, faça ao lado de uma parede.",
+    pt:"afundo com rotacao de tronco aquecimento dinamico", en:"walking lunge with twist warm up" },
+
+  { nome:"Elevação de joelho andando", dose:"10 de cada lado", musc:"flexor do quadril · glúteo",
+    passos:[
+      "Andando devagar, traga um joelho até a altura do quadril e segure com as duas mãos por um segundo.",
+      "Solte, dê um passo e repita com a outra perna.",
+      "Fique alto, sem desabar o tronco para trás.",
+      "Nas últimas repetições, junte o movimento inverso: leve o calcanhar até o glúteo, uma perna de cada vez."
+    ],
+    erros:["Curvar as costas para alcançar o joelho","Fazer sentado no quadril, sem se manter em pé","Puxar o joelho com força para além do confortável"],
+    fix:"Puxe o joelho até onde vier sem que o tronco mude de posição. É o corpo em pé que faz o exercício valer.",
+    pt:"elevacao de joelho andando aquecimento corrida", en:"walking knee hug warm up drill" }
+];
+
+const EDUCATIVOS = [
+  { nome:"Skipping alto", dose:"4 × 20 s", musc:"cadência · postura · tornozelo",
+    passos:[
+      "Trote no lugar ou avançando bem devagar, elevando o joelho até a altura do quadril.",
+      "Toque o chão com a parte da frente do pé, num contato curto e rápido.",
+      "Braços trabalhando junto, cotovelos a 90 graus, como na corrida.",
+      "Tronco ereto e alto: imagine um fio puxando o topo da cabeça para cima."
+    ],
+    erros:["Inclinar o tronco para trás para levantar o joelho","Contato pesado, com o calcanhar batendo no chão","Fazer rápido demais e perder a altura do joelho"],
+    fix:"É o educativo mais importante para quem quer aumentar a cadência. Pense em pé rápido no chão, não em joelho alto.",
+    pt:"skipping alto educativo de corrida como fazer", en:"high knees A-skip running drill" },
+
+  { nome:"Anfersen", dose:"4 × 20 s", musc:"posterior de coxa · recuperação da passada",
+    passos:[
+      "Trote avançando devagar, levando o calcanhar em direção ao glúteo.",
+      "O joelho aponta para baixo, sem avançar para a frente.",
+      "Contato leve com a parte da frente do pé.",
+      "Frequência alta: são muitos toques rápidos, não passadas grandes."
+    ],
+    erros:["Levar o joelho para a frente e virar skipping","Inclinar o tronco para a frente","Fazer com a perna esticada, chutando para trás"],
+    fix:"Este ensina a recolher a perna depois que o pé sai do chão — parte da passada que quase ninguém treina e que economiza energia em prova longa.",
+    pt:"anfersen educativo de corrida execucao", en:"butt kicks running drill form" },
+
+  { nome:"Dribles baixos", dose:"4 × 20 s", musc:"cadência · contato com o solo",
+    passos:[
+      "Passos curtíssimos e muito rápidos, mal saindo do chão.",
+      "Avance bem devagar — quase no lugar.",
+      "Só a parte da frente do pé toca o solo, num contato curtíssimo.",
+      "Conte os toques: o objetivo é o máximo de contatos no tempo, não a distância."
+    ],
+    erros:["Passos longos, que transformam o exercício em corrida","Bater o calcanhar","Tensionar os ombros e os braços"],
+    fix:"É o educativo que mais rápido melhora a cadência. Se você corre com passada longa e lenta, este é o seu.",
+    pt:"dribles baixos educativo corrida", en:"quick feet running drill" },
+
+  { nome:"Passada saltada", dose:"4 × 20 s", musc:"potência · impulsão · coordenação",
+    passos:[
+      "Corra dando passadas grandes e saltadas, ganhando altura a cada apoio.",
+      "Empurre o chão para trás e para baixo, projetando o corpo à frente e para cima.",
+      "Braços amplos, acompanhando cada salto.",
+      "Aterrisse com o meio do pé e absorva com o joelho levemente flexionado."
+    ],
+    erros:["Saltar para cima sem avançar","Aterrissar com a perna esticada e travada","Fazer cansado, no fim do treino"],
+    fix:"É o mais exigente dos quatro. Se você tem alguma dor no joelho ou no tendão, pule este e faça os outros três.",
+    pt:"passada saltada educativo corrida bounding", en:"bounding running drill technique" }
+];
+
+const ALONGAMENTOS = [
+  { nome:"Panturrilha na parede", dose:"30 s cada perna", musc:"panturrilha · tendão de aquiles",
+    passos:[
+      "Mãos na parede, uma perna à frente dobrada e a outra esticada atrás.",
+      "Calcanhar de trás firme no chão, pé apontado para a frente.",
+      "Empurre o quadril à frente até sentir a panturrilha de trás esticar.",
+      "Depois repita com o joelho de trás levemente dobrado — pega a parte funda da panturrilha."
+    ],
+    erros:["Deixar o calcanhar de trás subir","Girar o pé de trás para fora","Forçar até doer"],
+    fix:"As duas versões, joelho esticado e joelho dobrado, alcançam músculos diferentes. Vale fazer as duas.",
+    pt:"alongamento panturrilha na parede corredor", en:"calf stretch against wall runners" },
+
+  { nome:"Posterior de coxa", dose:"30 s cada perna", musc:"posterior de coxa",
+    passos:[
+      "Em pé, apoie o calcanhar de uma perna num degrau ou banco baixo, perna esticada.",
+      "Mantenha as costas retas e incline o tronco à frente a partir do quadril.",
+      "Pare quando sentir a parte de trás da coxa esticar.",
+      "Respire normalmente e deixe a tensão ceder sozinha."
+    ],
+    erros:["Arredondar as costas para alcançar o pé","Travar o joelho com força","Balançar para ganhar amplitude"],
+    fix:"O alongamento vem de inclinar o quadril, não de curvar a coluna. Se as costas arredondaram, use um apoio mais baixo.",
+    pt:"alongamento posterior de coxa corredor", en:"hamstring stretch for runners" },
+
+  { nome:"Quadríceps em pé", dose:"30 s cada perna", musc:"quadríceps",
+    passos:[
+      "Em pé, segure o peito do pé de uma perna e traga o calcanhar em direção ao glúteo.",
+      "Mantenha os dois joelhos lado a lado, sem abrir o de trás.",
+      "Empurre o quadril levemente à frente e aperte o glúteo.",
+      "Apoie a outra mão numa parede se o equilíbrio faltar."
+    ],
+    erros:["Abrir o joelho para o lado","Arquear a lombar","Puxar o pé com força"],
+    fix:"Se o joelho reclamar, faça deitado de lado, que tira a carga da articulação.",
+    pt:"alongamento quadriceps em pe corredor", en:"standing quad stretch runners" },
+
+  { nome:"Flexor do quadril", dose:"30 s cada lado", musc:"psoas · flexor do quadril",
+    passos:[
+      "Ajoelhe uma perna no chão e ponha a outra à frente, pé apoiado, joelho a 90 graus.",
+      "Encaixe o quadril: leve o osso da bacia para cima, como quem apaga a curva da lombar.",
+      "Empurre o quadril à frente sem arquear as costas.",
+      "Você sente na frente da coxa e na virilha da perna de trás."
+    ],
+    erros:["Arquear a lombar e não sentir nada","Deixar o joelho da frente passar muito da ponta do pé","Apoiar o joelho de trás direto no chão duro"],
+    fix:"Este é o alongamento mais importante para quem passa o dia sentado. O encaixe do quadril no passo 2 é o que faz o exercício funcionar — sem ele, você alonga a coluna e não o flexor.",
+    pt:"alongamento flexor do quadril psoas corredor", en:"hip flexor stretch kneeling runners" },
+
+  { nome:"Glúteo, figura 4", dose:"30 s cada lado", musc:"glúteo · piriforme",
+    passos:[
+      "Deitado de costas, cruze o tornozelo de uma perna sobre o joelho da outra, formando um 4.",
+      "Passe as mãos por trás da coxa de baixo e puxe as duas pernas em direção ao peito.",
+      "Mantenha a cabeça e os ombros relaxados no chão.",
+      "Você sente no glúteo da perna cruzada."
+    ],
+    erros:["Levantar a cabeça e tensionar o pescoço","Puxar com força até doer","Prender a respiração"],
+    fix:"Também dá para fazer sentado numa cadeira, cruzando o tornozelo sobre o joelho e inclinando o tronco à frente.",
+    pt:"alongamento gluteo figura 4 corredor", en:"figure 4 glute stretch runners" }
+];
+
+function cartao(e, i){
+  return `
+  <article class="ex">
+    <div class="ex-top">
+      <div class="num">${String(i+1).padStart(2,'0')}</div>
+      <div style="flex:1;min-width:0">
+        <h3>${e.nome}</h3>
+        <div class="chips">
+          <span class="chip series">${e.dose}</span>
+          <span class="chip">${e.musc}</span>
+        </div>
+        <div class="det">
+          <h4>Como fazer</h4>
+          <ol>${e.passos.map(p=>`<li>${p}</li>`).join('')}</ol>
+          <h4>Erros comuns</h4>
+          <ul>${e.erros.map(p=>`<li>${p}</li>`).join('')}</ul>
+          <p class="fix">${e.fix}</p>
+        </div>
+        <a class="video" href="${yt(e.pt)}" target="_blank" rel="noopener">Ver vídeo da execução</a>
+        <a class="video-en" href="${yt(e.en)}" target="_blank" rel="noopener">Ver em inglês</a>
+      </div>
+    </div>
+  </article>`;
+}
+
+document.getElementById('dinamicos-lista').innerHTML   = DINAMICOS.map(cartao).join('');
+document.getElementById('educativos-lista').innerHTML  = EDUCATIVOS.map(cartao).join('');
+document.getElementById('alongamento-lista').innerHTML = ALONGAMENTOS.map(cartao).join('');
+
+/* marca a aba da seção em que você está */
+const secoes = ['pre','dinamicos','educativos','desaquecimento','alongamento'];
+const abas = [...document.querySelectorAll('.tab')];
+window.addEventListener('scroll', () => {
+  let atual = 0;
+  secoes.forEach((id,i) => {
+    const el = document.getElementById(id);
+    if(el && el.getBoundingClientRect().top <= 90) atual = i;
+  });
+  abas.forEach((a,i) => a.classList.toggle('on', i === atual));
+}, {passive:true});
+</script>
+</body>
+</html>

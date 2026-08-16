@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '02p';
+const FIX_VERSAO = '02q';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -4267,13 +4267,18 @@ PARTE('questionario do corredor', function(){
 PARTE('seis etapas da sessao', function(){
   if(typeof window.etapas !== 'function') throw new Error('app sem etapas()');
 
-  var CANAL = 'https://www.youtube.com/@TiagoMecabo/search?query=';
+  /* O guia mora ao lado do app, na mesma pasta, e traz o passo a passo
+     de cada movimento: como fazer, erros comuns e um video de
+     demonstracao por exercicio. Antes estes botoes abriam o canal do
+     Tiago Mecabo, o que levava a uma pagina de canal e nao ao
+     exercicio — sem serventia na hora de aquecer. */
+  var GUIA = './guia-aquecimento.html';
   var VIDEOS = [
-    ['Pré-aquecimento',        'aquecimento corrida'],
-    ['Alongamentos dinâmicos', 'alongamento dinâmico corrida'],
-    ['Educativos',             'educativos de corrida'],
-    ['Desaquecimento',         'desaquecimento corrida'],
-    ['Alongamento',            'alongamento pós treino corrida']
+    ['1 · Pré-aquecimento',        'pre'],
+    ['2 · Alongamentos dinâmicos', 'dinamicos'],
+    ['3 · Educativos',             'educativos'],
+    ['5 · Desaquecimento',         'desaquecimento'],
+    ['6 · Alongamento',            'alongamento']
   ];
 
   var css = document.createElement('style');
@@ -4376,11 +4381,11 @@ PARTE('seis etapas da sessao', function(){
     box.innerHTML =
       '<div class="cab">Como fazer cada etapa</div>' +
       '<div class="lks">' + VIDEOS.map(function(v){
-        return '<a href="' + CANAL + encodeURIComponent(v[1]) + '" target="_blank" rel="noopener">' +
+        return '<a href="' + GUIA + '#' + v[1] + '" target="_blank" rel="noopener">' +
                '<i>▶</i>' + v[0] + '</a>';
       }).join('') + '</div>' +
-      '<p class="nota">Cada botão abre uma busca no canal do Tiago Mecabô. ' +
-      'Preferi busca a link de vídeo: endereço de vídeo sai do ar, busca não — e sempre traz o material mais novo dele.</p>';
+      '<p class="nota">Cada botão abre o guia direto na etapa: passo a passo de cada movimento, ' +
+      'os erros que mais aparecem e um vídeo de demonstração por exercício.</p>';
 
     var acts = el.querySelector('.acts');
     if(acts) acts.parentNode.insertBefore(box, acts);
