@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '02u';
+const FIX_VERSAO = '02v';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -5121,6 +5121,129 @@ PARTE('salvar que sobrevive', function(){
 });
 
 
+
+/* ═══ 27. O CANCELAMENTO PARAVA DE VALER POR CULPA DE UMA LAPIDE ═══
+
+   Este e o motivo de verdade do treino cancelado voltar. Nao era a
+   gravacao com atraso (parte 26) nem o plano se repondo (parte 20):
+   era uma parte do fix.js apagando o trabalho da outra.
+
+   O QUE ACONTECIA, na ordem:
+
+   1. Voce confirma o cancelamento. A parte "aba coach" grava o marcador
+      e, na linha seguinte, tambem grava uma LAPIDE:
+
+          ST.trocas[k] = {__cancelado:true};
+          window.bqApagar('trocas', k);
+
+   2. Lapide, na parte "sincronia entre aparelhos", quer dizer "isto foi
+      apagado neste aparelho; nao deixe voltar do servidor". Ela dura 24
+      horas e e respeitada por bqLimparApagados(), que faz assim:
+
+          if(bqFoiApagado(campo, k)) delete ST[campo][k];
+
+   3. Repare no que isso significa para "trocas": a lapide manda apagar
+      ST.trocas[k] — que e exatamente o marcador de cancelado do passo 1.
+
+   4. bqLimparApagados() roda dentro de salvarCoach, dentro da mesclagem
+      e quando a tela volta. Ou seja: na primeira gravacao depois do
+      cancelamento, o marcador morre. A tela ja tinha atualizado, entao
+      parecia certo — e o treino voltava na proxima remontagem.
+
+   5. E como a lapide vale 24 horas, cancelar de novo no mesmo dia dava
+      no mesmo. Era por isso que insistia.
+
+   A lapide faz todo sentido para o SEGUNDO TREINO do dia, que voce
+   apaga de verdade. Para "trocas" ela e o oposto do que se quer: ali o
+   marcador precisa SOBREVIVER, nao ser varrido.
+
+   CONSERTO:
+
+   a) bqApagar('trocas', dia) passa a ser ignorado quando aquele dia
+      esta marcado como cancelado. Nao se poe lapide no que precisa
+      viver. Para 'extras' nada muda.
+
+   b) bqLimparApagados ganha uma cerca: antes de rodar, guardo os
+      marcadores de cancelado; depois, devolvo os que tenham sido
+      varridos.
+
+   c) As lapides de 'trocas' que ja estao no aparelho sao removidas no
+      arranque. Elas so existem por causa deste erro — a unica linha do
+      app que criava lapide de troca era a do cancelamento — e enquanto
+      estiverem lá, continuariam matando o marcador por 24 horas. A
+      protecao contra ressuscitar do servidor continua existindo por
+      outro caminho, o "if(k in ST.trocas) continue" da mesclagem.
+   ══════════════════════════════════════════════════════════════════ */
+
+PARTE('lapide nao mata cancelamento', function(){
+  if(typeof ST !== 'object') throw new Error('sem ST');
+
+  var TUM = 'bq.apagados';
+
+  function ehCancelado(t){
+    return !!(t && (t.cancelado || t.__cancelado));
+  }
+  function cancelados(){
+    var o = {}, T = ST.trocas || {};
+    Object.keys(T).forEach(function(k){ if(ehCancelado(T[k])) o[k] = T[k] });
+    return o;
+  }
+
+  /* ── a) nao poe lapide em dia cancelado ── */
+  var apagarApp = window.bqApagar;
+  if(typeof apagarApp === 'function'){
+    window.bqApagar = function(tipo, chave){
+      if(tipo === 'trocas' && ehCancelado((ST.trocas || {})[chave])){
+        console.log('lápide ignorada em trocas|' + chave + ': o dia está cancelado e o marcador precisa viver');
+        return;
+      }
+      return apagarApp.apply(this, arguments);
+    };
+  }
+
+  /* ── b) cerca em volta da limpeza ── */
+  var limparApp = window.bqLimparApagados;
+  if(typeof limparApp === 'function'){
+    window.bqLimparApagados = function(){
+      var guardados = cancelados();
+      var r = limparApp.apply(this, arguments);
+      var devolvidos = 0;
+      ST.trocas = ST.trocas || {};
+      Object.keys(guardados).forEach(function(k){
+        if(!ehCancelado(ST.trocas[k])){ ST.trocas[k] = guardados[k]; devolvidos++ }
+      });
+      if(devolvidos) console.log('cancelamentos devolvidos depois da limpeza:', devolvidos);
+      return r;
+    };
+  }
+
+  /* ── c) tira as lápides de trocas que já estão no aparelho ── */
+  function limparLapidesDeTrocas(){
+    try{
+      var m = JSON.parse(localStorage.getItem(TUM) || '{}');
+      var tirou = 0;
+      Object.keys(m).forEach(function(c){
+        if(c.indexOf('trocas|') === 0){ delete m[c]; tirou++ }
+      });
+      if(tirou){
+        localStorage.setItem(TUM, JSON.stringify(m));
+        console.log('lápides de trocas removidas:', tirou);
+      }
+      return tirou;
+    }catch(e){ console.warn('lápides:', e && e.message); return 0 }
+  }
+  limparLapidesDeTrocas();
+
+  window.bqLapide = {
+    limpar: limparLapidesDeTrocas,
+    cancelados: cancelados,
+    lapides: function(){
+      try{ return JSON.parse(localStorage.getItem(TUM) || '{}') }catch(e){ return {} }
+    }
+  };
+});
+
+
 /* ─────────── selo de diagnóstico ─────────── */
 (function(){
   function montar(){
@@ -5140,7 +5263,7 @@ PARTE('salvar que sobrevive', function(){
         var l = window.planoBQ.ligado();
         var diag = '';
         try{ diag = window.bqDiag ? '\n\n── diagnóstico ──\n' + window.bqDiag() : '' }catch(e){}
-        if(confirm('fix.js ' + FIX_VERSAO + ' — as vinte e seis partes carregaram.\n\n'
+        if(confirm('fix.js ' + FIX_VERSAO + ' — as vinte e sete partes carregaram.\n\n'
           + 'Plano PEI Marathon: ' + (l ? 'LIGADO' : 'desligado') + diag
           + '\n\nOK ' + (l ? 'desliga o plano e volta ao automático do app.'
                              : 'liga o plano da maratona.'))){
@@ -5163,7 +5286,7 @@ PARTE('salvar que sobrevive', function(){
         return;
       }
       alert(ok
-        ? 'fix.js ' + FIX_VERSAO + ' — as vinte e seis partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
+        ? 'fix.js ' + FIX_VERSAO + ' — as vinte e sete partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
         : 'fix.js ' + FIX_VERSAO + '\n\nFalharam:\n\n' + FIX_FALHAS.join('\n\n'));
     };
     barra.insertBefore(s, barra.firstChild.nextSibling);
