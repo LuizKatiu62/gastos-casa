@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Guia de nutrição — treino e prova · Luiz Silva</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#10151C; --ink-2:#46515F; --paper:#EFF2EE; --card:#FFFFFF;
+    --line:#D5DAD3; --go:#0B6E5B; --warn:#A8500B; --bad:#8C2F2F; --radius:14px; --tap:46px;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+  body{margin:0;background:var(--paper);color:var(--ink);
+    font-family:"IBM Plex Sans",system-ui,-apple-system,sans-serif;font-size:17px;line-height:1.6}
+  .wrap{max-width:760px;margin:0 auto;padding:0 18px 70px}
+
+  header{background:var(--ink);color:#fff;padding:36px 0 28px}
+  header .wrap{padding-bottom:0}
+  .eyebrow{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.16em;
+    text-transform:uppercase;color:#8FB8AE;margin:0 0 10px}
+  h1{font-family:"Barlow Condensed",Impact,sans-serif;font-weight:700;text-transform:uppercase;
+    letter-spacing:.02em;line-height:.95;font-size:clamp(38px,10vw,58px);margin:0 0 13px}
+  .lede{margin:0;color:#C3CBD3;font-size:16.5px;max-width:50ch}
+
+  .tabs{position:sticky;top:0;z-index:20;background:var(--paper);border-bottom:1px solid var(--line);
+    padding:10px 0;margin-bottom:24px}
+  .tabs .wrap{padding-bottom:0;display:flex;gap:8px;flex-wrap:wrap}
+  .tab{font-family:"Barlow Condensed",sans-serif;font-weight:600;font-size:18px;text-transform:uppercase;
+    letter-spacing:.04em;min-height:var(--tap);padding:0 14px;border:1.5px solid var(--ink);
+    background:transparent;color:var(--ink);border-radius:999px;text-decoration:none;
+    display:inline-flex;align-items:center}
+  .tab.on{background:var(--ink);color:#fff}
+
+  h2{font-family:"Barlow Condensed",sans-serif;font-weight:700;text-transform:uppercase;font-size:26px;
+    letter-spacing:.03em;margin:34px 0 6px;border-bottom:2px solid var(--ink);padding-bottom:6px;scroll-margin-top:74px}
+  h2 span{font-family:"IBM Plex Mono",monospace;font-size:12px;font-weight:500;letter-spacing:.1em;
+    color:var(--ink-2);text-transform:none;float:right;padding-top:9px}
+  h3{font-family:"Barlow Condensed",sans-serif;font-weight:600;text-transform:uppercase;font-size:20px;margin:22px 0 7px}
+  p{margin:0 0 12px}
+  .bloco{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:17px 19px;margin-bottom:15px}
+  .destaque{border-left:3px solid var(--go);padding:3px 0 3px 13px;margin:14px 0;color:var(--ink-2);font-size:16px}
+
+  .linha{display:flex;gap:14px;padding:11px 0;border-bottom:1px solid var(--line)}
+  .linha:last-child{border-bottom:none}
+  .quando{font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--go);width:88px;flex:none;
+    padding-top:3px;font-weight:500}
+  .oque b{display:block;font-weight:600}
+  .oque span{display:block;font-size:14px;color:var(--ink-2);margin-top:2px}
+
+  table{width:100%;border-collapse:collapse;font-size:14.5px;margin:8px 0}
+  th{text-align:left;font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--ink-2);font-weight:500;border-bottom:1.5px solid var(--ink);padding:0 7px 6px 0}
+  td{padding:9px 7px 9px 0;border-bottom:1px solid var(--line);vertical-align:top}
+  .mono{font-family:"IBM Plex Mono",monospace;font-size:13px;white-space:nowrap}
+  tr.ensaio td{background:#E7F0EC}
+  tr.prova td{background:var(--ink);color:#fff;font-weight:600}
+  tr.prova td.mono{color:#8FB8AE}
+
+  .aviso{background:#FBF3E8;border:1px solid #E3CBA6;border-radius:var(--radius);padding:17px 19px;
+    font-size:15.5px;margin:20px 0}
+  .aviso.grave{background:#F8EAEA;border-color:#DBB4B4}
+  .aviso strong{display:block;font-family:"Barlow Condensed",sans-serif;text-transform:uppercase;
+    font-size:20px;letter-spacing:.03em;margin-bottom:6px}
+  .loja{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:15px 18px;margin-bottom:12px}
+  .loja b{display:block;font-family:"Barlow Condensed",sans-serif;text-transform:uppercase;font-size:19px;margin-bottom:3px}
+  .loja span{display:block;font-size:14.5px;color:var(--ink-2)}
+  .fontes{font-size:13.5px;color:var(--ink-2)}
+  .fontes a{color:var(--go)}
+  footer{margin-top:40px;padding-top:18px;border-top:1px solid var(--line);font-size:14px;color:var(--ink-2)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <p class="eyebrow">Corrida · Antes, durante e depois</p>
+    <h1>Guia de<br>nutrição</h1>
+    <p class="lede">O que tomar, quanto e quando — com a progressão semana a semana para o estômago aguentar no dia 18 de outubro.</p>
+  </div>
+</header>
+
+<nav class="tabs">
+  <div class="wrap">
+    <a class="tab on" href="#antes">Antes</a>
+    <a class="tab" href="#durante">Durante</a>
+    <a class="tab" href="#depois">Depois</a>
+    <a class="tab" href="#progressao">Progressão</a>
+    <a class="tab" href="#comprar">Onde comprar</a>
+  </div>
+</nav>
+
+<main class="wrap">
+
+  <div class="aviso grave">
+    <strong>Antes de tudo</strong>
+    <p>Este guia é literatura pública aplicada aos seus números. Não é prescrição, e quem escreve não é nutricionista nem médico.</p>
+    <p style="margin-bottom:0">Duas coisas do seu caso pedem conversa com um profissional antes: os estimulantes que você já usa, aos 64 anos, e qualquer medicação contínua que interaja com cafeína ou com sódio — pressão alta em particular.</p>
+  </div>
+
+  <div class="destaque">O ponto mais importante deste documento: <strong>um gel numa prova de quatro horas é muito pouco.</strong> Não é ajuste fino — é a diferença entre terminar e quebrar por volta do quilômetro 30.</div>
+
+  <h2 id="antes">Antes <span>3 h a 15 min</span></h2>
+
+  <div class="bloco">
+    <div class="linha">
+      <span class="quando">3 h antes</span>
+      <span class="oque"><b>Refeição principal · 1 a 2 g de carboidrato por quilo</b>
+        <span>Pão, aveia, banana, mel, arroz. Nada de fibra, nada de gordura, nada que você nunca comeu antes de correr. Se pesa 70 kg, são 70 a 140 g de carboidrato.</span></span>
+    </div>
+    <div class="linha">
+      <span class="quando">60 a 45 min</span>
+      <span class="oque"><b>Cafeína · 3 a 6 mg por quilo</b>
+        <span>É a faixa estudada. Para 70 kg dá 210 a 420 mg — muito, se você não está habituado. Comece pela metade da faixa baixa e suba ao longo dos treinos, nunca no dia da prova. Uma cápsula comum tem 100 a 200 mg; o C4 tem 150 a 200, dependendo da versão.</span></span>
+    </div>
+    <div class="linha">
+      <span class="quando">15 min</span>
+      <span class="oque"><b>Um gel + alguns goles de água</b>
+        <span>Só em treino longo ou prova. Encher o tanque na última hora antes da largada.</span></span>
+    </div>
+  </div>
+
+  <div class="aviso">
+    <strong>Sobre o C4 e a cápsula de cafeína</strong>
+    <p>Nunca os dois no mesmo dia. O C4 não é só cafeína: traz beta-alanina — aquele formigamento na pele, inofensivo — e, conforme a versão, outros estimulantes. Empilhar dois estimulantes antes de esforço máximo, aos 64 anos, é exatamente o tipo de coisa que se conversa com o médico antes.</p>
+    <p style="margin-bottom:0">E some a cafeína dos géis: muitos têm 20 a 40 mg cada. Numa prova com seis géis com cafeína, são mais 200 mg que você não contou.</p>
+  </div>
+
+  <h2 id="durante">Durante <span>por hora de corrida</span></h2>
+
+  <p>Três coisas, e você hoje faz uma delas pela metade.</p>
+
+  <div class="bloco">
+    <div class="linha">
+      <span class="quando">Carboidrato</span>
+      <span class="oque"><b>45 a 60 g por hora</b>
+        <span>É a faixa para quem termina a maratona perto das 4 horas. Um Gu tem cerca de 22 g — ou seja, <strong>dois a três por hora</strong>, não um. Acima de 60 g/h, procure mistura de glicose com frutose: são duas portas de absorção diferentes no intestino, e é o que permite passar do teto de uma só.</span></span>
+    </div>
+    <div class="linha">
+      <span class="quando">Sódio</span>
+      <span class="oque"><b>300 a 600 mg por hora</b>
+        <span>É o que falta por completo hoje. Um Gu comum tem 60 a 125 mg — não cobre. Uma pastilha de Nuun Sport em 500 ml resolve, com cerca de 300 mg.</span></span>
+    </div>
+    <div class="linha">
+      <span class="quando">Líquido</span>
+      <span class="oque"><b>400 a 800 ml por hora</b>
+        <span>Mais perto de 400 no frio de outubro em PEI, mais perto de 800 em treino de verão. Beber por sede funciona bem, desde que haja sódio junto.</span></span>
+    </div>
+  </div>
+
+  <h3>A receita prática</h3>
+  <p><strong>Por hora: 2 géis + 500 ml de água com uma pastilha de eletrólito.</strong> Isso dá cerca de 44 g de carboidrato e 300 mg de sódio. Na maratona, acrescente um terceiro gel na segunda e na terceira hora, que é quando o glicogênio começa a acabar — chega perto de 55 g/h.</p>
+  <p>Total estimado para os 42 km: <strong>9 a 10 géis e 4 pastilhas</strong>. Confira o que os postos da prova oferecem para não carregar tudo.</p>
+
+  <div class="aviso grave">
+    <strong>Por que o sódio não é detalhe</strong>
+    <p style="margin-bottom:0">Beber muita água sem repor sódio diminui a concentração de sódio no sangue. No estudo da Maratona de Boston de 2002, <strong>13% dos corredores que terminaram</strong> apresentaram hiponatremia. Os sintomas — confusão, náusea, dor de cabeça, inchaço — são fáceis de confundir com cansaço, e o quadro grave é uma emergência médica.</p>
+  </div>
+
+  <h2 id="depois">Depois <span>primeiras 2 h</span></h2>
+
+  <div class="bloco">
+    <div class="linha">
+      <span class="quando">30 min</span>
+      <span class="oque"><b>Carboidrato + 30 a 40 g de proteína</b>
+        <span>Aqui há um ponto da sua idade: com os anos o músculo responde menos ao mesmo estímulo de proteína. Onde um corredor jovem se vira com 20 g, a recomendação para você passa a 30 a 40 g. Leite com achocolatado, iogurte grego com fruta, ou um shake — o que descer melhor.</span></span>
+    </div>
+    <div class="linha">
+      <span class="quando">2 h</span>
+      <span class="oque"><b>Refeição de verdade</b>
+        <span>Carboidrato, proteína e sal. Depois de prova longa, comida salgada cai bem e não é acaso: você perdeu sódio.</span></span>
+    </div>
+    <div class="linha">
+      <span class="quando">o dia todo</span>
+      <span class="oque"><b>Líquido com eletrólito, não só água</b>
+        <span>Pese-se antes e depois do longão: cada quilo perdido são cerca de 1,5 litro a repor ao longo das horas seguintes.</span></span>
+    </div>
+  </div>
+
+  <h2 id="progressao">Progressão do estômago <span>8 longões</span></h2>
+
+  <p>Esta é a parte que quase todo mundo pula, e a razão de tanta gente passar mal em prova. <strong>Estômago se treina.</strong> Não dá para sair de um gel para 60 g/h no dia — o resultado é enjoo e banheiro. Sobe-se cerca de 10 g/h a cada uma ou duas semanas, sempre dentro do longão.</p>
+
+  <p>Você tem oito longões até a PEI. É exatamente a janela necessária.</p>
+
+  <table>
+    <tr><th class="mono">Sábado</th><th class="mono">Longão</th><th class="mono">Alvo</th><th>O que levar</th></tr>
+    <tr><td class="mono">22/08</td><td class="mono">23 km</td><td class="mono">30 g/h</td><td>2 géis + 1 pastilha em 500 ml</td></tr>
+    <tr><td class="mono">29/08</td><td class="mono">26 km</td><td class="mono">40 g/h</td><td>4 géis + 1 pastilha</td></tr>
+    <tr><td class="mono">05/09</td><td class="mono">17 km</td><td class="mono">40 g/h</td><td>3 géis + 1 pastilha · semana leve, mantém o hábito</td></tr>
+    <tr><td class="mono">12/09</td><td class="mono">28 km</td><td class="mono">50 g/h</td><td>6 géis + 2 pastilhas</td></tr>
+    <tr><td class="mono">19/09</td><td class="mono">26 km</td><td class="mono">55 g/h</td><td>6 géis + 2 pastilhas</td></tr>
+    <tr class="ensaio"><td class="mono">26/09</td><td class="mono">32 km</td><td class="mono">60 g/h</td><td><strong>Ensaio geral.</strong> Exatamente o que vai usar na prova, inclusive a roupa e o café da manhã</td></tr>
+    <tr><td class="mono">03/10</td><td class="mono">20 km</td><td class="mono">60 g/h</td><td>4 géis + 2 pastilhas · confirma o que deu certo</td></tr>
+    <tr><td class="mono">10/10</td><td class="mono">16 km</td><td class="mono">50 g/h</td><td>3 géis + 1 pastilha · polimento</td></tr>
+    <tr class="prova"><td class="mono">18/10</td><td class="mono">42,2 km</td><td class="mono">55–60 g/h</td><td>9 a 10 géis + 4 pastilhas</td></tr>
+  </table>
+
+  <div class="destaque">O longão de <strong>26 de setembro</strong> é o mais importante do ciclo inteiro, e não pelo volume. É o ensaio geral: mesma comida, mesmo horário, mesma roupa, mesmos géis. O que der errado ali, você ainda tem três semanas para arrumar.</div>
+
+  <h3>Como saber se está passando do ponto</h3>
+  <p>Enjoo, estufamento, arroto com gosto de gel ou vontade urgente de banheiro querem dizer que você subiu rápido demais. Volte um degrau e fique nele mais duas semanas. Não é fraqueza — é o intestino avisando que a adaptação não acompanhou.</p>
+
+  <h2 id="comprar">Onde comprar <span>Saint John e online</span></h2>
+
+  <div class="loja">
+    <b>Running Room</b>
+    <span>A1-39 King St, centro de Saint John · 506-652-6946 · tem Gu e Nuun.<br>
+    Um registro no Yelp menciona uma unidade fechada no Market Square — <strong>ligue antes de ir</strong>.</span>
+  </div>
+
+  <div class="loja">
+    <b>Fundy Sports Store</b>
+    <span>Loja de corrida independente, dentro do YMCA na Churchill Boulevard, Saint John.</span>
+  </div>
+
+  <div class="loja">
+    <b>The Radical Edge</b>
+    <span>386 Queen St, Fredericton. Fica a uma hora, mas tem sortimento maior — vale se você for por outro motivo.</span>
+  </div>
+
+  <div class="loja">
+    <b>Amazon.ca</b>
+    <span>Procure por: <strong>GU Energy Gel</strong> (22 g de carboidrato) · <strong>Nuun Sport</strong> (pastilha, cerca de 300 mg de sódio) · <strong>LMNT</strong> (1.000 mg — forte demais para você, use meio sachê) · <strong>Maurten</strong> ou <strong>SIS Beta Fuel</strong> (mistura glicose-frutose, 40 g por unidade, resolve o problema de carregar dez géis).</span>
+  </div>
+
+  <div class="aviso">
+    <strong>Uma regra que vale mais que a marca</strong>
+    <p style="margin-bottom:0">Nada de estreia no dia da prova. Nem gel novo, nem sabor novo, nem pastilha nova, nem café da manhã diferente. Tudo que entrar no dia 18 de outubro tem que ter sido testado num longão antes.</p>
+  </div>
+
+  <h2>Fontes</h2>
+  <p class="fontes">
+    <a href="https://www.precisionhydration.com/performance-advice/nutrition/how-much-carbohydrate-carbs-athletes-per-hour/">Precision Hydration — carboidrato por hora</a> ·
+    <a href="https://runnersconnect.net/marathon-gut-training/">Runners Connect — treino de estômago</a> ·
+    <a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7400827/">Estudo 120 vs 60 e 90 g/h em maratona de trilha, PMC</a> ·
+    <a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC9105618/">Dieta muito rica em carboidrato e treino de estômago, PMC</a>
+  </p>
+
+  <footer>
+    Escrito para Luiz Silva em 17/08/2026. As datas e distâncias dos longões vêm do plano da PEI que está no app Treinos v-2, já com o longão movido para o sábado. Se o plano mudar, esta tabela precisa mudar junto.
+  </footer>
+</main>
+
+<script>
+const secoes = ['antes','durante','depois','progressao','comprar'];
+const abas = [...document.querySelectorAll('.tab')];
+window.addEventListener('scroll', () => {
+  let atual = 0;
+  secoes.forEach((id,i) => {
+    const el = document.getElementById(id);
+    if(el && el.getBoundingClientRect().top <= 90) atual = i;
+  });
+  abas.forEach((a,i) => a.classList.toggle('on', i === atual));
+}, {passive:true});
+</script>
+</body>
+</html>

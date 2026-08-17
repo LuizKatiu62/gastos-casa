@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '02w';
+const FIX_VERSAO = '02x';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -5386,6 +5386,143 @@ PARTE('folgas e longao no sabado', function(){
 });
 
 
+
+/* ═══ 29. NUTRICAO NO DIA DO LONGAO ═══
+
+   Num longao e na prova, aparece uma faixa dentro do treino dizendo o
+   que levar naquele dia especifico: quantos gramas de carboidrato por
+   hora, quantos geis, quantas pastilhas de eletrolito. E um botao que
+   abre o guia completo.
+
+   POR QUE ISSO EXISTE: a informacao de nutricao so serve na hora de
+   sair de casa. Guardada num documento, ninguem le. Aqui ela aparece
+   junto do treino que a exige.
+
+   A PROGRESSAO NAO E ARBITRARIA. Estomago se treina: sobe-se cerca de
+   10 g/h a cada uma ou duas semanas, dentro do longao, ate chegar ao
+   alvo de prova. Pular etapas da enjoo e banheiro no dia errado. Sao
+   oito longoes ate a PEI, que e exatamente a janela necessaria.
+
+   As contas por dia:
+     geis      = carboidrato total / 22 g por gel
+     pastilhas = uma a cada hora, cerca de 500 ml e 300 mg de sodio
+     sodio     = 300 a 600 mg/h e a faixa recomendada acima de 2 h
+
+   Se o plano mudar de datas, a tabela ALVO precisa mudar junto — por
+   isso ela esta aqui em cima, facil de achar.
+   ══════════════════════════════════════════════════════════════════ */
+
+PARTE('nutricao no longao', function(){
+  if(typeof ST !== 'object') throw new Error('sem ST');
+
+  var GUIA = './guia-nutricao.html';
+  var G_POR_GEL = 22;
+
+  /* alvo de carboidrato por hora, longao a longao ate a PEI */
+  var ALVO = {
+    '2026-08-22': 30, '2026-08-29': 40, '2026-09-05': 40, '2026-09-12': 50,
+    '2026-09-19': 55, '2026-09-26': 60, '2026-10-03': 60, '2026-10-10': 50,
+    '2026-10-18': 58
+  };
+
+  var css = document.createElement('style');
+  css.textContent = [
+'.nutri{margin-top:14px;padding:13px 14px;border-radius:14px;',
+'  background:var(--s2);border:1px solid var(--line)}',
+'.nutri .cab{display:flex;align-items:center;gap:7px;margin-bottom:9px}',
+'.nutri .cab b{font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--tx3);flex:1}',
+'.nutri .cab i{font-style:normal;font-size:13px}',
+'.nutri .gh{font-size:23px;font-weight:800;letter-spacing:-.02em;line-height:1}',
+'.nutri .gh small{font-size:12px;font-weight:600;color:var(--tx2);margin-left:5px;letter-spacing:0}',
+'.nutri .itens{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}',
+'.nutri .it{padding:6px 11px;border-radius:999px;background:var(--s3);font-size:12.5px;font-weight:600}',
+'.nutri .nota{margin:9px 0 0;font-size:11.5px;color:var(--tx3);line-height:1.5}',
+'.nutri .ensaio{color:var(--acc);font-weight:700}',
+'.nutri a.gui{display:inline-flex;align-items:center;gap:6px;margin-top:11px;padding:9px 13px;',
+'  border-radius:999px;background:var(--s3);border:1px solid var(--line);color:var(--tx2);',
+'  font-size:12.5px;font-weight:600;text-decoration:none}',
+'.nutri a.gui:hover{color:var(--tx);border-color:var(--tx3)}'
+  ].join('\n');
+  document.head.appendChild(css);
+
+  function precisa(s){
+    if(!s || s.mod !== 'corrida') return false;
+    if(s.prova) return true;
+    var min = +s.min || 0;
+    return /longo/.test(s.foco || '') || min >= 90;
+  }
+
+  function montar(k, s){
+    var horas = (+s.min || 0) / 60;
+    if(!(horas > 0)) return '';
+    var gh = ALVO[k];
+    if(gh == null) gh = horas >= 2.5 ? 55 : horas >= 1.5 ? 45 : 30;
+
+    var totalG    = Math.round(gh * horas);
+    var geis      = Math.max(1, Math.round(totalG / G_POR_GEL));
+    var pastilhas = Math.max(1, Math.round(horas));
+    var sodio     = pastilhas * 300;
+    var ensaio    = k === '2026-09-26';
+
+    return '<div class="nutri">' +
+      '<div class="cab"><i>🥤</i><b>O que levar neste treino</b></div>' +
+      '<div class="gh">' + gh + ' g/h<small>de carboidrato · ' + totalG + ' g no total</small></div>' +
+      '<div class="itens">' +
+        '<span class="it">' + geis + ' ' + (geis === 1 ? 'gel' : 'géis') + '</span>' +
+        '<span class="it">' + pastilhas + ' ' + (pastilhas === 1 ? 'pastilha' : 'pastilhas') + ' de eletrólito</span>' +
+        '<span class="it">' + Math.round(horas * 500) + ' ml de água</span>' +
+        '<span class="it">~' + sodio + ' mg de sódio</span>' +
+      '</div>' +
+      '<p class="nota">' + (ensaio
+        ? '<span class="ensaio">Ensaio geral.</span> Use exatamente o que vai usar na prova: mesma comida no café, mesmo horário, mesma roupa, mesmos géis. O que der errado hoje você ainda tem três semanas para arrumar.'
+        : s.prova
+          ? 'Dia da prova. Nada de estreia: só o que você já testou nos longões. Confira o que os postos oferecem para não carregar tudo.'
+          : 'Suba devagar. Enjoo ou vontade de banheiro querem dizer que você passou do ponto — volte um degrau e fique nele mais duas semanas.') +
+      '</p>' +
+      '<a class="gui" href="' + GUIA + '#progressao" target="_blank" rel="noopener">Guia completo de nutrição</a>' +
+      '</div>';
+  }
+
+  function poe(){
+    var el = document.querySelector('#sess');
+    if(!el) return;
+    var velho = el.querySelector('.nutri');
+    var k = ST.sel;
+    var s = (typeof sessaoDe === 'function') ? sessaoDe(k) : null;
+    if(!precisa(s)){ if(velho) velho.remove(); return }
+    if(velho) return;
+    var html = montar(k, s);
+    if(!html) return;
+    var acts = el.querySelector('.acts');
+    if(acts) acts.parentNode.insertBefore(criar(html), acts);
+    else el.insertAdjacentHTML('beforeend', html);
+  }
+  function criar(html){
+    var d = document.createElement('div');
+    d.innerHTML = html;
+    return d.firstChild;
+  }
+
+  var diaApp = window.renderDia;
+  if(typeof diaApp === 'function'){
+    window.renderDia = function(){
+      var r = diaApp.apply(this, arguments);
+      try{ poe() }catch(e){ console.warn('nutrição:', e.message) }
+      return r;
+    };
+  }
+
+  window.bqNutri = {
+    alvo: ALVO,
+    doDia: function(k){
+      var s = (typeof sessaoDe === 'function') ? sessaoDe(k || ST.sel) : null;
+      if(!precisa(s)) return 'sem nutrição marcada neste dia';
+      return montar(k || ST.sel, s).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    }
+  };
+});
+
+
 /* ─────────── selo de diagnóstico ─────────── */
 (function(){
   function montar(){
@@ -5405,7 +5542,7 @@ PARTE('folgas e longao no sabado', function(){
         var l = window.planoBQ.ligado();
         var diag = '';
         try{ diag = window.bqDiag ? '\n\n── diagnóstico ──\n' + window.bqDiag() : '' }catch(e){}
-        if(confirm('fix.js ' + FIX_VERSAO + ' — as vinte e oito partes carregaram.\n\n'
+        if(confirm('fix.js ' + FIX_VERSAO + ' — as vinte e nove partes carregaram.\n\n'
           + 'Plano PEI Marathon: ' + (l ? 'LIGADO' : 'desligado') + diag
           + '\n\nOK ' + (l ? 'desliga o plano e volta ao automático do app.'
                              : 'liga o plano da maratona.'))){
@@ -5428,7 +5565,7 @@ PARTE('folgas e longao no sabado', function(){
         return;
       }
       alert(ok
-        ? 'fix.js ' + FIX_VERSAO + ' — as vinte e oito partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
+        ? 'fix.js ' + FIX_VERSAO + ' — as vinte e nove partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
         : 'fix.js ' + FIX_VERSAO + '\n\nFalharam:\n\n' + FIX_FALHAS.join('\n\n'));
     };
     barra.insertBefore(s, barra.firstChild.nextSibling);
