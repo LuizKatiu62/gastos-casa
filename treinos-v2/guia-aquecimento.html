@@ -118,6 +118,16 @@
     text-transform:uppercase;font-size:20px;letter-spacing:.03em;margin-bottom:6px}
   footer{margin-top:40px;padding-top:18px;border-top:1px solid var(--line);
     font-size:14px;color:var(--ink-2)}
+
+  /* ── barra de voltar ao app ── */
+  .voltar-bar{position:sticky;top:0;z-index:40;background:var(--ink);padding:0}
+  .voltar-bar .wrap{padding:0 18px;display:flex;align-items:center;min-height:48px}
+  .voltar{display:inline-flex;align-items:center;gap:8px;color:#fff;text-decoration:none;
+    font-family:"Barlow Condensed",sans-serif;font-weight:600;font-size:19px;
+    text-transform:uppercase;letter-spacing:.04em;min-height:44px;padding-right:10px}
+  .voltar span{font-size:22px;line-height:1}
+  .voltar:hover{color:#8FB8AE}
+  .tabs{top:48px !important}
 </style>
 </head>
 <body>
@@ -129,6 +139,11 @@
     <p class="lede">Como fazer cada movimento das etapas 1, 2, 3, 5 e 6 do seu treino, com passo a passo, os erros que mais aparecem e um vídeo para conferir antes de repetir.</p>
   </div>
 </header>
+
+<div class="voltar-bar"><div class="wrap">
+  <a class="voltar" href="./index.html" id="btVoltar"><span>&larr;</span> Voltar ao app</a>
+</div></div>
+
 
 <nav class="tabs">
   <div class="wrap">
@@ -477,6 +492,20 @@ window.addEventListener('scroll', () => {
   });
   abas.forEach((a,i) => a.classList.toggle('on', i === atual));
 }, {passive:true});
+</script>
+
+<script>
+/* Voltar ao app. Se o guia abriu na mesma aba, desfaz a navegacao e o app
+   volta como estava. Se abriu em aba nova, tenta fechar; se o navegador
+   nao deixar — Safari costuma nao deixar — o proprio link leva ao app. */
+(function(){
+  var b = document.getElementById('btVoltar');
+  if(!b) return;
+  b.addEventListener('click', function(e){
+    if(history.length > 1){ e.preventDefault(); history.back(); return }
+    try{ window.close() }catch(err){}
+  });
+})();
 </script>
 </body>
 </html>

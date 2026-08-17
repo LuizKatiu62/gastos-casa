@@ -72,6 +72,16 @@
   .fontes{font-size:13.5px;color:var(--ink-2)}
   .fontes a{color:var(--go)}
   footer{margin-top:44px;padding-top:20px;border-top:1px solid var(--line);font-size:14px;color:var(--ink-2)}
+
+  /* ── barra de voltar ao app ── */
+  .voltar-bar{position:sticky;top:0;z-index:40;background:var(--ink);padding:0}
+  .voltar-bar .wrap{padding:0 18px;display:flex;align-items:center;min-height:48px}
+  .voltar{display:inline-flex;align-items:center;gap:8px;color:#fff;text-decoration:none;
+    font-family:"Barlow Condensed",sans-serif;font-weight:600;font-size:19px;
+    text-transform:uppercase;letter-spacing:.04em;min-height:44px;padding-right:10px}
+  .voltar span{font-size:22px;line-height:1}
+  .voltar:hover{color:#8FB8AE}
+  .tabs{top:48px !important}
 </style>
 </head>
 <body>
@@ -84,6 +94,11 @@
     <p class="meta">Luiz Silva · 64 anos · Saint John, NB · escrito em 17/08/2026</p>
   </div>
 </header>
+
+<div class="voltar-bar"><div class="wrap">
+  <a class="voltar" href="./index.html" id="btVoltar"><span>&larr;</span> Voltar ao app</a>
+</div></div>
+
 
 <main class="wrap">
 
@@ -242,5 +257,19 @@
     Escrito para Luiz Silva em 17/08/2026, a partir dos dados do seu Garmin e do plano que já estava no app Treinos v-2. Este documento é a etapa de desenho: as sessões só entram no aplicativo depois que você concordar com o que está aqui — e discordar de qualquer parte é o uso esperado dele.
   </footer>
 </main>
+
+<script>
+/* Voltar ao app. Se o guia abriu na mesma aba, desfaz a navegacao e o app
+   volta como estava. Se abriu em aba nova, tenta fechar; se o navegador
+   nao deixar — Safari costuma nao deixar — o proprio link leva ao app. */
+(function(){
+  var b = document.getElementById('btVoltar');
+  if(!b) return;
+  b.addEventListener('click', function(e){
+    if(history.length > 1){ e.preventDefault(); history.back(); return }
+    try{ window.close() }catch(err){}
+  });
+})();
+</script>
 </body>
 </html>
