@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '02t';
+const FIX_VERSAO = '02u';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -4973,6 +4973,154 @@ PARTE('aba kpi', function(){
 });
 
 
+
+/* ═══ 26. O QUE VOCE MUDA SOBREVIVE A FECHAR O APP ═══
+
+   SINTOMA: voce cancela um treino, ele sai da tela, voce fecha o app —
+   e quando volta o treino esta de novo lá.
+
+   CAUSA: o app nao grava na hora. O persistir() do index.html faz
+   assim:
+
+       clearTimeout(_salvando);
+       _salvando = setTimeout(() => salvarCoach(), 600);
+
+   Sao 600 milissegundos de espera, de proposito, para nao disparar uma
+   gravacao a cada toque. O problema e o que acontece nesses 600 ms: se
+   voce fecha o app, o iOS congela a pagina, o temporizador nunca
+   dispara e a gravacao nunca sai. A tela ja tinha mudado, entao parecia
+   feito — mas o Firebase nunca soube.
+
+   E tem um segundo caminho para o mesmo estrago: se o celular estiver
+   sem sinal na hora, a gravacao falha em silencio. Foi o que aquela
+   faixa amarela de "Cópia local, não consegui falar com o servidor"
+   estava avisando.
+
+   CONSERTO EM TRES PONTAS:
+
+   a) ESPELHO LOCAL — a cada mudanca, uma copia vai para o localStorage
+      NA HORA, sem espera e sem rede. localStorage e sincrono: mesmo que
+      o app morra no milissegundo seguinte, ela ja esta gravada.
+
+   b) DESCARGA NA SAIDA — quando o app vai para segundo plano
+      (visibilitychange e pagehide), a gravacao no Firebase e disparada
+      imediatamente, sem esperar os 600 ms.
+
+   c) NA VOLTA, O MAIS NOVO GANHA — no arranque, comparo a data do
+      espelho local com a data do que veio do Firebase. Se o local for
+      mais recente, ele vale, e eu subo para o Firebase para os dois
+      ficarem iguais. E o que resolve o caso em que a gravacao nunca
+      saiu.
+
+   Vale para tudo que voce edita: cancelar, mover, incluir segundo
+   treino, marcar etapa, trocar objetivo, responder o questionario.
+   ══════════════════════════════════════════════════════════════════ */
+
+PARTE('salvar que sobrevive', function(){
+  if(typeof ST !== 'object') throw new Error('sem ST');
+  if(typeof window.salvarCoach !== 'function' || typeof window.lerCoach !== 'function')
+    throw new Error('app sem salvarCoach/lerCoach');
+
+  var CHAVE = 'bq.espelho';
+  var CAMPOS = ['objetivo','feitas','filtro','extras','trocas','periodo','quest'];
+
+  function lerEspelho(){
+    try{ return JSON.parse(localStorage.getItem(CHAVE) || 'null') }catch(e){ return null }
+  }
+  function gravarEspelho(){
+    try{
+      var s = { em: Date.now() };
+      CAMPOS.forEach(function(k){ if(ST[k] !== undefined) s[k] = ST[k] });
+      if(typeof PERFIL === 'object'){
+        s.dias = PERFIL.dias; s.marcoData = PERFIL.marcoData; s.marcoNome = PERFIL.marcoNome;
+      }
+      localStorage.setItem(CHAVE, JSON.stringify(s));
+      return true;
+    }catch(e){ console.warn('espelho:', e && e.message); return false }
+  }
+
+  /* ── a) espelho local a cada mudanca ── */
+  var persistirApp = window.persistir;
+  if(typeof persistirApp === 'function'){
+    window.persistir = function(){
+      gravarEspelho();                       /* sincrono, antes de tudo */
+      return persistirApp.apply(this, arguments);
+    };
+  }
+
+  /* ── b) descarga imediata quando o app sai de cena ── */
+  var salvandoAgora = false;
+  function descarregar(motivo){
+    if(salvandoAgora) return;
+    gravarEspelho();
+    salvandoAgora = true;
+    try{
+      var p = window.salvarCoach();
+      if(p && typeof p.then === 'function')
+        p.then(function(){ salvandoAgora = false }, function(){ salvandoAgora = false });
+      else salvandoAgora = false;
+    }catch(e){ salvandoAgora = false; console.warn('descarga (' + motivo + '):', e && e.message) }
+  }
+  document.addEventListener('visibilitychange', function(){
+    if(document.visibilityState === 'hidden') descarregar('segundo plano');
+  });
+  window.addEventListener('pagehide', function(){ descarregar('pagehide') });
+  window.addEventListener('blur', function(){ descarregar('blur') });
+
+  /* ── c) na volta, o mais novo ganha ── */
+  var doFirebase = null;
+  var lerApp = window.lerCoach;
+  window.lerCoach = async function(){
+    var c = await lerApp.apply(this, arguments);
+    doFirebase = c;
+    return c;
+  };
+
+  function aplicarEspelho(){
+    var s = lerEspelho();
+    if(!s || !s.em) return null;
+    var nuvem = 0;
+    if(doFirebase && doFirebase.em){ var t = Date.parse(doFirebase.em); if(isFinite(t)) nuvem = t }
+    /* 2 segundos de folga: relogio do aparelho e do servidor nunca
+       batem exatamente, e nao quero trocar por empate */
+    if(s.em <= nuvem + 2000) return null;
+
+    CAMPOS.forEach(function(k){ if(s[k] !== undefined) ST[k] = s[k] });
+    if(typeof PERFIL === 'object'){
+      if(Array.isArray(s.dias) && s.dias.length) PERFIL.dias = s.dias;
+      if(s.marcoData) PERFIL.marcoData = s.marcoData;
+      if(s.marcoNome) PERFIL.marcoNome = s.marcoNome;
+    }
+    return { local: new Date(s.em).toISOString(), nuvem: doFirebase && doFirebase.em || 'nada' };
+  }
+
+  /* roda depois do restaurar() do app, que e quem le o Firebase */
+  setTimeout(function(){
+    try{
+      var r = aplicarEspelho();
+      if(!r) return;
+      console.log('espelho local era mais novo que o Firebase; recuperado.', r);
+      if(typeof rebuild === 'function') rebuild();
+      if(typeof renderAll === 'function') renderAll();
+      else if(typeof renderCoach === 'function') renderCoach();
+      /* sobe para a nuvem para os dois ficarem iguais */
+      try{ window.salvarCoach() }catch(e){}
+    }catch(e){ console.warn('espelho na volta:', e && e.message) }
+  }, 2600);
+
+  window.bqSalvar = {
+    agora: function(){ descarregar('manual'); return 'gravando' },
+    espelho: lerEspelho,
+    nuvem: function(){ return doFirebase },
+    comparar: function(){
+      var s = lerEspelho();
+      return { local: s && s.em ? new Date(s.em).toISOString() : 'nada',
+               nuvem: doFirebase && doFirebase.em || 'nada' };
+    }
+  };
+});
+
+
 /* ─────────── selo de diagnóstico ─────────── */
 (function(){
   function montar(){
@@ -4992,7 +5140,7 @@ PARTE('aba kpi', function(){
         var l = window.planoBQ.ligado();
         var diag = '';
         try{ diag = window.bqDiag ? '\n\n── diagnóstico ──\n' + window.bqDiag() : '' }catch(e){}
-        if(confirm('fix.js ' + FIX_VERSAO + ' — as vinte e cinco partes carregaram.\n\n'
+        if(confirm('fix.js ' + FIX_VERSAO + ' — as vinte e seis partes carregaram.\n\n'
           + 'Plano PEI Marathon: ' + (l ? 'LIGADO' : 'desligado') + diag
           + '\n\nOK ' + (l ? 'desliga o plano e volta ao automático do app.'
                              : 'liga o plano da maratona.'))){
@@ -5015,7 +5163,7 @@ PARTE('aba kpi', function(){
         return;
       }
       alert(ok
-        ? 'fix.js ' + FIX_VERSAO + ' — as vinte e cinco partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
+        ? 'fix.js ' + FIX_VERSAO + ' — as vinte e seis partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
         : 'fix.js ' + FIX_VERSAO + '\n\nFalharam:\n\n' + FIX_FALHAS.join('\n\n'));
     };
     barra.insertBefore(s, barra.firstChild.nextSibling);
