@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '02v';
+const FIX_VERSAO = '02w';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -5244,6 +5244,148 @@ PARTE('lapide nao mata cancelamento', function(){
 });
 
 
+
+/* ═══ 28. SEGUNDA E SEXTA DE FOLGA · LONGAO NO SABADO ═══
+
+   Pedido de 17/08/2026, e o que o plano da PEI tinha antes:
+
+     seg  natacao          ter  rodagem + forca      qua  VO2
+     qui  limiar + forca   sex  (ja estava livre)    sab  bike
+     dom  longao
+
+   Como fica:
+
+     seg  FOLGA            ter  rodagem + forca      qua  VO2
+     qui  limiar + forca   sex  FOLGA                sab  LONGAO
+     dom  bike
+
+   TRES MUDANCAS:
+
+   1. Sexta ja estava livre — nao havia nenhum treino em sexta nas dez
+      semanas. Nada a fazer.
+
+   2. Segunda tinha uma coisa so: natacao, oito sessoes de 600 a 1.200 m.
+      Saem do plano. Nadar deixa de ser tarefa marcada e passa a ser
+      quando der.
+
+   3. Sabado e domingo trocam de conteudo. O longao vai para sabado e a
+      bike para domingo.
+
+   POR QUE A TROCA E BOA, e nao so conveniente: o longao passa a ter
+   DOIS dias leves depois dele — domingo sem impacto na bike e segunda
+   de folga. Antes o longao caia no domingo e a segunda ja tinha
+   natacao, entao a recuperacao era mais curta.
+
+   SO DE HOJE PARA FRENTE. Nao reescrevo o passado por dois motivos: o
+   historico do KPI compara o que foi planejado com o que foi feito, e
+   mexer nisso falsearia as semanas que ja passaram; e as etapas que
+   voce marcou como feitas sao guardadas pela data, entao trocar o
+   conteudo de um dia ja vivido marcaria como concluido um treino que
+   nunca aconteceu.
+
+   Para desfazer, no console: bqFolgas.desligar()
+   ══════════════════════════════════════════════════════════════════ */
+
+PARTE('folgas e longao no sabado', function(){
+  if(typeof window.gerarPlano !== 'function') throw new Error('app sem gerarPlano');
+
+  var DESLIGADO = 'bq.folgas.off';
+  var ligado = function(){ try{ return localStorage.getItem(DESLIGADO) !== '1' }catch(e){ return true } };
+
+  var conta = { natacaoFora: 0, trocados: 0 };
+
+  function arrumar(p){
+    if(!p) return p;
+    var hoje = iso(HOJE);
+    conta = { natacaoFora: 0, trocados: 0 };
+
+    /* ── 1. natacao sai do plano, de hoje para frente ── */
+    Object.keys(p).forEach(function(k){
+      if(k < hoje) return;
+      var s = p[k];
+      if(s && s.mod === 'natacao' && !s.prova){ delete p[k]; conta.natacaoFora++ }
+    });
+
+    /* ── 2. sabado e domingo trocam de conteudo ── */
+    Object.keys(p).sort().forEach(function(k){
+      if(k < hoje) return;
+      var d = dt(k);
+      if(dow(d) !== 6) return;                 /* 6 = sabado */
+      var kd = iso(addD(d, 1));                /* o domingo seguinte */
+      var sab = p[k], dom = p[kd];
+      if(!sab || !dom || sab.prova || dom.prova) return;
+
+      /* so troco o par que interessa: um lado bike/cross e o outro longao */
+      var sabLeve  = sab.mod === 'bike' || sab.foco === 'cross';
+      var domLongo = dom.foco === 'longo' || dom.foco === 'longo2';
+      if(!(sabLeve && domLongo)) return;
+
+      p[k]  = Object.assign({}, dom, { id: k,  data: k  });
+      p[kd] = Object.assign({}, sab, { id: kd, data: kd });
+      conta.trocados++;
+    });
+
+    return p;
+  }
+
+  var gerarApp = window.gerarPlano;
+  window.gerarPlano = function(){
+    var p = gerarApp.apply(this, arguments);
+    if(!ligado()) return p;
+    try{ return arrumar(p) }catch(e){ console.warn('folgas:', e && e.message); return p }
+  };
+
+  /* as etapas sao guardadas por id da sessao; como o conteudo de sabado
+     e domingo mudou, o cache antigo mostraria o treino errado */
+  function refazer(){
+    try{ if(ST && ST.cache) ST.cache = {} }catch(e){}
+    try{ rebuild() }catch(e){}
+    try{ if(typeof selecionarProximo === 'function') selecionarProximo() }catch(e){}
+    try{ if(typeof renderTudo === 'function') renderTudo() }
+    catch(e){ try{ renderCoach() }catch(e2){} }
+  }
+
+  /* o plano da PEI e aplicado por temporizador no arranque (2,5 s e 6 s);
+     entro depois dele para o meu ajuste nao ser desfeito */
+  setTimeout(refazer, 3200);
+  setTimeout(refazer, 6600);
+
+  /* ── 3. perfil: segunda e sexta deixam de ser dias de treino ──
+     O plano da PEI ignora PERFIL.dias, mas qualquer plano que o app
+     montar depois dele obedece. Sem isto, o proximo objetivo voltaria a
+     por treino na segunda e na sexta. */
+  var ALVO = [2,3,4,6,7];                      /* ter, qua, qui, sab, dom */
+  function ajustarPerfil(){
+    if(typeof PERFIL !== 'object' || !ligado()) return false;
+    var atual = (PERFIL.dias || []).slice().sort().join(',');
+    if(atual === ALVO.join(',')) return false;
+    PERFIL.dias = ALVO.slice();
+    try{ if(typeof persistir === 'function') persistir() }catch(e){}
+    console.log('perfil: dias de treino agora são ter, qua, qui, sáb e dom');
+    return true;
+  }
+  setTimeout(ajustarPerfil, 3400);
+
+  window.bqFolgas = {
+    ligar:    function(){ try{ localStorage.removeItem(DESLIGADO) }catch(e){}
+                          ajustarPerfil(); refazer(); return 'ligado' },
+    desligar: function(){ try{ localStorage.setItem(DESLIGADO, '1') }catch(e){}
+                          refazer(); return 'desligado — plano original de volta' },
+    ligado:   ligado,
+    resumo:   function(){ return conta },
+    semana:   function(){
+      var P = ST.plano || {}, DIA = ['dom','seg','ter','qua','qui','sex','sáb'];
+      return Object.keys(P).sort().filter(function(k){ return k >= iso(HOJE) })
+        .slice(0, 14).map(function(k){
+          var s = P[k];
+          return k + ' ' + DIA[dt(k).getDay()] + '  ' + (s.mod || '') + '  ' +
+                 (s.foco || '') + '  ' + (s.km ? s.km + ' km' : (s.metros ? s.metros + ' m' : ''));
+        });
+    }
+  };
+});
+
+
 /* ─────────── selo de diagnóstico ─────────── */
 (function(){
   function montar(){
@@ -5263,7 +5405,7 @@ PARTE('lapide nao mata cancelamento', function(){
         var l = window.planoBQ.ligado();
         var diag = '';
         try{ diag = window.bqDiag ? '\n\n── diagnóstico ──\n' + window.bqDiag() : '' }catch(e){}
-        if(confirm('fix.js ' + FIX_VERSAO + ' — as vinte e sete partes carregaram.\n\n'
+        if(confirm('fix.js ' + FIX_VERSAO + ' — as vinte e oito partes carregaram.\n\n'
           + 'Plano PEI Marathon: ' + (l ? 'LIGADO' : 'desligado') + diag
           + '\n\nOK ' + (l ? 'desliga o plano e volta ao automático do app.'
                              : 'liga o plano da maratona.'))){
@@ -5286,7 +5428,7 @@ PARTE('lapide nao mata cancelamento', function(){
         return;
       }
       alert(ok
-        ? 'fix.js ' + FIX_VERSAO + ' — as vinte e sete partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
+        ? 'fix.js ' + FIX_VERSAO + ' — as vinte e oito partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
         : 'fix.js ' + FIX_VERSAO + '\n\nFalharam:\n\n' + FIX_FALHAS.join('\n\n'));
     };
     barra.insertBefore(s, barra.firstChild.nextSibling);
