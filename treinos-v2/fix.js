@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '03l';
+const FIX_VERSAO = '03m';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -7501,6 +7501,373 @@ PARTE('planilha de treinos', function(){
 });
 
 
+/* ═══ 36. O QUILOMETRO E O TOTAL ═══
+
+   A DUVIDA QUE VOCE LEVANTOU, e que estava certa: "vc fala em 5,1 km
+   continuos, porem se eu acrescentar o warm up e o cool down vai dar
+   mais de 5,1 km e depois estes numeros vao mexer na minha performance".
+
+   AUTOPSIA. O app tinha DUAS contas brigando, e nenhuma avisava:
+
+   a) As etapas do index.html tratam s.km como sendo so a PARTE
+      PRINCIPAL. Escrevem "aquecimento 8 min" e depois "5,1 km
+      continuos" — ou seja, aquecimento POR CIMA dos 5,1.
+
+   b) A minha parte 34 calculava s.min = km x ritmo, tratando os mesmos
+      5,1 km como a SESSAO INTEIRA, e de quebra apagava os 11 minutos
+      que a parte 24 tinha somado pelas seis etapas.
+
+   Resultado pratico: o relogio gravava ~7 km, o plano dizia 5,1, e o
+   julgamento da sessao acusava "passou 2 km do previsto" num treino
+   que voce cumpriu exatamente. Pior: o volume semanal e o ACWR saem
+   do que o Garmin gravou, entao o plano media uma coisa e a realidade
+   outra. Voce ia carregar esse erro ate 18/10.
+
+   A REGRA, DAQUI EM DIANTE, UMA SO:
+
+     s.km e s.min sao o TOTAL da sessao, porta a porta.
+     Aquecimento e desaquecimento estao DENTRO. Nada por cima.
+
+   Por que essa e a escolha certa e nao a outra: o relogio grava o
+   total. O volume semanal, o ACWR e a evolucao do limiar saem do
+   total. Se o plano falasse em "parte principal" e a realidade em
+   "total", as duas nunca se encontrariam — e e exatamente por isso
+   que voce teve a duvida.
+
+   O QUE MUDA NA TELA. Cada etapa passa a dizer quantos km ela ocupa,
+   e a soma bate com o numero do cartao. Um treino de 8 km vira:
+   aquecimento 1,2 km, principal 6,1 km, desaquecimento 0,7 km.
+
+   E ENTRA UM CARTAO NOVO: "Montar no Garmin", com os passos exatos do
+   Workout, ja com tempo ou distancia em cada um. E copiavel.
+
+   ALONGAMENTOS E EDUCATIVOS ficam FORA da conta de propria, porque
+   voce os faz com o relogio parado. So o pre-aquecimento correndo,
+   a parte principal e o desaquecimento entram nos km.
+   ══════════════════════════════════════════════════════════════════ */
+
+PARTE('o quilômetro é o total', function(){
+  if(typeof ST !== 'object') throw new Error('sem ST');
+
+  /* minutos de aquecimento e desaquecimento CORRENDO, por tipo */
+  var WU = { facil:8, longo:10, soltura:6, rec:6, mp:12, limiar:12, vo2:12,
+             intervalado:12, fartlek:10, tiros:12, progressivo:8 };
+  var CD = { facil:5, longo:6, soltura:4, rec:4, mp:8, limiar:8, vo2:8,
+             intervalado:8, fartlek:6, tiros:8, progressivo:6 };
+  var QUAL = { mp:1, limiar:1, vo2:1, intervalado:1, fartlek:1, tiros:1 };
+
+  function paceZ(k){
+    try{
+      var z = Z[k];
+      if(z && z.p) return (z.p[0] + z.p[1]) / 2;
+    }catch(e){}
+    return (PERFIL.paceLimiar || 340) + 60;
+  }
+  function pcs(s){ return Math.floor(s/60) + ':' + String(Math.round(s%60)).padStart(2,'0') }
+
+  /* ── a reparticao de uma sessao de corrida ── */
+  function repartir(s){
+    if(!s || s.mod !== 'corrida' || s.prova) return null;
+    var total = +s.km || 0;
+    if(total <= 0) return null;
+
+    var foco = s.foco || 'facil';
+    var mWU = WU[foco] != null ? WU[foco] : 8;
+    var mCD = CD[foco] != null ? CD[foco] : 5;
+
+    var pRec = paceZ('rec'), pFac = paceZ('faci');
+    var kmWU = mWU * 60 / pRec;
+    var kmCD = mCD * 60 / pRec;
+
+    /* sessao curta demais para o aquecimento previsto: encolhe os dois,
+       nunca a parte principal abaixo de 45% do total */
+    var piso = total * 0.45;
+    if(total - kmWU - kmCD < piso){
+      var sobra = total - piso;
+      var esc = sobra / (kmWU + kmCD);
+      kmWU *= esc; kmCD *= esc;
+      mWU = Math.max(4, Math.round(kmWU * pRec / 60));
+      mCD = Math.max(3, Math.round(kmCD * pRec / 60));
+    }
+
+    var kmMain = total - kmWU - kmCD;
+    var r = { total:total, kmWU:+kmWU.toFixed(1), kmCD:+kmCD.toFixed(1),
+              kmMain:+kmMain.toFixed(1), minWU:mWU, minCD:mCD, qual:!!QUAL[foco] };
+
+    /* dentro da parte principal, quanto e forte e quanto e trote de
+       recuperacao entre os tiros */
+    if(r.qual){
+      var zq = foco === 'vo2' || foco === 'intervalado' || foco === 'fartlek' ? 'vo2'
+             : foco === 'mp' ? 'mp' : foco === 'tiros' ? 'vo2' : 'lim';
+      var pQ = paceZ(zq);
+      var kmForte = Math.min(kmMain * 0.62, total * 0.38);
+      r.kmForte = +kmForte.toFixed(1);
+      r.kmTrote = +(kmMain - kmForte).toFixed(1);
+      r.paceForte = pQ;
+      r.zonaForte = zq;
+      r.minMain = Math.round((kmForte * pQ + (kmMain - kmForte) * pFac) / 60);
+    } else {
+      var pM = foco === 'longo' ? paceZ('long') : foco === 'soltura' ? paceZ('rec') : pFac;
+      r.paceMain = pM;
+      r.minMain = Math.round(kmMain * pM / 60);
+    }
+
+    r.min = r.minWU + r.minMain + r.minCD;
+    r.paceMedio = Math.round(r.min * 60 / total);
+    return r;
+  }
+
+  /* ── o total mandado para o campo do plano ── */
+  function ajustar(s){
+    var r = repartir(s);
+    if(!r) return s;
+    s.min   = r.min;                    /* correndo, porta a porta */
+    s.pace  = pcs(r.paceMedio);         /* media da sessao inteira */
+    s.bqRep = r;                        /* a reparticao, para as etapas */
+    return s;
+  }
+
+  function varrer(p){
+    if(!p) return p;
+    try{
+      Object.keys(p).forEach(function(k){
+        if(k < iso(HOJE)) return;
+        ajustar(p[k]);
+      });
+    }catch(e){ console.warn('total:', e && e.message) }
+    return p;
+  }
+
+  var gerApp = window.gerarPlano;
+  if(typeof gerApp === 'function')
+    window.gerarPlano = function(){ return varrer(gerApp.apply(this, arguments)) };
+
+  if(window.bqBloco && typeof window.bqBloco.criar === 'function'){
+    var criarApp = window.bqBloco.criar;
+    window.bqBloco.criar = function(){
+      var B = criarApp.apply(this, arguments);
+      try{ if(B && B.sessoes) Object.keys(B.sessoes).forEach(function(k){ ajustar(B.sessoes[k]) }) }catch(e){}
+      try{ varrer(ST.plano) }catch(e){}
+      return B;
+    };
+  }
+
+  /* ── as etapas passam a declarar os km de cada uma ── */
+  var etApp = window.etapas;
+  if(typeof etApp === 'function'){
+    window.etapas = function(foco, mod, p){
+      var lista = etApp.apply(this, arguments);
+      try{
+        if(!Array.isArray(lista) || !p || p.mod !== 'corrida' || p.prova) return lista;
+        var r = p.bqRep || repartir(p);
+        if(!r) return lista;
+
+        /* O longo vem partido em "Bloco 1" e "Bloco 2". Se eu escrever o
+           total da parte principal nos dois, a soma dobra. Entao primeiro
+           descubro quantas etapas sao parte principal e reparto entre elas
+           na mesma proporcao que o app ja tinha escrito. */
+        function ehMain(t){
+          return /principal|contínuo|continuo|bloco|longo|tiros|ritmo|limiar/i.test(t)
+              && !/alongamento|mobilidade|educativo|hidrat|nutri|aquecimento/i.test(t);
+        }
+        function kmDaTag(et){
+          var v = 0;
+          (et.tags || []).forEach(function(tag){
+            if(tag && !tag.c){
+              var m = String(tag.t).match(/^([\d.,]+)\s*km$/);
+              if(m) v = parseFloat(m[1].replace(',', '.'));
+            }
+          });
+          return v;
+        }
+        var mains = lista.filter(function(et){ return et && et.t && ehMain(String(et.t)) });
+        var somaAntiga = mains.reduce(function(a, et){ return a + kmDaTag(et) }, 0);
+        var fatia = {};
+        mains.forEach(function(et, i){
+          var p = somaAntiga > 0 ? kmDaTag(et) / somaAntiga : 1 / mains.length;
+          fatia[i] = +(r.kmMain * p).toFixed(1);
+        });
+        /* arredondamento nao pode comer nem sobrar quilometro */
+        var conf = mains.reduce(function(a, _, i){ return a + fatia[i] }, 0);
+        if(mains.length) fatia[mains.length - 1] = +(fatia[mains.length - 1] + (r.kmMain - conf)).toFixed(1);
+
+        lista.forEach(function(et){
+          if(!et || !et.t) return;
+          var t = String(et.t);
+          var km = null, extra = null;
+
+          if(/aquecimento/i.test(t) && !/desaquecimento/i.test(t)){
+            km = r.kmWU; extra = r.minWU + ' min';
+          } else if(/desaquecimento/i.test(t)){
+            km = r.kmCD; extra = r.minCD + ' min';
+          } else if(ehMain(t)){
+            var i = mains.indexOf(et);
+            km = fatia[i];
+            extra = Math.round(r.minMain * (r.kmMain > 0 ? km / r.kmMain : 1)) + ' min';
+          }
+          if(km == null) return;
+
+          et.tags = et.tags || [];
+          /* troca a etiqueta de distancia que ja existia, se existia */
+          var trocou = false, temMin = false;
+          et.tags.forEach(function(tag){
+            if(!tag || tag.c) return;
+            var v = String(tag.t);
+            if(/^[\d.,]+\s*km$/.test(v)){ tag.t = km.toFixed(1) + ' km'; trocou = true }
+            /* o aquecimento ja vinha com "8 min": atualiza em vez de duplicar */
+            else if(/^≈?\s*[\d.,]+\s*min$/.test(v)){ tag.t = extra; temMin = true }
+          });
+          if(!trocou) et.tags.unshift({ t: km.toFixed(1) + ' km' });
+          if(!temMin) et.tags.push({ t: extra });
+        });
+
+        /* a linha que fecha a conta, para nunca mais restar duvida */
+        lista.push({
+          id: 'bq-total',
+          t: 'A conta fecha',
+          d: 'Aquecimento ' + r.kmWU.toFixed(1) + ' km + parte principal ' +
+             r.kmMain.toFixed(1) + ' km + desaquecimento ' + r.kmCD.toFixed(1) +
+             ' km = ' + r.total.toFixed(1) + ' km. É este o número do plano, e é ' +
+             'este que o relógio vai gravar. Alongamentos e educativos ficam de fora ' +
+             'da conta porque você os faz com o relógio parado.',
+          tags: [{ t: r.total.toFixed(1) + ' km' }, { t: r.min + ' min' },
+                 { t: pcs(r.paceMedio) + '/km médio', c:'z' }]
+        });
+      }catch(e){ console.warn('etapas/total:', e && e.message) }
+      return lista;
+    };
+  }
+
+  /* ── cartao: montar no Garmin ── */
+  var css = document.createElement('style');
+  css.textContent = [
+'#bqGar{margin:14px 0 0;background:var(--s2);border:1px dashed var(--line);border-radius:14px;padding:14px 15px}',
+'#bqGar h4{margin:0 0 3px;font-size:12.5px;font-weight:800;letter-spacing:-.01em;color:var(--tx)}',
+'#bqGar .gsub{font-size:11px;color:var(--tx3);margin:0 0 11px;line-height:1.5}',
+'#bqGar ol{margin:0;padding:0;list-style:none;counter-reset:g}',
+'#bqGar li{counter-increment:g;display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);align-items:flex-start}',
+'#bqGar li:last-child{border-bottom:0}',
+'#bqGar li:before{content:counter(g);flex:none;width:19px;height:19px;border-radius:50%;',
+'  background:var(--s3);color:var(--tx2);font-size:10px;font-weight:800;text-align:center;line-height:19px;margin-top:1px}',
+'#bqGar .gt{flex:1;min-width:0}',
+'#bqGar .gt b{display:block;font-size:12.5px;font-weight:700;color:var(--tx);line-height:1.3}',
+'#bqGar .gt span{display:block;font-size:11px;color:var(--tx3);margin-top:2px;line-height:1.45}',
+'#bqGar .gv{flex:none;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:11.5px;',
+'  font-weight:700;color:var(--acc);text-align:right;white-space:nowrap;margin-top:1px}',
+'#bqGar .gnota{margin:11px 0 0;font-size:11px;color:var(--tx3);line-height:1.5}',
+'#bqGar .gnota b{color:var(--tx2)}'
+  ].join('\n');
+  document.head.appendChild(css);
+
+  function passosGarmin(s){
+    var r = s.bqRep || repartir(s);
+    if(!r) return null;
+    var faci = pcs(paceZ('faci') - 15) + '–' + pcs(paceZ('faci') + 15);
+    var rec  = pcs(paceZ('rec') - 15) + '–' + pcs(paceZ('rec') + 15);
+    var P = [];
+
+    P.push({ t:'Aquecimento', v:r.minWU + ' min',
+             d:'Por TEMPO, não por distância. Ritmo ' + rec + '/km, subindo devagar.' });
+
+    if(r.qual){
+      var z = Z[r.zonaForte] || {};
+      var fx = z.p ? pcs(z.p[0]) + '–' + pcs(z.p[1]) : pcs(r.paceForte);
+      var mrep = r.zonaForte === 'mp' ? null : 600;
+      if(mrep){
+        var n = Math.max(3, Math.round(r.kmForte * 1000 / mrep));
+        P.push({ t:'Repetir ' + n + '×', v:'', d:'Crie um bloco de repetição com os dois passos abaixo.' });
+        P.push({ t:'— Tiro', v:mrep + ' m',
+                 d:'Por DISTÂNCIA. Alvo de ritmo ' + fx + '/km' +
+                   (z.fc ? ', FC subindo até ' + z.fc[0] + '–' + z.fc[1] + ' bpm' : '') + '.' });
+        P.push({ t:'— Recuperação', v:'2 min',
+                 d:'Por TEMPO, trote leve. Não pare de correr.' });
+      } else {
+        P.push({ t:'Bloco em ritmo', v:r.kmForte.toFixed(1) + ' km',
+                 d:'Por DISTÂNCIA. Alvo ' + fx + '/km' +
+                   (z.fc ? ', FC ' + z.fc[0] + '–' + z.fc[1] + ' bpm' : '') + '.' });
+      }
+    } else {
+      P.push({ t:'Parte principal', v:r.kmMain.toFixed(1) + ' km',
+               d:'Por DISTÂNCIA. Alvo de ritmo ' + faci + '/km.' });
+    }
+
+    P.push({ t:'Desaquecimento', v:r.minCD + ' min',
+             d:'Por TEMPO. Trote muito leve até a respiração normalizar.' });
+    return { passos:P, r:r };
+  }
+
+  function cartao(){
+    try{
+      var el = q('#sess');
+      if(!el) return;
+      var velho = el.querySelector('#bqGar');
+      if(velho) velho.parentNode.removeChild(velho);
+
+      var s = (typeof sessaoDe === 'function') ? sessaoDe(ST.sel) : (ST.plano || {})[ST.sel];
+      if(!s || s.mod !== 'corrida' || s.prova) return;
+      var G = passosGarmin(s);
+      if(!G) return;
+
+      var div = document.createElement('div');
+      div.id = 'bqGar';
+      div.innerHTML = '<h4>Montar no Garmin</h4>'
+        + '<p class="gsub">Um único Workout, do começo ao fim. O relógio grava tudo como '
+        + 'uma atividade só — que é exatamente o que o plano espera.</p>'
+        + '<ol>' + G.passos.map(function(p){
+            return '<li><div class="gt"><b>' + p.t + '</b><span>' + p.d + '</span></div>'
+                 + (p.v ? '<div class="gv">' + p.v + '</div>' : '') + '</li>';
+          }).join('') + '</ol>'
+        + '<p class="gnota">Soma <b>' + G.r.total.toFixed(1) + ' km</b> em cerca de <b>'
+        + G.r.min + ' min</b> — o mesmo número do cartão acima. Os alongamentos '
+        + 'dinâmicos e os educativos ficam <b>fora do Workout</b>: faça antes de apertar '
+        + 'o start, com o relógio parado. Eles não são quilômetro de treino.</p>';
+      el.appendChild(div);
+    }catch(e){ console.warn('garmin:', e && e.message) }
+  }
+
+  var diaApp = window.renderDia;
+  if(typeof diaApp === 'function'){
+    window.renderDia = function(){
+      var r = diaApp.apply(this, arguments);
+      try{ cartao() }catch(e){}
+      return r;
+    };
+  }
+
+  window.bqTotal = {
+    repartir: repartir,
+    hoje: function(){
+      var s = (ST.plano || {})[iso(HOJE)];
+      if(!s) return 'sem treino hoje';
+      var r = repartir(s);
+      if(!r) return 'sessão sem quilometragem';
+      return ['total ' + r.total.toFixed(1) + ' km · ' + r.min + ' min · ' + pcs(r.paceMedio) + '/km médio',
+              '  aquecimento    ' + r.kmWU.toFixed(1) + ' km  (' + r.minWU + ' min)',
+              (r.qual ? '  forte          ' + r.kmForte.toFixed(1) + ' km  em ' + pcs(r.paceForte) + '/km'
+                      : '  parte principal ' + r.kmMain.toFixed(1) + ' km  em ' + pcs(r.paceMain) + '/km'),
+              (r.qual ? '  trote entre    ' + r.kmTrote.toFixed(1) + ' km' : ''),
+              '  desaquecimento ' + r.kmCD.toFixed(1) + ' km  (' + r.minCD + ' min)'
+             ].filter(Boolean).join('\n');
+    },
+    garmin: function(){
+      var s = (ST.plano || {})[iso(HOJE)];
+      var G = s && passosGarmin(s);
+      if(!G) return 'sem treino de corrida hoje';
+      return G.passos.map(function(p){ return (p.v ? p.v.padEnd(9) : '         ') + p.t + ' — ' + p.d });
+    }
+  };
+
+  setTimeout(function(){
+    try{
+      if(ST.cache) ST.cache = {};
+      varrer(ST.plano);
+      if(typeof rebuild === 'function') rebuild();
+      if(typeof renderTudo === 'function') renderTudo();
+    }catch(e){}
+  }, 6800);
+});
+
+
 /* ─────────── selo de diagnóstico ─────────── */
 (function(){
   function montar(){
@@ -7520,7 +7887,7 @@ PARTE('planilha de treinos', function(){
         var l = window.planoBQ.ligado();
         var diag = '';
         try{ diag = window.bqDiag ? '\n\n── diagnóstico ──\n' + window.bqDiag() : '' }catch(e){}
-        if(confirm('fix.js ' + FIX_VERSAO + ' — as trinta e cinco partes carregaram.\n\n'
+        if(confirm('fix.js ' + FIX_VERSAO + ' — as trinta e seis partes carregaram.\n\n'
           + 'Plano PEI Marathon: ' + (l ? 'LIGADO' : 'desligado') + diag
           + '\n\nOK ' + (l ? 'desliga o plano e volta ao automático do app.'
                              : 'liga o plano da maratona.'))){
@@ -7543,7 +7910,7 @@ PARTE('planilha de treinos', function(){
         return;
       }
       alert(ok
-        ? 'fix.js ' + FIX_VERSAO + ' — as trinta e cinco partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
+        ? 'fix.js ' + FIX_VERSAO + ' — as trinta e seis partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
         : 'fix.js ' + FIX_VERSAO + '\n\nFalharam:\n\n' + FIX_FALHAS.join('\n\n'));
     };
     barra.insertBefore(s, barra.firstChild.nextSibling);
