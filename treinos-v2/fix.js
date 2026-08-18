@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '03v';
+const FIX_VERSAO = '03w';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -6628,10 +6628,12 @@ PARTE('força obedece ao bloco', function(){
       }
       var existe = ST.extras[k];
       if(existe && !ehAuto(existe)) return;   /* voce pos algo ai: respeito */
-      /* levanta a lapide ANTES de gravar: se ela ficar de pe, o
-         bqLimparApagados apaga no salvamento seguinte e a academia
-         some de novo, sem deixar rastro */
-      if(window.bqDesapagar) window.bqDesapagar('extras', k);
+      /* NAO derruba lapide aqui. Era o que eu fazia, e por isso o
+         treino de forca que voce cancelava voltava sozinho: o
+         semeador apagava a marca do seu cancelamento e escrevia por
+         cima. Semear e automatico; cancelar e uma decisao sua. O
+         automatico nunca passa por cima da decisao.
+         A parte 42 barra a escrita se o dia estiver cancelado. */
       ST.extras[k] = { id: 'x' + k, data: k, mod: 'forca', foco: 'forca',
                        sessao: sid, titulo: SESSOES_ACADEMIA[sid].nome,
                        min: 45, extra: true, auto: true };
@@ -8543,39 +8545,16 @@ PARTE('lápide não mata o que nasceu depois', function(){
     try{ if(window.bqDesapagar) window.bqDesapagar(tipo, chave) }catch(e){}
   }
 
-  /* ── a) o vigia ── */
-  function envolver(alvo){
-    alvo = alvo || {};
-    /* carimba o que ja estava dentro, para nao nascer sem idade */
-    try{
-      Object.keys(alvo).forEach(function(k){
-        var x = alvo[k];
-        if(x && typeof x === 'object' && !x.__em) x.__em = Date.now();
-      });
-    }catch(e){}
-
-    return new Proxy(alvo, {
-      set: function(o, k, v){
-        if(typeof k === 'string' && v && typeof v === 'object'){
-          if(!v.__em) v.__em = Date.now();
-          /* nasceu agora: a lapide daquele dia perde a validade */
-          derrubar('extras', k);
-        }
-        o[k] = v;
-        return true;
-      }
-    });
-  }
-
-  var _ex = envolver(ST.extras);
-  try{
-    Object.defineProperty(ST, 'extras', {
-      configurable: true,
-      get: function(){ return _ex },
-      /* c) se alguem trocar o objeto inteiro, o vigia volta na hora */
-      set: function(v){ _ex = envolver(v) }
-    });
-  }catch(e){ throw new Error('não consegui vigiar ST.extras: ' + (e && e.message)) }
+  /* O VIGIA SAIU DAQUI, DE PROPOSITO.
+     Eu tinha um Proxy nesta parte e outro na parte 42, os dois
+     tomando conta de ST.extras. Dois donos do mesmo objeto e como
+     dois freios no mesmo pedal: um desfaz o que o outro faz, e
+     ninguem consegue prever o resultado. Foi assim que a forca
+     cancelada voltou.
+     Agora o vigia tem UM dono, a parte 42, que e quem sabe
+     distinguir escrita sua de escrita automatica. Aqui fica so a
+     guarda de idade abaixo, que e assunto diferente: impedir que uma
+     lapide mate algo que nasceu depois dela. */
 
   /* ── b) a limpeza passa a comparar idades ── */
   var limparApp = window.bqLimparApagados;
@@ -8802,6 +8781,208 @@ PARTE('concluído é o que você fez', function(){
 });
 
 
+/* ═══ 42. CANCELADO FICA CANCELADO ═══
+
+   O DEFEITO: voce cancelou a forca de hoje e ela voltou.
+
+   A CAUSA, e ela e minha, de ontem. O unico mecanismo que impedia o
+   semeador de reescrever um dia era a lapide. A parte 40, que escrevi
+   para resolver OUTRO problema (a academia que voce movia sumia),
+   passou a derrubar a lapide em TODA escrita — inclusive na escrita
+   do proprio semeador. Consertei um lado e abri o outro.
+
+   O ERRO DE FUNDO foi tratar todas as escritas como iguais. Nao sao:
+
+     - voce criar uma academia    -> decisao sua
+     - voce remover uma academia  -> decisao sua
+     - o semeador criar uma       -> automatico
+
+   O automatico NUNCA pode passar por cima da decisao. Essa e a regra
+   que faltava, e ela vale para sempre, nao so para hoje.
+
+   E A LAPIDE NAO SERVIA PARA ISSO. Ela vale 24 horas — foi feita para
+   sincronia entre aparelhos, para um apagamento nao ser desfeito pelo
+   celular que estava desligado. Se voce cancelar a forca do dia 25, a
+   lapide vence amanha e o semeador repoe. O seu cancelamento tem que
+   durar enquanto voce nao mudar de ideia, nao 24 horas.
+
+   O QUE ESTA PARTE FAZ:
+
+   1. ST.cancelExtra guarda os dias em que VOCE tirou a forca. Sem
+      prazo de validade.
+   2. O vigia de ST.extras (parte 40) passa a distinguir quem escreve.
+      Escrita automatica (auto:true) em dia cancelado e IGNORADA, em
+      silencio. Escrita sua apaga o cancelamento — porque por o treino
+      de volta tambem e decisao sua.
+   3. Apagar uma forca registra o cancelamento, venha o apagamento de
+      onde vier: do botao do app, do painel do dia, de qualquer lugar.
+   4. A lista viaja para o Firebase junto com o resto, por PATCH, e
+      volta na leitura. Vale no iPhone, no Mac e num aparelho novo.
+
+   PARA DESFAZER: crie a academia de novo pelo botao do app, no dia. O
+   cancelamento daquele dia cai sozinho.
+
+   NO CONSOLE:
+     bqCancel.ver()          — os dias com força cancelada
+     bqCancel.desfazer(dia)  — libera um dia
+     bqCancel.limpar()       — libera todos
+   ══════════════════════════════════════════════════════════════════ */
+
+PARTE('cancelado fica cancelado', function(){
+  if(typeof ST !== 'object') throw new Error('sem ST');
+
+  ST.cancelExtra = ST.cancelExtra || {};
+
+  function cancelado(k){ return !!ST.cancelExtra[k] }
+  function marcar(k){
+    if(!k || typeof k !== 'string') return;
+    ST.cancelExtra[k] = new Date().toISOString();
+    console.log('força de ' + k + ' cancelada — o semeador não vai repor');
+  }
+  function liberar(k){
+    if(ST.cancelExtra[k]){
+      delete ST.cancelExtra[k];
+      console.log('força de ' + k + ' liberada de novo');
+    }
+  }
+
+  /* ── o vigia passa a distinguir quem escreve ── */
+  function envolver(alvo){
+    alvo = alvo || {};
+    /* O objeto inteiro pode ser TROCADO — e o que o lerCoach faz ao
+       aplicar o que veio da nuvem. Quem entra por essa porta nao passa
+       pela armadilha de escrita, entao trato aqui:
+
+       - forca automatica num dia que voce cancelou nao entra. Senao a
+         nuvem ressuscitaria o que voce tirou, e o cancelamento so
+         valeria ate a proxima sincronia.
+       - o que entra sem carimbo ganha um. Sem isso a guarda de idade
+         da parte 40 nao tem o que comparar e a lapide mata tudo. */
+    try{
+      Object.keys(alvo).forEach(function(k){
+        var x = alvo[k];
+        if(!x || typeof x !== 'object') return;
+        if(x.auto === true && cancelado(k)){ delete alvo[k]; return }
+        if(!x.__em) x.__em = Date.now();
+      });
+    }catch(e){}
+
+    return new Proxy(alvo, {
+      set: function(o, k, v){
+        if(typeof k === 'string' && v && typeof v === 'object'){
+          var auto = (v.auto === true);
+          if(auto && cancelado(k)){
+            /* o semeador tentando repor o que voce tirou: nao entra */
+            return true;
+          }
+          if(!auto && v.mod === 'forca') liberar(k);   /* voce pos de volta */
+          if(!v.__em) v.__em = Date.now();
+          /* Chegando aqui, a escrita e legitima: ou e sua, ou e
+             automatica num dia que voce nao cancelou. Nos dois casos
+             a lapide pode cair — quem guarda a sua intencao agora e
+             o cancelExtra, nao a lapide. A lapide volta a ser o que
+             sempre deveria ter sido: um detalhe de sincronia entre
+             aparelhos, com 24 horas de validade, e nao o lugar onde
+             mora uma decisao sua. */
+          {
+            try{
+              var TUM = 'bq.apagados';
+              var m = JSON.parse(localStorage.getItem(TUM) || '{}');
+              if(m['extras|' + k]){ delete m['extras|' + k]; localStorage.setItem(TUM, JSON.stringify(m)) }
+            }catch(e){}
+            try{ if(window.bqDesapagar) window.bqDesapagar('extras', k) }catch(e){}
+          }
+        }
+        o[k] = v;
+        return true;
+      },
+      deleteProperty: function(o, k){
+        /* apagar uma forca e sempre uma decisao, venha de onde vier */
+        try{
+          var x = o[k];
+          if(x && x.mod === 'forca' && typeof k === 'string' && k >= iso(HOJE)) marcar(k);
+        }catch(e){}
+        delete o[k];
+        return true;
+      }
+    });
+  }
+
+  var _ex = envolver(ST.extras);
+  try{
+    Object.defineProperty(ST, 'extras', {
+      configurable: true,
+      get: function(){ return _ex },
+      set: function(v){ _ex = envolver(v) }
+    });
+  }catch(e){ throw new Error('não consegui vigiar ST.extras: ' + (e && e.message)) }
+
+  /* ── viaja para a nuvem junto com o resto ── */
+  var salvarApp = window.salvarCoach;
+  if(typeof salvarApp === 'function'){
+    window.salvarCoach = async function(){
+      var r = await salvarApp.apply(this, arguments);
+      try{
+        if(ST.cancelExtra && Object.keys(ST.cancelExtra).length){
+          var t = await fbToken();
+          if(t) await fetch(FB_DB + '/' + FB_COACH + '.json?auth=' + t,
+            { method:'PATCH', headers:{'Content-Type':'application/json'},
+              body: JSON.stringify({ cancelExtra: ST.cancelExtra }) });
+        }
+      }catch(e){ console.warn('cancel/salvar:', e && e.message) }
+      return r;
+    };
+  }
+
+  var lerApp = window.lerCoach;
+  if(typeof lerApp === 'function'){
+    window.lerCoach = async function(){
+      var c = await lerApp.apply(this, arguments);
+      try{
+        if(c && c.cancelExtra) ST.cancelExtra = Object.assign({}, c.cancelExtra, ST.cancelExtra || {});
+      }catch(e){}
+      return c;
+    };
+  }
+
+  /* ── faxina: cancelamento de dia que ja passou nao serve mais ── */
+  function podar(){
+    var hoje = iso(HOJE), n = 0;
+    Object.keys(ST.cancelExtra || {}).forEach(function(k){
+      if(k < hoje){ delete ST.cancelExtra[k]; n++ }
+    });
+    return n;
+  }
+
+  window.bqCancel = {
+    ver: function(){
+      var ks = Object.keys(ST.cancelExtra || {}).sort();
+      if(!ks.length) return 'nenhum dia com força cancelada';
+      var D = ['','seg','ter','qua','qui','sex','sáb','dom'];
+      return ks.map(function(k){
+        return k + '  ' + D[dow(dt(k))] + '   cancelada em ' +
+               String(ST.cancelExtra[k]).slice(0, 16).replace('T', ' ');
+      }).join('\n');
+    },
+    desfazer: function(k){
+      liberar(k);
+      try{ if(window.bqForcaBloco) window.bqForcaBloco.sincronizar() }catch(e){}
+      try{ renderTudo(); persistir() }catch(e){}
+      return 'liberado ' + k;
+    },
+    limpar: function(){
+      var n = Object.keys(ST.cancelExtra || {}).length;
+      ST.cancelExtra = {};
+      try{ if(window.bqForcaBloco) window.bqForcaBloco.sincronizar() }catch(e){}
+      try{ renderTudo(); persistir() }catch(e){}
+      return n + ' dia(s) liberado(s)';
+    }
+  };
+
+  setTimeout(function(){ try{ if(podar()) persistir() }catch(e){} }, 8000);
+});
+
+
 /* ─────────── selo de diagnóstico ─────────── */
 (function(){
   function montar(){
@@ -8821,7 +9002,7 @@ PARTE('concluído é o que você fez', function(){
         var l = window.planoBQ.ligado();
         var diag = '';
         try{ diag = window.bqDiag ? '\n\n── diagnóstico ──\n' + window.bqDiag() : '' }catch(e){}
-        if(confirm('fix.js ' + FIX_VERSAO + ' — as quarenta e uma partes carregaram.\n\n'
+        if(confirm('fix.js ' + FIX_VERSAO + ' — as quarenta e duas partes carregaram.\n\n'
           + 'Plano PEI Marathon: ' + (l ? 'LIGADO' : 'desligado') + diag
           + '\n\nOK ' + (l ? 'desliga o plano e volta ao automático do app.'
                              : 'liga o plano da maratona.'))){
@@ -8844,7 +9025,7 @@ PARTE('concluído é o que você fez', function(){
         return;
       }
       alert(ok
-        ? 'fix.js ' + FIX_VERSAO + ' — as quarenta e uma partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
+        ? 'fix.js ' + FIX_VERSAO + ' — as quarenta e duas partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
         : 'fix.js ' + FIX_VERSAO + '\n\nFalharam:\n\n' + FIX_FALHAS.join('\n\n'));
     };
     barra.insertBefore(s, barra.firstChild.nextSibling);
