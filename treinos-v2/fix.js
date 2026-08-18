@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '03m';
+const FIX_VERSAO = '03n';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -7868,6 +7868,230 @@ PARTE('o quilômetro é o total', function(){
 });
 
 
+/* ═══ 37. PONTE PARA O GARMIN ═══
+
+   O QUE ISTO RESOLVE. Voce quis que a semana subisse sozinha para o
+   relogio. O problema e que o seu plano mora no Firebase, protegido por
+   senha — e quem for montar os workouts la fora nao consegue ler.
+
+   A TENTACAO ERRADA, que eu quase segui: deixar o script do GitHub, ou
+   o assistente, recalcular os ritmos e a reparticao da sessao por conta
+   propria. Seria uma SEGUNDA implementacao da mesma regra, vivendo
+   longe daqui. Ja cometi esse erro neste projeto — os testes do bloco
+   reimplementavam a logica em vez de carregar o fix.js — e ele custou
+   caro. Duas copias da mesma conta sempre acabam discordando, e voce
+   descobriria correndo.
+
+   ENTAO A REGRA AQUI E: toda a decisao de treino continua sendo tomada
+   NESTE arquivo. Esta parte apenas TRADUZ o que as partes 34 e 36 ja
+   decidiram para o vocabulario do Garmin — passo, condicao de fim e
+   alvo de ritmo em metros por segundo — e guarda o resultado pronto em
+   ST.garminSemana.
+
+   Quem estiver do outro lado so copia. Nao calcula nada.
+
+   O QUE VAI NO PACOTE, para os proximos 7 dias:
+     - so corridas (foi a sua escolha)
+     - nome, data, km e minutos totais
+     - os passos ja traduzidos, com ritmo em m/s
+     - o carimbo de quando foi gerado, para ninguem subir semana velha
+
+   METROS POR SEGUNDO: o Garmin nao entende "6:10/km". Ele guarda
+   velocidade. 6:10/km sao 370 segundos, e 1000/370 = 2,703 m/s. O
+   campo "rapido" leva o maior numero, que e o ritmo mais forte — foi
+   assim que achei no seu workout de 12/08, e mantive.
+
+   NO CONSOLE:
+     bqPonte.ver()      — a semana que seria enviada, em texto
+     bqPonte.pacote()   — o JSON exato que vai para o Firebase
+     bqPonte.gravar()   — forca a gravacao agora
+   ══════════════════════════════════════════════════════════════════ */
+
+PARTE('ponte para o Garmin', function(){
+  if(typeof ST !== 'object') throw new Error('sem ST');
+
+  var DIAS = 7;
+
+  function ms(seg){ return seg > 0 ? +(1000 / seg).toFixed(4) : null }
+  function pcs(s){ return Math.floor(s/60) + ':' + String(Math.round(s%60)).padStart(2,'0') }
+  function zona(k){ try{ return Z[k] || null }catch(e){ return null } }
+
+  function faixaMs(zk, folga){
+    var z = zona(zk);
+    if(!z || !z.p) return null;
+    var rapido = z.p[0] - (folga || 0), lento = z.p[1] + (folga || 0);
+    return { rapido: ms(rapido), lento: ms(lento),
+             txt: pcs(rapido) + '–' + pcs(lento) + '/km',
+             fc: z.fc ? z.fc.slice() : null };
+  }
+
+  /* ── traduz UMA sessao de corrida em passos do Garmin ── */
+  function passosDe(s){
+    /* a reparticao vem pronta da parte 36. Se ela nao existir, eu NAO
+       invento: devolvo nulo e a sessao fica de fora do pacote. */
+    var R = s && s.bqRep;
+    if(!R && window.bqTotal && typeof window.bqTotal.repartir === 'function')
+      R = window.bqTotal.repartir(s);
+    if(!R) return null;
+
+    var rec  = faixaMs('rec', 0);
+    var faci = faixaMs('faci', 0);
+    if(!rec || !faci) return null;
+
+    var P = [];
+
+    P.push({ tipo:'warmup', fim:'time', valor: R.minWU * 60,
+             rapido: rec.rapido, lento: rec.lento,
+             texto: R.minWU + ' min subindo devagar, ' + rec.txt +
+                    '. Se chegar ofegante ao fim, foi rapido demais.' });
+
+    if(R.qual){
+      var zk = R.zonaForte === 'mp' ? 'mp' : R.zonaForte === 'lim' ? 'lim' : 'vo2';
+      var forte = faixaMs(zk, 0);
+      if(!forte) return null;
+
+      if(zk === 'mp' || zk === 'lim'){
+        /* Bloco continuo. O volume facil que sobra vem ANTES do bloco
+           forte, nao depois. Terminar um limiar e ainda ter 5 km de
+           trote pela frente e desmotivador e nao rende nada; a escola
+           classica poe esse volume na entrada, com a perna fresca, e
+           deixa so o desaquecimento no fim. */
+        if(R.kmTrote > 0.4)
+          P.push({ tipo:'interval', fim:'distance', valor: Math.round(R.kmTrote * 1000),
+                   rapido: faci.rapido, lento: faci.lento,
+                   texto: 'Rodagem de entrada, ' + R.kmTrote.toFixed(1) + ' km em ' +
+                          faci.txt + '. Segure aqui: o trabalho vem a seguir.' });
+        P.push({ tipo:'interval', fim:'distance', valor: Math.round(R.kmForte * 1000),
+                 rapido: forte.rapido, lento: forte.lento,
+                 texto: R.kmForte.toFixed(1) + ' km em ' + forte.txt +
+                        (forte.fc ? ', FC ' + forte.fc[0] + '-' + forte.fc[1] + ' bpm' : '') + '.' });
+      } else {
+        /* tiros: grupo de repeticao */
+        var m = 600, n = Math.max(3, Math.min(10, Math.round(R.kmForte * 1000 / m)));
+        var trote = Math.max(90, Math.round(R.kmTrote * 1000 / n * (faci.lento ? 1/faci.lento : 0.4)));
+        trote = Math.min(210, Math.max(90, Math.round(trote / 30) * 30));
+        P.push({ tipo:'repetir', vezes: n, passos: [
+          { tipo:'interval', fim:'distance', valor: m,
+            rapido: forte.rapido, lento: forte.lento,
+            texto: m + ' m em ' + forte.txt +
+                   (forte.fc ? ', FC ate ' + forte.fc[0] + '-' + forte.fc[1] + ' bpm' : '') + '.' },
+          { tipo:'recovery', fim:'time', valor: trote,
+            texto: Math.round(trote/60) + ' min de trote leve. Nao pare de correr.' }
+        ]});
+      }
+    } else {
+      var zm = s.foco === 'longo' ? 'long' : s.foco === 'soltura' ? 'rec' : 'faci';
+      var alvo = faixaMs(zm, 0);
+      if(!alvo) return null;
+      P.push({ tipo:'interval', fim:'distance', valor: Math.round(R.kmMain * 1000),
+               rapido: alvo.rapido, lento: alvo.lento,
+               texto: R.kmMain.toFixed(1) + ' km em ' + alvo.txt +
+                      '. Voce deve conseguir falar frases inteiras.' });
+    }
+
+    P.push({ tipo:'cooldown', fim:'time', valor: R.minCD * 60,
+             texto: R.minCD + ' min de trote muito leve ate a respiracao normalizar.' });
+
+    return P;
+  }
+
+  /* ── monta o pacote da semana ── */
+  function pacote(){
+    var hoje = iso(HOJE), fim = iso(addD(HOJE, DIAS - 1));
+    var out = [];
+
+    Object.keys(ST.plano || {}).sort().forEach(function(k){
+      if(k < hoje || k > fim) return;
+      var s = ST.plano[k];
+      if(!s || s.mod !== 'corrida' || s.prova) return;   /* so corridas */
+      var P = passosDe(s);
+      if(!P) return;
+
+      var d = dt(k);
+      var nome = String(d.getDate()).padStart(2,'0') + '/' +
+                 String(d.getMonth()+1).padStart(2,'0') + ' · ' +
+                 (s.titulo || s.foco) + ' · ' + (+s.km).toFixed(1) + ' km total';
+
+      out.push({
+        data: k, nome: nome, foco: s.foco,
+        km: +(+s.km).toFixed(1), min: +s.min || null,
+        paceMedio: s.pace || null,
+        nota: 'Total porta a porta ' + (+s.km).toFixed(1) + ' km. Alongamentos e ' +
+              'educativos ANTES do start, relogio parado.',
+        passos: P
+      });
+    });
+
+    var lim = null;
+    try{ lim = PERFIL.paceLimiar }catch(e){}
+
+    return {
+      gerado: new Date().toISOString(),
+      versao: (typeof FIX_VERSAO === 'string' ? FIX_VERSAO : '?'),
+      de: hoje, ate: fim,
+      limiar: lim ? pcs(lim) : null,
+      fcMax: (PERFIL && PERFIL.fcMax) || null,
+      zonas: ['rec','faci','long','mp','lim','vo2'].reduce(function(a, k){
+        var z = zona(k);
+        if(z && z.p) a[k] = { n:z.n, pace: pcs(z.p[0]) + '–' + pcs(z.p[1]),
+                              fc: z.fc ? z.fc[0] + '–' + z.fc[1] : null };
+        return a;
+      }, {}),
+      sessoes: out
+    };
+  }
+
+  /* ── grava junto com o resto do estado ── */
+  function gravar(){
+    try{
+      var p = pacote();
+      ST.garminSemana = p;
+      return p.sessoes.length + ' sessões no pacote';
+    }catch(e){ console.warn('ponte:', e && e.message); return 'falhou' }
+  }
+
+  var persistApp = window.persistir;
+  if(typeof persistApp === 'function'){
+    window.persistir = function(){
+      try{ gravar() }catch(e){}
+      return persistApp.apply(this, arguments);
+    };
+  }
+
+  window.bqPonte = {
+    pacote: pacote,
+    gravar: gravar,
+    ver: function(){
+      var p = pacote();
+      if(!p.sessoes.length) return 'nenhuma corrida nos próximos ' + DIAS + ' dias';
+      var L = ['gerado ' + p.gerado.slice(0,16).replace('T',' ') + ' · fix ' + p.versao,
+               'limiar ' + p.limiar + '/km · janela ' + p.de + ' a ' + p.ate, ''];
+      p.sessoes.forEach(function(s){
+        L.push(s.nome);
+        s.passos.forEach(function(x){
+          if(x.tipo === 'repetir'){
+            L.push('   repetir ' + x.vezes + '×:');
+            x.passos.forEach(function(y){
+              L.push('     ' + y.tipo.padEnd(9) +
+                     (y.fim === 'time' ? y.valor + ' s' : y.valor + ' m').padEnd(9) +
+                     (y.rapido ? pcs(Math.round(1000/y.rapido)) + '–' + pcs(Math.round(1000/y.lento)) + '/km' : ''));
+            });
+          } else {
+            L.push('   ' + x.tipo.padEnd(9) +
+                   (x.fim === 'time' ? x.valor + ' s' : x.valor + ' m').padEnd(9) +
+                   (x.rapido ? pcs(Math.round(1000/x.rapido)) + '–' + pcs(Math.round(1000/x.lento)) + '/km' : 'livre'));
+          }
+        });
+        L.push('');
+      });
+      return L.join('\n');
+    }
+  };
+
+  setTimeout(function(){ try{ gravar() }catch(e){} }, 7200);
+});
+
+
 /* ─────────── selo de diagnóstico ─────────── */
 (function(){
   function montar(){
@@ -7887,7 +8111,7 @@ PARTE('o quilômetro é o total', function(){
         var l = window.planoBQ.ligado();
         var diag = '';
         try{ diag = window.bqDiag ? '\n\n── diagnóstico ──\n' + window.bqDiag() : '' }catch(e){}
-        if(confirm('fix.js ' + FIX_VERSAO + ' — as trinta e seis partes carregaram.\n\n'
+        if(confirm('fix.js ' + FIX_VERSAO + ' — as trinta e sete partes carregaram.\n\n'
           + 'Plano PEI Marathon: ' + (l ? 'LIGADO' : 'desligado') + diag
           + '\n\nOK ' + (l ? 'desliga o plano e volta ao automático do app.'
                              : 'liga o plano da maratona.'))){
@@ -7910,7 +8134,7 @@ PARTE('o quilômetro é o total', function(){
         return;
       }
       alert(ok
-        ? 'fix.js ' + FIX_VERSAO + ' — as trinta e seis partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
+        ? 'fix.js ' + FIX_VERSAO + ' — as trinta e sete partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
         : 'fix.js ' + FIX_VERSAO + '\n\nFalharam:\n\n' + FIX_FALHAS.join('\n\n'));
     };
     barra.insertBefore(s, barra.firstChild.nextSibling);
