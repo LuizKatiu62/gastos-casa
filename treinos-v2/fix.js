@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '03i';
+const FIX_VERSAO = '03j';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -4678,7 +4678,7 @@ PARTE('aba kpi', function(){
     cands.sort();
     /* nao mostro mais que 20 semanas de historico: passa disso vira ruido */
     var maisAntiga = cands[0];
-    var limite = iso(addD(HOJE, -140));
+    var limite = iso(addD(HOJE, -84));   /* 12 semanas: alem disso vira ruido */
     if(maisAntiga < limite) maisAntiga = limite;
 
     var ini = segunda(dt(maisAntiga)), fimProva = dt(o.data);
@@ -4841,29 +4841,56 @@ PARTE('aba kpi', function(){
         : tV.incl < -0.5 ? 'Seu volume vem <b>caindo</b>. Se ainda não é semana de polimento, vale entender por quê.'
         : 'Volume <b>estável</b> ao longo do ciclo.') + '</p></div>';
 
-    /* ── 3. longão ── */
-    var lFeito = passadas.map(function(w){ return w.longoFeito });
-    var lPlan  = passadas.map(function(w){ return w.longoPlan });
-    var alvoL = o.longoMax || Math.max.apply(null, lPlan.concat([10]));
+    /* ── 3. longão ──
+       ATENCAO ao que este cartao NAO faz mais: ele nao olha o historico
+       inteiro. Olhava, e o resultado foi absurdo — pegava a ultra de 65
+       km do ano passado, comparava com o alvo do objetivo e anunciava
+       "258% do pico, voce ja passou pelo longao de pico". Uma corrida de
+       meses atras nao diz nada sobre o preparo de hoje, e aquela frase
+       poderia levar alguem a pular justamente o treino que mais importa.
+
+       Agora a janela e de 8 SEMANAS, e o alvo e a faixa de 28 a 32 km,
+       que e o longao de quem vai correr uma maratona — nao o longoMax do
+       objetivo generico, que estava em 25. */
+    var JANELA_LONGO = 8;
+    var recentes = passadas.slice(-JANELA_LONGO);
+    var lFeito = recentes.map(function(w){ return w.longoFeito });
+    var lPlan  = recentes.map(function(w){ return w.longoPlan });
+    var alvoL = 30;                       /* meio da faixa de 28 a 32 km */
     var maiorL = Math.max.apply(null, lFeito.concat([0]));
-    var maxL = Math.max(alvoL, maiorL) * 1.18;
+    /* o proximo longao que o plano ja tem marcado */
+    var proxL = 0, chavesP = Object.keys(ST.plano || {}).sort();
+    chavesP.forEach(function(k){
+      if(k < iso(HOJE)) return;
+      var s2 = ST.plano[k];
+      if(s2 && s2.mod === 'corrida' && /longo/.test(s2.foco || '') && !s2.prova && !proxL)
+        proxL = +s2.km || 0;
+    });
+    var maxL = Math.max(alvoL, maiorL, proxL) * 1.18;
     var pL = pontos(lFeito.map(function(v){ return v > 0 ? v : null }), 0, maxL);
+    var faltamSem = Math.max(0, Math.ceil(diff(iso(HOJE), dados.prova) / 7));
 
     h += '<div class="kcard"><div class="kcab"><h3>Treino longo</h3>' +
-        '<span class="delta ' + (maiorL >= alvoL ? 'up' : 'fl') + '">' +
-        Math.round(maiorL/alvoL*100) + '% do pico</span></div>' +
-      '<div class="kbig">' + maiorL.toFixed(0) + '<small>km, seu maior até aqui. O pico do ciclo é ' +
-        alvoL.toFixed(0) + ' km</small></div>' +
+        '<span class="delta ' + (maiorL >= 28 ? 'up' : 'fl') + '">' +
+        (maiorL >= 28 ? 'na faixa' : Math.max(0, Math.round(28 - maiorL)) + ' km para a faixa') + '</span></div>' +
+      '<div class="kbig">' + maiorL.toFixed(0) + '<small>km, seu maior nas últimas ' +
+        JANELA_LONGO + ' semanas' + (proxL ? ' · o próximo do plano é ' + proxL.toFixed(0) + ' km' : '') +
+        '</small></div>' +
       svgBox(grade(maxL, 0, function(v){ return v.toFixed(0) }) +
-        refLinha(alvoL, 0, maxL, 'var(--acc)', 'pico ' + alvoL.toFixed(0) + ' km') +
+        refLinha(28, 0, maxL, 'var(--acc)', 'faixa de maratona · 28 a 32 km') +
         paresDeBarras(lFeito, lPlan, maxL, 'rgba(201,242,78,.30)') +
         area(pL, 'var(--run)') + curva(pL, 'var(--run)') +
         balao(pL, maiorL.toFixed(0) + ' km', 'var(--run)') +
         eixoX(lFeito.length, function(i){ return 'S'+(i+1) })) +
       legenda([['maior treino da semana','var(--run)'],['planejado','', 'gh']]) +
-      '<p class="ksub">' + (maiorL >= alvoL
-        ? 'Você já passou pelo longão de pico. Daqui para frente o trabalho é <b>chegar inteiro</b>, não mais forte.'
-        : 'Faltam <b>' + (alvoL-maiorL).toFixed(0) + ' km</b> até o longão de pico do plano.') + '</p></div>';
+      '<p class="ksub">' + (maiorL >= 28
+        ? 'Seus longões já estão na faixa que uma maratona pede. Daqui para frente o trabalho é <b>manter e chegar inteiro</b>, não subir mais.'
+        : 'Para a maratona, o ideal é chegar a <b>28 a 32 km</b> num longão, pelo menos três semanas antes da prova. ' +
+          'Faltam <b>' + Math.max(0, (28 - maiorL)).toFixed(0) + ' km</b> e <b>' + faltamSem +
+          '</b> ' + (faltamSem === 1 ? 'semana' : 'semanas') + '.') + '</p>' +
+      '<p class="kfoot">Só as últimas ' + JANELA_LONGO + ' semanas entram aqui. Antes eu olhava o histórico ' +
+      'inteiro — e a sua ultra de 65 km aparecia como se fosse preparo atual, o que não é verdade: ' +
+      'o que conta para outubro é o que suas pernas fizeram nas últimas semanas.</p></div>';
 
     /* ── 4. previsão ── */
     var prev = previsoes(passadas);
