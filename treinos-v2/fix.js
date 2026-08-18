@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '02x';
+const FIX_VERSAO = '02y';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -5523,6 +5523,338 @@ PARTE('nutricao no longao', function(){
 });
 
 
+
+/* ═══════ 30. RECALIBRACAO QUINZENAL ═══════
+
+   A cada 14 dias o app le o que voce REALMENTE fez nas duas semanas
+   anteriores e reescreve as duas seguintes. Nada de seguir dez semanas
+   escritas num domingo de agosto como se o corpo fosse obedecer.
+
+   O QUE ELE LE, na janela de 14 dias:
+     · km corridos contra km planejados
+     · sessoes feitas contra sessoes previstas
+     · maior treino longo
+     · melhor esforco, para recalcular o ritmo de limiar
+     · eficiencia aerobica media
+     · carga aguda sobre cronica
+
+   O QUE ELE MUDA, para as duas semanas seguintes:
+     1. RITMO DE LIMIAR  — recalculado pelo melhor esforco da janela,
+        por Riegel. E dele que saem todos os ritmos e volumes do motor.
+     2. VOLUME           — as sessoes sao reescaladas pelo que voce
+        aguentou de fato, nao pelo que estava no papel.
+     3. TETO DO LONGAO   — o proximo longo nao passa de 15% do seu maior
+        longo recente, por mais que o plano peca.
+
+   POR QUE AMORTECER, e nao simplesmente obedecer aos dados:
+
+   Duas semanas e pouca amostra. Uma quinzena de chuva, uma gripe ou uma
+   viagem derrubariam o limiar e encolheriam o plano; um unico dia bom o
+   inflaria. Um treinador olha isso e pondera. O codigo aqui pondera
+   assim:
+
+     · o limiar anda no maximo 8 s/km por recalibracao
+     · o fator de volume anda no maximo 15% por recalibracao
+     · o fator nunca passa de 1,05 — o plano original ja e o teto
+     · abaixo de 4 corridas na janela, nada muda: amostra insuficiente
+
+   NADA E APLICADO SEM VOCE MANDAR. A tela mostra a leitura e o que
+   mudaria; quem decide e voce. Um aplicativo que reescreve o treino
+   sozinho, sem explicar, e pior que um plano fixo.
+   ══════════════════════════════════════════════════════════════════ */
+
+PARTE('recalibracao quinzenal', function(){
+  if(typeof ST !== 'object') throw new Error('sem ST');
+
+  var ANCORA = '2026-08-17';        /* segunda-feira: inicio do 1o ciclo */
+  var CICLO  = 14;
+  var MAX_LIMIAR = 8;               /* s/km por recalibracao */
+  var MAX_FATOR  = 0.15;            /* 15% por recalibracao */
+  var MIN_CORRIDAS = 4;
+
+  var css = document.createElement('style');
+  css.textContent = [
+'.recal{background:var(--s1);border:1px solid var(--acc);border-radius:18px;padding:17px 16px;margin-bottom:14px}',
+'.recal .cab{font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--acc);margin-bottom:7px}',
+'.recal h3{margin:0 0 4px;font-size:18px;font-weight:800;letter-spacing:-.02em}',
+'.recal .per{font-size:12px;color:var(--tx3);margin:0 0 13px}',
+'.recal .ln{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13.5px}',
+'.recal .ln:last-of-type{border-bottom:none}',
+'.recal .ln .k{flex:1;color:var(--tx2)}',
+'.recal .ln .v{font-weight:700;text-align:right;white-space:nowrap}',
+'.recal .v.up{color:var(--ok)} .recal .v.dn{color:var(--bad)} .recal .v.fl{color:var(--tx2)}',
+'.recal .porque{margin:11px 0 0;padding-top:10px;border-top:1px solid var(--line);',
+'  font-size:12.5px;color:var(--tx3);line-height:1.55}',
+'.recal .bts{display:flex;gap:9px;margin-top:14px}',
+'.recal .bt{flex:1;padding:12px;border-radius:13px;font-size:14px;font-weight:700;border:0}',
+'.recal .bt.sim{background:var(--acc);color:var(--bg)}',
+'.recal .bt.nao{background:var(--s2);border:1px solid var(--line);color:var(--tx2)}',
+'.recal.feito{border-color:var(--line)}',
+'.recal.feito .cab{color:var(--tx3)}'
+  ].join('\n');
+  document.head.appendChild(css);
+
+  /* ---------- utilidades ---------- */
+  function dataDe(r){ return iso(addD(HOJE, -r.d)) }
+  function corridas(){
+    return (ST.runs || []).filter(function(r){
+      return !r.walk && (r.mod || 'corrida') === 'corrida' && r.km > 0;
+    });
+  }
+  function limiarPorEsforco(km, paceSeg){
+    /* Riegel ate a distancia de uma hora; esse ritmo e o limiar */
+    var t = km * paceSeg;
+    var distHora = km * Math.pow(3600 / t, 1/1.06);
+    return distHora > 0 ? Math.round(3600 / distHora) : null;
+  }
+
+  /* qual ciclo estamos, contando a partir da ancora */
+  function cicloAtual(){
+    var d = Math.floor((dt(iso(HOJE)) - dt(ANCORA)) / 864e5);
+    var n = Math.floor(d / CICLO);
+    if(n < 0) n = 0;
+    return { n: n,
+             ini: iso(addD(dt(ANCORA), n * CICLO)),
+             fim: iso(addD(dt(ANCORA), (n + 1) * CICLO - 1)) };
+  }
+
+  /* ---------- a leitura das duas semanas ---------- */
+  function leitura(ini, fim){
+    var runs = corridas().filter(function(r){
+      var k = dataDe(r); return k >= ini && k <= fim;
+    });
+    var plan = 0, planN = 0;
+    Object.keys(ST.plano || {}).forEach(function(k){
+      if(k < ini || k > fim) return;
+      var s = ST.plano[k];
+      if(!s || s.mod !== 'corrida' || s.prova) return;
+      plan += (+s.km || 0); planN++;
+    });
+
+    var km = 0, longo = 0, melhor = null, efs = [];
+    runs.forEach(function(r){
+      km += r.km;
+      if(r.km > longo) longo = r.km;
+      if(r.km >= 5 && r.pace > 200 && r.pace <= PERFIL.paceLimiar + 75){
+        var lim = limiarPorEsforco(r.km, r.pace);
+        if(lim && (melhor == null || lim < melhor)) melhor = lim;
+      }
+      if(r.fc > 60 && r.pace > PERFIL.paceLimiar + 20 && r.pace < 700)
+        efs.push((60000 / r.pace) / r.fc);
+    });
+
+    return {
+      ini: ini, fim: fim,
+      corridas: runs.length, sessoesPlan: planN,
+      km: +km.toFixed(1), kmPlan: +plan.toFixed(1),
+      longo: +longo.toFixed(1),
+      limiar: melhor,
+      ef: efs.length ? +(efs.reduce(function(s,v){return s+v},0)/efs.length).toFixed(2) : null,
+      aderencia: plan > 0 ? +(km / plan * 100).toFixed(0) : null
+    };
+  }
+
+  /* ---------- o que mudaria ---------- */
+  function proposta(L){
+    var p = { ok: false, motivos: [] };
+    if(L.corridas < MIN_CORRIDAS){
+      p.motivo = 'Só ' + L.corridas + ' corrida' + (L.corridas === 1 ? '' : 's') +
+                 ' nas duas semanas. Amostra pequena demais para recalibrar com honestidade — o plano segue como está.';
+      return p;
+    }
+    p.ok = true;
+
+    /* 1. limiar, com passo amortecido */
+    var atual = PERFIL.paceLimiar;
+    p.limiarAtual = atual;
+    if(L.limiar){
+      var alvo = L.limiar, passo = alvo - atual;
+      if(Math.abs(passo) > MAX_LIMIAR) passo = passo > 0 ? MAX_LIMIAR : -MAX_LIMIAR;
+      p.limiarNovo = Math.min(540, Math.max(210, atual + Math.round(passo)));
+      if(p.limiarNovo !== atual)
+        p.motivos.push(passo < 0
+          ? 'seu melhor esforço da quinzena projeta um limiar mais rápido'
+          : 'seu melhor esforço da quinzena projeta um limiar mais lento');
+    } else {
+      p.limiarNovo = atual;
+      p.motivos.push('nenhum esforço qualificado na janela; o limiar fica onde está');
+    }
+
+    /* 2. fator de volume */
+    var anterior = (ST.recal && ST.recal.fator) || 1;
+    var bruto = L.kmPlan > 0 ? (L.km * 1.05) / L.kmPlan : 1;
+    var alvoF = Math.min(1.05, Math.max(0.60, bruto));
+    var passoF = alvoF - anterior;
+    if(Math.abs(passoF) > MAX_FATOR) passoF = passoF > 0 ? MAX_FATOR : -MAX_FATOR;
+    p.fatorAtual = anterior;
+    p.fatorNovo = +Math.min(1.05, Math.max(0.55, anterior + passoF)).toFixed(2);
+    if(L.aderencia != null && L.aderencia < 90)
+      p.motivos.push('você cumpriu ' + L.aderencia + '% do volume planejado');
+    else if(L.aderencia != null && L.aderencia >= 100)
+      p.motivos.push('você cumpriu o volume inteiro');
+
+    /* 3. teto do longao */
+    p.tetoLongo = L.longo > 0 ? +(L.longo * 1.15).toFixed(1) : null;
+    if(p.tetoLongo) p.motivos.push('o próximo longo não passa de ' + p.tetoLongo +
+      ' km, 15% acima do seu maior recente');
+
+    /* 4. dor ou lesao, do questionario */
+    var q = ST.quest;
+    if(q && (q.dor === 'sim' || q.lesao === 'ativa')){
+      p.fatorNovo = +(p.fatorNovo * 0.9).toFixed(2);
+      p.motivos.push('você marcou dor ou lesão no questionário');
+    }
+    return p;
+  }
+
+  /* ---------- aplicar ---------- */
+  function aplicar(p, L){
+    if(!p.ok) return;
+    PERFIL.paceLimiar = p.limiarNovo;
+    try{ Z = zonas() }catch(e){}
+    ST.recal = { ciclo: cicloAtual().n, em: iso(HOJE),
+                 fator: p.fatorNovo, tetoLongo: p.tetoLongo,
+                 limiar: p.limiarNovo, leitura: L };
+    try{ if(ST.cache) ST.cache = {} }catch(e){}
+    try{ rebuild() }catch(e){}
+    try{ if(typeof renderTudo === 'function') renderTudo() }
+    catch(e){ try{ renderCoach() }catch(e2){} }
+    try{ persistir() }catch(e){}
+  }
+  function adiar(){
+    ST.recal = ST.recal || {};
+    ST.recal.adiado = cicloAtual().n;
+    try{ persistir() }catch(e){}
+    try{ if(typeof renderTudo === 'function') renderTudo() }catch(e){}
+  }
+
+  /* ---------- o plano obedece ao fator e ao teto ---------- */
+  var gerarApp = window.gerarPlano;
+  window.gerarPlano = function(){
+    var p = gerarApp.apply(this, arguments);
+    var R = ST.recal;
+    if(!p || !R || !(R.fator > 0)) return p;
+    var hoje = iso(HOJE);
+    var ate  = iso(addD(HOJE, CICLO));       /* vale para as 2 semanas seguintes */
+    try{
+      Object.keys(p).forEach(function(k){
+        if(k < hoje || k > ate) return;
+        var s = p[k];
+        if(!s || s.prova || s.mod !== 'corrida') return;
+        if(typeof s.km === 'number'){
+          var novo = s.km * R.fator;
+          if(R.tetoLongo && /longo/.test(s.foco || '')) novo = Math.min(novo, R.tetoLongo);
+          s.km = Math.round(novo * 10) / 10;
+        }
+        if(typeof s.min === 'number') s.min = Math.round(s.min * R.fator);
+      });
+    }catch(e){ console.warn('recal:', e && e.message) }
+    return p;
+  };
+
+  /* ---------- o cartao ---------- */
+  function chip(a, b, sufixo, menorEhMelhor){
+    if(a === b) return '<span class="v fl">' + b + sufixo + '</span>';
+    var bom = menorEhMelhor ? b < a : b > a;
+    return '<span class="v ' + (bom ? 'up' : 'dn') + '">' + a + sufixo + ' → ' + b + sufixo + '</span>';
+  }
+  function cartao(){
+    var c = cicloAtual();
+    var jaFeito  = ST.recal && ST.recal.ciclo === c.n;
+    var jaAdiado = ST.recal && ST.recal.adiado === c.n;
+    if(jaAdiado && !jaFeito) return '';
+
+    var ini = iso(addD(dt(c.ini), -CICLO)), fim = iso(addD(dt(c.ini), -1));
+    var L = leitura(ini, fim);
+    var p = proposta(L);
+    var per = fmtCurto(ini) + ' a ' + fmtCurto(fim);
+
+    if(jaFeito){
+      return '<div class="recal feito"><div class="cab">Recalibrado</div>' +
+        '<h3>Ciclo ' + (c.n + 1) + ' ajustado</h3>' +
+        '<p class="per">Leitura de ' + per + ' · vale até ' + fmtCurto(c.fim) + '</p>' +
+        '<div class="ln"><span class="k">Ritmo de limiar</span><span class="v">' + mmss(PERFIL.paceLimiar) + '/km</span></div>' +
+        '<div class="ln"><span class="k">Volume do plano</span><span class="v">' + Math.round(ST.recal.fator * 100) + '%</span></div>' +
+        (ST.recal.tetoLongo ? '<div class="ln"><span class="k">Teto do longo</span><span class="v">' + ST.recal.tetoLongo + ' km</span></div>' : '') +
+        '</div>';
+    }
+
+    var h = '<div class="recal"><div class="cab">Recalibração quinzenal</div>' +
+      '<h3>' + (p.ok ? 'O que muda nas próximas 2 semanas' : 'Sem dados para recalibrar') + '</h3>' +
+      '<p class="per">Leitura de ' + per + ' · ' + L.corridas + ' corrida' + (L.corridas === 1 ? '' : 's') +
+        ', ' + L.km + ' km de ' + L.kmPlan + ' planejados</p>';
+
+    if(!p.ok){
+      h += '<p class="porque">' + p.motivo + '</p>' +
+           '<div class="bts"><button class="bt nao" data-recal="nao">Entendi</button></div></div>';
+      return h;
+    }
+
+    h += '<div class="ln"><span class="k">Ritmo de limiar</span>' +
+         chip(mmss(p.limiarAtual), mmss(p.limiarNovo), '/km', true) + '</div>';
+    h += '<div class="ln"><span class="k">Volume do plano</span>' +
+         chip(Math.round(p.fatorAtual * 100), Math.round(p.fatorNovo * 100), '%', false) + '</div>';
+    if(p.tetoLongo)
+      h += '<div class="ln"><span class="k">Teto do próximo longo</span><span class="v">' + p.tetoLongo + ' km</span></div>';
+    if(L.aderencia != null)
+      h += '<div class="ln"><span class="k">Aderência da quinzena</span><span class="v ' +
+           (L.aderencia >= 90 ? 'up' : L.aderencia >= 70 ? 'fl' : 'dn') + '">' + L.aderencia + '%</span></div>';
+
+    h += '<p class="porque">Por quê: ' + (p.motivos.length ? p.motivos.join('; ') : 'ajuste de rotina') + '. ' +
+      'Os saltos são amortecidos de propósito — o limiar anda no máximo 8 s/km e o volume 15% por vez, ' +
+      'porque duas semanas são pouca amostra para virar o plano de cabeça para baixo.</p>' +
+      '<div class="bts">' +
+        '<button class="bt sim" data-recal="sim">Aplicar</button>' +
+        '<button class="bt nao" data-recal="nao">Agora não</button>' +
+      '</div></div>';
+    return h;
+  }
+
+  function ligar(host){
+    if(!host) return;
+    host.querySelectorAll('[data-recal]').forEach(function(b){
+      b.onclick = function(){
+        var c = cicloAtual();
+        var ini = iso(addD(dt(c.ini), -CICLO)), fim = iso(addD(dt(c.ini), -1));
+        var L = leitura(ini, fim);
+        if(b.dataset.recal === 'sim') aplicar(proposta(L), L);
+        else adiar();
+      };
+    });
+  }
+
+  /* entra no topo da aba KPI */
+  var kpiApp = window.bqKPI && window.bqKPI.render;
+  function injetar(){
+    var el = document.getElementById('v-kpi');
+    if(!el || el.querySelector('.recal')) return;
+    var h = cartao();
+    if(!h) return;
+    el.insertAdjacentHTML('afterbegin', h);
+    ligar(el);
+  }
+  if(typeof kpiApp === 'function'){
+    window.bqKPI.render = function(){
+      var r = kpiApp.apply(this, arguments);
+      try{ injetar() }catch(e){ console.warn('recal:', e && e.message) }
+      return r;
+    };
+  }
+
+  window.bqRecal = {
+    ciclo: cicloAtual,
+    leitura: function(){
+      var c = cicloAtual();
+      return leitura(iso(addD(dt(c.ini), -CICLO)), iso(addD(dt(c.ini), -1)));
+    },
+    proposta: function(){ return proposta(window.bqRecal.leitura()) },
+    aplicar: function(){ var L = window.bqRecal.leitura(); aplicar(proposta(L), L); return ST.recal },
+    estado: function(){ return ST.recal || null },
+    zerar: function(){ delete ST.recal; try{ rebuild(); renderTudo() }catch(e){} return 'zerado' }
+  };
+});
+
+
 /* ─────────── selo de diagnóstico ─────────── */
 (function(){
   function montar(){
@@ -5542,7 +5874,7 @@ PARTE('nutricao no longao', function(){
         var l = window.planoBQ.ligado();
         var diag = '';
         try{ diag = window.bqDiag ? '\n\n── diagnóstico ──\n' + window.bqDiag() : '' }catch(e){}
-        if(confirm('fix.js ' + FIX_VERSAO + ' — as vinte e nove partes carregaram.\n\n'
+        if(confirm('fix.js ' + FIX_VERSAO + ' — as trinta partes carregaram.\n\n'
           + 'Plano PEI Marathon: ' + (l ? 'LIGADO' : 'desligado') + diag
           + '\n\nOK ' + (l ? 'desliga o plano e volta ao automático do app.'
                              : 'liga o plano da maratona.'))){
@@ -5565,7 +5897,7 @@ PARTE('nutricao no longao', function(){
         return;
       }
       alert(ok
-        ? 'fix.js ' + FIX_VERSAO + ' — as vinte e nove partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
+        ? 'fix.js ' + FIX_VERSAO + ' — as trinta partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
         : 'fix.js ' + FIX_VERSAO + '\n\nFalharam:\n\n' + FIX_FALHAS.join('\n\n'));
     };
     barra.insertBefore(s, barra.firstChild.nextSibling);
