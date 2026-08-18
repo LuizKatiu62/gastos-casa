@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '03j';
+const FIX_VERSAO = '03k';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -6620,6 +6620,435 @@ PARTE('força obedece ao bloco', function(){
 });
 
 
+/* ═══ 34. RITMOS QUE EXISTEM ═══
+
+   O DEFEITO, encontrado por voce: o app pediu 5 km continuos a
+   "4:25 a 4:55/km" com o coracao em "112 a 125 bpm". As duas
+   instrucoes se contradizem, e nenhuma das duas servia.
+
+   AUTOPSIA. Sao tres defeitos somados, nao um:
+
+   1) A ZONA DE VO2 ERA UMA SUBTRACAO, NAO UMA MEDIDA.
+      O index.html define  vo2 = [limiar-45, limiar-25].
+      Com o limiar em 5:10/km isso da 4:25 a 4:45/km.
+      O seu quilometro mais rapido ja registrado em treino e 5:28/km
+      (9,9 km em 13/08, FC 133). Uma faixa que nenhum esforco medido
+      sustenta nao e uma zona de treino: e uma conta.
+
+   2) O RITMO E A FREQUENCIA CARDIACA VINHAM DE ZONAS DIFERENTES.
+      O ritmo mostrado era da zona de VO2. A FC mostrada, 112 a 125,
+      e 68 a 76% da FC maxima — a zona de RODAGEM FACIL. Duas zonas
+      no mesmo cartao, e nada no app conferia se combinavam.
+
+   3) UM RITMO DE TIRO FOI COLADO NUM ESFORCO CONTINUO.
+      Meu gerador de blocos calcula a duracao da sessao como
+      km x ritmo_do_foco, ou seja: trata os 5 km inteiros como se
+      fossem corridos no ritmo de VO2. Ritmo de VO2 so existe dentro
+      de repeticoes de 2 a 4 minutos. Como bloco continuo de 5 km,
+      e ritmo de PROVA de 5 km, nao de treino.
+
+   O QUE ESTA PARTE FAZ.
+
+   a) UM SO DONO PARA O LIMIAR. Antes, sete lugares diferentes
+      escreviam PERFIL.paceLimiar: uma constante fixa 305 que eu
+      deixei no fix.js, a regra "mediana - 65 s" do index.html, o
+      questionario, a recalibracao e o gerador de blocos. Nenhum
+      olhava para o outro. Agora existe bqRitmo.limiar(), calculado
+      pela formula de Riegel sobre os seus TRES melhores esforcos
+      reais de 8 km ou mais, e reafirmado depois de cada sincronia.
+
+   b) TRAVA CONTRA O IMPOSSIVEL. O limiar nunca pode ficar mais
+      rapido que o quilometro mais rapido que voce ja correu menos
+      10 s. Se a conta der um numero que os seus dados nao sustentam,
+      a trava vence a conta.
+
+   c) ZONAS ANCORADAS EM PREVISAO DE PROVA, nao em subtracao. O
+      ritmo de maratona vem do Riegel para 42,195 km. O ritmo de VO2
+      vem do Riegel para 3 a 5 km. Acrescentei a zona de RITMO DE
+      MARATONA, que faltava e e a mais importante para 18/10.
+
+   d) PORTAO DE COERENCIA. Antes de qualquer etapa aparecer na tela,
+      se ela mostra um ritmo E uma FC, as duas passam a sair da MESMA
+      zona. Se divergirem, a FC e corrigida e o console avisa. Vale
+      para as etapas de hoje e para qualquer parte que eu escrever
+      depois — o portao fica no caminho de todas.
+
+   e) TIRO NUNCA VIRA CONTINUO. Sessao de vo2, limiar ou mp passa a
+      ter ritmo MEDIO da sessao (aquecimento + parte forte + volta a
+      calma) no campo pace, e o ritmo forte aparece so no texto, com
+      a duracao das repeticoes escrita.
+
+   NO CONSOLE:
+     bqRitmo.mostrar()     — o limiar, de onde veio, e a tabela de zonas
+     bqRitmo.evidencia()   — os esforcos que sustentam o numero
+     bqRitmo.coerencia()   — quantas incoerencias foram barradas
+   ══════════════════════════════════════════════════════════════════ */
+
+PARTE('ritmos que existem', function(){
+  if(typeof PERFIL !== 'object') throw new Error('sem PERFIL');
+
+  var MIN_LIM = 270;          /* 4:30/km — piso absoluto, ninguem passa  */
+  var MAX_LIM = 480;          /* 8:00/km — teto absoluto                 */
+  var JANELA  = 120;          /* dias de historico que valem como prova  */
+  var barrados = [];          /* incoerencias barradas, para auditoria   */
+
+  function riegel(km, seg, d){ return seg * Math.pow(d / km, 1.06) }
+  function segDe(r){ return (isFinite(r.dur) && r.dur > 0) ? r.dur : r.km * r.pace }
+
+  /* ── 1. os esforcos que podem sustentar um limiar ── */
+  function esforcos(){
+    var lista = (typeof ST === 'object' && Array.isArray(ST.runs)) ? ST.runs : [];
+    return lista.filter(function(r){
+      return r && r.mod === 'corrida' && !r.walk
+          && r.km >= 8 && r.d <= JANELA
+          && isFinite(r.pace) && r.pace > 200 && r.pace < 700;
+    });
+  }
+
+  /* ── 2. o limiar, com trava ── */
+  var _cache = null, _cacheN = -1;
+
+  function medir(){
+    var E = esforcos();
+    if(E.length < 1) return null;
+
+    var proj = E.map(function(r){
+      var seg = segDe(r);
+      var dh  = r.km * Math.pow(3600 / seg, 1 / 1.06);   /* km em 1 hora */
+      return { L: 3600 / dh, km: r.km, pace: r.pace, d: r.d, fc: r.fc, seg: seg };
+    }).sort(function(a, b){ return a.L - b.L });          /* melhor primeiro */
+
+    var top = proj.slice(0, Math.min(3, proj.length));
+    var L   = top.reduce(function(a, b){ return a + b.L }, 0) / top.length;
+
+    /* TRAVA: mais rapido que o km mais rapido ja medido, menos 10 s, nao existe */
+    var todas = (typeof ST === 'object' && Array.isArray(ST.runs)) ? ST.runs : [];
+    var rapidas = todas.filter(function(r){
+      return r && r.mod === 'corrida' && !r.walk && r.km >= 5
+          && r.d <= JANELA && isFinite(r.pace) && r.pace > 200;
+    }).map(function(r){ return r.pace });
+    var maisRapido = rapidas.length ? Math.min.apply(null, rapidas) : null;
+
+    var travou = false;
+    if(maisRapido != null && L < maisRapido - 10){ L = maisRapido - 10; travou = true }
+    if(L < MIN_LIM){ L = MIN_LIM; travou = true }
+    if(L > MAX_LIM){ L = MAX_LIM; travou = true }
+
+    return { L: Math.round(L), base: top[0], top: top,
+             maisRapido: maisRapido, travou: travou, n: E.length };
+  }
+
+  function evid(){
+    var n = (typeof ST === 'object' && Array.isArray(ST.runs)) ? ST.runs.length : 0;
+    if(!_cache || _cacheN !== n){ _cache = medir(); _cacheN = n }
+    return _cache;
+  }
+
+  function limiar(){
+    var e = evid();
+    if(e) return e.L;
+    var p = +PERFIL.paceLimiar;
+    return isFinite(p) && p >= MIN_LIM && p <= MAX_LIM ? p : 340;
+  }
+
+  /* previsao de prova a partir do melhor esforco real */
+  function prev(d){
+    var e = evid();
+    if(!e || !e.base) return null;
+    return riegel(e.base.km, e.base.seg, d) / d;
+  }
+
+  /* ── 3. as zonas, refeitas ── */
+  var FC_PCT = {
+    rec : [0.60, 0.68], faci: [0.68, 0.76], long: [0.70, 0.80],
+    mp  : [0.80, 0.86], lim : [0.86, 0.91], vo2 : [0.91, 0.97]
+  };
+
+  function novasZonas(){
+    var L = limiar(), F = +PERFIL.fcMax || 163;
+    var p3 = prev(3), p5 = prev(5), p42 = prev(42.195);
+    var r  = function(x){ return Math.round(x) };
+    var fc = function(k){ return [r(F * FC_PCT[k][0]), r(F * FC_PCT[k][1])] };
+
+    /* ritmo de maratona: previsao real; se nao houver, limiar + 22 */
+    var mp = p42 ? [r(p42) - 6, r(p42) + 6] : [L + 16, L + 28];
+    /* VO2: previsao de 3 a 5 km. Nunca mais rapido que a previsao de 3 km. */
+    var vo = (p3 && p5) ? [r(p3) - 5, r(p5)] : [L - 26, L - 12];
+    if(vo[1] <= vo[0]) vo[1] = vo[0] + 12;
+
+    return {
+      rec :{n:'Recuperação',       s:'REC', p:[L+95, L+125], fc:fc('rec'),
+            d:'Conversa fluida o tempo todo'},
+      faci:{n:'Rodagem fácil',     s:'FÁC', p:[L+45, L+75],  fc:fc('faci'),
+            d:'Base aeróbica, onde mora o volume'},
+      long:{n:'Longo',             s:'LON', p:[L+35, L+65],  fc:fc('long'),
+            d:'Resistência, o treino mais importante'},
+      mp  :{n:'Ritmo de maratona', s:'MP',  p:mp,            fc:fc('mp'),
+            d:'O ritmo do dia 18 de outubro. Firme, mas você fala frases curtas'},
+      lim :{n:'Limiar',            s:'LIM', p:[L-8, L+12],   fc:fc('lim'),
+            d:'Confortavelmente difícil, 20 a 25 min sustentáveis'},
+      vo2 :{n:'VO₂ máx',           s:'VO₂',p:vo,             fc:fc('vo2'),
+            d:'Só dentro de tiros de 2 a 4 min. Nunca como bloco contínuo'}
+    };
+  }
+
+  /* ── 4. assumir o comando ── */
+  function assumir(motivo){
+    var L = limiar();
+    if(PERFIL.paceLimiar !== L){
+      var antes = PERFIL.paceLimiar;
+      PERFIL.paceLimiar = L;
+      console.log('ritmo: limiar ' + mmss(antes) + ' -> ' + mmss(L) + '/km  (' + motivo + ')');
+    }
+    try{ Z = zonas() }catch(e){}
+  }
+
+  /* zonas() passa a ser minha */
+  window.zonas = novasZonas;
+  try{ Z = zonas() }catch(e){}
+  assumir('posse inicial');
+
+  /* depois de cada sincronia o index.html reescreve o limiar pela regra
+     "mediana - 65 s". Essa regra supoe que a sua mediana e rodagem facil,
+     e a sua nao e: 5:48/km com FC 133 a 138 e ritmo firme, nao facil.
+     Por isso ela erra por excesso, e por isso eu reafirmo depois dela. */
+  if(typeof window.absorver === 'function'){
+    var absApp = window.absorver;
+    window.absorver = function(){
+      var r = absApp.apply(this, arguments);
+      try{ _cache = null; _cacheN = -1; assumir('depois da sincronia') }catch(e){}
+      return r;
+    };
+  }
+
+  /* ── 5. portao de coerencia ── */
+  function pcs(s){ return Math.floor(s/60) + ':' + String(Math.round(s%60)).padStart(2,'0') }
+
+  function paceDoTexto(t){                  /* le "5:20–5:40/km" ou "5:44/km" */
+    var m = String(t).match(/(\d+):(\d{2})\D+(\d+):(\d{2})/);
+    if(m) return [(+m[1])*60 + (+m[2]), (+m[3])*60 + (+m[4])];
+    m = String(t).match(/(\d+):(\d{2})/);
+    if(m){ var v = (+m[1])*60 + (+m[2]); return [v, v] }
+    return null;
+  }
+
+  function zonaDoPace(faixa){
+    var chaves = Object.keys(Z), melhor = null, menor = 1e9;
+    var mid = (faixa[0] + faixa[1]) / 2;
+    chaves.forEach(function(k){
+      var z = Z[k]; if(!z || !z.p) return;
+      /* casamento exato da faixa ganha de tudo */
+      if(z.p[0] === faixa[0] && z.p[1] === faixa[1]){ melhor = k; menor = -1; return }
+      if(menor === -1) return;
+      var zm = (z.p[0] + z.p[1]) / 2, d = Math.abs(zm - mid);
+      if(d < menor){ menor = d; melhor = k }
+    });
+    return melhor;
+  }
+
+  function conferir(et){
+    if(!et || !Array.isArray(et.tags)) return et;
+    var tp = null, tf = null;
+    et.tags.forEach(function(t){
+      if(!t) return;
+      if(t.c === 'z'  && tp === null) tp = t;
+      if(t.c === 'hr' && tf === null) tf = t;
+    });
+    if(!tp || !tf) return et;
+
+    var faixa = paceDoTexto(tp.t);
+    if(!faixa) return et;
+    var zk = zonaDoPace(faixa);
+    if(!zk || !Z[zk] || !Z[zk].fc) return et;
+
+    var certo = Z[zk].fc[0] + '–' + Z[zk].fc[1] + ' bpm';
+    var atual = String(tf.t).match(/(\d+)\D+(\d+)/);
+    if(atual){
+      var a0 = +atual[1], a1 = +atual[2];
+      /* tolerancia de 2 bpm por arredondamento */
+      if(Math.abs(a0 - Z[zk].fc[0]) <= 2 && Math.abs(a1 - Z[zk].fc[1]) <= 2) return et;
+    }
+    barrados.push({ etapa: et.t, pace: tp.t, fcErrada: tf.t, fcCerta: certo, zona: Z[zk].n });
+    if(barrados.length <= 12)
+      console.warn('coerência: "' + et.t + '" mostrava ' + tp.t + ' (' + Z[zk].n +
+                   ') com ' + tf.t + '. Corrigido para ' + certo + '.');
+    tf.t = certo;
+    return et;
+  }
+
+  if(typeof window.etapas === 'function'){
+    var etApp = window.etapas;
+    window.etapas = function(){
+      var r = etApp.apply(this, arguments);
+      try{ if(Array.isArray(r)) r.forEach(conferir) }catch(e){ console.warn('coerência:', e && e.message) }
+      return r;
+    };
+  }
+
+  /* ── 6. tiro nunca vira continuo ── */
+  var QUAL = {
+    /* fracao da sessao no ritmo forte, e como descrever */
+    /* O volume forte sai da propria sessao, nao de um numero fixo. Se a
+       sessao for curta, o tiro encurta em vez de estourar a distancia —
+       era assim que "4 x 800 m" acabava dentro de uma sessao de 5 km. */
+    vo2:    { frac: 0.35, txt: function(km, z){
+      var qv = Math.min(6, km * 0.35);                 /* km no ritmo forte */
+      var n8 = Math.round(qv / 0.8);
+      var m, n;
+      if(n8 >= 4){ m = 800; n = Math.min(8, n8) }
+      else if(qv >= 1.2){ m = 600; n = Math.max(3, Math.min(6, Math.round(qv / 0.6))) }
+      else { m = 400; n = Math.max(4, Math.min(8, Math.round(qv / 0.4))) }
+      var seg = Math.round(m / 1000 * (z.vo2.p[0] + z.vo2.p[1]) / 2);
+      var dur = Math.floor(seg / 60) + ' min ' + (seg % 60) + ' s';
+      return n + ' tiros de ' + m + ' m em ' + pcs(z.vo2.p[0]) + '–' + pcs(z.vo2.p[1]) +
+             '/km (cerca de ' + dur + ' cada), FC subindo até ' + z.vo2.fc[0] + '–' +
+             z.vo2.fc[1] + ' bpm, com ' + (m >= 800 ? '3' : '2') +
+             ' min de trote leve entre eles. Aquecimento e volta à calma em ' +
+             pcs(z.faci.p[0]) + '–' + pcs(z.faci.p[1]) + '/km. ' +
+             'Este ritmo só existe dentro dos tiros — nunca corra os ' + km +
+             ' km inteiros nele.' } },
+    limiar: { frac: 0.45, txt: function(km, z){
+      return 'Bloco contínuo de 20 a 25 min em ' + pcs(z.lim.p[0]) + '–' + pcs(z.lim.p[1]) +
+             '/km, FC ' + z.lim.fc[0] + '–' + z.lim.fc[1] + ' bpm. Confortavelmente difícil: ' +
+             'você fala 3 ou 4 palavras, não uma frase. Antes e depois, ' +
+             pcs(z.faci.p[0]) + '–' + pcs(z.faci.p[1]) + '/km.' } },
+    mp:     { frac: 0.70, txt: function(km, z){
+      return Math.round(km * 0.7) + ' km em ritmo de maratona, ' + pcs(z.mp.p[0]) + '–' +
+             pcs(z.mp.p[1]) + '/km, FC ' + z.mp.fc[0] + '–' + z.mp.fc[1] + ' bpm. ' +
+             'É o ritmo que você quer sentir no dia 18. O restante em ' +
+             pcs(z.faci.p[0]) + '–' + pcs(z.faci.p[1]) + '/km.' } }
+  };
+
+  function honesto(s){
+    if(!s || s.mod !== 'corrida') return s;
+    var q = QUAL[s.foco];
+    var km = +s.km || 0;
+    if(!km) return s;
+
+    if(!q){
+      /* sessao continua: ritmo da propria zona, sem invencao */
+      var zk = s.foco === 'longo' ? 'long' : (s.foco === 'soltura' ? 'rec' : 'faci');
+      var z  = Z[zk];
+      if(z){
+        var medio = Math.round((z.p[0] + z.p[1]) / 2);
+        s.pace = pcs(medio);
+        s.min  = Math.round(km * medio / 60);
+        /* o texto tambem: um ritmo velho escrito no detalhe continuaria
+           contradizendo o campo, e e o texto que voce le no relogio */
+        if(typeof s.detalhe === 'string' && /\d+:\d{2}\s*\/?\s*km/.test(s.detalhe))
+          s.detalhe = s.detalhe.replace(/\d+:\d{2}(\s*[–\-a]\s*\d+:\d{2})?\s*\/?\s*km/g,
+                        pcs(z.p[0]) + '–' + pcs(z.p[1]) + '/km');
+      }
+      return s;
+    }
+
+    /* sessao de qualidade: pace do CAMPO e a media da sessao inteira */
+    var zq = Z[s.foco === 'vo2' ? 'vo2' : (s.foco === 'limiar' ? 'lim' : 'mp')];
+    var zf = Z.faci;
+    if(!zq || !zf) return s;
+    var pq = (zq.p[0] + zq.p[1]) / 2, pf = (zf.p[0] + zf.p[1]) / 2;
+    var medio = Math.round(q.frac * pq + (1 - q.frac) * pf);
+
+    s.pace    = pcs(medio);
+    s.min     = Math.round(km * medio / 60) + (s.foco === 'vo2' ? 6 : 4);
+    s.detalhe = q.txt(km, Z);
+    s.bqRitmo = true;
+    return s;
+  }
+
+  function arrumar(p){
+    if(!p) return p;
+    try{
+      Object.keys(p).forEach(function(k){
+        if(k < iso(HOJE)) return;            /* passado nao se reescreve */
+        if(p[k] && p[k].prova) return;       /* a prova tem ritmo proprio */
+        honesto(p[k]);
+      });
+    }catch(e){ console.warn('ritmo/plano:', e && e.message) }
+    return p;
+  }
+
+  if(typeof window.gerarPlano === 'function'){
+    var gerApp = window.gerarPlano;
+    window.gerarPlano = function(){ return arrumar(gerApp.apply(this, arguments)) };
+  }
+  if(window.bqBloco && typeof window.bqBloco.criar === 'function'){
+    var criarApp = window.bqBloco.criar;
+    window.bqBloco.criar = function(){
+      var B = criarApp.apply(this, arguments);
+      try{ if(B && B.sessoes) Object.keys(B.sessoes).forEach(function(k){ honesto(B.sessoes[k]) }) }catch(e){}
+      try{ arrumar(ST.plano) }catch(e){}
+      return B;
+    };
+  }
+
+  /* ── 7. aviso sobre a FC maxima ── */
+  /* mapAtividade nao guarda a FC maxima da sessao — so a media. Ela existe
+     no dado bruto que o sync grava, e e de la que eu leio. */
+  function fcMaxSuspeita(){
+    var brutas = (typeof RAW === 'object' && RAW && Array.isArray(RAW.atividades))
+                 ? RAW.atividades : [];
+    var corte = iso(addD(HOJE, -JANELA));
+    var vistas = brutas.filter(function(a){
+      return a && a.data && String(a.data).slice(0,10) >= corte
+          && String(a.esporte||'').toLowerCase() === 'corrida'
+          && +a.fcMax > 100 && +a.fcMax < 230;
+    }).map(function(a){ return +a.fcMax });
+    if(!vistas.length) return null;
+    var obs = Math.max.apply(null, vistas), F = +PERFIL.fcMax || 163;
+    return obs > F * 0.955 ? { obs: obs, cfg: F } : null;
+  }
+
+  /* ── 8. o que dizer no console ── */
+  window.bqRitmo = {
+    limiar: limiar,
+    zonas : function(){ return Z },
+    evidencia: function(){
+      var e = evid();
+      if(!e) return 'sem corridas de 8 km ou mais nos últimos ' + JANELA + ' dias';
+      return e.top.map(function(t){
+        return 'há ' + t.d + ' dias · ' + t.km.toFixed(1) + ' km em ' + mmss(t.pace) +
+               '/km' + (isFinite(t.fc) ? ' · FC ' + Math.round(t.fc) : '') +
+               '  ->  limiar ' + mmss(Math.round(t.L));
+      }).concat([
+        'quilômetro mais rápido medido: ' + (e.maisRapido ? mmss(e.maisRapido) + '/km' : '—'),
+        'trava aplicada: ' + (e.travou ? 'sim' : 'não'),
+        'limiar adotado: ' + mmss(e.L) + '/km'
+      ]);
+    },
+    coerencia: function(){ return barrados.length ? barrados : 'nenhuma incoerência encontrada' },
+    mostrar: function(){
+      var L = limiar(), out = ['limiar: ' + mmss(L) + '/km', ''];
+      ['rec','faci','long','mp','lim','vo2'].forEach(function(k){
+        var z = Z[k]; if(!z) return;
+        out.push(z.n.padEnd(20) + (mmss(z.p[0]) + '–' + mmss(z.p[1]) + '/km').padEnd(18) +
+                 z.fc[0] + '–' + z.fc[1] + ' bpm');
+      });
+      var p = fcMaxSuspeita();
+      if(p) out.push('', 'atenção: FC máxima configurada ' + p.cfg + ' bpm, mas o relógio já ' +
+                         'registrou ' + p.obs + ' bpm. A sua máxima real é provavelmente mais alta, ' +
+                         'e todas as faixas de FC saem baixas por causa disso.');
+      return out.join('\n');
+    }
+  };
+
+  /* refaz o que estava na tela com os numeros certos */
+  setTimeout(function(){
+    try{
+      _cache = null; _cacheN = -1;
+      assumir('após carregar os dados');
+      if(ST.cache) ST.cache = {};
+      arrumar(ST.plano);
+      if(typeof rebuild === 'function') rebuild();
+      if(typeof renderTudo === 'function') renderTudo();
+      var p = fcMaxSuspeita();
+      if(p) console.warn('FC máxima configurada ' + p.cfg + ', observada ' + p.obs +
+                         '. Confira em Configurações — as faixas de FC dependem dela.');
+    }catch(e){ console.warn('ritmo/boot:', e && e.message) }
+  }, 6000);
+});
+
+
 /* ─────────── selo de diagnóstico ─────────── */
 (function(){
   function montar(){
@@ -6639,7 +7068,7 @@ PARTE('força obedece ao bloco', function(){
         var l = window.planoBQ.ligado();
         var diag = '';
         try{ diag = window.bqDiag ? '\n\n── diagnóstico ──\n' + window.bqDiag() : '' }catch(e){}
-        if(confirm('fix.js ' + FIX_VERSAO + ' — as trinta e tres partes carregaram.\n\n'
+        if(confirm('fix.js ' + FIX_VERSAO + ' — as trinta e quatro partes carregaram.\n\n'
           + 'Plano PEI Marathon: ' + (l ? 'LIGADO' : 'desligado') + diag
           + '\n\nOK ' + (l ? 'desliga o plano e volta ao automático do app.'
                              : 'liga o plano da maratona.'))){
@@ -6662,7 +7091,7 @@ PARTE('força obedece ao bloco', function(){
         return;
       }
       alert(ok
-        ? 'fix.js ' + FIX_VERSAO + ' — as trinta e tres partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
+        ? 'fix.js ' + FIX_VERSAO + ' — as trinta e quatro partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
         : 'fix.js ' + FIX_VERSAO + '\n\nFalharam:\n\n' + FIX_FALHAS.join('\n\n'));
     };
     barra.insertBefore(s, barra.firstChild.nextSibling);
