@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Guia de execução — Academia · Luiz em Movimento</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -45,9 +45,18 @@
   }
   .lede{margin:0;color:#C3CBD3;font-size:16px;max-width:46ch}
 
+  /* ── Barra de voltar ao app ────────────────── */
+  .voltar-bar{position:sticky;top:0;z-index:40;background:var(--ink);padding:0}
+  .voltar-bar .wrap{padding:0 18px;display:flex;align-items:center;min-height:48px}
+  .voltar{display:inline-flex;align-items:center;gap:8px;color:#fff;text-decoration:none;
+    font-family:"Barlow Condensed",sans-serif;font-weight:600;font-size:19px;
+    text-transform:uppercase;letter-spacing:.04em;min-height:44px;padding-right:10px}
+  .voltar span{font-size:22px;line-height:1}
+  .voltar:hover{color:#8FB8AE}
+
   /* ── Barra de rotinas ──────────────────────── */
   .tabs{
-    position:sticky;top:0;z-index:20;background:var(--paper);
+    position:sticky;top:48px;z-index:20;background:var(--paper);
     border-bottom:1px solid var(--line);padding:10px 0;margin-bottom:26px
   }
   .tabs .wrap{padding-bottom:0;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
@@ -171,6 +180,10 @@
     <p class="lede">Como fazer cada exercício das suas duas rotinas, com o nome em inglês para achar no MOTRA e um vídeo para conferir a técnica antes de repetir.</p>
   </div>
 </header>
+
+<div class="voltar-bar"><div class="wrap">
+  <a class="voltar" href="./index.html" id="btVoltar"><span>&larr;</span> Voltar ao app</a>
+</div></div>
 
 <nav class="tabs">
   <div class="wrap">
@@ -406,7 +419,7 @@ document.querySelectorAll('.tab').forEach(t => {
   t.addEventListener('click', () => {
     document.querySelectorAll('.tab').forEach(o => o.setAttribute('aria-selected', o === t));
     render(t.dataset.rot);
-    window.scrollTo({top: titulo.offsetTop - 70, behavior: 'smooth'});
+    window.scrollTo({top: titulo.offsetTop - 110, behavior: 'smooth'});
   });
 });
 
@@ -426,6 +439,18 @@ lista.addEventListener('click', async ev => {
 document.getElementById('compact').addEventListener('change', e => {
   document.body.classList.toggle('compact', e.target.checked);
 });
+
+/* Voltar ao app. Se o guia abriu na mesma aba, desfaz a navegacao e o app
+   volta como estava. Se abriu em aba nova, tenta fechar; se o navegador
+   nao deixar — Safari costuma nao deixar — o proprio link leva ao app. */
+(function(){
+  const b = document.getElementById('btVoltar');
+  if(!b) return;
+  b.addEventListener('click', function(e){
+    if(history.length > 1){ e.preventDefault(); history.back(); return }
+    try{ window.close() }catch(err){}
+  });
+})();
 
 render('pernas');
 </script>
