@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '03g';
+const FIX_VERSAO = '03i';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -4663,10 +4663,26 @@ PARTE('aba kpi', function(){
     var o = (typeof objetivoAtivo === 'function') ? objetivoAtivo() : null;
     if(!o || !o.data) return null;
     var chaves = Object.keys(ST.plano || {}).sort();
-    if(!chaves.length) return null;
+    var runs = corridas();
 
-    var ini = segunda(dt(chaves[0])), fimProva = dt(o.data);
-    var runs = corridas(), sems = [], n = 0;
+    /* O comeco do ciclo NAO pode vir do plano: desde que o plano passou
+       a ter 14 dias, ele so conheceria as duas ultimas semanas e todo o
+       historico do KPI sumia — uma barra so na aderencia. O ciclo comeca
+       na mais antiga entre a primeira corrida registrada, a primeira
+       semana do historico de blocos e a primeira data do plano. */
+    var cands = [];
+    if(chaves.length) cands.push(chaves[0]);
+    Object.keys(ST.hist || {}).forEach(function(k){ cands.push(k) });
+    runs.forEach(function(r){ cands.push(iso(addD(HOJE, -r.d))) });
+    if(!cands.length) return null;
+    cands.sort();
+    /* nao mostro mais que 20 semanas de historico: passa disso vira ruido */
+    var maisAntiga = cands[0];
+    var limite = iso(addD(HOJE, -140));
+    if(maisAntiga < limite) maisAntiga = limite;
+
+    var ini = segunda(dt(maisAntiga)), fimProva = dt(o.data);
+    var sems = [], n = 0;
 
     for(var d = new Date(ini); d <= fimProva && n < 40; d = addD(d, 7)){
       n++;
@@ -4679,6 +4695,12 @@ PARTE('aba kpi', function(){
         plan += (+s.km || 0); planN++;
         if((+s.km || 0) > longoPlan) longoPlan = +s.km;
       });
+      /* semana fora da janela do plano: o planejado vem do registro que
+         o bloco deixou quando a compos */
+      if(!plan && ST.hist && ST.hist[a]){
+        plan = +ST.hist[a].planKm || 0;
+        longoPlan = +ST.hist[a].longoPlan || 0;
+      }
       var feito = 0, feitoN = 0, longoFeito = 0, efs = [];
       runs.forEach(function(r){
         var k = dataDe(r);
@@ -4748,12 +4770,24 @@ PARTE('aba kpi', function(){
     var atual = passadas.length;
     var h = '';
 
+    /* Semanas ate a prova, nao semanas do plano.
+       Depois que o plano passou a ter so 14 dias, este contador dizia
+       "semana 2 de 3" — contava o bloco, nao a preparacao. Agora conta o
+       que falta para 18/10, que e o numero que interessa. */
+    var semRestam = Math.max(0, Math.ceil(dias / 7));
+
     /* ── cabeçalho ── */
     h += '<div class="khero"><div class="d">' + Math.max(0, dias) + ' dias</div>' +
-      '<div class="t">para ' + (o.nome || o.n) + ' · semana <b>' + atual + '</b> de <b>' + sems.length + '</b></div>' +
-      '<div class="kbar">' + sems.map(function(w,i){
-        return '<i class="' + (i === atual-1 ? 'hoje' : (!w.futura ? 'on' : '')) + '"></i>' }).join('') +
-      '</div></div>';
+      '<div class="t">para ' + (o.nome || o.n) + ' · faltam <b>' +
+        semRestam + '</b> ' + (semRestam === 1 ? 'semana' : 'semanas') + '</div>' +
+      '<div class="kbar">' + (function(){
+        /* uma marca por semana ate a prova; as que ja passaram ficam acesas */
+        var total = semRestam + passadas.length, out = '';
+        for(var i = 0; i < Math.min(total, 26); i++)
+          out += '<i class="' + (i < passadas.length - 1 ? 'on' :
+                 (i === passadas.length - 1 ? 'hoje' : '')) + '"></i>';
+        return out;
+      })() + '</div></div>';
 
     if(!passadas.length){
       el.innerHTML = h + '<div class="vazio">O ciclo ainda não começou.<br>Os indicadores aparecem na primeira semana de treino.</div>';
@@ -4761,6 +4795,8 @@ PARTE('aba kpi', function(){
     }
 
     /* ── 1. aderência ── */
+    /* semanas sem planejado registrado ficam de fora da aderencia — nao
+       da para cobrar cumprimento de um plano que nunca existiu */
     var comPlano = passadas.filter(function(w){ return w.planKm > 0 });
     var totPlan = comPlano.reduce(function(s,w){ return s+w.planKm }, 0);
     var totFeito = comPlano.reduce(function(s,w){ return s+w.feitoKm }, 0);
@@ -6284,10 +6320,34 @@ PARTE('blocos de 14 dias', function(){
     return { de: atual, para: novo };
   }
 
+  /* Registro do que foi planejado, semana a semana.
+     Sem isto o KPI perde a memoria: como o plano passou a ter so 14
+     dias, as semanas anteriores ficavam sem "planejado" e a aderencia
+     do ciclo inteiro virava uma barra so. Aqui cada bloco deixa
+     escrito quanto pediu em cada semana, e o KPI le daqui. */
+  function registrarHistorico(B){
+    if(!B || !B.sessoes) return;
+    ST.hist = ST.hist || {};
+    Object.keys(B.sessoes).forEach(function(k){
+      var s = B.sessoes[k];
+      if(!s || s.mod !== 'corrida' || s.prova) return;
+      var seg = iso(addD(dt(k), -(dow(dt(k)) - 1)));       /* segunda da semana */
+      ST.hist[seg] = ST.hist[seg] || { planKm: 0, longoPlan: 0 };
+      ST.hist[seg].planKm = +(ST.hist[seg].planKm + (+s.km || 0)).toFixed(1);
+      if((+s.km || 0) > ST.hist[seg].longoPlan) ST.hist[seg].longoPlan = +s.km;
+    });
+  }
+
   function criar(ini){
     var pre = leitura(iso(addD(dt(ini || iso(HOJE)), -DIAS)), iso(addD(dt(ini || iso(HOJE)), -1)));
     var mudou = atualizarLimiar(pre);
+    /* semanas do bloco antigo saem do historico antes de reescrever,
+       senao um bloco refeito soma duas vezes */
+    if(ST.hist && ST.bloco) Object.keys(ST.hist).forEach(function(seg){
+      if(seg >= iso(HOJE)) delete ST.hist[seg];
+    });
     ST.bloco = gerarBloco(ini || iso(HOJE));
+    registrarHistorico(ST.bloco);
     if(mudou) ST.bloco.resumo.limiar = mudou;
     try{ if(ST.cache) ST.cache = {} }catch(e){}
     try{ rebuild() }catch(e){}
@@ -6359,6 +6419,11 @@ PARTE('blocos de 14 dias', function(){
     var b = el.querySelector('[data-blk]');
     if(b) b.onclick = function(){ criar(iso(HOJE)) };
   }
+  /* Eu embrulhava window.bqKPI.render — e quem desenha a aba e uma
+     funcao INTERNA da parte 25; bqKPI.render e so um atalho de console,
+     que o app nunca chama. O cartao nunca teve chance de ser injetado.
+     Agora entro por irPara, que e por onde a aba KPI de fato aparece,
+     e tambem observo a aba caso ela seja redesenhada por outro caminho. */
   var kpiApp = window.bqKPI && window.bqKPI.render;
   if(typeof kpiApp === 'function'){
     window.bqKPI.render = function(){
@@ -6367,6 +6432,27 @@ PARTE('blocos de 14 dias', function(){
       return r;
     };
   }
+  var irApp32 = window.irPara;
+  if(typeof irApp32 === 'function'){
+    window.irPara = function(v){
+      var r = irApp32.apply(this, arguments);
+      if(v === 'kpi') setTimeout(function(){
+        try{ injetar() }catch(e){ console.warn('bloco:', e && e.message) }
+      }, 30);
+      return r;
+    };
+  }
+  setTimeout(function(){
+    try{
+      var alvo = document.getElementById('v-kpi');
+      if(alvo && window.MutationObserver){
+        new MutationObserver(function(){
+          if(!alvo.querySelector('.blk')){ try{ injetar() }catch(e){} }
+        }).observe(alvo, {childList:true});
+      }
+      if(ST.aba === 'kpi') injetar();
+    }catch(e){}
+  }, 4600);
 
   /* primeiro bloco automatico, se ainda nao existe nenhum */
   setTimeout(function(){
