@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '02y';
+const FIX_VERSAO = '03f';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -5733,6 +5733,12 @@ PARTE('recalibracao quinzenal', function(){
   window.gerarPlano = function(){
     var p = gerarApp.apply(this, arguments);
     var R = ST.recal;
+    /* Quando existe gerador de blocos (parte 32), quem manda no futuro e
+       ele: apaga tudo e poe as suas sessoes por cima. Escalar aqui seria
+       trabalho perdido — e pior, o cartao desta parte prometia um ajuste
+       que nunca chegava na tela. Uma so mecanica, para nao haver duvida
+       sobre quem decidiu o seu treino. */
+    if(window.bqBloco) return p;
     if(!p || !R || !(R.fator > 0)) return p;
     var hoje = iso(HOJE);
     var ate  = iso(addD(HOJE, CICLO));       /* vale para as 2 semanas seguintes */
@@ -5828,6 +5834,7 @@ PARTE('recalibracao quinzenal', function(){
   function injetar(){
     var el = document.getElementById('v-kpi');
     if(!el || el.querySelector('.recal')) return;
+    if(window.bqBloco) return;          /* o cartao do bloco ja diz tudo isto */
     var h = cartao();
     if(!h) return;
     el.insertAdjacentHTML('afterbegin', h);
@@ -5855,6 +5862,535 @@ PARTE('recalibracao quinzenal', function(){
 });
 
 
+
+/* ═══ 31. JANELA DE 14 DIAS ═══
+
+   O plano deixa de existir alem de duas semanas. So aparecem os
+   treinos de hoje ate hoje mais 14 dias, mais o dia da prova, que fica
+   sempre visivel como alvo.
+
+   POR QUE: planejar dez semanas de treino num domingo de agosto e
+   ficcao — o corpo nao obedece a planilha, e o que estava escrito para
+   a semana 8 ja nasce errado. A cada quinzena o app le o que voce
+   realmente fez (parte 30) e reescreve as duas seguintes.
+
+   O QUE ISTO NAO FAZ: nao apaga nada. O plano inteiro continua sendo
+   gerado; o que muda e o que voce enxerga. Amanha a janela anda um dia
+   e o dia 15 aparece. Nenhum treino foi perdido, e o KPI continua
+   sabendo o que estava planejado nas semanas que ja passaram.
+
+   O PASSADO FICA. Dias anteriores a hoje continuam no calendario, para
+   voce ver o que fez e o que faltou. A janela corta so o futuro
+   distante.
+
+   Para ver o plano inteiro de novo, no console: bqJanela.desligar()
+   ══════════════════════════════════════════════════════════════════ */
+
+PARTE('janela de 14 dias', function(){
+  if(typeof window.gerarPlano !== 'function') throw new Error('app sem gerarPlano');
+
+  var DIAS = 14;
+  var DESLIGADO = 'bq.janela.off';
+  var ligado = function(){ try{ return localStorage.getItem(DESLIGADO) !== '1' }catch(e){ return true } };
+
+  var css = document.createElement('style');
+  css.textContent = [
+'.jan-nota{margin:14px 0 0;padding:13px 15px;border-radius:14px;background:var(--s2);',
+'  border:1px dashed var(--line);font-size:12.5px;color:var(--tx3);line-height:1.55}',
+'.jan-nota b{color:var(--tx2)}'
+  ].join('\n');
+  document.head.appendChild(css);
+
+  function limite(){ return iso(addD(HOJE, DIAS)) }
+
+  var gerarApp = window.gerarPlano;
+  window.gerarPlano = function(){
+    var p = gerarApp.apply(this, arguments);
+    if(!p || !ligado()) return p;
+    var ate = limite();
+    try{
+      Object.keys(p).forEach(function(k){
+        if(k <= ate) return;              /* dentro da janela, fica */
+        if(p[k] && p[k].prova) return;    /* a prova nunca some */
+        delete p[k];
+      });
+    }catch(e){ console.warn('janela:', e && e.message) }
+    return p;
+  };
+
+  /* explica o calendario vazio, para nao parecer defeito */
+  function nota(){
+    var el = document.querySelector('#sess');
+    if(!el || !ligado()) return;
+    if(el.querySelector('.jan-nota')) return;
+    var k = ST.sel;
+    if(!k || k <= limite()) return;
+    var s = (typeof sessaoDe === 'function') ? sessaoDe(k) : null;
+    if(s) return;                          /* e a prova, ou algo que ficou */
+
+    var faltam = diff(limite(), k);
+    var d = document.createElement('p');
+    d.className = 'jan-nota';
+    d.innerHTML = 'Este dia ainda não tem treino porque o plano só vai até <b>' +
+      fmtCurto(limite()) + '</b>. Ele é reescrito de duas em duas semanas, a partir do que você ' +
+      'realmente treinou — planejar mais longe que isso é ficção. ' +
+      (faltam > 0 ? 'Faltam <b>' + faltam + ' dia' + (faltam === 1 ? '' : 's') +
+        '</b> para este dia entrar na janela.' : '');
+    el.appendChild(d);
+  }
+
+  var diaApp = window.renderDia;
+  if(typeof diaApp === 'function'){
+    window.renderDia = function(){
+      var r = diaApp.apply(this, arguments);
+      try{ nota() }catch(e){}
+      return r;
+    };
+  }
+
+  window.bqJanela = {
+    dias: DIAS,
+    limite: limite,
+    ligado: ligado,
+    ligar: function(){
+      try{ localStorage.removeItem(DESLIGADO) }catch(e){}
+      try{ if(ST.cache) ST.cache = {}; rebuild(); renderTudo() }catch(e){}
+      return 'janela de ' + DIAS + ' dias ligada';
+    },
+    desligar: function(){
+      try{ localStorage.setItem(DESLIGADO, '1') }catch(e){}
+      try{ if(ST.cache) ST.cache = {}; rebuild(); renderTudo() }catch(e){}
+      return 'plano inteiro visível de novo';
+    }
+  };
+
+  setTimeout(function(){
+    try{ if(ST.cache) ST.cache = {}; rebuild();
+      if(typeof renderTudo === 'function') renderTudo(); else renderCoach(); }catch(e){}
+  }, 3600);
+});
+
+
+
+/* ═══ 32. BLOCOS DE 14 DIAS, COMPOSTOS A CADA QUINZENA ═══
+
+   Isto substitui o plano fixo. Nao existe mais planilha escrita ate
+   18/10: existe UM bloco de 14 dias por vez. Quando ele acaba, o app
+   compoe o proximo a partir do que voce realmente treinou.
+
+   Antes eu estava ENCOLHENDO um plano pronto. Nao e a mesma coisa —
+   e era razoavel a reclamacao: ninguem sabe hoje o que voce vai
+   produzir em setembro, entao escrever setembro hoje e chute.
+
+   COMO O BLOCO E COMPOSTO
+
+   Entram tres coisas:
+
+   1. O QUE VOCE FEZ nos 14 dias anteriores — km reais, maior longo,
+      melhor esforco, quantas sessoes cumpriu.
+   2. QUANTO FALTA para 18/10, que decide a fase.
+   3. SEUS DIAS — ter, qua, qui, sab, dom, do seu perfil.
+
+   VOLUME. A base e a media semanal REAL das duas semanas anteriores,
+   nao o que estava no papel. Sobre ela:
+     aderencia >= 85% e sem dor .... +6% por semana
+     aderencia 70 a 85% ............ mantem
+     aderencia < 70% ............... -10%
+   E um teto duro: o bloco nunca passa de 1,10x a media real. Progressao
+   e degrau, nao salto.
+
+   LONGAO. 32% do volume da semana, limitado por tres tetos: 1,15x o
+   maior longo recente, o teto da fase, e 32 km em absoluto. O ultimo
+   longo grande cai a tres semanas da prova; depois disso so encurta.
+
+   QUALIDADE, pelo tempo restante:
+     mais de 7 semanas .... VO2, tiros de 800 a 1000 m
+     4 a 7 semanas ........ limiar e ritmo de prova
+     3 semanas ............ ritmo de prova, volume ja caindo
+     2 semanas ou menos ... polimento
+
+   A SEGUNDA SEMANA DO BLOCO e de recuperacao quando as duas anteriores
+   foram de carga: volume x 0,78. Sem isso a carga so sobe.
+
+   TIROS CURTOS EM LADEIRA entram toda terca, o ano todo — 6 a 8 de 10
+   a 12 s, com recuperacao completa. Custo de fadiga quase zero, e e a
+   lacuna que a auditoria do plano antigo encontrou.
+
+   O PASSADO NAO E TOCADO. Dias anteriores a hoje continuam como
+   estavam, para o KPI comparar planejado com feito com honestidade.
+   ══════════════════════════════════════════════════════════════════ */
+
+PARTE('blocos de 14 dias', function(){
+  if(typeof window.gerarPlano !== 'function') throw new Error('app sem gerarPlano');
+  if(typeof PERFIL !== 'object') throw new Error('app sem PERFIL');
+
+  var PROVA = '2026-10-18';
+  var DIAS  = 14;
+  var LONGO_MAX = 32;
+
+  var css = document.createElement('style');
+  css.textContent = [
+'.blk{background:var(--s1);border:1px solid var(--acc);border-radius:18px;padding:17px 16px;margin-bottom:14px}',
+'.blk .cab{font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--acc);margin-bottom:7px}',
+'.blk h3{margin:0 0 4px;font-size:19px;font-weight:800;letter-spacing:-.02em}',
+'.blk .per{font-size:12px;color:var(--tx3);margin:0 0 13px}',
+'.blk .ln{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13.5px}',
+'.blk .ln:last-of-type{border-bottom:none}',
+'.blk .ln .k{flex:1;color:var(--tx2)}',
+'.blk .ln .v{font-weight:700;text-align:right;white-space:nowrap}',
+'.blk .porque{margin:11px 0 0;padding-top:10px;border-top:1px solid var(--line);',
+'  font-size:12.5px;color:var(--tx3);line-height:1.55}',
+'.blk .bt{width:100%;margin-top:14px;padding:13px;border-radius:13px;font-size:14.5px;',
+'  font-weight:700;border:0;background:var(--acc);color:var(--bg)}',
+'.blk.aberto{border-color:var(--line)}',
+'.blk.aberto .cab{color:var(--tx3)}'
+  ].join('\n');
+  document.head.appendChild(css);
+
+  /* ---------- leitura dos 14 dias anteriores ---------- */
+  function dataDe(r){ return iso(addD(HOJE, -r.d)) }
+  function corridas(){
+    return (ST.runs || []).filter(function(r){
+      return !r.walk && (r.mod || 'corrida') === 'corrida' && r.km > 0;
+    });
+  }
+  function limiarPor(km, pace){
+    var t = km * pace, d = km * Math.pow(3600 / t, 1/1.06);
+    return d > 0 ? Math.round(3600 / d) : null;
+  }
+  function leitura(ini, fim){
+    var runs = corridas().filter(function(r){
+      var k = dataDe(r); return k >= ini && k <= fim;
+    });
+    var plan = 0;
+    Object.keys(ST.plano || {}).forEach(function(k){
+      if(k < ini || k > fim) return;
+      var s = ST.plano[k];
+      if(s && s.mod === 'corrida' && !s.prova) plan += (+s.km || 0);
+    });
+    var km = 0, longo = 0, melhor = null;
+    runs.forEach(function(r){
+      km += r.km;
+      if(r.km > longo) longo = r.km;
+      if(r.km >= 5 && r.pace > 200 && r.pace <= PERFIL.paceLimiar + 75){
+        var l = limiarPor(r.km, r.pace);
+        if(l && (melhor == null || l < melhor)) melhor = l;
+      }
+    });
+    return { corridas: runs.length, km: +km.toFixed(1), kmPlan: +plan.toFixed(1),
+             semanal: +(km/2).toFixed(1), longo: +longo.toFixed(1), limiar: melhor,
+             aderencia: plan > 0 ? Math.round(km/plan*100) : null };
+  }
+
+  /* ---------- composicao do bloco ---------- */
+  function fase(semanas){
+    if(semanas > 7) return {n:'Construção',   qual:'vo2',    tetoLongo:28, cresce:true};
+    if(semanas > 4) return {n:'Específica',   qual:'limiar', tetoLongo:32, cresce:true};
+    if(semanas > 3) return {n:'Pico',         qual:'mp',     tetoLongo:32, cresce:false};
+    if(semanas > 2) return {n:'Transição',    qual:'mp',     tetoLongo:24, cresce:false};
+    return             {n:'Polimento',    qual:'soltura',tetoLongo:16, cresce:false};
+  }
+
+  var PISO_SEMANAL = 25;      /* km: abaixo disso nao se prepara maratona */
+  var ALVO_LONGO   = 32;      /* km: o longao de pico do ciclo */
+  var PASSO_LONGO  = 3;       /* km por bloco */
+
+  /* Base do volume. NAO e so o que ele correu: se fosse, um bloco ruim
+     encolheria o proximo, que encolheria o seguinte, e em quatro blocos
+     o plano viraria 6 km por semana. Testei e foi exatamente isso que
+     aconteceu. A base e a MAIOR entre o realizado e 85% do que havia
+     sido proposto — o plano cede, mas nao desaba — com piso absoluto. */
+  function volumeAlvo(L, F){
+    var real     = L.semanal > 0 ? L.semanal : 0;
+    var anterior = (ST.bloco && ST.bloco.resumo && ST.bloco.resumo.vol1) || 0;
+    var base = Math.max(real, anterior * 0.85, PISO_SEMANAL);
+
+    var f = 1;
+    var q = ST.quest;
+    var dor = q && (q.dor === 'sim' || q.lesao === 'ativa');
+    if(!F.cresce) f = 0.85;
+    else if(dor) f = 0.95;
+    else if(L.aderencia == null) f = 1.0;
+    else if(L.aderencia >= 85) f = 1.06;
+    else if(L.aderencia >= 70) f = 1.0;
+    else f = 0.90;
+
+    return { sem1: +Math.max(PISO_SEMANAL, Math.min(base * 1.10, base * f)).toFixed(1),
+             fator: f, base: +base.toFixed(1), real: +real.toFixed(1) };
+  }
+
+  /* Longao. Ele NAO e uma porcentagem do volume: numa maratona com
+     volume modesto, 32% dariam 15 km e voce nunca passaria disso — o
+     bloco seguinte leria 15 como referencia e travaria ali. Aqui ele
+     sobe por degraus de 3 km em direcao aos 32, respeitando o teto de
+     1,15x o maior recente e o teto da fase. */
+  function longoAlvo(L, Fw){
+    var recente = L.longo > 0 ? L.longo : 10;
+    var passo   = Math.min(recente + PASSO_LONGO, recente * 1.15 + PASSO_LONGO);
+    var alvo    = Math.min(passo, ALVO_LONGO, Fw.tetoLongo);
+    return Math.max(6, +alvo.toFixed(1));
+  }
+
+  var PACES = {
+    facil:   function(){ return PERFIL.paceLimiar + 70 },
+    longo:   function(){ return PERFIL.paceLimiar + 55 },
+    mp:      function(){ return PERFIL.paceLimiar + 22 },
+    limiar:  function(){ return PERFIL.paceLimiar },
+    vo2:     function(){ return PERFIL.paceLimiar - 22 },
+    soltura: function(){ return PERFIL.paceLimiar + 80 }
+  };
+  function pc(seg){ return Math.floor(seg/60) + ':' + String(Math.round(seg%60)).padStart(2,'0') }
+
+  function sessao(k, mod, foco, km, extra){
+    var s = { id:k, data:k, mod:mod, foco:foco, prova:false, bloco:true };
+    if(mod === 'corrida'){
+      s.km = +km.toFixed(1);
+      s.min = Math.round(s.km * (PACES[foco] ? PACES[foco]() : PACES.facil()) / 60);
+      s.pace = pc(PACES[foco] ? PACES[foco]() : PACES.facil());
+    } else {
+      s.min = Math.round(km);
+    }
+    return Object.assign(s, extra || {});
+  }
+
+  function gerarBloco(ini){
+    var L = leitura(iso(addD(dt(ini), -DIAS)), iso(addD(dt(ini), -1)));
+    var semanas = Math.max(0, diff(ini, PROVA) / 7);
+    var F = fase(semanas);
+    var V = volumeAlvo(L, F);
+    var dias = (PERFIL.dias || [2,3,4,6,7]).slice().sort();
+
+    var sess = {}, resumo = { leitura:L, fase:F.n, semanas:+semanas.toFixed(1),
+                              vol1:V.sem1, vol2:0, longo1:0, longo2:0, qual:F.qual };
+
+    for(var w = 0; w < 2; w++){
+      /* segunda semana do bloco recua, se a fase ainda cresce */
+      var vol = w === 0 ? V.sem1 : (F.cresce ? +(V.sem1 * 0.78).toFixed(1) : +(V.sem1 * 0.85).toFixed(1));
+
+      /* SEMANA PARCIAL. Se o bloco nasce numa quinta, a primeira semana
+         tem 4 dias, nao 7 — e enfiar o volume inteiro neles seria um
+         salto de carga disfarcado. Aqui o volume e proporcional aos
+         dias de treino que sobraram. */
+      var disponiveis = 0;
+      /* Sem piso rigido por sessao. O piso de 5 km que eu tinha posto
+         inflava semanas leves: numa semana de 25 km ele entregava 28,8.
+         Agora o resto e distribuido proporcionalmente e so nao desce de
+         3 km, que e o minimo para uma sessao fazer sentido. */
+      dias.forEach(function(d){
+        for(var i = 0; i < 7; i++){
+          var c = addD(dt(ini), w*7 + i);
+          if(dow(c) === d && iso(c) >= iso(HOJE) && iso(c) <= PROVA){ disponiveis++; break }
+        }
+      });
+      if(disponiveis < dias.length && disponiveis > 0)
+        vol = +(vol * disponiveis / dias.length).toFixed(1);
+      var semRest = semanas - w;
+      var Fw = fase(semRest);
+
+      /* Longao por degraus rumo aos 32 km — mas LIMITADO pelo volume da
+         semana, nunca o contrario. Na primeira versao eu deixava o
+         longao puxar o volume para cima e ele saltava de 45 para 71 km
+         por semana num bloco so. Quem manda e o volume: o longao pode
+         chegar a 55% dele, que e a proporcao do seu proprio plano
+         original (32 km numa semana de 60).
+
+         Consequencia honesta: com o volume que voce tem hoje, o longao
+         maximo desta preparacao fica por volta de 28 a 30 km, nao 32.
+         Para 32 seria preciso uma semana de 58 km, e nao ha tempo de
+         chegar la com seguranca. */
+      var longo = Math.min(longoAlvo(w === 0 ? L : {longo: resumo.longo1 || L.longo}, Fw),
+                           +(vol * 0.55).toFixed(1));
+      longo = Math.max(6, +longo.toFixed(1));
+      var resto = Math.max(0, vol - longo);
+      /* resto dividido entre os dias de corrida que nao sao o longao */
+      var diasCorrida = dias.filter(function(d){ return d !== 7 });   /* domingo e bike */
+      var nRest = Math.max(1, diasCorrida.length - 1);
+      var kmDia = resto / nRest;
+
+      dias.forEach(function(d){
+        var data = null;
+        for(var i = 0; i < 7; i++){
+          var cand = addD(dt(ini), w*7 + i);
+          if(dow(cand) === d){ data = iso(cand); break }
+        }
+        if(!data || data > PROVA) return;
+        if(data === PROVA) return;
+
+        if(d === 6){                       /* sábado: longão */
+          sess[data] = sessao(data, 'corrida', semRest <= 2 ? 'soltura' : 'longo', longo, {
+            titulo: semRest <= 2 ? 'Soltura pré-prova' : 'Longão',
+            detalhe: semRest <= 2
+              ? longo.toFixed(0) + ' km bem leves. Nada de testar ritmo na véspera.'
+              : longo.toFixed(0) + ' km contínuos. Primeiros 60% em rodagem, últimos 40% um pouco mais firmes. Treine a alimentação.',
+            fase: Fw.n });
+          resumo['longo' + (w+1)] = longo;
+        } else if(d === 7){                /* domingo: bike, sem impacto */
+          sess[data] = sessao(data, 'bike', 'cross', Math.round(vol * 1.5), {
+            titulo: 'Bike aeróbica',
+            detalhe: 'Volume sem impacto no dia seguinte ao longão. Acelera a recuperação em vez de atrapalhar.',
+            fase: Fw.n });
+        } else if(d === 3){                /* quarta: a sessão de qualidade */
+          var q = Fw.qual, km = Math.max(3, kmDia * 1.05);
+          var txt = {
+            vo2:    '5 a 6 tiros de 1000 m em ' + pc(PACES.vo2()) + '/km, com 3 min de trote entre eles.',
+            limiar: 'Bloco contínuo de 20 a 25 min em ' + pc(PACES.limiar()) + '/km. Confortavelmente difícil.',
+            mp:     km.toFixed(0) + ' km em ritmo de prova, ' + pc(PACES.mp()) + '/km. É o ritmo que você quer sentir no dia 18.',
+            soltura:'Rodagem leve com 4 acelerações de 20 s no fim.'
+          }[q];
+          sess[data] = sessao(data, 'corrida', q, km, {
+            titulo: {vo2:'Intervalado VO₂', limiar:'Limiar', mp:'Ritmo de prova', soltura:'Soltura'}[q],
+            detalhe: txt, fase: Fw.n });
+        } else if(d === 2){                /* terça: fácil + tiros curtos + força */
+          sess[data] = sessao(data, 'corrida', 'facil', Math.max(3, kmDia * 0.975), {
+            titulo: 'Rodagem leve + tiros curtos',
+            detalhe: kmDia.toFixed(0) + ' km soltos e, no fim, 6 a 8 tiros de 10 a 12 s numa ladeira leve, ' +
+                     'descendo caminhando com recuperação completa. São curtos demais para cansar — é ' +
+                     'estímulo de fibra rápida, a lacuna que a auditoria encontrou.',
+            forca: 'base_a', fase: Fw.n });
+        } else {                            /* quinta: moderado + força */
+          sess[data] = sessao(data, 'corrida', 'facil', Math.max(3, kmDia * 0.975), {
+            titulo: 'Rodagem moderada',
+            detalhe: kmDia.toFixed(0) + ' km em ritmo confortável, com 2 blocos de 5 min de cadência alta ' +
+                     '— passos mais curtos e frequentes, sem acelerar.',
+            forca: 'base_b', fase: Fw.n });
+        }
+      });
+      if(w === 1) resumo.vol2 = vol;
+    }
+    return { ini: ini, fim: iso(addD(dt(ini), DIAS - 1)), sessoes: sess, resumo: resumo };
+  }
+
+  /* ---------- estado ---------- */
+  function blocoAtual(){ return ST.bloco && ST.bloco.fim >= iso(HOJE) ? ST.bloco : null }
+
+  /* O bloco comeca HOJE, nao na segunda-feira.
+     Tentei alinhar na segunda e foi pior: a segunda da semana CORRENTE
+     ja passou, entao metade do bloco nascia no passado e sobravam 7
+     dias de treino em vez de 14. A dupla longao-sabado / bike-domingo
+     nao depende disso — as sessoes sao atribuidas por dia da semana,
+     entao sabado sempre vem antes do domingo dentro da mesma semana. */
+  /* O limiar e a ancora de TODOS os ritmos. A cada bloco ele e recalculado
+     pelo melhor esforco da quinzena, por Riegel, com passo amortecido de
+     8 s/km — duas semanas sao pouca amostra para virar tudo de cabeca
+     para baixo, e uma quinzena de chuva nao pode redefinir quem voce e. */
+  function atualizarLimiar(L){
+    if(!L || !L.limiar) return null;
+    var atual = PERFIL.paceLimiar, passo = L.limiar - atual;
+    if(Math.abs(passo) > 8) passo = passo > 0 ? 8 : -8;
+    var novo = Math.min(540, Math.max(210, atual + Math.round(passo)));
+    if(novo === atual) return null;
+    PERFIL.paceLimiar = novo;
+    try{ Z = zonas() }catch(e){}
+    return { de: atual, para: novo };
+  }
+
+  function criar(ini){
+    var pre = leitura(iso(addD(dt(ini || iso(HOJE)), -DIAS)), iso(addD(dt(ini || iso(HOJE)), -1)));
+    var mudou = atualizarLimiar(pre);
+    ST.bloco = gerarBloco(ini || iso(HOJE));
+    if(mudou) ST.bloco.resumo.limiar = mudou;
+    try{ if(ST.cache) ST.cache = {} }catch(e){}
+    try{ rebuild() }catch(e){}
+    try{ if(typeof renderTudo === 'function') renderTudo() }catch(e){ try{ renderCoach() }catch(e2){} }
+    try{ persistir() }catch(e){}
+    return ST.bloco;
+  }
+
+  /* ---------- o plano passa a ser o bloco ---------- */
+  var gerarApp = window.gerarPlano;
+  window.gerarPlano = function(){
+    var p = gerarApp.apply(this, arguments) || {};
+    var hoje = iso(HOJE);
+    var B = blocoAtual();
+    try{
+      /* o futuro sai: quem manda agora e o bloco */
+      Object.keys(p).forEach(function(k){
+        if(k >= hoje && !(p[k] && p[k].prova)) delete p[k];
+      });
+      if(B) Object.keys(B.sessoes).forEach(function(k){
+        if(k >= hoje) p[k] = Object.assign({}, B.sessoes[k]);
+      });
+    }catch(e){ console.warn('bloco:', e && e.message) }
+    return p;
+  };
+
+  /* ---------- cartao ---------- */
+  function cartao(){
+    var B = blocoAtual();
+    if(B){
+      var r = B.resumo;
+      return '<div class="blk aberto"><div class="cab">Bloco em andamento</div>' +
+        '<h3>' + r.fase + '</h3>' +
+        '<p class="per">' + fmtCurto(B.ini) + ' a ' + fmtCurto(B.fim) + ' · ' +
+          r.semanas.toFixed(1) + ' semanas até a prova</p>' +
+        '<div class="ln"><span class="k">Volume semana 1</span><span class="v">' + r.vol1 + ' km</span></div>' +
+        '<div class="ln"><span class="k">Volume semana 2</span><span class="v">' + r.vol2 + ' km</span></div>' +
+        '<div class="ln"><span class="k">Longão</span><span class="v">' +
+          (r.longo2 > 0 ? r.longo1 + ' e ' + r.longo2 + ' km' : r.longo1 + ' km') + '</span></div>' +
+        '<div class="ln"><span class="k">Sessão de qualidade</span><span class="v">' +
+          {vo2:'VO₂', limiar:'Limiar', mp:'Ritmo de prova', soltura:'Soltura'}[r.qual] + '</span></div>' +
+        (r.limiar ? '<div class="ln"><span class="k">Ritmo de limiar</span><span class="v">' +
+          mmss(r.limiar.de) + ' → ' + mmss(r.limiar.para) + '/km</span></div>' : '') +
+        '<p class="porque">Composto em ' + fmtCurto(B.ini) + ' a partir dos seus ' + r.leitura.km +
+        ' km reais das duas semanas anteriores' +
+        (r.leitura.aderencia != null ? ' (' + r.leitura.aderencia + '% do previsto)' : '') +
+        '. O próximo bloco será composto em <b>' + fmtCurto(iso(addD(dt(B.fim), 1))) + '</b>.</p></div>';
+    }
+    /* sem bloco: hora de compor */
+    var prev = gerarBloco(iso(HOJE)).resumo;
+    return '<div class="blk"><div class="cab">Hora de compor</div>' +
+      '<h3>Suas próximas 2 semanas</h3>' +
+      '<p class="per">Fase: ' + prev.fase + ' · ' + prev.semanas.toFixed(1) + ' semanas até 18/10</p>' +
+      '<div class="ln"><span class="k">Você correu na quinzena</span><span class="v">' + prev.leitura.km + ' km</span></div>' +
+      '<div class="ln"><span class="k">Média semanal real</span><span class="v">' + prev.leitura.semanal + ' km</span></div>' +
+      '<div class="ln"><span class="k">Maior longo recente</span><span class="v">' + prev.leitura.longo + ' km</span></div>' +
+      '<div class="ln"><span class="k">Volume proposto</span><span class="v">' + prev.vol1 + ' e ' + prev.vol2 + ' km</span></div>' +
+      '<div class="ln"><span class="k">Longão proposto</span><span class="v">' +
+        (prev.longo2 > 0 ? prev.longo1 + ' e ' + prev.longo2 + ' km' : prev.longo1 + ' km') + '</span></div>' +
+      '<p class="porque">O volume parte da sua média real, não do que estava no papel, e sobe no máximo 10%. ' +
+      'O longão respeita três tetos: 1,15× o seu maior recente, o teto da fase e 32 km em absoluto.</p>' +
+      '<button class="bt" data-blk="criar">Compor as próximas 2 semanas</button></div>';
+  }
+
+  function injetar(){
+    var el = document.getElementById('v-kpi');
+    if(!el || el.querySelector('.blk')) return;
+    el.insertAdjacentHTML('afterbegin', cartao());
+    var b = el.querySelector('[data-blk]');
+    if(b) b.onclick = function(){ criar(iso(HOJE)) };
+  }
+  var kpiApp = window.bqKPI && window.bqKPI.render;
+  if(typeof kpiApp === 'function'){
+    window.bqKPI.render = function(){
+      var r = kpiApp.apply(this, arguments);
+      try{ injetar() }catch(e){ console.warn('bloco:', e && e.message) }
+      return r;
+    };
+  }
+
+  /* primeiro bloco automatico, se ainda nao existe nenhum */
+  setTimeout(function(){
+    try{ if(!blocoAtual()) criar(iso(HOJE)) }catch(e){ console.warn('bloco:', e && e.message) }
+  }, 4200);
+
+  window.bqBloco = {
+    atual: blocoAtual,
+    criar: criar,
+    prever: function(){ return gerarBloco(iso(HOJE)).resumo },
+    lista: function(){
+      var B = blocoAtual(); if(!B) return 'nenhum bloco';
+      var D = ['','seg','ter','qua','qui','sex','sáb','dom'];
+      return Object.keys(B.sessoes).sort().map(function(k){
+        var s = B.sessoes[k];
+        return k + ' ' + D[dow(dt(k))] + '  ' + s.mod + '  ' + s.foco + '  ' +
+               (s.km ? s.km + ' km' : s.min + ' min');
+      });
+    },
+    zerar: function(){ delete ST.bloco; try{ rebuild(); renderTudo() }catch(e){} return 'zerado' }
+  };
+});
+
+
 /* ─────────── selo de diagnóstico ─────────── */
 (function(){
   function montar(){
@@ -5874,7 +6410,7 @@ PARTE('recalibracao quinzenal', function(){
         var l = window.planoBQ.ligado();
         var diag = '';
         try{ diag = window.bqDiag ? '\n\n── diagnóstico ──\n' + window.bqDiag() : '' }catch(e){}
-        if(confirm('fix.js ' + FIX_VERSAO + ' — as trinta partes carregaram.\n\n'
+        if(confirm('fix.js ' + FIX_VERSAO + ' — as trinta e duas partes carregaram.\n\n'
           + 'Plano PEI Marathon: ' + (l ? 'LIGADO' : 'desligado') + diag
           + '\n\nOK ' + (l ? 'desliga o plano e volta ao automático do app.'
                              : 'liga o plano da maratona.'))){
@@ -5897,7 +6433,7 @@ PARTE('recalibracao quinzenal', function(){
         return;
       }
       alert(ok
-        ? 'fix.js ' + FIX_VERSAO + ' — as trinta partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
+        ? 'fix.js ' + FIX_VERSAO + ' — as trinta e duas partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
         : 'fix.js ' + FIX_VERSAO + '\n\nFalharam:\n\n' + FIX_FALHAS.join('\n\n'));
     };
     barra.insertBefore(s, barra.firstChild.nextSibling);
