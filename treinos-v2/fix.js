@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '04a';
+const FIX_VERSAO = '04c';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -1215,9 +1215,6 @@ PARTE('linha do tempo', function(){
   #bqLinha .bqbar i{display:block;height:100%;border-radius:5px}
   #bqLinha .bqsem.hoje{background:rgba(128,128,128,.07);border-radius:6px;padding-left:4px;padding-right:4px}
   #bqLinha .bqkm{opacity:.6;text-align:right}
-  #bqLinha .bqbar u{position:absolute;top:-2px;bottom:-2px;width:2px;border-radius:1px;
-    background:var(--tx,#EEF2F6);opacity:.55}
-  #bqLinha .bqde{display:block;font-style:normal;font-size:9.5px;opacity:.55;line-height:1.1;margin-top:1px}
   #bqLinha .bqp{text-align:right;font-weight:700}
   #bqLinha .bqnota{font-size:11px;opacity:.6;margin-top:11px;line-height:1.45}`;
 
@@ -1279,36 +1276,16 @@ PARTE('linha do tempo', function(){
     const linhas = semanas.map(function(w){
       const futura = w.venceu === 0;
       const agora = hoje >= w.ini && hoje <= w.fim;
-
-      /* O DENOMINADOR DE UMA SEMANA E A SEMANA.
-         Antes eu trocava a base na semana em curso, para a
-         quarta-feira nao parecer fracasso. Mas ao fazer isso a linha
-         "S2 · 5 km · 66%" passava a dizer que a meta da semana eram 8
-         km, o que e falso — sao 47. Eu tinha resolvido um problema de
-         LEITURA mexendo na CONTA, que e o pior lugar para resolver.
-
-         Agora a conta e sempre real/plan, e o problema de leitura e
-         resolvido onde ele nasceu: a semana em curso ganha um risco na
-         barra mostrando onde voce deveria estar HOJE, e nao e pintada
-         de vermelho por estar incompleta. A barra responde "quanto da
-         semana ja foi"; o risco responde "estou adiantado ou atrasado".
-         Duas perguntas, duas respostas, nenhuma disfarcada de outra. */
-      const p = w.plan > 0 ? Math.min(1.15, w.real / w.plan) : 0;
-      const marca = (agora && w.plan > 0) ? Math.min(100, w.venceu / w.plan * 100) : null;
+      /* na semana em curso comparo com o que já venceu, não com a
+         semana inteira: senão a quarta-feira sempre parece fracasso */
+      const base = agora ? (w.venceu || w.plan) : w.plan;
+      const p = base > 0 ? Math.min(1.15, w.real / base) : 0;
       return '<div class="bqsem' + (agora ? ' hoje' : '') + '">'
         + '<b>S' + w.n + '</b>'
         + '<span class="bqbar"><i style="width:' + Math.round(Math.min(1, p) * 100)
-        + '%;background:' + (futura ? 'transparent' : agora ? 'var(--acc,#C9F24E)' : cor(p)) + '"></i>'
-        + (marca != null ? '<u style="left:' + Math.round(marca) + '%"></u>' : '')
-        + '</span>'
-        /* O DENOMINADOR MOSTRADO TEM QUE SER O DENOMINADOR USADO.
-           Antes a conta dividia por w.venceu (o que o plano pediu nos
-           dias ja vencidos) e a tela escrevia w.plan (a semana toda).
-           Dava "5/47 km ... 66%", que nao fecha em lugar nenhum. Cada
-           numero estava certo sozinho; juntos eram uma mentira. */
+        + '%;background:' + (futura ? 'transparent' : cor(p)) + '"></i></span>'
         + '<span class="bqkm">' + Math.round(w.real) + '/' + Math.round(w.plan) + ' km</span>'
-        + '<span class="bqp" style="color:' + (futura || agora ? 'inherit' : cor(p))
-        + ';opacity:' + (futura ? '.35' : agora ? '.7' : '1') + '">'
+        + '<span class="bqp" style="color:' + (futura ? 'inherit' : cor(p)) + ';opacity:' + (futura ? '.35' : '1') + '">'
         + (futura ? '—' : Math.round(p * 100) + '%') + '</span></div>';
     }).join('');
 
@@ -1328,7 +1305,7 @@ PARTE('linha do tempo', function(){
       + linhas
       + '<div class="bqnota">A conta usa as corridas que o Garmin registrou, não as etapas marcadas. '
       + 'Semana acima de 100% conta como 100%: correr a mais não compensa a semana que faltou. '
-      + 'Cada linha mostra quanto da SEMANA INTEIRA já foi feito. Na semana em curso o risco branco na barra é onde você deveria estar hoje: barra à frente do risco, adiantado; atrás, atrasado. Ela não é pintada de vermelho por estar incompleta. '
+      + 'A semana em curso é medida só pelos dias que já passaram. '
       + 'Abaixo de 80% em duas semanas seguidas, é hora de rever o alvo.</div>';
   }
 
@@ -6148,31 +6125,12 @@ PARTE('blocos de 14 dias', function(){
     var runs = corridas().filter(function(r){
       var k = dataDe(r); return k >= ini && k <= fim;
     });
-    /* O "189% DO PREVISTO" NASCIA AQUI.
-       Eu procurava o planejado em ST.plano — que so guarda os 14 dias
-       VIGENTES. As duas semanas anteriores ja nao estao la, entao o
-       plano vinha quase vazio e 66,2 km reais viravam 189%.
-       O ST.hist existe justamente para lembrar quanto cada bloco pediu
-       em cada semana. Leio de la primeiro, e so caio no ST.plano para
-       os dias que por acaso ainda estejam presentes.
-       Se nao houver registro nenhum, devolvo null — um traco na tela e
-       honesto; um percentual inventado nao e. */
-    var plan = 0, temRegistro = false;
-    try{
-      var seg = iso(addD(dt(ini), -(dow(dt(ini)) - 1)));
-      while(seg <= fim){
-        var h = (ST.hist || {})[seg];
-        if(h && h.planKm > 0){ plan += +h.planKm; temRegistro = true }
-        seg = iso(addD(dt(seg), 7));
-      }
-    }catch(e){}
-    if(!temRegistro){
-      Object.keys(ST.plano || {}).forEach(function(k){
-        if(k < ini || k > fim) return;
-        var s = ST.plano[k];
-        if(s && s.mod === 'corrida' && !s.prova){ plan += (+s.km || 0); temRegistro = true }
-      });
-    }
+    var plan = 0;
+    Object.keys(ST.plano || {}).forEach(function(k){
+      if(k < ini || k > fim) return;
+      var s = ST.plano[k];
+      if(s && s.mod === 'corrida' && !s.prova) plan += (+s.km || 0);
+    });
     var km = 0, longo = 0, melhor = null;
     runs.forEach(function(r){
       km += r.km;
@@ -6184,7 +6142,7 @@ PARTE('blocos de 14 dias', function(){
     });
     return { corridas: runs.length, km: +km.toFixed(1), kmPlan: +plan.toFixed(1),
              semanal: +(km/2).toFixed(1), longo: +longo.toFixed(1), limiar: melhor,
-             aderencia: (temRegistro && plan > 0) ? Math.round(km/plan*100) : null };
+             aderencia: plan > 0 ? Math.round(km/plan*100) : null };
   }
 
   /* ---------- composicao do bloco ---------- */
@@ -6413,11 +6371,8 @@ PARTE('blocos de 14 dias', function(){
     /* semanas do bloco antigo saem do historico antes de reescrever,
        senao um bloco refeito soma duas vezes */
     if(ST.hist && ST.bloco) Object.keys(ST.hist).forEach(function(seg){
-      /* Comparava a chave da SEGUNDA-FEIRA com a data de HOJE. Numa
-         terca, '2026-08-17' >= '2026-08-18' e falso, entao a semana em
-         curso nao era limpa antes de ser reescrita — e um bloco
-         refeito no meio da semana SOMAVA o plano duas vezes naquela
-         linha. Achado pelo agente que revisou a parte 43. */
+      /* comparava chave de SEGUNDA com a data de HOJE: numa terca a
+         semana em curso nao era limpa e o plano somava duas vezes */
       var segHoje = iso(addD(HOJE, -(dow(HOJE) - 1)));
       if(seg >= segHoje) delete ST.hist[seg];
     });
@@ -6585,25 +6540,12 @@ PARTE('força obedece ao bloco', function(){
   if(typeof ST !== 'object') throw new Error('sem ST');
   if(!window.bqBloco) throw new Error('sem gerador de blocos');
 
-  /* O DEFEITO QUE APAGOU A SUA ACADEMIA E NUNCA A DEVOLVEU.
-     Eu mapeava para BQ_BASE_A, BQ_BASE_B, BQ_PICO_A, BQ_PICO_B e
-     BQ_MANUT. Nenhum desses nomes existe: o index.html so tem PERNAS
-     e COSTAS. A linha de guarda do semear() —
-       if(!sid || !SESSOES_ACADEMIA[sid]) return;
-     — batia SEMPRE, entao esta parte nunca semeou nada em nenhum dia,
-     desde o dia em que eu a escrevi. Ela so apagava.
-
-     E o meu teste nao pegou porque o boneco de teste declarava
-     SESSOES_ACADEMIA com as chaves BQ_BASE_A e BQ_BASE_B — eu inventei
-     no teste exatamente os nomes que o meu codigo esperava, em vez de
-     usar os do app. O teste provou que o meu codigo concorda consigo
-     mesmo, que e a unica coisa que ele nao precisava provar. */
+  /* BQ_BASE_A e companhia nao existem: o index.html so tem PERNAS e
+     COSTAS. A guarda do semear batia sempre e esta parte nunca semeou
+     nada — so apagava. */
   var MAPA = { base_a:'PERNAS', base_b:'COSTAS',
                pico_a:'PERNAS', pico_b:'COSTAS', manut:'PERNAS' };
 
-  /* Marcar por 'auto' e nao pelo prefixo do nome. As criadas por voce
-     pelo botao do app vem com extra:true e sem auto, entao ficam de fora
-     da limpeza — que e o que sempre quis dizer "criada por voce". */
   function ehAuto(x){
     return !!(x && x.mod === 'forca' &&
               (x.auto === true || String(x.sessao || '').indexOf('BQ_') === 0));
@@ -6612,12 +6554,8 @@ PARTE('força obedece ao bloco', function(){
   /* 1. limpa a academia automatica que ficou solta alem do bloco */
   function limpar(fim){
     if(!ST.extras) return 0;
-    /* SEM BLOCO, NAO SE APAGA NADA.
-       Este era o defeito que sumiu com a sua academia. A guarda logo
-       abaixo e "if(fim && k <= fim) return" — com fim nulo ela nunca
-       protege ninguem, e o laco apagava TODA a academia futura de uma
-       vez. Ausencia de bloco nao e prova de que a academia sobra; e
-       so ausencia de informacao, e diante dela o certo e nao mexer. */
+    /* SEM BLOCO, NAO SE APAGA NADA. Com fim nulo a guarda abaixo nunca
+       protegia ninguem e o laco apagava toda a academia futura. */
     if(!fim) return 0;
     var hoje = iso(HOJE), n = 0;
     Object.keys(ST.extras).forEach(function(k){
@@ -6640,24 +6578,17 @@ PARTE('força obedece ao bloco', function(){
       if(k < hoje) return;
       var s = B.sessoes[k];
       if(!s || !s.forca) return;
-      /* usa a alternancia do proprio app quando ela existir, em vez de
-         eu decidir por fora qual sessao cai em qual dia */
       var sid = MAPA[s.forca];
       if(typeof sessaoAcademiaDe === 'function'){
         try{ sid = sessaoAcademiaDe(k) || sid }catch(e){}
       }
       if(!sid || typeof SESSOES_ACADEMIA !== 'object' || !SESSOES_ACADEMIA[sid]){
-        console.warn('força: sessão "' + sid + '" não existe em SESSOES_ACADEMIA — ' +
-                     'não semeio o que não sei montar');
+        console.warn('força: sessão "' + sid + '" não existe — não semeio o que não sei montar');
         return;
       }
       var existe = ST.extras[k];
       if(existe && !ehAuto(existe)) return;   /* voce pos algo ai: respeito */
-      /* NAO derruba lapide aqui. Era o que eu fazia, e por isso o
-         treino de forca que voce cancelava voltava sozinho: o
-         semeador apagava a marca do seu cancelamento e escrevia por
-         cima. Semear e automatico; cancelar e uma decisao sua. O
-         automatico nunca passa por cima da decisao.
+      /* NAO derruba lapide aqui: semear e automatico, cancelar e seu.
          A parte 42 barra a escrita se o dia estiver cancelado. */
       ST.extras[k] = { id: 'x' + k, data: k, mod: 'forca', foco: 'forca',
                        sessao: sid, titulo: SESSOES_ACADEMIA[sid].nome,
@@ -7811,11 +7742,10 @@ PARTE('o quilômetro é o total', function(){
           if(!temMin) et.tags.push({ t: extra });
         });
 
-        /* Aqui existia uma etapa "A conta fecha", so informativa.
-           Ela contava como etapa de verdade no concluida(), entao um
-           treino que voce tinha terminado passava a aparecer como
-           incompleto — 6 marcas para 7 etapas. A informacao continua,
-           no cartao "Montar no Garmin", onde nao atrapalha a contagem. */
+        /* Aqui existia uma etapa "A conta fecha", so informativa. Ela
+           contava no concluida() e um treino terminado virava
+           incompleto: 6 marcas para 7 etapas. A informacao continua no
+           cartao "Montar no Garmin", onde nao atrapalha a contagem. */
       }catch(e){ console.warn('etapas/total:', e && e.message) }
       return lista;
     };
@@ -8428,15 +8358,10 @@ PARTE('a marca de concluído gruda', function(){
         et.id = id;
       });
 
-      /* AQUI EU CONVERTIA AS MARCAS ANTIGAS "PELA QUANTIDADE" —
-         seis marcas velhas viravam as seis primeiras etapas de agora.
-         Foi isso que marcou o seu VO2 de amanha como concluido: eu
-         fabricava exatamente o numero de marcas que a conta do
-         concluida() precisava para fechar. Tentando preservar
-         historico, criei uma mentira sobre o futuro.
-         Agora eu so LIMPO o que nao casa. Se marca antiga nao
-         corresponde a nenhuma etapa atual, ela nao vale — e a parte 41
-         garante que dia futuro nunca conte como feito. */
+      /* Aqui eu convertia marcas antigas PELA QUANTIDADE, e assim
+         fabricava exatamente o numero que o concluida() precisava para
+         fechar — foi o que marcou o VO2 de amanha como feito. Agora so
+         LIMPO o que nao casa. */
       if(ST.feitas && ST.feitas[p.id]){
         var novos = lista.map(function(et){ return et.id });
         var casam = (ST.feitas[p.id] || []).filter(function(x){ return novos.indexOf(x) >= 0 });
@@ -8557,11 +8482,9 @@ PARTE('lápide não mata o que nasceu depois', function(){
     return typeof t === 'number' ? t : null;
   }
 
-  /* Derruba a lapide EU MESMO, mexendo no armazenamento.
-     Antes eu chamava window.bqDesapagar, que mora noutra parte. Se
-     aquela parte ainda nao tivesse carregado — ou falhasse —, a lapide
-     continuava de pe e a sessao morria. Depender de outra parte para
-     uma garantia e o mesmo que nao ter garantia. */
+  /* Derruba a lapide EU MESMO. Antes eu chamava window.bqDesapagar,
+     que mora noutra parte — depender de outra parte para uma garantia
+     e o mesmo que nao ter garantia. */
   function derrubar(tipo, chave){
     try{
       var m = tumulos(), c = tipo + '|' + chave;
@@ -8570,16 +8493,10 @@ PARTE('lápide não mata o que nasceu depois', function(){
     try{ if(window.bqDesapagar) window.bqDesapagar(tipo, chave) }catch(e){}
   }
 
-  /* O VIGIA SAIU DAQUI, DE PROPOSITO.
-     Eu tinha um Proxy nesta parte e outro na parte 42, os dois
-     tomando conta de ST.extras. Dois donos do mesmo objeto e como
-     dois freios no mesmo pedal: um desfaz o que o outro faz, e
-     ninguem consegue prever o resultado. Foi assim que a forca
-     cancelada voltou.
-     Agora o vigia tem UM dono, a parte 42, que e quem sabe
-     distinguir escrita sua de escrita automatica. Aqui fica so a
-     guarda de idade abaixo, que e assunto diferente: impedir que uma
-     lapide mate algo que nasceu depois dela. */
+  /* O VIGIA SAIU DAQUI: havia um Proxy nesta parte e outro na 42, os
+     dois tomando conta de ST.extras. Dois donos do mesmo objeto e como
+     dois freios no mesmo pedal. O dono agora e a parte 42. Aqui fica so
+     a guarda de idade abaixo. */
 
   /* ── b) a limpeza passa a comparar idades ── */
   var limparApp = window.bqLimparApagados;
@@ -8593,10 +8510,9 @@ PARTE('lápide não mata o que nasceu depois', function(){
           var t = tumuloEm('extras', k);
           /* sem carimbo, a sessao e antiga: a lapide vale.
              com carimbo posterior a lapide, ela nasceu depois e fica. */
-          /* >= e nao >: apagar e recriar no mesmo instante e comum,
-             e Date.now() tem resolucao de milissegundo. Com > estrito,
-             uma recriacao rapida demais era tratada como anterior a
-             lapide e morria. */
+          /* >= e nao >: apagar e recriar no mesmo instante e comum, e
+             Date.now() tem resolucao de milissegundo. Com > estrito, a
+             recriacao rapida demais era tratada como anterior a lapide. */
           if(t && x.__em && x.__em >= t) salvos[k] = x;
         });
       }catch(e){}
@@ -8874,15 +8790,10 @@ PARTE('cancelado fica cancelado', function(){
   /* ── o vigia passa a distinguir quem escreve ── */
   function envolver(alvo){
     alvo = alvo || {};
-    /* O objeto inteiro pode ser TROCADO — e o que o lerCoach faz ao
-       aplicar o que veio da nuvem. Quem entra por essa porta nao passa
-       pela armadilha de escrita, entao trato aqui:
-
-       - forca automatica num dia que voce cancelou nao entra. Senao a
-         nuvem ressuscitaria o que voce tirou, e o cancelamento so
-         valeria ate a proxima sincronia.
-       - o que entra sem carimbo ganha um. Sem isso a guarda de idade
-         da parte 40 nao tem o que comparar e a lapide mata tudo. */
+    /* O objeto inteiro pode ser TROCADO (o lerCoach faz isso). Quem
+       entra por essa porta nao passa pela armadilha de escrita:
+       - forca automatica em dia cancelado nao entra
+       - o que entra sem carimbo ganha um, senao a lapide mata tudo */
     try{
       Object.keys(alvo).forEach(function(k){
         var x = alvo[k];
@@ -8902,13 +8813,8 @@ PARTE('cancelado fica cancelado', function(){
           }
           if(!auto && v.mod === 'forca') liberar(k);   /* voce pos de volta */
           if(!v.__em) v.__em = Date.now();
-          /* Chegando aqui, a escrita e legitima: ou e sua, ou e
-             automatica num dia que voce nao cancelou. Nos dois casos
-             a lapide pode cair — quem guarda a sua intencao agora e
-             o cancelExtra, nao a lapide. A lapide volta a ser o que
-             sempre deveria ter sido: um detalhe de sincronia entre
-             aparelhos, com 24 horas de validade, e nao o lugar onde
-             mora uma decisao sua. */
+          /* quem guarda a sua intencao agora e o cancelExtra, nao a
+             lapide — entao a lapide pode cair nos dois casos */
           {
             try{
               var TUM = 'bq.apagados';
@@ -9048,21 +8954,6 @@ PARTE('cancelado fica cancelado', function(){
    b) A aderencia so conta semanas com plano registrado. Sem registro,
       "—". Preferi um traco a um numero inventado.
 
-   CORRECAO 03z — duas coisas que eu quebrei ao escrever isto acima:
-
-   1) A semana em curso aparecia com 0 km. Eu somava o real a partir do
-      r.d de ST.runs, que e "dias atras" contado de um HOJE fixado no
-      carregamento da pagina. App instalado nao recarrega: com o HOJE
-      de ontem, o mapAtividade descarta a corrida de hoje (d = -1) e
-      ela nunca chega aqui. Passei a ler a data escrita em
-      RAW.atividades, que nao depende de HOJE.
-
-   2) Apareciam so duas linhas. Eu listava apenas as chaves do
-      planejado(), e com o ST.hist vazio isso e exatamente a quinzena
-      do bloco vigente. Agora entram tambem a semana em curso, a
-      proxima, e — quando nao ha plano registrado no passado — de 2 a 4
-      semanas anteriores com o real corrido e "—" no plano.
-
    c) O plano fixo de dez semanas e desligado. Ele nao manda em nada
       ha semanas; so enfeitava a tela com numeros que ninguem estava
       cumprindo.
@@ -9084,114 +8975,15 @@ PARTE('um plano só', function(){
 
   var segDe = function(k){ return iso(addD(dt(k), -(dow(dt(k)) - 1))) };
 
-  /* ══ POR QUE A SEMANA EM CURSO APARECIA COM 0 KM ══════════════════
-     Eu lia so o ST.runs. Cada item de ST.runs nao guarda data: guarda
-     r.d, o NUMERO DE DIAS ATRAS contado a partir de HOJE. E HOJE e
-     fixado UMA UNICA VEZ, quando a pagina carrega:
-
-         const HOJE = new Date(); HOJE.setHours(0,0,0,0);   (index.html:1070)
-
-     Num app instalado no celular a pagina nao recarrega: ela dorme e
-     acorda. Quando voce abriu o app na terca com o HOJE gravado na
-     segunda, o mapAtividade() calculou d = -1 para a corrida de hoje e
-     jogou a corrida fora antes de ela chegar aqui:
-
-         const d = Math.round((HOJE - dd)/864e5);
-         if(d < 0 || d > 3000) return null;                (index.html:1805-1806)
-
-     Os 5,1 km de hoje sumiam de ST.runs, e a linha da semana em curso
-     nascia com 0 km. Nao era arredondamento nem filtro meu: a corrida
-     ja nao existia na lista que eu recebo.
-
-     E NAO ADIANTA PROCURAR r.data. Eu tinha escrito
-     "r.data || iso(addD(HOJE, -r.d))" imaginando um campo que nao
-     existe: o mapAtividade devolve d, km, pace, mod, titulo, manual,
-     gid, dur, fc, cad, osc, gct, vr, bal, vo2 e walk — e mais nada
-     (index.html:1818-1834). O lado esquerdo do "||" nunca valeu nada;
-     era codigo morto que eu nunca exercitei porque testei com objetos
-     falsos que tinham o campo.
-
-     A data de verdade existe, mas um andar acima: em RAW.atividades,
-     o pacote cru que o absorver() consumiu (index.html:1837 "RAW = d").
-     La cada atividade tem a.data escrita em texto, que nao depende de
-     HOJE nenhum. E de la que passo a ler.
-
-     Fico com ST.runs se o RAW cobrir MENOS corrida do que ele — e o
-     caso da importacao de CSV, que troca ST.runs sem tocar no RAW
-     (index.html:3695). Assim nenhum dos dois caminhos perde treino. */
-
-  /* mesma regra do app para decidir o que conta como corrida:
-     o esporte gravado no sync manda, nao o ritmo (index.html:1811-1833).
-     Treino manual chega sem esporte e continua contando. */
-  function ehCorrida(esporte, tipo){
-    var mod;
-    if(typeof espParaMod === 'function'){
-      mod = espParaMod(esporte, tipo);
-    } else {
-      /* copia da regra do index.html:1794-1800, para o caso de eu rodar
-         antes do app definir a funcao. Sem isto, a bike de domingo
-         entraria como corrida e inflaria a semana. */
-      var t = String(esporte || '').toLowerCase() + ' ' + String(tipo || '').toLowerCase();
-      mod = /bike|ciclismo|cycling|mtb|nata|swim|academia|muscula|forca|força|strength|gym/.test(t)
-            ? 'outro' : 'corrida';
-    }
-    if(mod !== 'corrida') return false;
-    var e = String(esporte || '').toLowerCase();
-    return !e || e === 'corrida';        /* treino manual vem sem esporte */
-  }
-
-  function somarPorSemana(itens){
-    var m = {};
-    itens.forEach(function(x){
-      var s = segDe(x.k);
-      m[s] = +((m[s] || 0) + x.km).toFixed(1);
-    });
-    return { m: m, n: itens.length };
-  }
-
-  /* leitura pelo RAW: a data vem escrita, imune a HOJE velho */
-  function reaisDoRaw(){
-    var A = (typeof RAW === 'object' && RAW && Array.isArray(RAW.atividades)) ? RAW.atividades : null;
-    if(!A || !A.length) return null;
-    var vistos = {}, itens = [];
-    A.forEach(function(a){
-      if(!a || !a.data) return;
-      if(!ehCorrida(a.esporte, a.tipo)) return;
-      /* o mapAtividade descarta o que nao tem duracao nem ritmo; se eu
-         nao descartar tambem, entro aqui com atividade que o app nunca
-         contou e a comparacao entre as duas leituras fica torta */
-      if(!a.duracao && !a.pace) return;
-      var k = String(a.data).slice(0, 10);
-      if(!/^\d{4}-\d{2}-\d{2}$/.test(k)) return;
-      var km = +a.distancia || 0;
-      if(!(km > 0)) return;
-      /* mesma chave de duplicata do absorver(): o id do Garmin decide,
-         e sem id vale dia + km com duas casas (index.html:1850) */
-      var id = String(a.garminId || a.id || '');
-      var ch = id ? 'id:' + id : k + '|' + km.toFixed(2);
-      if(vistos[ch]) return;
-      vistos[ch] = 1;
-      itens.push({ k: k, km: km });
-    });
-    return somarPorSemana(itens);
-  }
-
-  /* leitura pelo ST.runs: so serve de reserva, porque depende de HOJE */
-  function reaisDosRuns(){
-    var itens = [];
-    ((typeof ST === 'object' && ST.runs) || []).forEach(function(r){
-      if(!r || r.walk || (r.mod || 'corrida') !== 'corrida' || !(r.km > 0)) return;
-      if(!isFinite(r.d)) return;
-      itens.push({ k: iso(addD(HOJE, -r.d)), km: r.km });
-    });
-    return somarPorSemana(itens);
-  }
-
   function reais(){
-    var A = reaisDoRaw(), B = reaisDosRuns();
-    /* quem viu mais corrida ganha. Nunca somo os dois: seria contar o
-       mesmo treino duas vezes, porque ST.runs nasce do proprio RAW. */
-    return (A && A.n >= B.n) ? A.m : B.m;
+    var m = {};
+    ((ST.runs) || []).forEach(function(r){
+      if(!r || r.walk || (r.mod || 'corrida') !== 'corrida' || !(r.km > 0)) return;
+      var k = r.data || iso(addD(HOJE, -r.d));
+      var s = segDe(k);
+      m[s] = +((m[s] || 0) + r.km).toFixed(1);
+    });
+    return m;
   }
 
   /* planejado por semana: hist para o passado, bloco para o presente */
@@ -9215,58 +9007,39 @@ PARTE('um plano só', function(){
     return m;
   }
 
+  function dataProva(){
+    try{ if(ST.objetivo && ST.objetivo.data) return ST.objetivo.data }catch(e){}
+    return '2026-10-18';
+  }
+
   function semanas(){
-    var P = planejado(), R = reais(), hojeSeg = segDe(iso(HOJE));
-    var proxSeg = iso(addD(dt(hojeSeg), 7));
+    /* NUMERACAO FIXA E ANCORADA NO CALENDARIO:
+         S1 = a semana passada
+         S2 = esta semana
+         ... ate a semana da prova.
 
-    /* SO SEMANAS COM PLANO — E FOI DEMAIS.
-       Primeiro eu juntava as semanas planejadas com TODAS as semanas em
-       que houve corrida, e como ST.runs guarda mais de um ano davam
-       sessenta e tantas linhas. Corrigi para o outro extremo: passei a
-       listar SO as chaves do planejado(). Ai apareceu o defeito que
-       voce viu — duas linhas, S1 e S2, e mais nada.
+       Antes eu montava a lista a partir do que existia no banco, e por
+       isso a numeracao ANDAVA: quando entrava registro de mais uma
+       semana antiga, o que era S1 virava S5 e voce perdia a
+       referencia. Um rotulo que muda de significado sozinho nao serve
+       para nada. A regua e o calendario. */
+    var P = planejado(), R = reais();
+    var hojeSeg = segDe(iso(HOJE));
+    var ini = segDe(iso(addD(HOJE, -7)));
+    var fim = segDe(dataProva());
+    if(fim < hojeSeg) fim = hojeSeg;
 
-       O motivo: o planejado() le o ST.hist para o passado, e o ST.hist
-       so passou a ser gravado no Firebase ha poucas versoes
-       (fix.js:8269). No seu aparelho ele esta vazio, entao sobrava
-       apenas o bloco vigente, que e uma quinzena — as duas linhas.
-
-       Agora a lista e: o que os blocos registraram, mais a semana em
-       curso, mais a proxima. E quando nao ha NENHUM plano registrado
-       antes da semana em curso, mostro o passado recente pelo que foi
-       corrido: de 2 a 4 semanas, com "—" na coluna do plano. Sem
-       registro eu nao invento numero; escrevo o traco e digo por que.
-       Teto de doze semanas, sempre as mais recentes. */
-    var chaves = {};
-    Object.keys(P).forEach(function(s){ chaves[s] = 1 });
-    chaves[hojeSeg] = 1;
-    chaves[proxSeg] = 1;
-
-    var temPassado = Object.keys(P).some(function(s){ return s < hojeSeg });
-    if(!temPassado){
-      var achou = 0, sAnt;
-      for(var i = 1; i <= 4; i++){
-        sAnt = iso(addD(dt(hojeSeg), -7 * i));
-        if(R[sAnt] > 0){ chaves[sAnt] = 1; achou++ }
-      }
-      /* piso de duas linhas de passado mesmo sem corrida registrada:
-         "aqui nao havia plano" tambem e informacao */
-      if(achou < 2) for(var j = 1; j <= 2; j++) chaves[iso(addD(dt(hojeSeg), -7 * j))] = 1;
+    var out = [], k = ini, i = 0;
+    while(k <= fim && i < 60){
+      out.push({ seg: k, n: i + 1,
+                 plan: P[k] != null ? P[k].km : null,
+                 de:   P[k] != null ? P[k].de : null,
+                 real: R[k] || 0,
+                 atual: k === hojeSeg,
+                 futura: k > hojeSeg,
+                 prova: k === segDe(dataProva()) });
+      k = iso(addD(dt(k), 7)); i++;
     }
-
-    var lista = Object.keys(chaves).sort();
-    if(!lista.length) return [];
-    var ini = lista[0], fim = lista[lista.length - 1];
-    if(fim < proxSeg) fim = proxSeg;
-
-    var out = [], s = ini;
-    while(s <= fim){
-      out.push({ seg: s, plan: P[s] ? P[s].km : null, de: P[s] ? P[s].de : null,
-                 real: R[s] || 0, atual: s === hojeSeg, futura: s > hojeSeg });
-      s = iso(addD(dt(s), 7));
-      if(out.length > 60) break;                  /* trava contra data doida */
-    }
-    if(out.length > 12) out = out.slice(out.length - 12);
     return out;
   }
 
@@ -9279,8 +9052,7 @@ PARTE('um plano só', function(){
         return w.seg + (w.atual ? ' *' : '  ') + '  real ' +
                String(w.real.toFixed(1)).padStart(6) + ' km   plano ' +
                (w.plan != null ? String(w.plan.toFixed(1)).padStart(6) + ' km  (' + w.de + ')'
-                               : '     —   (' + (w.futura ? 'ainda não composto'
-                                                          : 'sem plano registrado') + ')');
+                               : '     —   (ainda não composto)');
       }).join('\n');
     }
   };
@@ -9332,58 +9104,85 @@ PARTE('um plano só', function(){
     /* aderencia so nas semanas FECHADAS e com plano registrado */
     var somaP = 0, somaR = 0, n = 0;
     L.forEach(function(w){
-      if(w.atual || w.futura || w.plan == null) return;
+      if(w.atual || w.plan == null || w.seg > segDe(iso(HOJE))) return;
       somaP += w.plan; somaR += Math.min(w.real, w.plan); n++;
     });
     var ad = somaP > 0 ? somaR / somaP : null;
 
-    var linhas = L.map(function(w, i){
+    var linhas = L.map(function(w){
       var temPlano = w.plan != null && w.plan > 0;
       var p = temPlano ? Math.min(1.15, w.real / w.plan) : 0;
-      /* tres casos diferentes, antes eu tinha so dois e por isso semana
-         passada sem plano era pintada de vermelho como se fosse falha:
-           vazia  = ainda nao composta, esta no futuro
-           orfa   = ja passou e nao havia plano registrado nenhum
-           normal = tem plano, da para comparar */
-      var vazia = !temPlano && w.futura;
-      var orfa  = !temPlano && !w.futura;
-      var fundo = vazia ? 'transparent'
-                : orfa  ? 'rgba(128,128,128,.30)'
-                : w.atual ? 'var(--acc,#C9F24E)' : cor(p);
+
+      /* TRES CASOS, e nao dois:
+           vazia    = ainda nao comecou e nao tem plano
+           orfa     = ja passou e nao havia plano registrado
+           normal   = tem plano e ja comecou, da para comparar
+         SEMANA QUE AINDA NAO COMECOU NAO LEVA NOTA. Ter plano nao a
+         torna avaliavel; so o tempo passar torna. Antes uma semana
+         futura com plano aparecia como 0% em vermelho. */
+      var comecou  = !w.futura;
+      var vazia    = !temPlano && w.futura;
+      var orfa     = !temPlano && comecou;
+      var julgavel = temPlano && comecou && !w.atual;
+
+      var fundo = (vazia || !comecou) ? 'transparent'
+                : orfa                ? 'rgba(128,128,128,.30)'
+                : w.atual             ? 'var(--acc,#C9F24E)'
+                                      : cor(p);
+
       return '<div class="lin' + (w.atual ? ' hoje' : '') + '">'
-        + '<b>S' + (i + 1) + '</b>'
-        + '<span class="bar"><i style="width:' + (orfa ? 100 : Math.round(Math.min(1, p) * 100))
+        + '<b>' + (w.prova ? 'PEI' : 'S' + w.n) + '</b>'
+        + '<span class="bar"><i style="width:'
+        + (orfa ? 100 : Math.round(Math.min(1, p) * 100))
         + '%;background:' + fundo + '"></i></span>'
         + '<span class="km">' + w.real.toFixed(0) + '/'
         + (temPlano ? w.plan.toFixed(0) + ' km' : '— km') + '</span>'
-        + '<span class="p" style="opacity:' + (vazia ? '.35' : (w.atual || orfa) ? '.7' : '1')
-        + ';color:' + (temPlano && !w.atual ? cor(p) : 'inherit') + '">'
-        + (temPlano ? Math.round(p * 100) + '%' : '—') + '</span></div>';
+        + '<span class="p" style="opacity:' + (julgavel ? '1' : w.atual ? '.7' : '.35')
+        + ';color:' + (julgavel ? cor(p) : 'inherit') + '">'
+        + (temPlano && comecou ? Math.round(p * 100) + '%' : '—') + '</span></div>';
     }).join('');
 
-    var semPlano = L.filter(function(w){ return w.plan == null && w.futura }).length;
-    var orfas    = L.filter(function(w){ return w.plan == null && !w.futura }).length;
-    var faltam = Math.max(0, Math.ceil(diff(iso(HOJE), '2026-10-18') / 7));
+    var semPlano = L.filter(function(w){ return w.plan == null }).length;
+    var faltam = Math.max(0, Math.ceil(diff(iso(HOJE), dataProva()) / 7));
+
+    /* Sem semana fechada, o cabecalho mostrava um traco grande — inutil
+       justamente agora, que e quando o ST.hist esta comecando. Entao
+       mostro a semana EM CURSO, que e o numero que interessa hoje. */
+    var atual = null;
+    L.forEach(function(w){ if(w.atual) atual = w });
+    var temAtual = atual && atual.plan != null && atual.plan > 0;
+    var pAtual = temAtual ? Math.min(1.15, atual.real / atual.plan) : null;
+
+    var cabeca, sub;
+    if(ad != null){
+      cabeca = '<span class="pct" style="color:' + cor(ad) + '">' + Math.round(ad * 100) + '%</span>'
+             + '<span style="font-size:11.5px;opacity:.65">' + n + ' semana' + (n > 1 ? 's' : '')
+             + ' fechada' + (n > 1 ? 's' : '') + ' · faltam ' + faltam + ' até a prova</span>';
+      sub = Math.round(somaR) + ' km dos ' + Math.round(somaP) +
+            ' km que os blocos pediram nas semanas já fechadas.';
+    } else if(temAtual){
+      cabeca = '<span class="pct">' + atual.real.toFixed(0)
+             + '<span style="font-size:15px;opacity:.55">/' + atual.plan.toFixed(0) + ' km</span></span>'
+             + '<span style="font-size:11.5px;opacity:.65">nesta semana · faltam '
+             + faltam + ' até a prova</span>';
+      sub = 'Você fez <b style="color:var(--tx2)">' + Math.round((pAtual || 0) * 100) +
+            '%</b> do que o bloco pediu para esta semana. A aderência do ciclo aparece quando ' +
+            'a primeira semana com plano registrado fechar.';
+    } else {
+      cabeca = '<span class="pct">—</span><span style="font-size:11.5px;opacity:.65">faltam '
+             + faltam + ' até a prova</span>';
+      sub = 'Ainda não há semana com plano registrado para comparar.';
+    }
 
     box.innerHTML =
       '<span class="kicker">Progresso do ciclo</span>'
-      + '<div class="topo"><span class="pct" style="color:' + (ad == null ? 'inherit' : cor(ad)) + '">'
-      + (ad == null ? '—' : Math.round(ad * 100) + '%') + '</span>'
-      + '<span style="font-size:11.5px;opacity:.65">'
-      + (ad == null ? 'sem semana fechada ainda' : n + ' semana' + (n > 1 ? 's' : '') + ' fechada' + (n > 1 ? 's' : ''))
-      + ' · faltam ' + faltam + ' até a prova</span></div>'
-      + '<p class="sub">' + (ad == null
-          ? 'A aderência aparece quando a primeira semana do bloco fechar.'
-          : Math.round(somaR) + ' km dos ' + Math.round(somaP) + ' km que os blocos pediram nas semanas já fechadas.')
-      + '</p>'
+      + '<div class="topo">' + cabeca + '</div>'
+      + '<p class="sub">' + sub + '</p>'
       + linhas
       + '<p class="nota">Cada linha compara o que você correu com o que <b>o bloco daquela quinzena '
-      + 'realmente pediu</b>. '
-      + (orfas ? 'As <b>' + orfas + '</b> primeira' + (orfas > 1 ? 's' : '') + ' são anteriores ao '
-               + 'registro de planos: mostro só o que o relógio marcou, porque plano daquela época '
-               + 'não ficou guardado em lugar nenhum — e número inventado seria pior que traço. ' : '')
-      + (semPlano ? 'As <b>' + semPlano + '</b> do fim ainda não têm plano: ele é composto de duas em '
-                  + 'duas semanas, a partir do que você treinou. ' : '')
+      + 'realmente pediu</b>. As semanas com <b>—</b> ainda não têm plano: ele é composto de duas em '
+      + 'duas semanas, a partir do que você treinou. '
+      + (semPlano ? 'Faltam compor <b>' + semPlano + '</b> delas. ' : '')
       + 'A semana em curso não entra na aderência enquanto não fechar.</p>';
   }
 
