@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '03k';
+const FIX_VERSAO = '03l';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -7049,6 +7049,458 @@ PARTE('ritmos que existem', function(){
 });
 
 
+/* ═══ 35. PLANILHA DE TREINOS ═══
+
+   O QUE VOCE PEDIU: "nao gosto do visual dos meus treinos, nao chamam
+   a atencao e sao todas as fases da mesma cor. Ha como melhorar isso
+   produzindo como se fosse uma planilha mesmo?"
+
+   DE ONDE VEM A COR. Nao inventei paleta. A convencao vem de Jack
+   Daniels, que classifica todo treino de corrida em cinco intensidades
+   — E (easy), M (marathon), T (threshold), I (interval), R (repetition)
+   — e e a base de praticamente toda planilha de treinador serio. Renato
+   Canova usa quatro familias com a mesma ideia (regeneracao, fundamental,
+   especial, especifico). O que as duas escolas tem em comum e o que
+   importa aqui: a intensidade e a informacao que precisa ser lida de
+   relance, antes de qualquer numero.
+
+   Por isso a cor sai da ZONA, nao da modalidade:
+
+     Recuperação      cinza-azul   o treino que quase nao conta
+     Rodagem fácil    verde        onde mora 80% do volume
+     Longo            limão        a sessao mais importante da semana
+     Ritmo maratona   âmbar        o ritmo do dia 18/10
+     Limiar           laranja      confortavelmente dificil
+     VO₂ máx          vermelho     forte, so dentro de tiros
+     Tiros curtos     violeta      o R de Daniels, neuromuscular
+     Bike             azul         volume sem impacto
+     Natação          turquesa
+     Força            cinza        trabalho de suporte, cor discreta de proposito
+     Prova            branco       a linha que interessa
+
+   Verde a vermelho segue a ordem da intensidade. Nao e decoracao: se a
+   sua semana esta cheia de laranja e vermelho, voce ve isso sem ler
+   nada, e sabe que o problema existe antes de sentir na perna.
+
+   O QUE A PLANILHA MOSTRA QUE A LISTA ANTIGA NAO MOSTRAVA:
+
+   1. As duas semanas inteiras de uma vez, dia por dia, uma linha cada.
+   2. Total de km e de horas por semana, na linha de fechamento.
+   3. A REPARTICAO 80/20 de cada semana — quanto do volume foi leve e
+      quanto foi forte. E o unico numero que quase todo corredor de 60+
+      erra, e o app nunca te mostrou. Verde acima de 75% e o alvo.
+   4. Se o treino foi feito, esta na coluna da direita.
+   5. A fase do ciclo aparece na barra de cada semana.
+
+   COMO FUNCIONA. Toque numa linha e o dia abre embaixo, com as seis
+   etapas, exatamente como antes — nada do que ja existia foi jogado
+   fora. A faixa de um dia so (a sessbar) sai de cena, porque a linha
+   da planilha faz o mesmo trabalho e melhor.
+
+   NO IPHONE. A coluna do dia fica congelada e o resto rola para o lado.
+   Os alvos de toque tem 44 px de altura, que e o minimo da Apple.
+
+   NO CONSOLE:
+     bqPlanilha.desligar()   — volta a lista antiga
+     bqPlanilha.ligar()
+     bqPlanilha.dados()      — as linhas em texto, para conferir
+   ══════════════════════════════════════════════════════════════════ */
+
+PARTE('planilha de treinos', function(){
+  if(typeof ST !== 'object') throw new Error('sem ST');
+  if(typeof q !== 'function') throw new Error('sem q()');
+
+  var OFF = 'bq.planilha.off';
+  var ligado = function(){ try{ return localStorage.getItem(OFF) !== '1' }catch(e){ return true } };
+
+  /* ── a paleta, por zona de intensidade ── */
+  var ZC = {
+    prova   : { n:'Prova',           c:'#FFFFFF', o:0 },
+    soltura : { n:'Recuperação',     c:'#7C93A8', o:1 },
+    rec     : { n:'Recuperação',     c:'#7C93A8', o:1 },
+    facil   : { n:'Rodagem fácil',   c:'#3FD98A', o:2 },
+    longo   : { n:'Longo',           c:'#C9F24E', o:3 },
+    mp      : { n:'Ritmo maratona',  c:'#F5C544', o:4 },
+    progressivo:{n:'Progressivo',    c:'#F5C544', o:4 },
+    limiar  : { n:'Limiar',          c:'#F79256', o:5 },
+    tempo   : { n:'Limiar',          c:'#F79256', o:5 },
+    vo2     : { n:'VO₂ máx',         c:'#F2685C', o:6 },
+    intervalado:{n:'VO₂ máx',        c:'#F2685C', o:6 },
+    fartlek : { n:'Fartlek',         c:'#F2685C', o:6 },
+    tiros   : { n:'Tiros curtos',    c:'#C77DFF', o:7 },
+    ladeira : { n:'Ladeiras',        c:'#C77DFF', o:7 },
+    forca   : { n:'Força',           c:'#9AA5B8', o:8 },
+    cross   : { n:'Cruzado',         c:'#4FA6F5', o:9 },
+    brick   : { n:'Combinado',       c:'#4FA6F5', o:9 }
+  };
+  var MODC = { bike:{n:'Bike', c:'#4FA6F5'}, natacao:{n:'Natação', c:'#3FE0C4'},
+               forca:{n:'Força', c:'#9AA5B8'} };
+
+  /* focos que contam como volume FORTE na conta do 80/20 */
+  var FORTE = { mp:1, limiar:1, tempo:1, vo2:1, intervalado:1, fartlek:1,
+                tiros:1, ladeira:1, progressivo:1, prova:1 };
+
+  function zonaDe(s){
+    if(!s) return null;
+    if(s.prova) return ZC.prova;
+    if(s.mod && s.mod !== 'corrida') return MODC[s.mod] || ZC[s.foco] || MODC.forca;
+    return ZC[s.foco] || ZC.facil;
+  }
+
+  /* ── estilo ── */
+  var css = document.createElement('style');
+  css.textContent = [
+'#bqPl{background:var(--s1);border-radius:var(--r-lg);padding:0;margin-bottom:14px;overflow:hidden}',
+'#bqPl .plhead{display:flex;align-items:baseline;justify-content:space-between;',
+'  padding:15px 16px 11px;gap:10px}',
+'#bqPl .plhead h2{margin:0;font-size:15px;font-weight:800;letter-spacing:-.02em}',
+'#bqPl .plhead .sub{font-size:11px;color:var(--tx3);text-align:right;line-height:1.35}',
+'#bqPl .rolo{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin}',
+'#bqPl table{border-collapse:separate;border-spacing:0;width:100%;min-width:430px;',
+'  font-size:12.5px;table-layout:fixed}',
+'#bqPl th{font-size:9.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;',
+'  color:var(--tx3);text-align:right;padding:7px 9px;background:var(--s2);',
+'  border-bottom:1px solid var(--line);white-space:nowrap;position:sticky;top:0;z-index:3}',
+'#bqPl th.d,#bqPl th.t{text-align:left}',
+'#bqPl td{padding:0 9px;height:46px;vertical-align:middle;border-bottom:1px solid rgba(34,43,54,.75);',
+'  text-align:right;white-space:nowrap;color:var(--tx2)}',
+/* coluna do dia: congelada */
+'#bqPl td.d,#bqPl th.d{position:sticky;left:0;z-index:2;width:74px;min-width:74px;',
+'  background:var(--s1);text-align:left;padding-left:14px}',
+'#bqPl th.d{z-index:4;background:var(--s2)}',
+'#bqPl tr.sel td.d{background:var(--s3)}',
+'#bqPl td.d .dw{font-size:9.5px;font-weight:800;letter-spacing:.08em;color:var(--tx3);',
+'  text-transform:uppercase;display:block;line-height:1.1}',
+'#bqPl td.d .dn{font-size:13px;font-weight:700;color:var(--tx2);display:block;line-height:1.25}',
+'#bqPl tr.hoje td.d .dn{color:var(--acc)}',
+'#bqPl tr.hoje td.d .dw{color:var(--acc)}',
+/* a faixa de cor da zona */
+'#bqPl td.t{text-align:left;width:150px;min-width:150px;position:relative;padding-left:16px}',
+'#bqPl td.t:before{content:"";position:absolute;left:0;top:6px;bottom:6px;width:4px;',
+'  border-radius:0 3px 3px 0;background:var(--zc,transparent)}',
+'#bqPl td.t .tt{display:block;font-weight:700;color:var(--tx);font-size:12.5px;',
+'  overflow:hidden;text-overflow:ellipsis;line-height:1.25}',
+'#bqPl td.t .zz{display:block;font-size:9.5px;font-weight:800;letter-spacing:.07em;',
+'  text-transform:uppercase;color:var(--zc,var(--tx3));margin-top:1px;line-height:1.1}',
+'#bqPl tr.linha{cursor:pointer;transition:background .12s}',
+'#bqPl tr.linha:active{background:var(--s2)}',
+'#bqPl tr.linha.pint td{background:var(--zw)}',
+'#bqPl tr.linha.pint td.d{background:linear-gradient(90deg,var(--zw),var(--zw))}',
+'#bqPl tr.sel.linha td{box-shadow:inset 0 -2px 0 var(--zc)}',
+'#bqPl .num{font-family:"JetBrains Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums;',
+'  letter-spacing:-.03em;color:var(--tx)}',
+'#bqPl .dim{color:var(--tx3)}',
+'#bqPl td.ok{width:34px;min-width:34px;text-align:center;padding:0 4px}',
+'#bqPl .vv{display:inline-block;width:17px;height:17px;border-radius:50%;line-height:17px;',
+'  font-size:10px;font-weight:900;background:rgba(63,217,138,.16);color:var(--ok)}',
+'#bqPl .oo{display:inline-block;width:17px;height:17px;border-radius:50%;',
+'  border:1.5px dashed var(--line);box-sizing:border-box}',
+'#bqPl .xx{display:inline-block;width:17px;height:17px;border-radius:50%;line-height:17px;',
+'  font-size:10px;font-weight:900;background:rgba(242,104,92,.14);color:var(--bad)}',
+/* barra de semana */
+'#bqPl tr.sem td{background:var(--s2);height:auto;padding:8px 9px 7px;border-bottom:1px solid var(--line);',
+'  border-top:1px solid var(--line)}',
+'#bqPl tr.sem td.d{background:var(--s2);padding-left:14px}',
+'#bqPl .semtag{font-size:9.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--tx2)}',
+'#bqPl .semfase{font-size:9.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;',
+'  padding:2px 7px;border-radius:99px;background:var(--s3);color:var(--tx2);margin-left:7px}',
+/* fechamento da semana */
+'#bqPl tr.tot td{height:auto;padding:9px 9px 11px;background:var(--s2);border-bottom:2px solid var(--line);',
+'  font-size:11px}',
+'#bqPl tr.tot td.d{background:var(--s2);padding-left:14px;font-size:9.5px;font-weight:800;',
+'  letter-spacing:.09em;text-transform:uppercase;color:var(--tx3)}',
+'#bqPl .totn{font-family:"JetBrains Mono",ui-monospace,monospace;font-weight:800;font-size:13px;color:var(--tx)}',
+'#bqPl .mixbar{display:flex;height:5px;border-radius:3px;overflow:hidden;background:var(--s3);',
+'  margin-top:5px;min-width:110px}',
+'#bqPl .mixbar i{display:block;height:100%}',
+'#bqPl .mixtx{font-size:9.5px;font-weight:700;color:var(--tx3);letter-spacing:.02em}',
+/* legenda */
+'#bqPl .pleg{display:flex;flex-wrap:wrap;gap:5px 12px;padding:12px 16px 15px;border-top:1px solid var(--line)}',
+'#bqPl .pleg span{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--tx3);font-weight:600}',
+'#bqPl .pleg i{width:9px;height:9px;border-radius:2.5px;flex:none}',
+'#bqPl .plnota{padding:0 16px 15px;font-size:11px;color:var(--tx3);line-height:1.5}',
+'#bqPl .plnota b{color:var(--tx2)}',
+'@media(max-width:400px){',
+'  #bqPl td.t{width:132px;min-width:132px}',
+'  #bqPl table{min-width:404px;font-size:12px}',
+'}'
+  ].join('\n');
+  document.head.appendChild(css);
+
+  /* ── utilidades ── */
+  var D3 = ['','SEG','TER','QUA','QUI','SEX','SÁB','DOM'];
+
+  function alfa(hex, a){
+    var h = String(hex).replace('#','');
+    if(h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+    var n = parseInt(h, 16);
+    return 'rgba(' + ((n>>16)&255) + ',' + ((n>>8)&255) + ',' + (n&255) + ',' + a + ')';
+  }
+  function pcNum(s){                       /* pace da sessao, em texto */
+    if(!s) return null;
+    if(typeof s.pace === 'string' && s.pace.indexOf(':') > 0) return s.pace;
+    if(s.km > 0 && s.min > 0) return mmss(Math.round(s.min * 60 / s.km));
+    return null;
+  }
+  function distDe(s){
+    if(!s) return null;
+    if(s.foco === 'brick') return (+s.bikeKm || 0) + (+s.runKm || 0);
+    if(s.metros) return +(s.metros / 1000).toFixed(2);
+    return +s.km || null;
+  }
+
+  /* ── quais dias entram: a semana corrente + tudo o que o bloco tem ── */
+  function dias(){
+    var ini = addD(HOJE, -(dow(HOJE) - 1));          /* segunda desta semana */
+    var chaves = Object.keys(ST.plano || {});
+    var fim = addD(HOJE, 13);
+    chaves.forEach(function(k){
+      if(ST.plano[k] && ST.plano[k].prova) return;   /* a prova nao estica a tabela */
+      var d = dt(k);
+      if(d > fim && d <= addD(HOJE, 27)) fim = d;
+    });
+    var out = [], d = ini;
+    while(d <= fim){ out.push(iso(d)); d = addD(d, 1) }
+    /* corta folga solta no fim: uma segunda-feira sozinha abrindo uma
+       "semana 3" vazia era feio e nao informava nada */
+    while(out.length > 7){
+      var u = out[out.length - 1];
+      if((ST.plano && ST.plano[u]) || (ST.extras && ST.extras[u])) break;
+      out.pop();
+    }
+    return out;
+  }
+
+  function faseDe(ks){
+    for(var i = 0; i < ks.length; i++){
+      var s = ST.plano[ks[i]];
+      if(s && s.fase) return s.fase;
+    }
+    return '';
+  }
+
+  /* ── uma linha ── */
+  function linha(k){
+    var s = (typeof sessaoDe === 'function') ? sessaoDe(k) : (ST.plano[k] || null);
+    var x = (typeof extraDe  === 'function') ? extraDe(k)  : (ST.extras && ST.extras[k]) || null;
+    var d = dt(k), hoje = k === iso(HOJE), passado = k < iso(HOJE);
+    var z = zonaDe(s) || (x ? (MODC[x.mod] || ZC.forca) : null);
+    var cor = z ? z.c : null;
+
+    var tit, sub;
+    if(s){
+      tit = s.titulo || (typeof MOD === 'object' && MOD[s.mod] ? MOD[s.mod].n : s.mod);
+      sub = z.n;
+      if(s.mod !== 'corrida' && ZC[s.foco] && !s.prova) sub = z.n + ' · ' + ZC[s.foco].n;
+    } else if(x){
+      tit = x.titulo || 'Academia';
+      sub = 'Força';
+    } else {
+      tit = 'Descanso';
+      sub = '';
+    }
+
+    var km   = distDe(s);
+    var min  = s ? (+s.min || null) : null;
+    var pace = s && s.mod === 'corrida' ? pcNum(s) : null;
+    var xmin = x ? (+x.min || 45) : 0;
+
+    var feito = s && typeof concluida === 'function' ? concluida(s) : false;
+    var estado = !s ? '' : feito ? 'v' : (passado ? 'x' : 'o');
+
+    /* segundo treino do dia sinalizado no titulo */
+    if(s && x) tit = tit + ' + academia';
+
+    var cls = ['linha'];
+    if(hoje) cls.push('hoje');
+    if(k === ST.sel) cls.push('sel');
+    if(s || x) cls.push('pint');
+    if(!s && !x) cls.push('folga');
+
+    var estilo = cor ? ('--zc:' + cor + ';--zw:' + alfa(cor, hoje ? 0.13 : 0.075)) : '';
+
+    var html = '<tr class="' + cls.join(' ') + '" data-k="' + k + '" style="' + estilo + '">'
+      + '<td class="d"><span class="dw">' + D3[dow(d)] + '</span>'
+      + '<span class="dn">' + String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '</span></td>'
+      + '<td class="t"><span class="tt">' + tit + '</span>'
+      + (sub ? '<span class="zz">' + sub + '</span>' : '') + '</td>'
+      + '<td>' + (km ? '<span class="num">' + km.toFixed(km >= 10 ? 0 : 1) + '</span>' : '<span class="dim">—</span>') + '</td>'
+      + '<td>' + (pace ? '<span class="num">' + pace + '</span>' : '<span class="dim">—</span>') + '</td>'
+      + '<td>' + ((min || xmin) ? '<span class="num">' + ((min || 0) + xmin) + '</span>' : '<span class="dim">—</span>') + '</td>'
+      + '<td class="ok">' + (estado === 'v' ? '<span class="vv">✓</span>'
+                          : estado === 'x' ? '<span class="xx">!</span>'
+                          : estado === 'o' ? '<span class="oo"></span>' : '') + '</td>'
+      + '</tr>';
+
+    return { html: html, km: km || 0, min: (min || 0) + xmin,
+             forte: s && FORTE[s.foco] ? (km || 0) : 0,
+             corrida: s && s.mod === 'corrida' ? (km || 0) : 0,
+             feito: feito, tem: !!(s || x) };
+  }
+
+  /* ── a tabela inteira ── */
+  function tabela(){
+    var ks = dias(), semanas = [], atual = null;
+    ks.forEach(function(k){
+      if(!atual || dow(dt(k)) === 1){ atual = { ks: [] }; semanas.push(atual) }
+      atual.ks.push(k);
+    });
+
+    var corpo = '', nsem = 0;
+    semanas.forEach(function(w){
+      nsem++;
+      var somaKm = 0, somaMin = 0, forte = 0, corrida = 0, feitos = 0, tem = 0;
+      var linhas = w.ks.map(function(k){
+        var L = linha(k);
+        somaKm += L.km; somaMin += L.min; forte += L.forte; corrida += L.corrida;
+        if(L.tem){ tem++; if(L.feito) feitos++ }
+        return L.html;
+      }).join('');
+
+      var fase = faseDe(w.ks);
+      var rot = w.ks[0] <= iso(HOJE) && w.ks[w.ks.length-1] >= iso(HOJE)
+                ? 'Esta semana' : 'Semana ' + nsem;
+
+      corpo += '<tr class="sem"><td class="d"><span class="semtag">' + rot + '</span></td>'
+             + '<td class="t" colspan="5" style="text-align:left">'
+             + (fase ? '<span class="semfase">' + fase + '</span>' : '') + '</td></tr>'
+             + linhas;
+
+      /* fechamento: km, horas e a reparticao 80/20 */
+      var leve = corrida - forte;
+      var pctLeve = corrida > 0 ? Math.round(leve / corrida * 100) : null;
+      var corMix = pctLeve == null ? 'var(--tx3)' : pctLeve >= 75 ? '#3FD98A'
+                 : pctLeve >= 65 ? '#F5C544' : '#F2685C';
+
+      corpo += '<tr class="tot"><td class="d">Semana</td>'
+        + '<td class="t" style="text-align:left;padding-left:16px">'
+        + (pctLeve == null ? '<span class="mixtx">sem corrida na semana</span>'
+           : '<span class="mixtx" style="color:' + corMix + '">' + pctLeve + '% leve · '
+             + (100 - pctLeve) + '% forte</span>'
+             + '<span class="mixbar"><i style="width:' + pctLeve + '%;background:' + corMix + '"></i>'
+             + '<i style="width:' + (100 - pctLeve) + '%;background:#F2685C"></i></span>')
+        + '</td>'
+        + '<td><span class="totn">' + (somaKm ? somaKm.toFixed(somaKm >= 100 ? 0 : 1) : '—') + '</span></td>'
+        + '<td><span class="mixtx">km</span></td>'
+        + '<td><span class="totn">' + (somaMin ? (somaMin / 60).toFixed(1) : '—') + '</span>'
+          + '<span class="mixtx"> h</span></td>'
+        + '<td class="ok"><span class="mixtx">' + (tem ? feitos + '/' + tem : '') + '</span></td></tr>';
+    });
+
+    var chaves = ['facil','longo','mp','limiar','vo2','tiros'];
+    var leg = chaves.map(function(c){
+      return '<span><i style="background:' + ZC[c].c + '"></i>' + ZC[c].n + '</span>';
+    }).join('') +
+      '<span><i style="background:' + MODC.bike.c + '"></i>Bike</span>' +
+      '<span><i style="background:' + MODC.natacao.c + '"></i>Natação</span>' +
+      '<span><i style="background:' + MODC.forca.c + '"></i>Força</span>';
+
+    return ''
+      + '<div class="plhead"><h2>Planilha</h2><div class="sub">'
+      + 'toque numa linha<br>para abrir o treino</div></div>'
+      + '<div class="rolo"><table><thead><tr>'
+      + '<th class="d">Dia</th><th class="t">Treino</th><th>km</th>'
+      + '<th>Ritmo</th><th>min</th><th class="ok"></th>'
+      + '</tr></thead><tbody>' + corpo + '</tbody></table></div>'
+      + '<div class="pleg">' + leg + '</div>'
+      + '<p class="plnota">A cor é a <b>intensidade</b>, na ordem de Jack Daniels: verde é leve, '
+      + 'vermelho é forte. A barra de fechamento mostra quanto do volume da semana foi leve — '
+      + '<b>acima de 75% é o alvo</b>, e é o número que quase todo corredor erra por excesso de '
+      + 'treino forte.</p>';
+  }
+
+  /* ── montagem e religação ── */
+  function alvo(){
+    var s = q('#sess');
+    return s && s.parentNode ? s.parentNode : null;
+  }
+
+  function montar(){
+    if(!ligado()) return;
+    var pai = alvo(), sess = q('#sess');
+    if(!pai || !sess) return;
+    var el = q('#bqPl');
+    if(!el){
+      el = document.createElement('section');
+      el.id = 'bqPl';
+      pai.insertBefore(el, sess);
+    }
+    el.innerHTML = tabela();
+
+    Array.prototype.forEach.call(el.querySelectorAll('tr.linha'), function(tr){
+      tr.onclick = function(){
+        var k = tr.getAttribute('data-k');
+        if(!k) return;
+        var mesmo = (k === ST.sel);
+        ST.sel = k;
+        try{
+          if(window.bqDia) mesmo ? (window.bqDia.estado() === 'aberto' ? window.bqDia.fechar()
+                                                                      : window.bqDia.abrir())
+                                 : window.bqDia.abrir();
+        }catch(e){}
+        try{ if(typeof renderDia === 'function') renderDia();
+             if(typeof renderCal === 'function') renderCal();
+             if(typeof renderSemana === 'function') renderSemana() }catch(e){}
+        try{ montar() }catch(e){}
+        try{ q('#sess').scrollIntoView({behavior:'smooth', block:'nearest'}) }catch(e){}
+      };
+    });
+
+    /* a faixa de um dia so vira redundante: a linha ja faz o trabalho */
+    try{
+      var faixa = sess.querySelector('.sessbar');
+      if(faixa) faixa.style.display = 'none';
+    }catch(e){}
+  }
+
+  function tirar(){
+    var el = q('#bqPl');
+    if(el && el.parentNode) el.parentNode.removeChild(el);
+    try{
+      var faixa = q('#sess') && q('#sess').querySelector('.sessbar');
+      if(faixa) faixa.style.display = '';
+    }catch(e){}
+  }
+
+  /* redesenha junto com o resto */
+  ['renderDia','renderCoach','renderCal','renderSemana'].forEach(function(nome){
+    var orig = window[nome];
+    if(typeof orig !== 'function') return;
+    window[nome] = function(){
+      var r = orig.apply(this, arguments);
+      try{ if(ligado()) montar() }catch(e){ console.warn('planilha:', e && e.message) }
+      return r;
+    };
+  });
+
+  window.bqPlanilha = {
+    ligar: function(){
+      try{ localStorage.removeItem(OFF) }catch(e){}
+      montar(); return 'planilha ligada';
+    },
+    desligar: function(){
+      try{ localStorage.setItem(OFF, '1') }catch(e){}
+      tirar(); return 'lista antiga de volta';
+    },
+    montar: montar,
+    html: tabela,
+    dados: function(){
+      return dias().map(function(k){
+        var s = ST.plano[k], x = ST.extras && ST.extras[k];
+        var z = zonaDe(s);
+        return k + ' ' + D3[dow(dt(k))] + '  ' +
+               (s ? (s.titulo || s.mod) : (x ? 'academia' : 'descanso')) +
+               (z ? '  [' + z.n + ' ' + z.c + ']' : '') +
+               (s && s.km ? '  ' + s.km + ' km' : '') +
+               (s && s.pace ? '  ' + s.pace + '/km' : '');
+      });
+    }
+  };
+
+  setTimeout(function(){ try{ if(ligado()) montar() }catch(e){} }, 4200);
+});
+
+
 /* ─────────── selo de diagnóstico ─────────── */
 (function(){
   function montar(){
@@ -7068,7 +7520,7 @@ PARTE('ritmos que existem', function(){
         var l = window.planoBQ.ligado();
         var diag = '';
         try{ diag = window.bqDiag ? '\n\n── diagnóstico ──\n' + window.bqDiag() : '' }catch(e){}
-        if(confirm('fix.js ' + FIX_VERSAO + ' — as trinta e quatro partes carregaram.\n\n'
+        if(confirm('fix.js ' + FIX_VERSAO + ' — as trinta e cinco partes carregaram.\n\n'
           + 'Plano PEI Marathon: ' + (l ? 'LIGADO' : 'desligado') + diag
           + '\n\nOK ' + (l ? 'desliga o plano e volta ao automático do app.'
                              : 'liga o plano da maratona.'))){
@@ -7091,7 +7543,7 @@ PARTE('ritmos que existem', function(){
         return;
       }
       alert(ok
-        ? 'fix.js ' + FIX_VERSAO + ' — as trinta e quatro partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
+        ? 'fix.js ' + FIX_VERSAO + ' — as trinta e cinco partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
         : 'fix.js ' + FIX_VERSAO + '\n\nFalharam:\n\n' + FIX_FALHAS.join('\n\n'));
     };
     barra.insertBefore(s, barra.firstChild.nextSibling);
