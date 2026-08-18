@@ -8088,7 +8088,25 @@ PARTE('ponte para o Garmin', function(){
     }
   };
 
-  setTimeout(function(){ try{ gravar() }catch(e){} }, 7200);
+  /* Abrir o app tem que ser suficiente.
+     Antes eu so montava o pacote na memoria e esperava que algum
+     salvamento acontecesse por outro motivo. Se voce abrisse o app e
+     nao mexesse em nada, nada era salvo, o Firebase nunca recebia o
+     pacote e a corrente inteira ficava parada — sem erro na tela, sem
+     aviso, sem nada. Agora, se o pacote mudou em relacao ao que ja
+     estava gravado, eu forco um salvamento. */
+  setTimeout(function(){
+    try{
+      var antes = ST.garminSemana && JSON.stringify(ST.garminSemana.sessoes || []);
+      gravar();
+      var depois = ST.garminSemana && JSON.stringify(ST.garminSemana.sessoes || []);
+      if(antes !== depois && typeof window.persistir === 'function'){
+        window.persistir();
+        console.log('ponte: semana do Garmin salva (' +
+                    (ST.garminSemana.sessoes || []).length + ' sessões)');
+      }
+    }catch(e){ console.warn('ponte/boot:', e && e.message) }
+  }, 7200);
 });
 
 
