@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '03w';
+const FIX_VERSAO = '03x';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -6148,12 +6148,31 @@ PARTE('blocos de 14 dias', function(){
     var runs = corridas().filter(function(r){
       var k = dataDe(r); return k >= ini && k <= fim;
     });
-    var plan = 0;
-    Object.keys(ST.plano || {}).forEach(function(k){
-      if(k < ini || k > fim) return;
-      var s = ST.plano[k];
-      if(s && s.mod === 'corrida' && !s.prova) plan += (+s.km || 0);
-    });
+    /* O "189% DO PREVISTO" NASCIA AQUI.
+       Eu procurava o planejado em ST.plano — que so guarda os 14 dias
+       VIGENTES. As duas semanas anteriores ja nao estao la, entao o
+       plano vinha quase vazio e 66,2 km reais viravam 189%.
+       O ST.hist existe justamente para lembrar quanto cada bloco pediu
+       em cada semana. Leio de la primeiro, e so caio no ST.plano para
+       os dias que por acaso ainda estejam presentes.
+       Se nao houver registro nenhum, devolvo null — um traco na tela e
+       honesto; um percentual inventado nao e. */
+    var plan = 0, temRegistro = false;
+    try{
+      var seg = iso(addD(dt(ini), -(dow(dt(ini)) - 1)));
+      while(seg <= fim){
+        var h = (ST.hist || {})[seg];
+        if(h && h.planKm > 0){ plan += +h.planKm; temRegistro = true }
+        seg = iso(addD(dt(seg), 7));
+      }
+    }catch(e){}
+    if(!temRegistro){
+      Object.keys(ST.plano || {}).forEach(function(k){
+        if(k < ini || k > fim) return;
+        var s = ST.plano[k];
+        if(s && s.mod === 'corrida' && !s.prova){ plan += (+s.km || 0); temRegistro = true }
+      });
+    }
     var km = 0, longo = 0, melhor = null;
     runs.forEach(function(r){
       km += r.km;
@@ -6165,7 +6184,7 @@ PARTE('blocos de 14 dias', function(){
     });
     return { corridas: runs.length, km: +km.toFixed(1), kmPlan: +plan.toFixed(1),
              semanal: +(km/2).toFixed(1), longo: +longo.toFixed(1), limiar: melhor,
-             aderencia: plan > 0 ? Math.round(km/plan*100) : null };
+             aderencia: (temRegistro && plan > 0) ? Math.round(km/plan*100) : null };
   }
 
   /* ---------- composicao do bloco ---------- */
@@ -8983,6 +9002,232 @@ PARTE('cancelado fica cancelado', function(){
 });
 
 
+/* ═══ 43. UM PLANO SO ═══
+
+   VOCE DISSE: "os numeros nao batem com os do Coach". Estao os dois
+   errados de origens diferentes, e as duas causas sao minhas.
+
+   CAUSA 1 — DOIS PLANOS VIVENDO JUNTOS.
+   O card "Progresso do ciclo" nao le o bloco. Ele le um plano fixo de
+   dez semanas que eu deixei cravado no fix.js meses atras:
+
+       S1 42 · S2 47 · S3 53 · S4 38 · S5 55
+       S6 57 · S7 60 · S8 44 · S9 40 · S10 23 km
+
+   Sao exatamente os numeros da sua tela. E e justamente o que voce me
+   pediu tres vezes para NAO existir: plano pronto alem de duas
+   semanas. Eu troquei o motor por blocos de 14 dias e esqueci de
+   desligar o painel antigo. O app passou a mostrar dois planos que
+   discordam, e voce, com razao, nao soube em qual acreditar.
+
+   CAUSA 2 — O "189% DO PREVISTO".
+   O bloco compara os km reais das duas semanas anteriores com o que
+   estava planejado para elas. Mas ele procura esse "planejado" em
+   ST.plano — que so guarda os 14 dias vigentes. As duas semanas
+   ANTERIORES ja nao estao la. Entao dividia 66,2 km reais por um
+   plano quase vazio e dava 189%.
+
+   E o mesmo erro do "5/47 = 66%" de ontem: numerador e denominador
+   medindo periodos diferentes. Eu ja tinha escrito o ST.hist
+   exatamente para guardar quanto cada bloco pediu por semana — e nao
+   usei na hora de fazer a conta.
+
+   O QUE MUDA:
+
+   a) O card do ciclo passa a sair do que REALMENTE foi planejado: o
+      ST.hist para as semanas que ja passaram, e o bloco vigente para
+      as duas atuais. As semanas seguintes aparecem como "—" e o
+      rodape diz por que: elas ainda nao existem.
+
+   b) A aderencia so conta semanas com plano registrado. Sem registro,
+      "—". Preferi um traco a um numero inventado.
+
+   c) O plano fixo de dez semanas e desligado. Ele nao manda em nada
+      ha semanas; so enfeitava a tela com numeros que ninguem estava
+      cumprindo.
+
+   NO CONSOLE:
+     bqCiclo.ver()   — semana a semana, planejado e real, com a origem
+   ══════════════════════════════════════════════════════════════════ */
+
+PARTE('um plano só', function(){
+  if(typeof ST !== 'object') throw new Error('sem ST');
+
+  /* ── a) o plano fixo sai de cena ── */
+  try{
+    if(window.planoBQ && window.planoBQ.ligado && window.planoBQ.ligado()){
+      window.planoBQ.desligar();
+      console.log('plano fixo de 10 semanas desligado — quem manda é o bloco');
+    }
+  }catch(e){}
+
+  var segDe = function(k){ return iso(addD(dt(k), -(dow(dt(k)) - 1))) };
+
+  function reais(){
+    var m = {};
+    ((ST.runs) || []).forEach(function(r){
+      if(!r || r.walk || (r.mod || 'corrida') !== 'corrida' || !(r.km > 0)) return;
+      var k = r.data || iso(addD(HOJE, -r.d));
+      var s = segDe(k);
+      m[s] = +((m[s] || 0) + r.km).toFixed(1);
+    });
+    return m;
+  }
+
+  /* planejado por semana: hist para o passado, bloco para o presente */
+  function planejado(){
+    var m = {};
+    Object.keys(ST.hist || {}).forEach(function(s){
+      var h = ST.hist[s];
+      if(h && h.planKm > 0) m[s] = { km: +h.planKm, de: 'bloco anterior' };
+    });
+    var B = ST.bloco;
+    if(B && B.sessoes){
+      var acc = {};
+      Object.keys(B.sessoes).forEach(function(k){
+        var x = B.sessoes[k];
+        if(!x || x.mod !== 'corrida' || x.prova) return;
+        var s = segDe(k);
+        acc[s] = +((acc[s] || 0) + (+x.km || 0)).toFixed(1);
+      });
+      Object.keys(acc).forEach(function(s){ m[s] = { km: acc[s], de: 'bloco vigente' } });
+    }
+    return m;
+  }
+
+  function semanas(){
+    var P = planejado(), R = reais(), hojeSeg = segDe(iso(HOJE));
+    var chaves = Object.keys(P).concat(Object.keys(R));
+    if(!chaves.length) return [];
+    chaves.sort();
+    var ini = chaves[0], fim = chaves[chaves.length - 1];
+    if(fim < hojeSeg) fim = hojeSeg;
+    var out = [], s = ini;
+    while(s <= fim){
+      out.push({ seg: s, plan: P[s] ? P[s].km : null, de: P[s] ? P[s].de : null,
+                 real: R[s] || 0, atual: s === hojeSeg });
+      s = iso(addD(dt(s), 7));
+    }
+    return out;
+  }
+
+  window.bqCiclo = {
+    semanas: semanas,
+    ver: function(){
+      var L = semanas();
+      if(!L.length) return 'sem semanas para mostrar';
+      return L.map(function(w){
+        return w.seg + (w.atual ? ' *' : '  ') + '  real ' +
+               String(w.real.toFixed(1)).padStart(6) + ' km   plano ' +
+               (w.plan != null ? String(w.plan.toFixed(1)).padStart(6) + ' km  (' + w.de + ')'
+                               : '     —   (ainda não composto)');
+      }).join('\n');
+    }
+  };
+
+  /* ── b) o card, refeito ── */
+  var CSS = [
+'#bqCic{background:var(--s1);border-radius:var(--r-lg);padding:16px;margin-bottom:14px}',
+'#bqCic .kicker{display:block;margin-bottom:9px}',
+'#bqCic .topo{display:flex;align-items:baseline;gap:9px;margin-bottom:3px}',
+'#bqCic .pct{font-size:29px;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums}',
+'#bqCic .sub{font-size:11.5px;color:var(--tx3);line-height:1.5;margin:0 0 12px}',
+'#bqCic .lin{display:grid;grid-template-columns:30px 1fr 74px 40px;gap:8px;align-items:center;',
+'  padding:5px 0;font-size:11.5px;font-variant-numeric:tabular-nums}',
+'#bqCic .lin+.lin{border-top:1px solid rgba(128,128,128,.13)}',
+'#bqCic .lin b{font-weight:700;opacity:.75}',
+'#bqCic .lin.hoje{background:rgba(128,128,128,.07);border-radius:6px;padding-left:4px;padding-right:4px}',
+'#bqCic .bar{height:9px;border-radius:5px;background:rgba(128,128,128,.16);overflow:hidden;position:relative}',
+'#bqCic .bar i{display:block;height:100%;border-radius:5px}',
+'#bqCic .km{opacity:.6;text-align:right}',
+'#bqCic .p{text-align:right;font-weight:700}',
+'#bqCic .nota{font-size:11px;color:var(--tx3);margin-top:11px;line-height:1.5}',
+'#bqCic .nota b{color:var(--tx2)}'
+  ].join('\n');
+
+  var st = document.createElement('style');
+  st.textContent = CSS;
+  document.head.appendChild(st);
+
+  function cor(p){ return p >= .95 ? '#3FD98A' : p >= .80 ? '#F5C544' : '#F2685C' }
+
+  function montar(){
+    var alvo = document.getElementById('objBox');
+    if(!alvo || !alvo.parentNode) return;
+
+    /* o card antigo, se ainda existir, sai */
+    var velho = document.getElementById('bqLinha');
+    if(velho && velho.parentNode) velho.parentNode.removeChild(velho);
+
+    var L = semanas();
+    if(!L.length) return;
+
+    var box = document.getElementById('bqCic');
+    if(!box){
+      box = document.createElement('section');
+      box.id = 'bqCic';
+      alvo.parentNode.insertBefore(box, alvo);
+    }
+
+    /* aderencia so nas semanas FECHADAS e com plano registrado */
+    var somaP = 0, somaR = 0, n = 0;
+    L.forEach(function(w){
+      if(w.atual || w.plan == null || w.seg > segDe(iso(HOJE))) return;
+      somaP += w.plan; somaR += Math.min(w.real, w.plan); n++;
+    });
+    var ad = somaP > 0 ? somaR / somaP : null;
+
+    var linhas = L.map(function(w, i){
+      var temPlano = w.plan != null && w.plan > 0;
+      var p = temPlano ? Math.min(1.15, w.real / w.plan) : 0;
+      var futura = !temPlano && w.real === 0;
+      return '<div class="lin' + (w.atual ? ' hoje' : '') + '">'
+        + '<b>S' + (i + 1) + '</b>'
+        + '<span class="bar"><i style="width:' + Math.round(Math.min(1, p) * 100) + '%;background:'
+        + (futura ? 'transparent' : w.atual ? 'var(--acc,#C9F24E)' : cor(p)) + '"></i></span>'
+        + '<span class="km">' + w.real.toFixed(0) + '/'
+        + (temPlano ? w.plan.toFixed(0) + ' km' : '— km') + '</span>'
+        + '<span class="p" style="opacity:' + (futura ? '.35' : w.atual ? '.7' : '1')
+        + ';color:' + (futura || w.atual ? 'inherit' : cor(p)) + '">'
+        + (temPlano ? Math.round(p * 100) + '%' : '—') + '</span></div>';
+    }).join('');
+
+    var semPlano = L.filter(function(w){ return w.plan == null }).length;
+    var faltam = Math.max(0, Math.ceil(diff(iso(HOJE), '2026-10-18') / 7));
+
+    box.innerHTML =
+      '<span class="kicker">Progresso do ciclo</span>'
+      + '<div class="topo"><span class="pct" style="color:' + (ad == null ? 'inherit' : cor(ad)) + '">'
+      + (ad == null ? '—' : Math.round(ad * 100) + '%') + '</span>'
+      + '<span style="font-size:11.5px;opacity:.65">'
+      + (ad == null ? 'sem semana fechada ainda' : n + ' semana' + (n > 1 ? 's' : '') + ' fechada' + (n > 1 ? 's' : ''))
+      + ' · faltam ' + faltam + ' até a prova</span></div>'
+      + '<p class="sub">' + (ad == null
+          ? 'A aderência aparece quando a primeira semana do bloco fechar.'
+          : Math.round(somaR) + ' km dos ' + Math.round(somaP) + ' km que os blocos pediram nas semanas já fechadas.')
+      + '</p>'
+      + linhas
+      + '<p class="nota">Cada linha compara o que você correu com o que <b>o bloco daquela quinzena '
+      + 'realmente pediu</b>. As semanas com <b>—</b> ainda não têm plano: ele é composto de duas em '
+      + 'duas semanas, a partir do que você treinou. '
+      + (semPlano ? 'Faltam compor <b>' + semPlano + '</b> delas. ' : '')
+      + 'A semana em curso não entra na aderência enquanto não fechar.</p>';
+  }
+
+  ['renderCoach','renderDia','renderSemana'].forEach(function(nome){
+    var orig = window[nome];
+    if(typeof orig !== 'function') return;
+    window[nome] = function(){
+      var r = orig.apply(this, arguments);
+      try{ montar() }catch(e){ console.warn('ciclo:', e && e.message) }
+      return r;
+    };
+  });
+
+  setTimeout(function(){ try{ montar() }catch(e){} }, 5000);
+});
+
+
 /* ─────────── selo de diagnóstico ─────────── */
 (function(){
   function montar(){
@@ -9002,7 +9247,7 @@ PARTE('cancelado fica cancelado', function(){
         var l = window.planoBQ.ligado();
         var diag = '';
         try{ diag = window.bqDiag ? '\n\n── diagnóstico ──\n' + window.bqDiag() : '' }catch(e){}
-        if(confirm('fix.js ' + FIX_VERSAO + ' — as quarenta e duas partes carregaram.\n\n'
+        if(confirm('fix.js ' + FIX_VERSAO + ' — as quarenta e tres partes carregaram.\n\n'
           + 'Plano PEI Marathon: ' + (l ? 'LIGADO' : 'desligado') + diag
           + '\n\nOK ' + (l ? 'desliga o plano e volta ao automático do app.'
                              : 'liga o plano da maratona.'))){
@@ -9025,7 +9270,7 @@ PARTE('cancelado fica cancelado', function(){
         return;
       }
       alert(ok
-        ? 'fix.js ' + FIX_VERSAO + ' — as quarenta e duas partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
+        ? 'fix.js ' + FIX_VERSAO + ' — as quarenta e tres partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
         : 'fix.js ' + FIX_VERSAO + '\n\nFalharam:\n\n' + FIX_FALHAS.join('\n\n'));
     };
     barra.insertBefore(s, barra.firstChild.nextSibling);
