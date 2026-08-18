@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '03t';
+const FIX_VERSAO = '03u';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -1215,6 +1215,7 @@ PARTE('linha do tempo', function(){
   #bqLinha .bqbar i{display:block;height:100%;border-radius:5px}
   #bqLinha .bqsem.hoje{background:rgba(128,128,128,.07);border-radius:6px;padding-left:4px;padding-right:4px}
   #bqLinha .bqkm{opacity:.6;text-align:right}
+  #bqLinha .bqde{display:block;font-style:normal;font-size:9.5px;opacity:.55;line-height:1.1;margin-top:1px}
   #bqLinha .bqp{text-align:right;font-weight:700}
   #bqLinha .bqnota{font-size:11px;opacity:.6;margin-top:11px;line-height:1.45}`;
 
@@ -1284,7 +1285,15 @@ PARTE('linha do tempo', function(){
         + '<b>S' + w.n + '</b>'
         + '<span class="bqbar"><i style="width:' + Math.round(Math.min(1, p) * 100)
         + '%;background:' + (futura ? 'transparent' : cor(p)) + '"></i></span>'
-        + '<span class="bqkm">' + Math.round(w.real) + '/' + Math.round(w.plan) + ' km</span>'
+        /* O DENOMINADOR MOSTRADO TEM QUE SER O DENOMINADOR USADO.
+           Antes a conta dividia por w.venceu (o que o plano pediu nos
+           dias ja vencidos) e a tela escrevia w.plan (a semana toda).
+           Dava "5/47 km ... 66%", que nao fecha em lugar nenhum. Cada
+           numero estava certo sozinho; juntos eram uma mentira. */
+        + '<span class="bqkm">' + Math.round(w.real) + '/' + Math.round(base) + ' km'
+        + (agora && Math.round(base) < Math.round(w.plan)
+             ? '<i class="bqde">de ' + Math.round(w.plan) + '</i>' : '')
+        + '</span>'
         + '<span class="bqp" style="color:' + (futura ? 'inherit' : cor(p)) + ';opacity:' + (futura ? '.35' : '1') + '">'
         + (futura ? '—' : Math.round(p * 100) + '%') + '</span></div>';
     }).join('');
@@ -1305,7 +1314,7 @@ PARTE('linha do tempo', function(){
       + linhas
       + '<div class="bqnota">A conta usa as corridas que o Garmin registrou, não as etapas marcadas. '
       + 'Semana acima de 100% conta como 100%: correr a mais não compensa a semana que faltou. '
-      + 'A semana em curso é medida só pelos dias que já passaram. '
+      + 'Na semana em curso o denominador é só o que o plano pediu até hoje — é esse o número ao lado dos km. Em cinza, embaixo, a meta da semana inteira. '
       + 'Abaixo de 80% em duas semanas seguidas, é hora de rever o alvo.</div>';
   }
 
