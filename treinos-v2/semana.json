@@ -1,0 +1,186 @@
+{
+ "ate": "2026-08-24",
+ "de": "2026-08-18",
+ "fcMax": 163,
+ "gerado": "2026-08-18T19:27:57.261Z",
+ "limiar": "5:16",
+ "sessoes": [
+  {
+   "data": "2026-08-18",
+   "foco": "facil",
+   "km": 5.1,
+   "min": 33,
+   "nome": "18/08 · Rodagem leve + tiros curtos · 5.1 km total",
+   "nota": "Total porta a porta 5.1 km. Alongamentos e educativos ANTES do start, relogio parado.",
+   "paceMedio": "6:28",
+   "passos": [
+    {
+     "fim": "time",
+     "lento": 2.2676,
+     "rapido": 2.4331,
+     "texto": "8 min subindo devagar, 6:51–7:21/km. Se chegar ofegante ao fim, foi rapido demais.",
+     "tipo": "warmup",
+     "valor": 480
+    },
+    {
+     "fim": "distance",
+     "lento": 2.5575,
+     "rapido": 2.7701,
+     "texto": "3.3 km em 6:01–6:31/km. Voce deve conseguir falar frases inteiras.",
+     "tipo": "interval",
+     "valor": 3300
+    },
+    {
+     "fim": "time",
+     "texto": "5 min de trote muito leve ate a respiracao normalizar.",
+     "tipo": "cooldown",
+     "valor": 300
+    }
+   ]
+  },
+  {
+   "data": "2026-08-19",
+   "foco": "vo2",
+   "km": 5.5,
+   "min": 34,
+   "nome": "19/08 · Intervalado VO₂ · 5.5 km total",
+   "nota": "Total porta a porta 5.5 km. Alongamentos e educativos ANTES do start, relogio parado.",
+   "paceMedio": "6:11",
+   "passos": [
+    {
+     "fim": "time",
+     "lento": 2.2676,
+     "rapido": 2.4331,
+     "texto": "12 min subindo devagar, 6:51–7:21/km. Se chegar ofegante ao fim, foi rapido demais.",
+     "tipo": "warmup",
+     "valor": 720
+    },
+    {
+     "passos": [
+      {
+       "fim": "distance",
+       "lento": 3.3898,
+       "rapido": 3.5587,
+       "texto": "600 m em 4:41–4:55/km, FC ate 148-158 bpm.",
+       "tipo": "interval",
+       "valor": 600
+      },
+      {
+       "fim": "time",
+       "texto": "2 min de trote leve. Nao pare de correr.",
+       "tipo": "recovery",
+       "valor": 120
+      }
+     ],
+     "tipo": "repetir",
+     "vezes": 3
+    },
+    {
+     "fim": "time",
+     "texto": "8 min de trote muito leve ate a respiracao normalizar.",
+     "tipo": "cooldown",
+     "valor": 480
+    }
+   ]
+  },
+  {
+   "data": "2026-08-20",
+   "foco": "facil",
+   "km": 5.1,
+   "min": 33,
+   "nome": "20/08 · Rodagem moderada · 5.1 km total",
+   "nota": "Total porta a porta 5.1 km. Alongamentos e educativos ANTES do start, relogio parado.",
+   "paceMedio": "6:28",
+   "passos": [
+    {
+     "fim": "time",
+     "lento": 2.2676,
+     "rapido": 2.4331,
+     "texto": "8 min subindo devagar, 6:51–7:21/km. Se chegar ofegante ao fim, foi rapido demais.",
+     "tipo": "warmup",
+     "valor": 480
+    },
+    {
+     "fim": "distance",
+     "lento": 2.5575,
+     "rapido": 2.7701,
+     "texto": "3.3 km em 6:01–6:31/km. Voce deve conseguir falar frases inteiras.",
+     "tipo": "interval",
+     "valor": 3300
+    },
+    {
+     "fim": "time",
+     "texto": "5 min de trote muito leve ate a respiracao normalizar.",
+     "tipo": "cooldown",
+     "valor": 300
+    }
+   ]
+  },
+  {
+   "data": "2026-08-22",
+   "foco": "longo",
+   "km": 19.3,
+   "min": 120,
+   "nome": "22/08 · Longão · 19.3 km total",
+   "nota": "Total porta a porta 19.3 km. Alongamentos e educativos ANTES do start, relogio parado.",
+   "paceMedio": "6:13",
+   "passos": [
+    {
+     "fim": "time",
+     "lento": 2.2676,
+     "rapido": 2.4331,
+     "texto": "10 min subindo devagar, 6:51–7:21/km. Se chegar ofegante ao fim, foi rapido demais.",
+     "tipo": "warmup",
+     "valor": 600
+    },
+    {
+     "fim": "distance",
+     "lento": 2.6247,
+     "rapido": 2.849,
+     "texto": "17.0 km em 5:51–6:21/km. Voce deve conseguir falar frases inteiras.",
+     "tipo": "interval",
+     "valor": 17000
+    },
+    {
+     "fim": "time",
+     "texto": "6 min de trote muito leve ate a respiracao normalizar.",
+     "tipo": "cooldown",
+     "valor": 360
+    }
+   ]
+  }
+ ],
+ "versao": "03o",
+ "zonas": {
+  "faci": {
+   "fc": "111–124",
+   "n": "Rodagem fácil",
+   "pace": "6:01–6:31"
+  },
+  "lim": {
+   "fc": "140–148",
+   "n": "Limiar",
+   "pace": "5:08–5:28"
+  },
+  "long": {
+   "fc": "114–130",
+   "n": "Longo",
+   "pace": "5:51–6:21"
+  },
+  "mp": {
+   "fc": "130–140",
+   "n": "Ritmo de maratona",
+   "pace": "5:29–5:41"
+  },
+  "rec": {
+   "fc": "98–111",
+   "n": "Recuperação",
+   "pace": "6:51–7:21"
+  },
+  "vo2": {
+   "fc": "148–158",
+   "n": "VO₂ máx",
+   "pace": "4:41–4:55"
+  }
+ }
+}
