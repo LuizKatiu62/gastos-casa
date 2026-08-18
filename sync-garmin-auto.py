@@ -320,6 +320,206 @@ def firebase_put(path, data, token):
         return r.status == 200
 
 
+def firebase_get(path, token):
+    """Le um no do Firebase. Devolve None se nao existir ou se der erro."""
+    url = f"{FIREBASE_DB}/{path}.json?auth={token}"
+    try:
+        with urlreq.urlopen(url, timeout=20) as r:
+            if r.status != 200:
+                return None
+            return json.loads(r.read().decode() or "null")
+    except Exception as e:
+        log(f"Firebase leitura falhou em {path}: {e}")
+        return None
+
+
+def publicar_semana(token, pacote=None):
+    """Copia o pacote que o app montou (ST.garminSemana) para um arquivo do
+    repositorio, de onde o assistente le para criar os workouts no Garmin.
+
+    Este script NAO decide nada de treino: ritmos, distancias e reparticao
+    das sessoes vem prontos do fix.js. Aqui e so copia. Se um dia essa
+    regra for quebrada, passam a existir duas versoes da mesma conta e
+    elas vao discordar.
+    """
+    if pacote is None:
+        pacote = firebase_get("treinos_coach_v2/luiz/garminSemana", token)
+    if not pacote or not isinstance(pacote, dict):
+        log("Semana do Garmin: o app ainda nao gravou o pacote (abra o app uma vez)")
+        return False
+
+    sessoes = pacote.get("sessoes") or []
+
+    # Um pacote vazio ou sem carimbo NAO pode apagar a semana boa que ja
+    # esta publicada. Se o app tropecar, o certo e o arquivo antigo ficar
+    # onde esta — ele vem com data e quem le sabe julgar se envelheceu.
+    if not sessoes or not pacote.get("gerado"):
+        log("Semana do Garmin: pacote vazio ou sem carimbo, mantendo o anterior")
+        return False
+
+    destino = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                           "treinos-v2", "semana.json")
+    os.makedirs(os.path.dirname(destino), exist_ok=True)
+
+    antigo = None
+    if os.path.exists(destino):
+        try:
+            with open(destino, encoding="utf-8") as f:
+                antigo = json.load(f)
+        except Exception:
+            antigo = None
+
+    # nao reescreve por reescrever: o commit so acontece se mudou de verdade
+    if antigo and antigo.get("gerado") == pacote.get("gerado"):
+        log(f"Semana do Garmin: sem novidade ({len(sessoes)} sessoes)")
+        return False
+
+    with open(destino, "w", encoding="utf-8") as f:
+        json.dump(pacote, f, ensure_ascii=False, indent=1)
+    log(f"Semana do Garmin publicada: {len(sessoes)} sessoes, "
+        f"gerada em {pacote.get('gerado', '?')[:16]}")
+    return True
+
+
+# ══════════════════════════════════════════════════════════════════════
+#  SEMANA NO GARMIN
+#
+#  Este bloco NAO decide nada de treino. Ritmos, distancias e a divisao
+#  entre aquecimento e parte principal ja vem prontos do fix.js, dentro
+#  do no garminSemana. Aqui e traducao para o vocabulario do Garmin e
+#  mais nada. Se um dia alguem puser regra de treino aqui, passam a
+#  existir duas versoes da mesma conta, e elas vao discordar.
+# ══════════════════════════════════════════════════════════════════════
+
+PASSO_ID = {"warmup": (1, "warmup"), "cooldown": (2, "cooldown"),
+            "interval": (3, "interval"), "recovery": (4, "recovery")}
+FIM_ID   = {"time": (2, "time"), "distance": (3, "distance")}
+
+
+def _passo_dto(p, ordem):
+    """Traduz um passo do pacote para o formato que o Garmin espera."""
+    if p.get("tipo") == "repetir":
+        dentro = []
+        for i, q in enumerate(p.get("passos") or [], start=1):
+            dentro.append(_passo_dto(q, i))
+        return {
+            "type": "RepeatGroupDTO",
+            "stepOrder": ordem,
+            "stepType": {"stepTypeId": 6, "stepTypeKey": "repeat"},
+            "numberOfIterations": p["vezes"],
+            # sem o conditionTypeId 7 o Garmin corrompe a contagem em silencio
+            "endCondition": {"conditionTypeId": 7, "conditionTypeKey": "iterations"},
+            "endConditionValue": p["vezes"],
+            "workoutSteps": dentro,
+        }
+
+    tid, tkey = PASSO_ID[p["tipo"]]
+    cid, ckey = FIM_ID[p["fim"]]
+    dto = {
+        "type": "ExecutableStepDTO",
+        "stepOrder": ordem,
+        "stepType": {"stepTypeId": tid, "stepTypeKey": tkey},
+        "description": p.get("texto", ""),
+        "endCondition": {"conditionTypeId": cid, "conditionTypeKey": ckey},
+        "endConditionValue": p["valor"],
+    }
+    if p.get("rapido"):
+        # ja vem em metros por segundo, prontos. Nao converter.
+        dto["targetType"] = {"workoutTargetTypeId": 6, "workoutTargetTypeKey": "pace.zone"}
+        dto["targetValueOne"] = p["rapido"]
+        dto["targetValueTwo"] = p["lento"]
+    return dto
+
+
+def _workout_dto(sessao):
+    corrida = {"sportTypeId": 1, "sportTypeKey": "running"}
+    passos  = [_passo_dto(p, i) for i, p in enumerate(sessao["passos"], start=1)]
+    return {
+        "sportType": corrida,
+        "workoutName": sessao["nome"][:80],
+        "description": sessao.get("nota", ""),
+        "workoutSegments": [{
+            "segmentOrder": 1,
+            "sportType": corrida,
+            "workoutSteps": passos,
+        }],
+    }
+
+
+def subir_semana_garmin(api, token, pacote):
+    """Cria e agenda no Garmin as corridas da semana.
+
+    Idempotente: guarda no Firebase o que ja subiu, por data e por
+    carimbo do pacote. Rodar de hora em hora nao cria duplicata. Se o
+    app recompoe o bloco, o carimbo muda, o workout antigo daquele dia
+    e apagado e entra o novo — substituicao, nunca acumulo.
+    """
+    sessoes = pacote.get("sessoes") or []
+    carimbo = pacote.get("gerado")
+    if not sessoes or not carimbo:
+        return
+
+    hoje  = datetime.now().date()
+    envio = firebase_get("treinos_coach_v2/luiz/garminEnviado", token) or {}
+    if not isinstance(envio, dict):
+        envio = {}
+
+    novos, trocados, erros = 0, 0, 0
+
+    for s in sessoes:
+        data = s.get("data")
+        if not data:
+            continue
+        try:
+            d = datetime.strptime(data, "%Y-%m-%d").date()
+        except ValueError:
+            continue
+        if d < hoje or (d - hoje).days > 7:
+            continue
+
+        ja = envio.get(data) or {}
+        if ja.get("gerado") == carimbo and ja.get("id"):
+            continue                      # ja subiu, nada mudou
+
+        # o plano mudou para este dia: tira o antigo antes de por o novo
+        if ja.get("id"):
+            try:
+                api.connectapi(f"/workout-service/workout/{ja['id']}", method="DELETE")
+                log(f"Garmin: workout antigo de {data} removido")
+            except Exception as e:
+                log(f"Garmin: nao consegui remover o antigo de {data}: {e}")
+
+        try:
+            criado = api.connectapi("/workout-service/workout",
+                                    method="POST", json=_workout_dto(s))
+            wid = (criado or {}).get("workoutId")
+            if not wid:
+                raise RuntimeError("resposta sem workoutId")
+
+            api.connectapi(f"/workout-service/schedule/{wid}",
+                           method="POST", json={"date": data})
+
+            envio[data] = {"id": wid, "gerado": carimbo, "nome": s.get("nome")}
+            if ja.get("id"):
+                trocados += 1
+            else:
+                novos += 1
+            log(f"Garmin: {s.get('nome')} agendado para {data}")
+        except Exception as e:
+            erros += 1
+            log(f"Garmin: FALHOU {data} — {e}")
+
+    # esquece o que ja passou, para o registro nao crescer para sempre
+    envio = {k: v for k, v in envio.items()
+             if k >= (hoje - timedelta(days=30)).strftime("%Y-%m-%d")}
+
+    if novos or trocados:
+        firebase_put("treinos_coach_v2/luiz/garminEnviado", envio, token)
+        log(f"Garmin: {novos} novos, {trocados} substituidos, {erros} com erro")
+    elif erros:
+        log(f"Garmin: nenhum subiu, {erros} com erro")
+
+
 def safe_get(api, fn, *args, delay=0.4):
     try:
         result = fn(*args)
@@ -523,6 +723,16 @@ def main():
                     f"bike {pub['bike']['km']} km · natacao {pub['natacao']['km']} km")
             else:
                 log("ERRO ao salvar a evolucao publica")
+
+        # A semana que o app montou: publica o arquivo e sobe no Garmin.
+        # Le o pacote uma vez so e passa para os dois.
+        try:
+            pacote = firebase_get("treinos_coach_v2/luiz/garminSemana", token)
+            publicar_semana(token, pacote)
+            if pacote:
+                subir_semana_garmin(api, token, pacote)
+        except Exception as e:
+            log(f"ERRO na semana do Garmin: {e}")
     except Exception as e:
         log(f"ERRO Firebase: {e}")
 
