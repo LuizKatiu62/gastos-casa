@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '03o';
+const FIX_VERSAO = '03p';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -6547,6 +6547,13 @@ PARTE('força obedece ao bloco', function(){
   /* 1. limpa a academia automatica que ficou solta alem do bloco */
   function limpar(fim){
     if(!ST.extras) return 0;
+    /* SEM BLOCO, NAO SE APAGA NADA.
+       Este era o defeito que sumiu com a sua academia. A guarda logo
+       abaixo e "if(fim && k <= fim) return" — com fim nulo ela nunca
+       protege ninguem, e o laco apagava TODA a academia futura de uma
+       vez. Ausencia de bloco nao e prova de que a academia sobra; e
+       so ausencia de informacao, e diante dela o certo e nao mexer. */
+    if(!fim) return 0;
     var hoje = iso(HOJE), n = 0;
     Object.keys(ST.extras).forEach(function(k){
       if(k < hoje) return;                    /* passado nao se mexe */
@@ -6583,8 +6590,12 @@ PARTE('força obedece ao bloco', function(){
 
   function sincronizar(){
     var B = window.bqBloco.atual();
-    var fora = limpar(B ? B.fim : null);
-    var novas = B ? semear(B) : 0;
+    if(!B){
+      console.warn('força: sem bloco vigente — não mexo na academia');
+      return { semeadas: 0, removidas: 0, motivo: 'sem bloco' };
+    }
+    var fora = limpar(B.fim);
+    var novas = semear(B);
     if(fora || novas){
       console.log('força ajustada ao bloco: ' + novas + ' semeadas, ' + fora + ' removidas do futuro');
       try{ if(typeof renderTudo === 'function') renderTudo() }catch(e){}
@@ -8138,6 +8149,133 @@ PARTE('ponte para o Garmin', function(){
 });
 
 
+/* ═══ 38. O BLOCO SOBREVIVE ═══
+
+   O QUE ACONTECEU COM A SUA ACADEMIA, na ordem:
+
+   1. salvarCoach() do index.html grava uma lista fixa de campos:
+      objetivo, feitas, filtro, extras, trocas, dias, marcoData,
+      marcoNome, periodo. ST.bloco e ST.hist NAO estao nela, e o
+      lerCoach() tambem nao os le de volta. Os dois so viviam no
+      espelho de localStorage da parte 26.
+
+   2. No iPhone, o app aberto pelo icone da tela de inicio e o app
+      aberto pelo Safari nao compartilham esse armazenamento. Ao abrir
+      pelo Safari — como eu te pedi para fazer —, ST.bloco chegou vazio.
+
+   3. Sem bloco, blocoAtual() devolve null. A parte 33 chamava
+      limpar(null), e a guarda dela ("se estiver dentro do bloco,
+      fica") nunca protegia ninguem com fim nulo. Resultado: apagou
+      TODA a academia futura de uma vez.
+
+   4. persistir() salvou isso. E extras ESTA na lista do salvarCoach.
+      A exclusao virou permanente e desceu para o celular.
+
+   Duas falhas somadas, as duas minhas: uma que apaga diante da
+   duvida, e outra que deixa a informacao se perder entre um
+   armazenamento e outro.
+
+   A parte 33 ja foi corrigida: sem bloco, nao apaga nada. Esta parte
+   ataca a outra metade — o bloco e o historico passam a viajar junto
+   com o resto para o Firebase, por PATCH, como a parte 23 ja fazia
+   com o questionario e a 37 com a semana do Garmin. Assim o app e o
+   mesmo esteja voce no icone, no Safari, no Mac ou num celular novo.
+
+   E SE MESMO ASSIM NAO HOUVER BLOCO: em vez de apagar, esta parte
+   MANDA CRIAR um. Foi o oposto do que acontecia.
+
+   NO CONSOLE:
+     bqBlocoSalvo.ver()       — o que esta guardado
+     bqBlocoSalvo.repor()     — refaz o bloco e a academia agora
+   ══════════════════════════════════════════════════════════════════ */
+
+PARTE('o bloco sobrevive', function(){
+  if(typeof ST !== 'object') throw new Error('sem ST');
+
+  /* ── guarda: PATCH acrescenta sem reescrever o PUT do app ── */
+  var salvarApp = window.salvarCoach;
+  if(typeof salvarApp === 'function'){
+    window.salvarCoach = async function(){
+      var r = await salvarApp.apply(this, arguments);
+      try{
+        var corpo = {};
+        if(ST.bloco) corpo.bloco = ST.bloco;
+        if(ST.hist)  corpo.hist  = ST.hist;
+        if(Object.keys(corpo).length){
+          var t = await fbToken();
+          if(t) await fetch(FB_DB + '/' + FB_COACH + '.json?auth=' + t,
+            { method:'PATCH', headers:{'Content-Type':'application/json'},
+              body: JSON.stringify(corpo) });
+        }
+      }catch(e){ console.warn('bloco/salvar:', e && e.message) }
+      return r;
+    };
+  }
+
+  /* ── leitura: o app so aplica os campos que conhece ── */
+  var lerApp = window.lerCoach;
+  if(typeof lerApp === 'function'){
+    window.lerCoach = async function(){
+      var c = await lerApp.apply(this, arguments);
+      try{
+        if(c && typeof c === 'object'){
+          /* so aceita se for mais novo que o que ja esta na memoria —
+             o espelho local pode estar a frente da nuvem */
+          if(c.bloco && c.bloco.fim &&
+             (!ST.bloco || !ST.bloco.fim || c.bloco.fim > ST.bloco.fim)){
+            ST.bloco = c.bloco;
+            console.log('bloco recuperado da nuvem, até ' + c.bloco.fim);
+          }
+          if(c.hist){
+            ST.hist = Object.assign({}, c.hist, ST.hist || {});
+          }
+        }
+      }catch(e){ console.warn('bloco/ler:', e && e.message) }
+      return c;
+    };
+  }
+
+  /* ── rede de seguranca: sem bloco, CRIA. Nunca apaga. ── */
+  function repor(){
+    if(!window.bqBloco) return 'sem gerador de blocos';
+    var B = window.bqBloco.atual();
+    if(!B){
+      B = window.bqBloco.criar();
+      console.log('bloco recriado: ' + (B && B.inicio) + ' a ' + (B && B.fim));
+    }
+    var f = window.bqForcaBloco && window.bqForcaBloco.sincronizar();
+    try{ if(typeof renderTudo === 'function') renderTudo() }catch(e){}
+    try{ persistir() }catch(e){}
+    return B ? ('bloco até ' + B.fim + (f ? ' · academia: ' + f.semeadas + ' sessões' : ''))
+             : 'não consegui criar o bloco';
+  }
+
+  /* no arranque, depois que a nuvem ja respondeu */
+  setTimeout(function(){
+    try{
+      if(!window.bqBloco) return;
+      if(!window.bqBloco.atual()){
+        console.warn('sem bloco vigente no arranque — recriando');
+        repor();
+      }
+    }catch(e){ console.warn('bloco/boot:', e && e.message) }
+  }, 9000);
+
+  window.bqBlocoSalvo = {
+    repor: repor,
+    ver: function(){
+      var B = ST.bloco;
+      if(!B) return 'nenhum bloco em memória';
+      var ex = Object.keys(ST.extras || {}).filter(function(k){ return k >= iso(HOJE) });
+      return ['bloco ' + B.inicio + ' a ' + B.fim,
+              'sessões no bloco: ' + Object.keys(B.sessoes || {}).length,
+              'academia futura: ' + ex.length + (ex.length ? ' (' + ex.join(', ') + ')' : ''),
+              'histórico de semanas: ' + Object.keys(ST.hist || {}).length].join('\n');
+    }
+  };
+});
+
+
 /* ─────────── selo de diagnóstico ─────────── */
 (function(){
   function montar(){
@@ -8157,7 +8295,7 @@ PARTE('ponte para o Garmin', function(){
         var l = window.planoBQ.ligado();
         var diag = '';
         try{ diag = window.bqDiag ? '\n\n── diagnóstico ──\n' + window.bqDiag() : '' }catch(e){}
-        if(confirm('fix.js ' + FIX_VERSAO + ' — as trinta e sete partes carregaram.\n\n'
+        if(confirm('fix.js ' + FIX_VERSAO + ' — as trinta e oito partes carregaram.\n\n'
           + 'Plano PEI Marathon: ' + (l ? 'LIGADO' : 'desligado') + diag
           + '\n\nOK ' + (l ? 'desliga o plano e volta ao automático do app.'
                              : 'liga o plano da maratona.'))){
@@ -8180,7 +8318,7 @@ PARTE('ponte para o Garmin', function(){
         return;
       }
       alert(ok
-        ? 'fix.js ' + FIX_VERSAO + ' — as trinta e sete partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
+        ? 'fix.js ' + FIX_VERSAO + ' — as trinta e oito partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
         : 'fix.js ' + FIX_VERSAO + '\n\nFalharam:\n\n' + FIX_FALHAS.join('\n\n'));
     };
     barra.insertBefore(s, barra.firstChild.nextSibling);
