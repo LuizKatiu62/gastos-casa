@@ -392,6 +392,84 @@ def publicar_semana(token, pacote=None):
 # ══════════════════════════════════════════════════════════════════════
 
 
+def _resposta(r):
+    """O garth as vezes devolve um Response do requests, as vezes ja o
+    JSON pronto. Aceito os dois."""
+    if r is None:
+        return {}
+    if hasattr(r, "json"):
+        try:
+            return r.json()
+        except Exception:
+            return {}
+    return r if isinstance(r, (dict, list)) else {}
+
+
+_FORMA = {}   # lembra qual jeito funcionou, para nao tentar de novo
+
+
+def _chamar(g, metodo, path, payload=None):
+    """Chama o Garmin sem depender de UMA assinatura.
+
+    A TERCEIRA TENTATIVA MINHA NESTE PONTO, e desta vez sem adivinhar.
+    O erro que voltou duas vezes —
+
+        Client._run_request() got multiple values for argument 'method'
+
+    — acontece porque o connectapi da sua versao do garth e assim:
+
+        def connectapi(self, path, **kwargs):
+            return self.request("GET", "connectapi", path, api=True, **kwargs)
+
+    O "GET" esta FIXO. Qualquer method= que eu mande entra pelo
+    **kwargs e colide. Nao ha jeito de mandar POST por ali, em versao
+    nenhuma. Foi burrice minha insistir nesse caminho duas vezes.
+
+    Entao nao uso mais o connectapi para escrever. Uso os verbos
+    diretos (post, delete), que existem no garth antigo e no novo, e
+    deixo uma segunda e uma terceira forma como reserva.
+
+    So troco de forma quando o erro e de ASSINATURA (TypeError). Se o
+    Garmin recusar de verdade — 400, 401, 500 —, o erro sobe na hora,
+    porque tentar outra assinatura nao consertaria nada e so
+    esconderia o motivo.
+    """
+    kw = {"json": payload} if payload is not None else {}
+    verbo = metodo.lower()
+
+    formas = []
+    fn = getattr(g, verbo, None)
+    if callable(fn):
+        formas.append((f"g.{verbo}('connectapi', path, api=True)",
+                       lambda: fn("connectapi", path, api=True, **kw)))
+    if hasattr(g, "request"):
+        formas.append((f"g.request('{metodo}', 'connectapi', path, api=True)",
+                       lambda: g.request(metodo, "connectapi", path, api=True, **kw)))
+    if hasattr(g, "connectapi"):
+        formas.append((f"g.connectapi(path, method='{metodo}')",
+                       lambda: g.connectapi(path, method=metodo, **kw)))
+
+    # se ja descobrimos a forma boa, vai direto nela
+    if _FORMA.get(verbo):
+        formas = [f for f in formas if f[0] == _FORMA[verbo]] + \
+                 [f for f in formas if f[0] != _FORMA[verbo]]
+
+    recusas = []
+    for nome, chamada in formas:
+        try:
+            r = chamada()
+        except TypeError as e:
+            recusas.append(f"{nome} -> {e}")
+            continue
+        if not _FORMA.get(verbo):
+            _FORMA[verbo] = nome
+            log(f"Garmin: {metodo} funciona por {nome}")
+        return _resposta(r)
+
+    raise RuntimeError("nenhuma assinatura serviu para " + metodo + ": " +
+                       " | ".join(recusas))
+
+
 def _garth(api):
     """Devolve o cliente garth de dentro do garminconnect.
 
@@ -518,20 +596,18 @@ def subir_semana_garmin(api, token, pacote):
         # o plano mudou para este dia: tira o antigo antes de por o novo
         if ja.get("id"):
             try:
-                g.connectapi(f"/workout-service/workout/{ja['id']}", method="DELETE")
+                _chamar(g, "DELETE", f"/workout-service/workout/{ja['id']}")
                 log(f"Garmin: workout antigo de {data} removido")
             except Exception as e:
                 log(f"Garmin: nao consegui remover o antigo de {data}: {e}")
 
         try:
-            criado = g.connectapi("/workout-service/workout",
-                                  method="POST", json=_workout_dto(s))
+            criado = _chamar(g, "POST", "/workout-service/workout", _workout_dto(s))
             wid = (criado or {}).get("workoutId")
             if not wid:
                 raise RuntimeError("resposta sem workoutId")
 
-            g.connectapi(f"/workout-service/schedule/{wid}",
-                         method="POST", json={"date": data})
+            _chamar(g, "POST", f"/workout-service/schedule/{wid}", {"date": data})
 
             envio[data] = {"id": wid, "gerado": carimbo, "nome": s.get("nome")}
             if ja.get("id"):
