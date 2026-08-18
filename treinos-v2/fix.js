@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '03x';
+const FIX_VERSAO = '03y';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -9097,10 +9097,20 @@ PARTE('um plano só', function(){
 
   function semanas(){
     var P = planejado(), R = reais(), hojeSeg = segDe(iso(HOJE));
-    var chaves = Object.keys(P).concat(Object.keys(R));
+
+    /* SO SEMANAS COM PLANO. Eu montava a lista juntando as semanas
+       planejadas com TODAS as semanas em que houve corrida — e ST.runs
+       guarda mais de um ano. Resultado: sessenta e tantas linhas, a
+       maioria de antes de existir bloco nenhum. Erro besta e meu.
+       O ciclo e o que os blocos compuseram, mais a semana em curso.
+       Nada de antes disso, e no maximo doze semanas para tras. */
+    var chaves = Object.keys(P);
+    if(chaves.indexOf(hojeSeg) < 0) chaves.push(hojeSeg);
     if(!chaves.length) return [];
     chaves.sort();
     var ini = chaves[0], fim = chaves[chaves.length - 1];
+    var teto = segDe(iso(addD(HOJE, -84)));
+    if(ini < teto) ini = teto;
     if(fim < hojeSeg) fim = hojeSeg;
     var out = [], s = ini;
     while(s <= fim){
