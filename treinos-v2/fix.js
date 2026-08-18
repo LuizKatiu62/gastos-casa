@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '03q';
+const FIX_VERSAO = '03s';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -7761,18 +7761,11 @@ PARTE('o quilômetro é o total', function(){
           if(!temMin) et.tags.push({ t: extra });
         });
 
-        /* a linha que fecha a conta, para nunca mais restar duvida */
-        lista.push({
-          id: 'bq-total',
-          t: 'A conta fecha',
-          d: 'Aquecimento ' + r.kmWU.toFixed(1) + ' km + parte principal ' +
-             r.kmMain.toFixed(1) + ' km + desaquecimento ' + r.kmCD.toFixed(1) +
-             ' km = ' + r.total.toFixed(1) + ' km. É este o número do plano, e é ' +
-             'este que o relógio vai gravar. Alongamentos e educativos ficam de fora ' +
-             'da conta porque você os faz com o relógio parado.',
-          tags: [{ t: r.total.toFixed(1) + ' km' }, { t: r.min + ' min' },
-                 { t: pcs(r.paceMedio) + '/km médio', c:'z' }]
-        });
+        /* Aqui existia uma etapa "A conta fecha", so informativa.
+           Ela contava como etapa de verdade no concluida(), entao um
+           treino que voce tinha terminado passava a aparecer como
+           incompleto — 6 marcas para 7 etapas. A informacao continua,
+           no cartao "Montar no Garmin", onde nao atrapalha a contagem. */
       }catch(e){ console.warn('etapas/total:', e && e.message) }
       return lista;
     };
@@ -8305,6 +8298,348 @@ PARTE('o bloco sobrevive', function(){
 });
 
 
+/* ═══ 39. A MARCA DE CONCLUIDO TEM QUE GRUDAR ═══
+
+   O QUE VOCE VIU: marca o treino como concluido, vai na aba Provas,
+   volta no Coach, e ele esta desmarcado de novo.
+
+   A CAUSA. Cada etapa recebe o id de um contador global:
+
+       let _id = 0;  const eid = () => 'e' + (++_id);
+       const E = (t, d, tags) => ({ id: eid(), t, d, tags: tags || [] });
+
+   As suas marcas ficam guardadas em ST.feitas[id_da_sessao] como uma
+   lista desses ids. Mas o contador nunca volta ao mesmo lugar: basta
+   ST.cache ser limpo para as etapas serem geradas de novo e ganharem
+   numeros DIFERENTES. As marcas antigas viram orfas, e concluida()
+   compara 6 marcas contra 6 etapas que agora se chamam outra coisa.
+
+   E eu limpo ST.cache em nove lugares do fix.js — nas partes do
+   ritmo, do total, da planilha, da janela, do bloco. Cada uma delas
+   tinha um bom motivo isolado, e juntas transformaram um defeito raro
+   num defeito de toda hora. A culpa da piora recente e minha.
+
+   A CORRECAO. O id da etapa passa a sair do que ela E, nao da ordem em
+   que foi criada: sessao + titulo. "2026-08-18" mais "parte principal"
+   da sempre o mesmo id, hoje, amanha e depois de dez recargas. Assim o
+   ST.cache pode ser limpo a vontade que a marca continua no lugar.
+
+   O titulo perde a numeracao antes de virar id ("4 · Parte principal"
+   vira "parte principal"), porque a parte 24 renumera as etapas e eu
+   nao quero que renumerar apague marca.
+
+   AS MARCAS ANTIGAS. Elas guardam numeros do contador velho, que nao
+   casam com nada. Na primeira vez que uma sessao e desenhada, se ha
+   marcas e nenhuma delas casa, eu converto pela QUANTIDADE: seis
+   marcas viram as seis primeiras etapas. Nao e exato — nao da para
+   saber quais eram —, mas preserva o quanto voce tinha feito, e
+   preserva o principal, que e o treino terminado continuar terminado.
+
+   NO CONSOLE:
+     bqMarcas.ver()        — as marcas de hoje e se casam com as etapas
+     bqMarcas.conferir()   — varre o plano e mostra sessoes com marca orfa
+   ══════════════════════════════════════════════════════════════════ */
+
+PARTE('a marca de concluído gruda', function(){
+  if(typeof window.etapas !== 'function') throw new Error('app sem etapas()');
+  if(typeof ST !== 'object') throw new Error('sem ST');
+
+  var convertidas = {};   /* sessoes ja migradas nesta sessao do app */
+
+  /* titulo -> pedaco estavel de id */
+  function chave(t){
+    return String(t || '')
+      .replace(/^\s*\d+\s*[·.\-]\s*/, '')        /* tira "4 · " */
+      .toLowerCase()
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 40);
+  }
+
+  function idDe(sid, titulo, i){
+    var c = chave(titulo);
+    return 'e:' + sid + ':' + (c || 'etapa' + i);
+  }
+
+  var etApp = window.etapas;
+  window.etapas = function(foco, mod, p){
+    var lista = etApp.apply(this, arguments);
+    try{
+      if(!Array.isArray(lista) || !p || !p.id) return lista;
+
+      var usados = {};
+      lista.forEach(function(et, i){
+        if(!et) return;
+        var id = idDe(p.id, et.t, i);
+        /* dois titulos iguais na mesma sessao: desempata pela posicao,
+           senao as duas etapas dividiriam a mesma marca */
+        if(usados[id]) id = id + '-' + i;
+        usados[id] = 1;
+        et.id = id;
+      });
+
+      /* ---- migra as marcas antigas, uma vez por sessao ---- */
+      if(!convertidas[p.id] && ST.feitas && ST.feitas[p.id]) {
+        convertidas[p.id] = 1;
+        var antigas = ST.feitas[p.id] || [];
+        var novos   = lista.map(function(et){ return et.id });
+        var casam   = antigas.filter(function(x){ return novos.indexOf(x) >= 0 });
+
+        if(antigas.length && !casam.length){
+          var n = Math.min(antigas.length, novos.length);
+          ST.feitas[p.id] = novos.slice(0, n);
+          console.log('marcas de ' + p.id + ' convertidas: ' + antigas.length +
+                      ' antigas -> ' + n + ' de ' + novos.length + ' etapas');
+        } else if(casam.length !== antigas.length){
+          /* sobrou lixo de gerações passadas: limpa o que não existe */
+          ST.feitas[p.id] = casam;
+        }
+      }
+    }catch(e){ console.warn('marcas:', e && e.message) }
+    return lista;
+  };
+
+  /* ---- diagnostico ---- */
+  window.bqMarcas = {
+    ver: function(){
+      var k = ST.sel || iso(HOJE);
+      var s = (typeof sessaoDe === 'function') ? sessaoDe(k) : (ST.plano || {})[k];
+      if(!s) return 'sem treino em ' + k;
+      var ets = (typeof etapasDe === 'function') ? etapasDe(s) : [];
+      var f = (ST.feitas || {})[s.id] || [];
+      return [k + ' · ' + (s.titulo || s.foco),
+              'etapas: ' + ets.length + ' · marcas: ' + f.length,
+              'concluída: ' + (typeof concluida === 'function' ? concluida(s) : '?'),
+              ''].concat(ets.map(function(e){
+                return (f.indexOf(e.id) >= 0 ? '  [x] ' : '  [ ] ') + e.t + '   ' + e.id;
+              })).join('\n');
+    },
+    conferir: function(){
+      var out = [];
+      Object.keys(ST.plano || {}).sort().forEach(function(k){
+        var s = ST.plano[k];
+        if(!s) return;
+        var f = (ST.feitas || {})[s.id] || [];
+        if(!f.length) return;
+        var ets = (typeof etapasDe === 'function') ? etapasDe(s) : [];
+        var ids = ets.map(function(e){ return e.id });
+        var orfas = f.filter(function(x){ return ids.indexOf(x) < 0 });
+        out.push(k + '  ' + f.length + '/' + ets.length + ' marcas' +
+                 (orfas.length ? '  ÓRFÃS: ' + orfas.length : '  ok'));
+      });
+      return out.length ? out.join('\n') : 'nenhuma sessão com marcas';
+    }
+  };
+
+  /* redesenha com os ids novos, sem apagar nada */
+  setTimeout(function(){
+    try{
+      if(ST.cache) ST.cache = {};
+      if(typeof renderTudo === 'function') renderTudo();
+    }catch(e){}
+  }, 3000);
+});
+
+
+/* ═══ 40. A LAPIDE NAO MATA O QUE NASCEU DEPOIS DELA ═══
+
+   O DEFEITO, provado com o codigo de verdade e nao por suposicao.
+
+   Voce tirou a academia de hoje e pos amanha, 19/08, e ela sumiu.
+   Instrumentei ST.extras com um vigia que grava quem apaga cada dia, e
+   a sequencia foi esta:
+
+     1. De manha, o limpar() quebrado da parte 33 apagou toda a academia
+        futura e deixou uma LAPIDE em cada dia, inclusive 19/08.
+        As lapides valem 24 horas (JANELA = 24 * 3600 * 1000).
+     2. Voce removeu a de hoje. Certo, lapide em 18/08.
+     3. Voce criou a de amanha. O caminho do app e este, no index.html:
+              ST.extras[k] = x;  ...  persistir();
+        Ele NAO chama bqDesapagar. A lapide de 19/08 continuou de pe.
+     4. No salvamento, bqLimparApagados() varreu ST.extras, viu a lapide
+        de 19/08 ainda valida e apagou a sessao que voce tinha acabado
+        de criar. Sem erro, sem aviso.
+
+   POR QUE ISSO NAO SE CONSERTA COM MAIS UM REMENDO. Existem doze
+   lugares que escrevem em ST.extras, entre index.html e fix.js. Tapar
+   um por um e como eu vinha fazendo — e por isso quebrava de novo a
+   cada versao. Basta um caminho novo esquecer a linha e o defeito
+   volta.
+
+   A REGRA, QUE VALE PARA SEMPRE:
+
+       uma lapide so pode matar o que e MAIS VELHO QUE ELA.
+
+   Isso e o que qualquer sistema de sincronia faz para distinguir
+   "apagado" de "recriado depois". Sem carimbo de hora, as duas coisas
+   sao indistinguiveis, e o app sempre vai escolher errado.
+
+   COMO ISTO E GARANTIDO, e nao pedido por favor:
+
+   a) ST.extras passa a ser um objeto vigiado. Toda escrita, venha de
+      onde vier — do botao do app, do semeador, da sincronia, de uma
+      parte que eu ainda nem escrevi — recebe um carimbo __em e derruba
+      a lapide daquele dia. Nao ha como um caminho novo esquecer,
+      porque nao ha o que lembrar.
+
+   b) bqLimparApagados compara os carimbos antes de apagar. Se a sessao
+      nasceu depois da lapide, ela fica. Isso cobre o caso em que a
+      lapide volta da nuvem depois da escrita, num segundo aparelho.
+
+   c) Se alguem trocar ST.extras inteiro (o lerCoach faz isso), o vigia
+      e reposto na hora, por um getter/setter em ST.
+
+   NO CONSOLE:
+     bqLapide.ver()        — as lapides de pe e o que elas ameacam
+     bqLapide.limpar()     — derruba todas as lapides de extras
+   ══════════════════════════════════════════════════════════════════ */
+
+PARTE('lápide não mata o que nasceu depois', function(){
+  if(typeof ST !== 'object') throw new Error('sem ST');
+
+  var TUM = 'bq.apagados';
+
+  function tumulos(){
+    try{ return JSON.parse(localStorage.getItem(TUM) || '{}') }catch(e){ return {} }
+  }
+  function tumuloEm(tipo, chave){
+    var t = tumulos()[tipo + '|' + chave];
+    return typeof t === 'number' ? t : null;
+  }
+
+  /* Derruba a lapide EU MESMO, mexendo no armazenamento.
+     Antes eu chamava window.bqDesapagar, que mora noutra parte. Se
+     aquela parte ainda nao tivesse carregado — ou falhasse —, a lapide
+     continuava de pe e a sessao morria. Depender de outra parte para
+     uma garantia e o mesmo que nao ter garantia. */
+  function derrubar(tipo, chave){
+    try{
+      var m = tumulos(), c = tipo + '|' + chave;
+      if(m[c]){ delete m[c]; localStorage.setItem(TUM, JSON.stringify(m)) }
+    }catch(e){}
+    try{ if(window.bqDesapagar) window.bqDesapagar(tipo, chave) }catch(e){}
+  }
+
+  /* ── a) o vigia ── */
+  function envolver(alvo){
+    alvo = alvo || {};
+    /* carimba o que ja estava dentro, para nao nascer sem idade */
+    try{
+      Object.keys(alvo).forEach(function(k){
+        var x = alvo[k];
+        if(x && typeof x === 'object' && !x.__em) x.__em = Date.now();
+      });
+    }catch(e){}
+
+    return new Proxy(alvo, {
+      set: function(o, k, v){
+        if(typeof k === 'string' && v && typeof v === 'object'){
+          if(!v.__em) v.__em = Date.now();
+          /* nasceu agora: a lapide daquele dia perde a validade */
+          derrubar('extras', k);
+        }
+        o[k] = v;
+        return true;
+      }
+    });
+  }
+
+  var _ex = envolver(ST.extras);
+  try{
+    Object.defineProperty(ST, 'extras', {
+      configurable: true,
+      get: function(){ return _ex },
+      /* c) se alguem trocar o objeto inteiro, o vigia volta na hora */
+      set: function(v){ _ex = envolver(v) }
+    });
+  }catch(e){ throw new Error('não consegui vigiar ST.extras: ' + (e && e.message)) }
+
+  /* ── b) a limpeza passa a comparar idades ── */
+  var limparApp = window.bqLimparApagados;
+  if(typeof limparApp === 'function'){
+    window.bqLimparApagados = function(){
+      var salvos = {};
+      try{
+        Object.keys(ST.extras || {}).forEach(function(k){
+          var x = ST.extras[k];
+          if(!x || typeof x !== 'object') return;
+          var t = tumuloEm('extras', k);
+          /* sem carimbo, a sessao e antiga: a lapide vale.
+             com carimbo posterior a lapide, ela nasceu depois e fica. */
+          /* >= e nao >: apagar e recriar no mesmo instante e comum,
+             e Date.now() tem resolucao de milissegundo. Com > estrito,
+             uma recriacao rapida demais era tratada como anterior a
+             lapide e morria. */
+          if(t && x.__em && x.__em >= t) salvos[k] = x;
+        });
+      }catch(e){}
+
+      var r = limparApp.apply(this, arguments);
+
+      var devolvidos = 0;
+      Object.keys(salvos).forEach(function(k){
+        if(!ST.extras[k]){
+          derrubar('extras', k);         /* senão ela mata de novo no próximo save */
+          ST.extras[k] = salvos[k];
+          devolvidos++;
+        }
+      });
+      if(devolvidos)
+        console.log('lápide barrada: ' + devolvidos + ' sessão(ões) de academia ' +
+                    'nasceram depois da lápide e ficaram');
+      return r;
+    };
+  }
+
+  /* ── diagnostico ── */
+  window.bqLapide = {
+    ver: function(){
+      var m = tumulos(), agora = Date.now(), out = [];
+      Object.keys(m).sort().forEach(function(c){
+        var idade = Math.round((agora - m[c]) / 60000);
+        var viva = (agora - m[c]) < 24 * 3600 * 1000;
+        var chave = c.split('|')[1], tipo = c.split('|')[0];
+        var alvo = tipo === 'extras' ? (ST.extras || {})[chave] : null;
+        out.push(c.padEnd(28) + (viva ? 'de pé' : 'vencida').padEnd(9) +
+                 'há ' + idade + ' min' +
+                 (alvo ? '   ameaça: ' + (alvo.titulo || alvo.mod) +
+                         (alvo.__em > m[c] ? ' (protegida)' : ' (VULNERÁVEL)') : ''));
+      });
+      return out.length ? out.join('\n') : 'nenhuma lápide';
+    },
+    limpar: function(){
+      try{
+        var m = tumulos(), n = 0;
+        Object.keys(m).forEach(function(c){
+          if(c.indexOf('extras|') === 0){ delete m[c]; n++ }
+        });
+        localStorage.setItem(TUM, JSON.stringify(m));
+        try{ if(typeof renderTudo === 'function') renderTudo() }catch(e){}
+        return n + ' lápide(s) de academia derrubada(s)';
+      }catch(e){ return 'falhou: ' + (e && e.message) }
+    }
+  };
+
+  /* As lapides que a parte 33 quebrada deixou hoje ainda estao de pe e
+     vao barrar academia por 24 horas. Como elas foram postas por um
+     defeito, e nao por voce, derrubo as de academia uma unica vez. */
+  try{
+    var m = tumulos(), sujas = 0;
+    Object.keys(m).forEach(function(c){
+      if(c.indexOf('extras|') !== 0) return;
+      var dia = c.split('|')[1];
+      if(dia >= iso(HOJE)){ delete m[c]; sujas++ }
+    });
+    if(sujas){
+      localStorage.setItem(TUM, JSON.stringify(m));
+      console.log('limpeza única: ' + sujas + ' lápide(s) de academia futura removidas — ' +
+                  'foram postas pelo defeito da parte 33, não por você');
+    }
+  }catch(e){}
+});
+
+
 /* ─────────── selo de diagnóstico ─────────── */
 (function(){
   function montar(){
@@ -8324,7 +8659,7 @@ PARTE('o bloco sobrevive', function(){
         var l = window.planoBQ.ligado();
         var diag = '';
         try{ diag = window.bqDiag ? '\n\n── diagnóstico ──\n' + window.bqDiag() : '' }catch(e){}
-        if(confirm('fix.js ' + FIX_VERSAO + ' — as trinta e oito partes carregaram.\n\n'
+        if(confirm('fix.js ' + FIX_VERSAO + ' — as quarenta partes carregaram.\n\n'
           + 'Plano PEI Marathon: ' + (l ? 'LIGADO' : 'desligado') + diag
           + '\n\nOK ' + (l ? 'desliga o plano e volta ao automático do app.'
                              : 'liga o plano da maratona.'))){
@@ -8347,7 +8682,7 @@ PARTE('o bloco sobrevive', function(){
         return;
       }
       alert(ok
-        ? 'fix.js ' + FIX_VERSAO + ' — as trinta e oito partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
+        ? 'fix.js ' + FIX_VERSAO + ' — as quarenta partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
         : 'fix.js ' + FIX_VERSAO + '\n\nFalharam:\n\n' + FIX_FALHAS.join('\n\n'));
     };
     barra.insertBefore(s, barra.firstChild.nextSibling);
