@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '03f';
+const FIX_VERSAO = '03g';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -6391,6 +6391,122 @@ PARTE('blocos de 14 dias', function(){
 });
 
 
+
+/* ═══ 33. A FORÇA TAMBEM OBEDECE AO BLOCO ═══
+
+   DEFEITO QUE ISTO CONSERTA, encontrado por voce: depois de trocar o
+   plano fixo pelos blocos de 14 dias, corrida e bike sumiram do futuro
+   mas a ACADEMIA continuou aparecendo ate 18/10.
+
+   POR QUE ACONTECEU. As sessoes de academia nao vivem no plano. Elas
+   sao "segundo treino do dia" — ST.extras — e foram semeadas de uma so
+   vez, la em agosto, para todas as datas do plano antigo. Meu gerador
+   de blocos reescreve ST.plano e nunca encostou em ST.extras. Duas
+   estruturas diferentes, e eu so tinha lembrado de uma.
+
+   E havia a outra metade: o bloco marca forca na terca e na quinta
+   (campo `forca`), mas ninguem transformava essa marca em sessao. A
+   intencao existia no papel e nao chegava na tela.
+
+   O QUE ESTA PARTE FAZ, toda vez que um bloco e composto:
+
+   1. Apaga as sessoes de academia semeadas automaticamente que estejam
+      ALEM do bloco. So as automaticas — as que voce criou a mao ficam.
+   2. Semeia academia nos dias do bloco que pedem forca: terca (pernas e
+      core) e quinta (quadril e core).
+
+   O QUE ELA NAO FAZ: nao mexe no passado, e nao apaga nada que voce
+   tenha incluido manualmente. A distincao e o campo `sessao` comecando
+   com "BQ_", que so o semeador automatico usa.
+   ══════════════════════════════════════════════════════════════════ */
+
+PARTE('força obedece ao bloco', function(){
+  if(typeof ST !== 'object') throw new Error('sem ST');
+  if(!window.bqBloco) throw new Error('sem gerador de blocos');
+
+  var MAPA = { base_a:'BQ_BASE_A', base_b:'BQ_BASE_B',
+               pico_a:'BQ_PICO_A', pico_b:'BQ_PICO_B', manut:'BQ_MANUT' };
+
+  function ehAuto(x){
+    return x && x.mod === 'forca' && String(x.sessao || '').indexOf('BQ_') === 0;
+  }
+
+  /* 1. limpa a academia automatica que ficou solta alem do bloco */
+  function limpar(fim){
+    if(!ST.extras) return 0;
+    var hoje = iso(HOJE), n = 0;
+    Object.keys(ST.extras).forEach(function(k){
+      if(k < hoje) return;                    /* passado nao se mexe */
+      if(fim && k <= fim) return;             /* dentro do bloco, fica */
+      if(!ehAuto(ST.extras[k])) return;       /* criada por voce, fica */
+      delete ST.extras[k];
+      if(window.bqApagar) window.bqApagar('extras', k);
+      n++;
+    });
+    return n;
+  }
+
+  /* 2. semeia a academia que o bloco pediu */
+  function semear(B){
+    if(!B || !B.sessoes) return 0;
+    ST.extras = ST.extras || {};
+    var hoje = iso(HOJE), n = 0;
+    Object.keys(B.sessoes).forEach(function(k){
+      if(k < hoje) return;
+      var s = B.sessoes[k];
+      if(!s || !s.forca) return;
+      var sid = MAPA[s.forca];
+      if(!sid || typeof SESSOES_ACADEMIA !== 'object' || !SESSOES_ACADEMIA[sid]) return;
+      var existe = ST.extras[k];
+      if(existe && !ehAuto(existe)) return;   /* voce pos algo ai: respeito */
+      ST.extras[k] = { id: k + '-forca', data: k, mod: 'forca', foco: 'forca',
+                       sessao: sid, titulo: SESSOES_ACADEMIA[sid].nome,
+                       min: 45, auto: true };
+      if(window.bqDesapagar) window.bqDesapagar('extras', k);
+      n++;
+    });
+    return n;
+  }
+
+  function sincronizar(){
+    var B = window.bqBloco.atual();
+    var fora = limpar(B ? B.fim : null);
+    var novas = B ? semear(B) : 0;
+    if(fora || novas){
+      console.log('força ajustada ao bloco: ' + novas + ' semeadas, ' + fora + ' removidas do futuro');
+      try{ if(typeof renderTudo === 'function') renderTudo() }catch(e){}
+      try{ persistir() }catch(e){}
+    }
+    return { semeadas: novas, removidas: fora };
+  }
+
+  /* roda junto com a criacao do bloco */
+  var criarApp = window.bqBloco.criar;
+  window.bqBloco.criar = function(){
+    var B = criarApp.apply(this, arguments);
+    try{ sincronizar() }catch(e){ console.warn('força/bloco:', e && e.message) }
+    return B;
+  };
+
+  /* e uma vez no arranque, para arrumar o que ficou de antes */
+  setTimeout(function(){ try{ sincronizar() }catch(e){} }, 5200);
+
+  window.bqForcaBloco = {
+    sincronizar: sincronizar,
+    lista: function(){
+      var D = ['','seg','ter','qua','qui','sex','sáb','dom'];
+      return Object.keys(ST.extras || {}).sort()
+        .filter(function(k){ return k >= iso(HOJE) })
+        .map(function(k){
+          var x = ST.extras[k];
+          return k + ' ' + D[dow(dt(k))] + '  ' + (x.titulo || x.mod) +
+                 (ehAuto(x) ? '  (automática)' : '  (sua)');
+        });
+    }
+  };
+});
+
+
 /* ─────────── selo de diagnóstico ─────────── */
 (function(){
   function montar(){
@@ -6410,7 +6526,7 @@ PARTE('blocos de 14 dias', function(){
         var l = window.planoBQ.ligado();
         var diag = '';
         try{ diag = window.bqDiag ? '\n\n── diagnóstico ──\n' + window.bqDiag() : '' }catch(e){}
-        if(confirm('fix.js ' + FIX_VERSAO + ' — as trinta e duas partes carregaram.\n\n'
+        if(confirm('fix.js ' + FIX_VERSAO + ' — as trinta e tres partes carregaram.\n\n'
           + 'Plano PEI Marathon: ' + (l ? 'LIGADO' : 'desligado') + diag
           + '\n\nOK ' + (l ? 'desliga o plano e volta ao automático do app.'
                              : 'liga o plano da maratona.'))){
@@ -6433,7 +6549,7 @@ PARTE('blocos de 14 dias', function(){
         return;
       }
       alert(ok
-        ? 'fix.js ' + FIX_VERSAO + ' — as trinta e duas partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
+        ? 'fix.js ' + FIX_VERSAO + ' — as trinta e tres partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
         : 'fix.js ' + FIX_VERSAO + '\n\nFalharam:\n\n' + FIX_FALHAS.join('\n\n'));
     };
     barra.insertBefore(s, barra.firstChild.nextSibling);
