@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '03s';
+const FIX_VERSAO = '03t';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -8344,7 +8344,6 @@ PARTE('a marca de concluído gruda', function(){
   if(typeof window.etapas !== 'function') throw new Error('app sem etapas()');
   if(typeof ST !== 'object') throw new Error('sem ST');
 
-  var convertidas = {};   /* sessoes ja migradas nesta sessao do app */
 
   /* titulo -> pedaco estavel de id */
   function chave(t){
@@ -8379,21 +8378,21 @@ PARTE('a marca de concluído gruda', function(){
         et.id = id;
       });
 
-      /* ---- migra as marcas antigas, uma vez por sessao ---- */
-      if(!convertidas[p.id] && ST.feitas && ST.feitas[p.id]) {
-        convertidas[p.id] = 1;
-        var antigas = ST.feitas[p.id] || [];
-        var novos   = lista.map(function(et){ return et.id });
-        var casam   = antigas.filter(function(x){ return novos.indexOf(x) >= 0 });
-
-        if(antigas.length && !casam.length){
-          var n = Math.min(antigas.length, novos.length);
-          ST.feitas[p.id] = novos.slice(0, n);
-          console.log('marcas de ' + p.id + ' convertidas: ' + antigas.length +
-                      ' antigas -> ' + n + ' de ' + novos.length + ' etapas');
-        } else if(casam.length !== antigas.length){
-          /* sobrou lixo de gerações passadas: limpa o que não existe */
-          ST.feitas[p.id] = casam;
+      /* AQUI EU CONVERTIA AS MARCAS ANTIGAS "PELA QUANTIDADE" —
+         seis marcas velhas viravam as seis primeiras etapas de agora.
+         Foi isso que marcou o seu VO2 de amanha como concluido: eu
+         fabricava exatamente o numero de marcas que a conta do
+         concluida() precisava para fechar. Tentando preservar
+         historico, criei uma mentira sobre o futuro.
+         Agora eu so LIMPO o que nao casa. Se marca antiga nao
+         corresponde a nenhuma etapa atual, ela nao vale — e a parte 41
+         garante que dia futuro nunca conte como feito. */
+      if(ST.feitas && ST.feitas[p.id]){
+        var novos = lista.map(function(et){ return et.id });
+        var casam = (ST.feitas[p.id] || []).filter(function(x){ return novos.indexOf(x) >= 0 });
+        if(casam.length !== ST.feitas[p.id].length){
+          if(casam.length) ST.feitas[p.id] = casam;
+          else delete ST.feitas[p.id];
         }
       }
     }catch(e){ console.warn('marcas:', e && e.message) }
@@ -8640,6 +8639,146 @@ PARTE('lápide não mata o que nasceu depois', function(){
 });
 
 
+/* ═══ 41. CONCLUIDO E O QUE VOCE FEZ, NAO UMA CONTA ═══
+
+   O DEFEITO: o treino de VO2 de AMANHA apareceu como concluido, sem
+   voce ter tocado nele.
+
+   AS DUAS CAUSAS, somadas:
+
+   1) O id de uma sessao do plano e a DATA. "2026-08-19", so isso.
+      As suas marcas ficam em ST.feitas["2026-08-19"]. Quando o bloco e
+      recomposto e coloca outro treino naquele dia, o treino novo herda
+      as marcas do treino velho — porque para o app os dois sao "o
+      treino do dia 19". Havia marcas de uma sessao anterior naquela
+      data, e o VO2 nasceu vestindo elas.
+
+   2) concluida() conta em vez de conferir:
+
+          feitasDe(s.id).length >= e.length
+
+      Sete marcas contra sete etapas da verdade a bandeira de
+      concluido, mesmo que as sete marcas sejam de OUTRO treino e nao
+      correspondam a nenhuma das etapas atuais.
+
+      E a minha parte 39 piorou isso: ao converter marcas antigas "pela
+      quantidade", eu produzia exatamente o numero necessario para a
+      conta fechar. Eu criei o falso concluido tentando preservar
+      historico.
+
+   AS TRES REGRAS QUE ENTRAM NO LUGAR:
+
+   a) CONCLUIDO E INTERSECAO, NAO SOMA. So contam as marcas que
+      correspondem a uma etapa que existe agora. Marca orfa nao vale.
+
+   b) TREINO NO FUTURO NAO PODE ESTAR CONCLUIDO. Nenhuma conta, nenhuma
+      migracao, nenhuma sincronia pode dizer que amanha ja aconteceu.
+      Esta e a trava que eu deveria ter posto desde o inicio: quando o
+      mundo diz que uma coisa e impossivel, o app nao discute.
+
+   c) MARCA ORFA DE DIA FUTURO E APAGADA. Se o bloco trocou o treino do
+      dia, as marcas do treino antigo nao pertencem a ninguem.
+
+   O QUE ISTO CUSTA: marcas antigas que nao casam com nenhuma etapa
+   atual deixam de contar. Voce pode ter que remarcar algum treino
+   passado. Preferi isso a te mostrar como feito algo que voce nao fez —
+   um treino marcado errado some do KPI, some da aderencia, e a proxima
+   quinzena e composta em cima de uma mentira.
+
+   NO CONSOLE:
+     bqConcluido.ver()       — hoje: etapas, marcas que casam e veredito
+     bqConcluido.varrer()    — lista futuros com marca orfa
+   ══════════════════════════════════════════════════════════════════ */
+
+PARTE('concluído é o que você fez', function(){
+  if(typeof window.concluida !== 'function') throw new Error('app sem concluida()');
+  if(typeof ST !== 'object') throw new Error('sem ST');
+
+  function ids(s){
+    try{
+      var e = (typeof etapasDe === 'function') ? etapasDe(s) : [];
+      return e.map(function(x){ return x.id });
+    }catch(err){ return [] }
+  }
+  function casadas(s){
+    var f = (ST.feitas || {})[s.id] || [], lista = ids(s);
+    return f.filter(function(x){ return lista.indexOf(x) >= 0 });
+  }
+  function futuro(s){
+    var d = s && (s.data || s.id);
+    return typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d) && d > iso(HOJE);
+  }
+
+  /* ── a) e b) ── */
+  var conclApp = window.concluida;
+  window.concluida = function(s){
+    if(!s) return false;
+    /* b) amanhã não aconteceu. Ponto. */
+    if(futuro(s)) return false;
+    var lista = ids(s);
+    if(!lista.length) return false;
+    /* a) interseção, não soma */
+    return casadas(s).length >= lista.length;
+  };
+
+  /* ── c) limpa marca órfã de dia futuro ── */
+  function varrerFuturos(apagar){
+    var out = [], hoje = iso(HOJE);
+    var fontes = [ST.plano || {}, ST.extras || {}];
+    fontes.forEach(function(fonte){
+      Object.keys(fonte).forEach(function(k){
+        var s = fonte[k];
+        if(!s || !s.id) return;
+        var d = s.data || k;
+        if(!(d > hoje)) return;
+        var f = (ST.feitas || {})[s.id] || [];
+        if(!f.length) return;
+        var boas = casadas(s);
+        var orfas = f.length - boas.length;
+        if(!orfas) return;
+        out.push(d + '  ' + (s.titulo || s.foco) + ': ' + orfas + ' marca(s) órfã(s)');
+        if(apagar){
+          if(boas.length) ST.feitas[s.id] = boas;
+          else delete ST.feitas[s.id];
+        }
+      });
+    });
+    return out;
+  }
+
+  window.bqConcluido = {
+    ver: function(){
+      var k = ST.sel || iso(HOJE);
+      var s = (typeof sessaoDe === 'function') ? sessaoDe(k) : (ST.plano || {})[k];
+      if(!s) return 'sem treino em ' + k;
+      var lista = ids(s), f = (ST.feitas || {})[s.id] || [], c = casadas(s);
+      return [k + ' · ' + (s.titulo || s.foco),
+              'etapas agora     : ' + lista.length,
+              'marcas guardadas : ' + f.length,
+              'marcas que casam : ' + c.length,
+              'é futuro         : ' + (futuro(s) ? 'sim — nunca conta como feito' : 'não'),
+              'concluída        : ' + window.concluida(s)].join('\n');
+    },
+    varrer: function(){
+      var r = varrerFuturos(false);
+      return r.length ? r.join('\n') : 'nenhum treino futuro com marca órfã';
+    }
+  };
+
+  /* na entrada, tira as marcas que nao pertencem a ninguem */
+  setTimeout(function(){
+    try{
+      var r = varrerFuturos(true);
+      if(r.length){
+        console.log('marcas órfãs removidas de dias futuros:\n  ' + r.join('\n  '));
+        try{ if(typeof renderTudo === 'function') renderTudo() }catch(e){}
+        try{ persistir() }catch(e){}
+      }
+    }catch(e){ console.warn('concluído/boot:', e && e.message) }
+  }, 4000);
+});
+
+
 /* ─────────── selo de diagnóstico ─────────── */
 (function(){
   function montar(){
@@ -8659,7 +8798,7 @@ PARTE('lápide não mata o que nasceu depois', function(){
         var l = window.planoBQ.ligado();
         var diag = '';
         try{ diag = window.bqDiag ? '\n\n── diagnóstico ──\n' + window.bqDiag() : '' }catch(e){}
-        if(confirm('fix.js ' + FIX_VERSAO + ' — as quarenta partes carregaram.\n\n'
+        if(confirm('fix.js ' + FIX_VERSAO + ' — as quarenta e uma partes carregaram.\n\n'
           + 'Plano PEI Marathon: ' + (l ? 'LIGADO' : 'desligado') + diag
           + '\n\nOK ' + (l ? 'desliga o plano e volta ao automático do app.'
                              : 'liga o plano da maratona.'))){
@@ -8682,7 +8821,7 @@ PARTE('lápide não mata o que nasceu depois', function(){
         return;
       }
       alert(ok
-        ? 'fix.js ' + FIX_VERSAO + ' — as quarenta partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
+        ? 'fix.js ' + FIX_VERSAO + ' — as quarenta e uma partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
         : 'fix.js ' + FIX_VERSAO + '\n\nFalharam:\n\n' + FIX_FALHAS.join('\n\n'));
     };
     barra.insertBefore(s, barra.firstChild.nextSibling);
