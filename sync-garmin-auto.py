@@ -391,6 +391,34 @@ def publicar_semana(token, pacote=None):
 #  existir duas versoes da mesma conta, e elas vao discordar.
 # ══════════════════════════════════════════════════════════════════════
 
+
+def _garth(api):
+    """Devolve o cliente garth de dentro do garminconnect.
+
+    POR QUE NAO USO api.connectapi(). O embrulho do garminconnect na
+    versao instalada chama o transporte assim:
+
+        self._run_request(method, path, ...)
+
+    passando o method POR POSICAO. Quando eu tambem mandava
+    method="POST" por palavra-chave, o Python reclamava:
+
+        Client._run_request() got multiple values for argument 'method'
+
+    e as quatro sessoes falhavam. O garth, que fica uma camada abaixo,
+    tem a assinatura connectapi(path, method="GET", **kwargs) e aceita
+    a palavra-chave sem ambiguidade. Entao falo com ele direto.
+
+    O nome do atributo mudou entre versoes (client, garth), por isso
+    procuro os dois em vez de fixar um.
+    """
+    for nome in ("garth", "client"):
+        g = getattr(api, nome, None)
+        if g is not None and hasattr(g, "connectapi"):
+            return g, nome
+    return None, None
+
+
 PASSO_ID = {"warmup": (1, "warmup"), "cooldown": (2, "cooldown"),
             "interval": (3, "interval"), "recovery": (4, "recovery")}
 FIM_ID   = {"time": (2, "time"), "distance": (3, "distance")}
@@ -459,6 +487,12 @@ def subir_semana_garmin(api, token, pacote):
     if not sessoes or not carimbo:
         return
 
+    g, via = _garth(api)
+    if g is None:
+        log("Garmin: nao achei o cliente garth dentro do garminconnect — nada sobe")
+        return
+    log(f"Garmin: falando com o Connect via api.{via}")
+
     hoje  = datetime.now().date()
     envio = firebase_get("treinos_coach_v2/luiz/garminEnviado", token) or {}
     if not isinstance(envio, dict):
@@ -484,20 +518,20 @@ def subir_semana_garmin(api, token, pacote):
         # o plano mudou para este dia: tira o antigo antes de por o novo
         if ja.get("id"):
             try:
-                api.connectapi(f"/workout-service/workout/{ja['id']}", method="DELETE")
+                g.connectapi(f"/workout-service/workout/{ja['id']}", method="DELETE")
                 log(f"Garmin: workout antigo de {data} removido")
             except Exception as e:
                 log(f"Garmin: nao consegui remover o antigo de {data}: {e}")
 
         try:
-            criado = api.connectapi("/workout-service/workout",
-                                    method="POST", json=_workout_dto(s))
+            criado = g.connectapi("/workout-service/workout",
+                                  method="POST", json=_workout_dto(s))
             wid = (criado or {}).get("workoutId")
             if not wid:
                 raise RuntimeError("resposta sem workoutId")
 
-            api.connectapi(f"/workout-service/schedule/{wid}",
-                           method="POST", json={"date": data})
+            g.connectapi(f"/workout-service/schedule/{wid}",
+                         method="POST", json={"date": data})
 
             envio[data] = {"id": wid, "gerado": carimbo, "nome": s.get("nome")}
             if ja.get("id"):
