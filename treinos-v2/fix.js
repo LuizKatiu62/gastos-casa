@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '03y';
+const FIX_VERSAO = '04a';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -6413,7 +6413,13 @@ PARTE('blocos de 14 dias', function(){
     /* semanas do bloco antigo saem do historico antes de reescrever,
        senao um bloco refeito soma duas vezes */
     if(ST.hist && ST.bloco) Object.keys(ST.hist).forEach(function(seg){
-      if(seg >= iso(HOJE)) delete ST.hist[seg];
+      /* Comparava a chave da SEGUNDA-FEIRA com a data de HOJE. Numa
+         terca, '2026-08-17' >= '2026-08-18' e falso, entao a semana em
+         curso nao era limpa antes de ser reescrita — e um bloco
+         refeito no meio da semana SOMAVA o plano duas vezes naquela
+         linha. Achado pelo agente que revisou a parte 43. */
+      var segHoje = iso(addD(HOJE, -(dow(HOJE) - 1)));
+      if(seg >= segHoje) delete ST.hist[seg];
     });
     ST.bloco = gerarBloco(ini || iso(HOJE));
     registrarHistorico(ST.bloco);
@@ -9042,6 +9048,21 @@ PARTE('cancelado fica cancelado', function(){
    b) A aderencia so conta semanas com plano registrado. Sem registro,
       "—". Preferi um traco a um numero inventado.
 
+   CORRECAO 03z — duas coisas que eu quebrei ao escrever isto acima:
+
+   1) A semana em curso aparecia com 0 km. Eu somava o real a partir do
+      r.d de ST.runs, que e "dias atras" contado de um HOJE fixado no
+      carregamento da pagina. App instalado nao recarrega: com o HOJE
+      de ontem, o mapAtividade descarta a corrida de hoje (d = -1) e
+      ela nunca chega aqui. Passei a ler a data escrita em
+      RAW.atividades, que nao depende de HOJE.
+
+   2) Apareciam so duas linhas. Eu listava apenas as chaves do
+      planejado(), e com o ST.hist vazio isso e exatamente a quinzena
+      do bloco vigente. Agora entram tambem a semana em curso, a
+      proxima, e — quando nao ha plano registrado no passado — de 2 a 4
+      semanas anteriores com o real corrido e "—" no plano.
+
    c) O plano fixo de dez semanas e desligado. Ele nao manda em nada
       ha semanas; so enfeitava a tela com numeros que ninguem estava
       cumprindo.
@@ -9063,15 +9084,114 @@ PARTE('um plano só', function(){
 
   var segDe = function(k){ return iso(addD(dt(k), -(dow(dt(k)) - 1))) };
 
-  function reais(){
+  /* ══ POR QUE A SEMANA EM CURSO APARECIA COM 0 KM ══════════════════
+     Eu lia so o ST.runs. Cada item de ST.runs nao guarda data: guarda
+     r.d, o NUMERO DE DIAS ATRAS contado a partir de HOJE. E HOJE e
+     fixado UMA UNICA VEZ, quando a pagina carrega:
+
+         const HOJE = new Date(); HOJE.setHours(0,0,0,0);   (index.html:1070)
+
+     Num app instalado no celular a pagina nao recarrega: ela dorme e
+     acorda. Quando voce abriu o app na terca com o HOJE gravado na
+     segunda, o mapAtividade() calculou d = -1 para a corrida de hoje e
+     jogou a corrida fora antes de ela chegar aqui:
+
+         const d = Math.round((HOJE - dd)/864e5);
+         if(d < 0 || d > 3000) return null;                (index.html:1805-1806)
+
+     Os 5,1 km de hoje sumiam de ST.runs, e a linha da semana em curso
+     nascia com 0 km. Nao era arredondamento nem filtro meu: a corrida
+     ja nao existia na lista que eu recebo.
+
+     E NAO ADIANTA PROCURAR r.data. Eu tinha escrito
+     "r.data || iso(addD(HOJE, -r.d))" imaginando um campo que nao
+     existe: o mapAtividade devolve d, km, pace, mod, titulo, manual,
+     gid, dur, fc, cad, osc, gct, vr, bal, vo2 e walk — e mais nada
+     (index.html:1818-1834). O lado esquerdo do "||" nunca valeu nada;
+     era codigo morto que eu nunca exercitei porque testei com objetos
+     falsos que tinham o campo.
+
+     A data de verdade existe, mas um andar acima: em RAW.atividades,
+     o pacote cru que o absorver() consumiu (index.html:1837 "RAW = d").
+     La cada atividade tem a.data escrita em texto, que nao depende de
+     HOJE nenhum. E de la que passo a ler.
+
+     Fico com ST.runs se o RAW cobrir MENOS corrida do que ele — e o
+     caso da importacao de CSV, que troca ST.runs sem tocar no RAW
+     (index.html:3695). Assim nenhum dos dois caminhos perde treino. */
+
+  /* mesma regra do app para decidir o que conta como corrida:
+     o esporte gravado no sync manda, nao o ritmo (index.html:1811-1833).
+     Treino manual chega sem esporte e continua contando. */
+  function ehCorrida(esporte, tipo){
+    var mod;
+    if(typeof espParaMod === 'function'){
+      mod = espParaMod(esporte, tipo);
+    } else {
+      /* copia da regra do index.html:1794-1800, para o caso de eu rodar
+         antes do app definir a funcao. Sem isto, a bike de domingo
+         entraria como corrida e inflaria a semana. */
+      var t = String(esporte || '').toLowerCase() + ' ' + String(tipo || '').toLowerCase();
+      mod = /bike|ciclismo|cycling|mtb|nata|swim|academia|muscula|forca|força|strength|gym/.test(t)
+            ? 'outro' : 'corrida';
+    }
+    if(mod !== 'corrida') return false;
+    var e = String(esporte || '').toLowerCase();
+    return !e || e === 'corrida';        /* treino manual vem sem esporte */
+  }
+
+  function somarPorSemana(itens){
     var m = {};
-    ((ST.runs) || []).forEach(function(r){
-      if(!r || r.walk || (r.mod || 'corrida') !== 'corrida' || !(r.km > 0)) return;
-      var k = r.data || iso(addD(HOJE, -r.d));
-      var s = segDe(k);
-      m[s] = +((m[s] || 0) + r.km).toFixed(1);
+    itens.forEach(function(x){
+      var s = segDe(x.k);
+      m[s] = +((m[s] || 0) + x.km).toFixed(1);
     });
-    return m;
+    return { m: m, n: itens.length };
+  }
+
+  /* leitura pelo RAW: a data vem escrita, imune a HOJE velho */
+  function reaisDoRaw(){
+    var A = (typeof RAW === 'object' && RAW && Array.isArray(RAW.atividades)) ? RAW.atividades : null;
+    if(!A || !A.length) return null;
+    var vistos = {}, itens = [];
+    A.forEach(function(a){
+      if(!a || !a.data) return;
+      if(!ehCorrida(a.esporte, a.tipo)) return;
+      /* o mapAtividade descarta o que nao tem duracao nem ritmo; se eu
+         nao descartar tambem, entro aqui com atividade que o app nunca
+         contou e a comparacao entre as duas leituras fica torta */
+      if(!a.duracao && !a.pace) return;
+      var k = String(a.data).slice(0, 10);
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(k)) return;
+      var km = +a.distancia || 0;
+      if(!(km > 0)) return;
+      /* mesma chave de duplicata do absorver(): o id do Garmin decide,
+         e sem id vale dia + km com duas casas (index.html:1850) */
+      var id = String(a.garminId || a.id || '');
+      var ch = id ? 'id:' + id : k + '|' + km.toFixed(2);
+      if(vistos[ch]) return;
+      vistos[ch] = 1;
+      itens.push({ k: k, km: km });
+    });
+    return somarPorSemana(itens);
+  }
+
+  /* leitura pelo ST.runs: so serve de reserva, porque depende de HOJE */
+  function reaisDosRuns(){
+    var itens = [];
+    ((typeof ST === 'object' && ST.runs) || []).forEach(function(r){
+      if(!r || r.walk || (r.mod || 'corrida') !== 'corrida' || !(r.km > 0)) return;
+      if(!isFinite(r.d)) return;
+      itens.push({ k: iso(addD(HOJE, -r.d)), km: r.km });
+    });
+    return somarPorSemana(itens);
+  }
+
+  function reais(){
+    var A = reaisDoRaw(), B = reaisDosRuns();
+    /* quem viu mais corrida ganha. Nunca somo os dois: seria contar o
+       mesmo treino duas vezes, porque ST.runs nasce do proprio RAW. */
+    return (A && A.n >= B.n) ? A.m : B.m;
   }
 
   /* planejado por semana: hist para o passado, bloco para o presente */
@@ -9097,27 +9217,56 @@ PARTE('um plano só', function(){
 
   function semanas(){
     var P = planejado(), R = reais(), hojeSeg = segDe(iso(HOJE));
+    var proxSeg = iso(addD(dt(hojeSeg), 7));
 
-    /* SO SEMANAS COM PLANO. Eu montava a lista juntando as semanas
-       planejadas com TODAS as semanas em que houve corrida — e ST.runs
-       guarda mais de um ano. Resultado: sessenta e tantas linhas, a
-       maioria de antes de existir bloco nenhum. Erro besta e meu.
-       O ciclo e o que os blocos compuseram, mais a semana em curso.
-       Nada de antes disso, e no maximo doze semanas para tras. */
-    var chaves = Object.keys(P);
-    if(chaves.indexOf(hojeSeg) < 0) chaves.push(hojeSeg);
-    if(!chaves.length) return [];
-    chaves.sort();
-    var ini = chaves[0], fim = chaves[chaves.length - 1];
-    var teto = segDe(iso(addD(HOJE, -84)));
-    if(ini < teto) ini = teto;
-    if(fim < hojeSeg) fim = hojeSeg;
+    /* SO SEMANAS COM PLANO — E FOI DEMAIS.
+       Primeiro eu juntava as semanas planejadas com TODAS as semanas em
+       que houve corrida, e como ST.runs guarda mais de um ano davam
+       sessenta e tantas linhas. Corrigi para o outro extremo: passei a
+       listar SO as chaves do planejado(). Ai apareceu o defeito que
+       voce viu — duas linhas, S1 e S2, e mais nada.
+
+       O motivo: o planejado() le o ST.hist para o passado, e o ST.hist
+       so passou a ser gravado no Firebase ha poucas versoes
+       (fix.js:8269). No seu aparelho ele esta vazio, entao sobrava
+       apenas o bloco vigente, que e uma quinzena — as duas linhas.
+
+       Agora a lista e: o que os blocos registraram, mais a semana em
+       curso, mais a proxima. E quando nao ha NENHUM plano registrado
+       antes da semana em curso, mostro o passado recente pelo que foi
+       corrido: de 2 a 4 semanas, com "—" na coluna do plano. Sem
+       registro eu nao invento numero; escrevo o traco e digo por que.
+       Teto de doze semanas, sempre as mais recentes. */
+    var chaves = {};
+    Object.keys(P).forEach(function(s){ chaves[s] = 1 });
+    chaves[hojeSeg] = 1;
+    chaves[proxSeg] = 1;
+
+    var temPassado = Object.keys(P).some(function(s){ return s < hojeSeg });
+    if(!temPassado){
+      var achou = 0, sAnt;
+      for(var i = 1; i <= 4; i++){
+        sAnt = iso(addD(dt(hojeSeg), -7 * i));
+        if(R[sAnt] > 0){ chaves[sAnt] = 1; achou++ }
+      }
+      /* piso de duas linhas de passado mesmo sem corrida registrada:
+         "aqui nao havia plano" tambem e informacao */
+      if(achou < 2) for(var j = 1; j <= 2; j++) chaves[iso(addD(dt(hojeSeg), -7 * j))] = 1;
+    }
+
+    var lista = Object.keys(chaves).sort();
+    if(!lista.length) return [];
+    var ini = lista[0], fim = lista[lista.length - 1];
+    if(fim < proxSeg) fim = proxSeg;
+
     var out = [], s = ini;
     while(s <= fim){
       out.push({ seg: s, plan: P[s] ? P[s].km : null, de: P[s] ? P[s].de : null,
-                 real: R[s] || 0, atual: s === hojeSeg });
+                 real: R[s] || 0, atual: s === hojeSeg, futura: s > hojeSeg });
       s = iso(addD(dt(s), 7));
+      if(out.length > 60) break;                  /* trava contra data doida */
     }
+    if(out.length > 12) out = out.slice(out.length - 12);
     return out;
   }
 
@@ -9130,7 +9279,8 @@ PARTE('um plano só', function(){
         return w.seg + (w.atual ? ' *' : '  ') + '  real ' +
                String(w.real.toFixed(1)).padStart(6) + ' km   plano ' +
                (w.plan != null ? String(w.plan.toFixed(1)).padStart(6) + ' km  (' + w.de + ')'
-                               : '     —   (ainda não composto)');
+                               : '     —   (' + (w.futura ? 'ainda não composto'
+                                                          : 'sem plano registrado') + ')');
       }).join('\n');
     }
   };
@@ -9182,7 +9332,7 @@ PARTE('um plano só', function(){
     /* aderencia so nas semanas FECHADAS e com plano registrado */
     var somaP = 0, somaR = 0, n = 0;
     L.forEach(function(w){
-      if(w.atual || w.plan == null || w.seg > segDe(iso(HOJE))) return;
+      if(w.atual || w.futura || w.plan == null) return;
       somaP += w.plan; somaR += Math.min(w.real, w.plan); n++;
     });
     var ad = somaP > 0 ? somaR / somaP : null;
@@ -9190,19 +9340,29 @@ PARTE('um plano só', function(){
     var linhas = L.map(function(w, i){
       var temPlano = w.plan != null && w.plan > 0;
       var p = temPlano ? Math.min(1.15, w.real / w.plan) : 0;
-      var futura = !temPlano && w.real === 0;
+      /* tres casos diferentes, antes eu tinha so dois e por isso semana
+         passada sem plano era pintada de vermelho como se fosse falha:
+           vazia  = ainda nao composta, esta no futuro
+           orfa   = ja passou e nao havia plano registrado nenhum
+           normal = tem plano, da para comparar */
+      var vazia = !temPlano && w.futura;
+      var orfa  = !temPlano && !w.futura;
+      var fundo = vazia ? 'transparent'
+                : orfa  ? 'rgba(128,128,128,.30)'
+                : w.atual ? 'var(--acc,#C9F24E)' : cor(p);
       return '<div class="lin' + (w.atual ? ' hoje' : '') + '">'
         + '<b>S' + (i + 1) + '</b>'
-        + '<span class="bar"><i style="width:' + Math.round(Math.min(1, p) * 100) + '%;background:'
-        + (futura ? 'transparent' : w.atual ? 'var(--acc,#C9F24E)' : cor(p)) + '"></i></span>'
+        + '<span class="bar"><i style="width:' + (orfa ? 100 : Math.round(Math.min(1, p) * 100))
+        + '%;background:' + fundo + '"></i></span>'
         + '<span class="km">' + w.real.toFixed(0) + '/'
         + (temPlano ? w.plan.toFixed(0) + ' km' : '— km') + '</span>'
-        + '<span class="p" style="opacity:' + (futura ? '.35' : w.atual ? '.7' : '1')
-        + ';color:' + (futura || w.atual ? 'inherit' : cor(p)) + '">'
+        + '<span class="p" style="opacity:' + (vazia ? '.35' : (w.atual || orfa) ? '.7' : '1')
+        + ';color:' + (temPlano && !w.atual ? cor(p) : 'inherit') + '">'
         + (temPlano ? Math.round(p * 100) + '%' : '—') + '</span></div>';
     }).join('');
 
-    var semPlano = L.filter(function(w){ return w.plan == null }).length;
+    var semPlano = L.filter(function(w){ return w.plan == null && w.futura }).length;
+    var orfas    = L.filter(function(w){ return w.plan == null && !w.futura }).length;
     var faltam = Math.max(0, Math.ceil(diff(iso(HOJE), '2026-10-18') / 7));
 
     box.innerHTML =
@@ -9218,9 +9378,12 @@ PARTE('um plano só', function(){
       + '</p>'
       + linhas
       + '<p class="nota">Cada linha compara o que você correu com o que <b>o bloco daquela quinzena '
-      + 'realmente pediu</b>. As semanas com <b>—</b> ainda não têm plano: ele é composto de duas em '
-      + 'duas semanas, a partir do que você treinou. '
-      + (semPlano ? 'Faltam compor <b>' + semPlano + '</b> delas. ' : '')
+      + 'realmente pediu</b>. '
+      + (orfas ? 'As <b>' + orfas + '</b> primeira' + (orfas > 1 ? 's' : '') + ' são anteriores ao '
+               + 'registro de planos: mostro só o que o relógio marcou, porque plano daquela época '
+               + 'não ficou guardado em lugar nenhum — e número inventado seria pior que traço. ' : '')
+      + (semPlano ? 'As <b>' + semPlano + '</b> do fim ainda não têm plano: ele é composto de duas em '
+                  + 'duas semanas, a partir do que você treinou. ' : '')
       + 'A semana em curso não entra na aderência enquanto não fechar.</p>';
   }
 
@@ -9235,6 +9398,128 @@ PARTE('um plano só', function(){
   });
 
   setTimeout(function(){ try{ montar() }catch(e){} }, 5000);
+});
+
+
+/* ═══ 44. O DIA VIRA A MEIA-NOITE ═══
+
+   ESTE E O DEFEITO DE RAIZ POR TRAS DE VARIAS COISAS ESTRANHAS QUE
+   VOCE VIU HOJE — inclusive a semana em curso aparecer com 0 km
+   depois de voce ter corrido.
+
+   O QUE ACONTECE. O index.html calcula o dia UMA VEZ, ao carregar:
+
+       const HOJE = new Date(); HOJE.setHours(0,0,0,0);   (linha 1070)
+
+   O app instalado na tela de inicio do iPhone nao recarrega. Ele
+   dorme e acorda, e pode ficar dias com a mesma pagina viva. Entao o
+   HOJE fica parado no dia em que voce abriu.
+
+   E ISSO JOGA TREINO FORA. Em mapAtividade:
+
+       const d = Math.round((HOJE - dd)/864e5);
+       if(d < 0 || d > 3000) return null;                 (linha 1806)
+
+   Com o HOJE de ontem, a corrida de hoje tem d = -1 e e DESCARTADA
+   antes de chegar a qualquer tela. Nao e o card que erra: o treino
+   nunca chega nele.
+
+   O estrago vai muito alem disso: "hoje" no calendario, o que conta
+   como passado ou futuro, a janela de 14 dias, a aderencia, o KPI, o
+   bloco — tudo compara com o HOJE. Um dia congelado desalinha o app
+   inteiro em silencio.
+
+   O CONSERTO. HOJE e const, entao nao da para reatribuir. Mas e um
+   Date, e Date e mutavel: setTime() muda o valor no lugar, e todas as
+   referencias que ja existem passam a ver o dia certo. Nao e truque —
+   e a unica forma de corrigir sem reescrever o index.html inteiro.
+
+   QUANDO VERIFICO: ao voltar para o app (visibilitychange, focus,
+   pageshow) e uma vez por minuto para quem deixa a tela aberta. A
+   verificacao e uma comparacao de numeros; so faz trabalho de verdade
+   quando o dia mudou mesmo.
+
+   AO VIRAR O DIA: releio as atividades do dado bruto (que guarda a
+   data escrita, e nao depende de HOJE), limpo os caches e redesenho.
+
+   NO CONSOLE:
+     bqHoje.ver()     — o dia que o app pensa que e, e o de verdade
+     bqHoje.virar()   — forca a virada agora
+   ══════════════════════════════════════════════════════════════════ */
+
+PARTE('o dia vira à meia-noite', function(){
+  if(typeof HOJE === 'undefined' || !(HOJE instanceof Date))
+    throw new Error('app sem HOJE');
+
+  function alvo(){
+    var d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  }
+
+  var virando = false;
+
+  function virar(){
+    if(virando) return false;
+    var novo = alvo();
+    if(HOJE.getTime() === novo) return false;
+
+    virando = true;
+    var antes = iso(HOJE);
+    try{
+      /* HOJE e const: nao da para reatribuir, mas Date e mutavel.
+         setTime muda o valor no lugar e todo mundo passa a ver o dia
+         certo, inclusive o codigo que ja guardou a referencia. */
+      HOJE.setTime(novo);
+      console.log('o dia virou: ' + antes + ' → ' + iso(HOJE) +
+                  ' — relendo as atividades');
+
+      /* releitura: o dado bruto tem a data ESCRITA em cada atividade,
+         entao nao carrega o erro do dia congelado */
+      try{
+        if(typeof RAW === 'object' && RAW && typeof absorver === 'function') absorver(RAW);
+      }catch(e){ console.warn('hoje/absorver:', e && e.message) }
+
+      try{ if(ST && ST.cache) ST.cache = {} }catch(e){}
+      try{ if(typeof rebuild === 'function') rebuild() }catch(e){}
+
+      /* se o dia selecionado ficou para tras, pula para hoje */
+      try{
+        if(ST && ST.sel && ST.sel < iso(HOJE)) ST.sel = iso(HOJE);
+      }catch(e){}
+
+      try{ if(typeof renderTudo === 'function') renderTudo();
+           else if(typeof renderCoach === 'function') renderCoach() }catch(e){}
+    } finally {
+      virando = false;
+    }
+    return true;
+  }
+
+  try{
+    document.addEventListener('visibilitychange', function(){
+      if(!document.hidden) virar();
+    });
+  }catch(e){}
+  try{ window.addEventListener('focus', virar) }catch(e){}
+  try{ window.addEventListener('pageshow', virar) }catch(e){}
+
+  /* para quem deixa o app aberto atravessando a meia-noite */
+  try{ setInterval(virar, 60000) }catch(e){}
+
+  window.bqHoje = {
+    virar: virar,
+    ver: function(){
+      var real = new Date(alvo());
+      return ['o app pensa que hoje é : ' + iso(HOJE),
+              'hoje de verdade é       : ' + iso(real),
+              'defasagem               : ' +
+                Math.round((alvo() - HOJE.getTime()) / 864e5) + ' dia(s)'].join('\n');
+    }
+  };
+
+  /* uma virada na entrada, caso a pagina tenha ficado viva desde ontem */
+  setTimeout(function(){ try{ virar() }catch(e){} }, 2500);
 });
 
 
@@ -9257,7 +9542,7 @@ PARTE('um plano só', function(){
         var l = window.planoBQ.ligado();
         var diag = '';
         try{ diag = window.bqDiag ? '\n\n── diagnóstico ──\n' + window.bqDiag() : '' }catch(e){}
-        if(confirm('fix.js ' + FIX_VERSAO + ' — as quarenta e tres partes carregaram.\n\n'
+        if(confirm('fix.js ' + FIX_VERSAO + ' — as quarenta e quatro partes carregaram.\n\n'
           + 'Plano PEI Marathon: ' + (l ? 'LIGADO' : 'desligado') + diag
           + '\n\nOK ' + (l ? 'desliga o plano e volta ao automático do app.'
                              : 'liga o plano da maratona.'))){
@@ -9280,7 +9565,7 @@ PARTE('um plano só', function(){
         return;
       }
       alert(ok
-        ? 'fix.js ' + FIX_VERSAO + ' — as quarenta e tres partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
+        ? 'fix.js ' + FIX_VERSAO + ' — as quarenta e quatro partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
         : 'fix.js ' + FIX_VERSAO + '\n\nFalharam:\n\n' + FIX_FALHAS.join('\n\n'));
     };
     barra.insertBefore(s, barra.firstChild.nextSibling);
