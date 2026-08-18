@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '03p';
+const FIX_VERSAO = '03q';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -6537,11 +6537,28 @@ PARTE('força obedece ao bloco', function(){
   if(typeof ST !== 'object') throw new Error('sem ST');
   if(!window.bqBloco) throw new Error('sem gerador de blocos');
 
-  var MAPA = { base_a:'BQ_BASE_A', base_b:'BQ_BASE_B',
-               pico_a:'BQ_PICO_A', pico_b:'BQ_PICO_B', manut:'BQ_MANUT' };
+  /* O DEFEITO QUE APAGOU A SUA ACADEMIA E NUNCA A DEVOLVEU.
+     Eu mapeava para BQ_BASE_A, BQ_BASE_B, BQ_PICO_A, BQ_PICO_B e
+     BQ_MANUT. Nenhum desses nomes existe: o index.html so tem PERNAS
+     e COSTAS. A linha de guarda do semear() —
+       if(!sid || !SESSOES_ACADEMIA[sid]) return;
+     — batia SEMPRE, entao esta parte nunca semeou nada em nenhum dia,
+     desde o dia em que eu a escrevi. Ela so apagava.
 
+     E o meu teste nao pegou porque o boneco de teste declarava
+     SESSOES_ACADEMIA com as chaves BQ_BASE_A e BQ_BASE_B — eu inventei
+     no teste exatamente os nomes que o meu codigo esperava, em vez de
+     usar os do app. O teste provou que o meu codigo concorda consigo
+     mesmo, que e a unica coisa que ele nao precisava provar. */
+  var MAPA = { base_a:'PERNAS', base_b:'COSTAS',
+               pico_a:'PERNAS', pico_b:'COSTAS', manut:'PERNAS' };
+
+  /* Marcar por 'auto' e nao pelo prefixo do nome. As criadas por voce
+     pelo botao do app vem com extra:true e sem auto, entao ficam de fora
+     da limpeza — que e o que sempre quis dizer "criada por voce". */
   function ehAuto(x){
-    return x && x.mod === 'forca' && String(x.sessao || '').indexOf('BQ_') === 0;
+    return !!(x && x.mod === 'forca' &&
+              (x.auto === true || String(x.sessao || '').indexOf('BQ_') === 0));
   }
 
   /* 1. limpa a academia automatica que ficou solta alem do bloco */
@@ -6575,14 +6592,26 @@ PARTE('força obedece ao bloco', function(){
       if(k < hoje) return;
       var s = B.sessoes[k];
       if(!s || !s.forca) return;
+      /* usa a alternancia do proprio app quando ela existir, em vez de
+         eu decidir por fora qual sessao cai em qual dia */
       var sid = MAPA[s.forca];
-      if(!sid || typeof SESSOES_ACADEMIA !== 'object' || !SESSOES_ACADEMIA[sid]) return;
+      if(typeof sessaoAcademiaDe === 'function'){
+        try{ sid = sessaoAcademiaDe(k) || sid }catch(e){}
+      }
+      if(!sid || typeof SESSOES_ACADEMIA !== 'object' || !SESSOES_ACADEMIA[sid]){
+        console.warn('força: sessão "' + sid + '" não existe em SESSOES_ACADEMIA — ' +
+                     'não semeio o que não sei montar');
+        return;
+      }
       var existe = ST.extras[k];
       if(existe && !ehAuto(existe)) return;   /* voce pos algo ai: respeito */
-      ST.extras[k] = { id: k + '-forca', data: k, mod: 'forca', foco: 'forca',
-                       sessao: sid, titulo: SESSOES_ACADEMIA[sid].nome,
-                       min: 45, auto: true };
+      /* levanta a lapide ANTES de gravar: se ela ficar de pe, o
+         bqLimparApagados apaga no salvamento seguinte e a academia
+         some de novo, sem deixar rastro */
       if(window.bqDesapagar) window.bqDesapagar('extras', k);
+      ST.extras[k] = { id: 'x' + k, data: k, mod: 'forca', foco: 'forca',
+                       sessao: sid, titulo: SESSOES_ACADEMIA[sid].nome,
+                       min: 45, extra: true, auto: true };
       n++;
     });
     return n;
