@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '03n';
+const FIX_VERSAO = '03o';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -8055,6 +8055,34 @@ PARTE('ponte para o Garmin', function(){
     window.persistir = function(){
       try{ gravar() }catch(e){}
       return persistApp.apply(this, arguments);
+    };
+  }
+
+  /* O ERRO QUE ME CUSTOU UMA RODADA INTEIRA.
+     salvarCoach() do index.html nao grava ST inteiro: monta um corpo com
+     uma lista fixa de campos — objetivo, feitas, filtro, extras, trocas,
+     dias, marcoData, marcoNome, periodo — e manda com PUT. PUT substitui
+     o no inteiro. Ou seja: eu montava o pacote na memoria e o proprio
+     salvamento seguinte o apagava, sem erro nenhum na tela.
+
+     A parte 23 ja tinha esbarrado nisso e resolvido com um PATCH depois
+     do PUT. Eu sabia disso e mesmo assim esqueci. Mesma solucao aqui:
+     PATCH acrescenta a chave sem reescrever o que o app acabou de salvar. */
+  var salvarApp = window.salvarCoach;
+  if(typeof salvarApp === 'function'){
+    window.salvarCoach = async function(){
+      var r = await salvarApp.apply(this, arguments);
+      try{
+        if(!ST.garminSemana) gravar();
+        var p = ST.garminSemana;
+        if(p && p.sessoes && p.sessoes.length){
+          var t = await fbToken();
+          if(t) await fetch(FB_DB + '/' + FB_COACH + '.json?auth=' + t,
+            { method:'PATCH', headers:{'Content-Type':'application/json'},
+              body: JSON.stringify({ garminSemana: p }) });
+        }
+      }catch(e){ console.warn('ponte/salvar:', e && e.message) }
+      return r;
     };
   }
 
