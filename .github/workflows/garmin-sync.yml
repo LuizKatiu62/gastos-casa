@@ -10,6 +10,10 @@ on:
         required: false
         default: "21"
 
+# necessário para o passo que grava treinos-v2/semana.json de volta no repositório
+permissions:
+  contents: write
+
 jobs:
   sync:
     runs-on: ubuntu-latest
@@ -34,3 +38,19 @@ jobs:
           FIREBASE_EMAIL:    ${{ secrets.FIREBASE_EMAIL }}
           FIREBASE_PASSWORD: ${{ secrets.FIREBASE_PASSWORD }}
           DIAS_SAUDE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.health_days || '180' }}
+
+      # A semana que o app montou vira arquivo público do repositório.
+      # Só faz commit se o arquivo mudou de verdade — o sync roda de hora
+      # em hora e não pode encher o histórico de commits vazios.
+      - name: Publicar a semana do Garmin
+        run: |
+          if [ -n "$(git status --porcelain treinos-v2/semana.json)" ]; then
+            git config user.name  "garmin-sync"
+            git config user.email "garmin-sync@users.noreply.github.com"
+            git add treinos-v2/semana.json
+            git commit -m "semana do Garmin: $(date -u +%Y-%m-%d\ %H:%M) UTC"
+            git push
+            echo "semana.json publicado"
+          else
+            echo "semana.json sem mudanca, nada a publicar"
+          fi
