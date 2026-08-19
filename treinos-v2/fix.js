@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '04l';
+const FIX_VERSAO = '04m';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -3214,6 +3214,21 @@ PARTE('analise feito x planejado', function(){
   .bqa-ruim{background:rgba(226,86,86,.10);border-color:rgba(226,86,86,.35)}
   .bqa-info{background:rgba(255,255,255,.045);border-color:rgba(255,255,255,.13)}
   .bqa-g{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+  .bqa-leg{margin:0 0 12px;border-radius:10px;background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.07);overflow:hidden}
+  .bqa-leg>summary{list-style:none;cursor:pointer;padding:9px 11px;font-size:11.5px;
+    font-weight:700;color:var(--tx2);display:flex;align-items:center;justify-content:space-between}
+  .bqa-leg>summary::-webkit-details-marker{display:none}
+  .bqa-leg>summary:after{content:'▾';font-size:10px;opacity:.6;transition:.2s}
+  .bqa-leg[open]>summary:after{transform:rotate(180deg)}
+  .bqa-leg .li{padding:0 11px 11px}
+  .bqa-leg dl{margin:0}
+  .bqa-leg dt{font-size:11.5px;font-weight:700;color:var(--tx);margin-top:10px}
+  .bqa-leg dt:first-child{margin-top:2px}
+  .bqa-leg dd{margin:2px 0 0;font-size:11px;color:var(--tx3);line-height:1.5}
+  .bqa-leg dd b{color:var(--tx2)}
+  .bqa-leg .alvo{display:inline-block;margin-top:3px;font-size:10.5px;font-weight:700;
+    padding:2px 7px;border-radius:99px;background:rgba(255,255,255,.06);color:var(--tx2)}
   .bqa-c{background:rgba(255,255,255,.04);border-radius:10px;padding:9px 10px}
   .bqa-c i{display:block;font-style:normal;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;opacity:.55;margin-bottom:3px}
   .bqa-c b{font-size:16px;font-variant-numeric:tabular-nums}
@@ -3289,6 +3304,43 @@ PARTE('analise feito x planejado', function(){
              ? 'precisa de 3 rodagens com FC em cada período'
              : 'contra as 3 semanas antes · ' + b.efN + ' rodagens') + '</u></div>'
       + '</div>';
+
+    /* LEGENDA. Um numero sem referencia nao ajuda ninguem a decidir
+       treino: 1.19 e bom ou ruim? +11,8% e muito? Cada verbete diz o
+       que a conta mede, qual e a faixa que interessa e — quando existe
+       — em que ponto o numero deixa de ser confiavel. */
+    h += '<details class="bqa-leg"><summary>O que cada número quer dizer</summary><div class="li"><dl>'
+
+      + '<dt>Sessões</dt><dd>Quantos treinos de corrida que o plano pediu nos últimos '
+      + JANELA + ' dias tiveram uma atividade correspondente no Garmin. '
+      + 'Só conta sessão que ainda está no calendário: o que você cancelou sai da conta.'
+      + '<span class="alvo">alvo: 90% ou mais</span></dd>'
+
+      + '<dt>Volume</dt><dd>Os quilômetros que você <b>correu de verdade</b> nos últimos '
+      + JANELA + ' dias. A linha de baixo separa o que saiu do plano do que você fez por fora — '
+      + 'os dois contam para o corpo, mas só o primeiro mede a aderência.'
+      + '<span class="alvo">sem alvo fixo: o que importa é a progressão</span></dd>'
+
+      + '<dt>Carga 7d ÷ média</dt><dd>Os quilômetros da última semana divididos pela sua média '
+      + 'das últimas quatro. É o <b>ACWR</b>, e mede o quanto você acelerou em relação ao que o seu '
+      + 'corpo já está acostumado. Subir demais de uma vez é a receita clássica da lesão — e aos 64 '
+      + 'anos o tendão avisa depois, não durante.'
+      + '<span class="alvo">0,8 a 1,3 seguro · acima de 1,45 é risco · abaixo de 0,8 é destreino</span></dd>'
+
+      + '<dt>Eficiência aeróbica</dt><dd>Quantos metros você percorre por minuto para <b>cada '
+      + 'batimento do coração</b>, nas rodagens fáceis. Sobe quando você corre mais rápido com o '
+      + 'mesmo esforço cardíaco — é o sinal mais honesto de base aeróbica, porque não depende de '
+      + 'você se esforçar mais no dia do teste. A comparação é contra as três semanas anteriores.'
+      + '<span class="alvo">positivo é bom · 3 a 8% em 3 semanas é ganho real · acima de 15% quase '
+      + 'sempre é amostra pequena, não condicionamento</span></dd>'
+
+      + '<dt>Projeção para 18 de outubro</dt><dd>O tempo de maratona que o seu melhor esforço '
+      + 'recente projeta, pela fórmula de Riegel. Serve para responder uma pergunta só: '
+      + '<b>o alvo ainda é viável?</b> O número a acompanhar não é o valor de hoje, é se ele '
+      + 'encolhe a cada bloco.'
+      + '<span class="alvo">alvo: 3:50 (5:27/km)</span></dd>'
+
+      + '</dl></div></details>';
 
     if(!proj){
       h += '<div class="bqa-t">Projeção para 18 de outubro</div>'
