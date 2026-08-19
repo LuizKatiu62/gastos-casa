@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '04i';
+const FIX_VERSAO = '04j';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -3140,10 +3140,30 @@ PARTE('analise feito x planejado', function(){
 
   /* ═══════ veredito geral ═══════ */
   function veredito(b, props){
-    if(!b.plan)
+    if(!b.plan){
+      /* DIAGNOSTICO, e nao so uma mensagem bonita.
+         "Nenhum treino avaliado" pode ser tres coisas muito diferentes:
+         o plano nao cobre a janela, o plano sumiu, ou as atividades
+         nao casaram. Antes eu chutava qual era. Agora o proprio cartao
+         conta o que existe em ST.plano, para o motivo aparecer na tela
+         em vez de virar mais uma rodada de adivinhacao. */
+      var ini0 = iso(addD(HOJE, -JANELA)), h0 = hojeIso();
+      var todas = Object.keys(ST.plano || {}).sort();
+      var naJanela = todas.filter(function(k){ return k >= ini0 && k <= h0 });
+      var corridaNaJanela = naJanela.filter(function(k){
+        var x = ST.plano[k]; return x && x.mod === 'corrida' && !x.prova });
+
+      var diag = 'Plano: ' + todas.length + ' dia' + (todas.length === 1 ? '' : 's') +
+                 (todas.length ? ' (' + todas[0] + ' a ' + todas[todas.length-1] + ')' : '') +
+                 ' · na janela de ' + JANELA + ' dias: ' + naJanela.length +
+                 ', sendo ' + corridaNaJanela.length + ' de corrida.';
+
       return {classe:'info', t:'Nenhum treino do plano avaliado ainda',
-        d:'Ou o plano começou hoje, ou o treino de hoje ainda não chegou do Garmin. '
-        + 'A sincronia roda de hora em hora — quando a atividade aparecer na aba Evolução, ela aparece aqui também.'};
+        d: (naJanela.length === 0
+             ? 'O plano não tem nenhum dia entre ' + ini0 + ' e hoje. '
+             : 'Há dias de plano na janela, mas nenhum foi avaliado — as atividades do Garmin não casaram com eles. ')
+        + 'A sincronia roda de hora em hora. ' + diag};
+    }
     if(b.plan < 4)
       return {classe:'info', t:'Poucos dias para julgar o bloco',
         d:'O plano tem ' + b.plan + (b.plan === 1 ? ' dia avaliado' : ' dias avaliados') + ' até agora. '
