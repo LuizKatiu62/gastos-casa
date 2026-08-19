@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '04f';
+const FIX_VERSAO = '04h';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -9012,29 +9012,56 @@ PARTE('um plano só', function(){
   function planejado(){
     var m = {};
 
-    /* FONTE 1 — o ST.plano, que e onde o plano das semanas JA PASSADAS
-       continua morando.
+    /* FONTE 1 — o plano que estava em vigor ANTES do primeiro bloco.
+       Ate 17/08 quem mandava era o plano fixo de dez semanas. Ele e um
+       registro do que foi pedido naquele periodo, e por isso serve de
+       denominador para aquelas semanas.
 
-       Este era o meu erro, e ele custou varias respostas erradas: a
-       janela de 14 dias corta o FUTURO distante, mas guarda o passado
-       de proposito, "para voce ver o que fez e o que faltou". O plano
-       da semana passada esteve o tempo todo ali, e eu ficava
-       respondendo que nao existia em lugar nenhum porque so procurava
-       no ST.hist e no bloco vigente. Procurei no lugar errado e
-       transformei isso numa limitacao que nao era real. */
-    var acc = {};
-    Object.keys(ST.plano || {}).forEach(function(k){
-      var x = ST.plano[k];
-      if(!x || x.mod !== 'corrida' || x.prova) return;
-      var seg = segDe(k);
-      acc[seg] = +((acc[seg] || 0) + (+x.km || 0)).toFixed(1);
-    });
-    Object.keys(acc).forEach(function(seg){
-      if(acc[seg] > 0) m[seg] = { km: acc[seg], de: 'plano do calendário' };
-    });
+       AQUI EU JA ERREI DUAS VEZES, e vale deixar escrito:
+         1a) usei o ST.hist, que estava vazio, e disse que o plano "nao
+             existia em lugar nenhum". Existia.
+         2a) usei o ST.plano. Parecia certo, mas o peneirar() APAGA de
+             la os dias cancelados ou movidos, a cada desenho de tela.
+             O ST.plano de uma semana passada nao e "o que o plano
+             pediu": e "o que sobrou do plano". Como denominador ele
+             encolhe e infla a porcentagem — 39 de 22 daria 177%. Era o
+             mesmo defeito do "189%", so que a meu favor, o que o torna
+             mais perigoso, nao menos. */
+    /* O plano fixo so vale ATE o primeiro bloco. Dali em diante quem
+       manda sao os blocos, e semana que o bloco ainda nao compos NAO
+       pode ganhar um numero vindo do plano de dez semanas — seria
+       justamente o plano pronto que voce mandou tirar, entrando pela
+       porta dos fundos. Sem isso, a S3 aparecia com 53 km previstos
+       para uma quinzena que ainda nem foi montada. */
+    var corte = null;
+    try{
+      var cands = [];
+      if(ST.bloco && ST.bloco.inicio) cands.push(segDe(ST.bloco.inicio));
+      Object.keys(ST.hist || {}).forEach(function(k){ cands.push(k) });
+      if(cands.length){ cands.sort(); corte = cands[0] }
+    }catch(e){}
 
-    /* FONTE 2 — o registro que cada bloco deixou. Mais confiavel que o
-       calendario, porque nao sofre com sessao apagada ou movida. */
+    try{
+      var fixo = window.planoBQ && window.planoBQ.plano;
+      if(fixo){
+        var acc = {};
+        Object.keys(fixo).forEach(function(k){
+          var x = fixo[k];
+          if(!x || x.prova || !(x.km > 0)) return;
+          var seg = segDe(k);
+          acc[seg] = +((acc[seg] || 0) + (+x.km || 0)).toFixed(1);
+        });
+        Object.keys(acc).forEach(function(seg){
+          if(!(acc[seg] > 0)) return;
+          if(corte && seg >= corte) return;      /* dali em diante, quem manda e o bloco */
+          m[seg] = { km: acc[seg], de: 'plano fixo' };
+        });
+      }
+    }catch(e){}
+
+    /* FONTE 2 — o registro que cada bloco deixou ao compor a quinzena.
+       Sobrepoe o plano fixo, porque a partir do primeiro bloco e ele
+       quem passou a mandar. */
     Object.keys(ST.hist || {}).forEach(function(seg){
       var h = ST.hist[seg];
       if(h && h.planKm > 0) m[seg] = { km: +h.planKm, de: 'bloco anterior' };
@@ -9053,6 +9080,8 @@ PARTE('um plano só', function(){
       Object.keys(bl).forEach(function(seg){ m[seg] = { km: bl[seg], de: 'bloco vigente' } });
     }
 
+    /* O ST.plano NAO entra. Ele e a agenda, nao o registro do previsto:
+       o que voce cancela some de la. */
     return m;
   }
 
