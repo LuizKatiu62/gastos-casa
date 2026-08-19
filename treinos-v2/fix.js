@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '04o';
+const FIX_VERSAO = '04q';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -9848,6 +9848,87 @@ PARTE('visual da aba coach', function(){
 });
 
 
+/* ═══ 47. O TEXTO QUE VAI PARA O MOTRA ═══
+
+   POR QUE ISTO E COPIAR E COLAR, e nao um envio automatico como o
+   Garmin: o Garmin tem uma API de escrita, e o garth fala com ela. O
+   MOTRA lancou integracao por MCP este ano, mas ela e SOMENTE LEITURA
+   — a propria documentacao diz que a escrita "will be available soon",
+   e o Claude ainda nao esta entre os clientes suportados. Nao existe
+   hoje caminho nenhum para criar um treino dentro dele. Enquanto nao
+   existir, o melhor que da para fazer e entregar o texto pronto.
+
+   O QUE MUDA. O texto copiado tinha uma linha por exercicio:
+
+       1. Agachamento Goblet — 3×10-12 · Desça controlando...
+
+   Agora sai separado em blocos, com series e repeticoes em linha
+   propria e a dica de execucao embaixo. Colando no MOTRA, cada campo
+   ja esta onde voce precisa ler, sem ter que garimpar dentro de uma
+   frase corrida. E acrescentei o musculo trabalhado e o porque de
+   cada exercicio estar ali — os dois ja existiam no app, mas ficavam
+   so na tela e nao iam junto.
+
+   O QUE NAO MUDA. Esta parte troca UMA funcao: textoMotra. O botao, a
+   folha que abre, a copia para a area de transferencia, o cabecalho
+   com data e hora, e o caminho de volta pelo Atalho do iPhone
+   continuam exatamente como estao. Se voce apagar esta parte, o texto
+   volta ao formato de antes e nada mais muda.
+
+   NO CONSOLE:
+     bqMotra.ver('PERNAS')   — como o texto vai sair
+   ══════════════════════════════════════════════════════════════════ */
+
+PARTE('texto do MOTRA', function(){
+  if(typeof textoMotra !== 'function') throw new Error('app sem textoMotra');
+  if(typeof SESSOES_ACADEMIA !== 'object') throw new Error('sem SESSOES_ACADEMIA');
+  if(typeof ACADEMIA !== 'object') throw new Error('sem ACADEMIA');
+
+  var antigo = window.textoMotra;
+
+  function montar(sid){
+    var S = SESSOES_ACADEMIA[sid];
+    /* sessao desconhecida: devolvo vazio em vez de estourar. O
+       original fazia SESSOES_ACADEMIA[sid].itens direto e quebrava a
+       tela inteira se o id nao existisse. */
+    if(!S || !S.itens) return '';
+
+    var linhas = [];
+    S.itens.forEach(function(it, i){
+      var e = ACADEMIA[it.k];
+      if(!e) return;
+      linhas.push((i + 1) + ') ' + e.n);
+      linhas.push('   Séries: ' + e.s);
+      if(e.m) linhas.push('   Trabalha: ' + e.m);
+      if(e.c) linhas.push('   Execução: ' + e.c);
+      if(it.p) linhas.push('   Por que: ' + it.p);
+      linhas.push('');
+    });
+
+    /* tira a linha vazia do fim, para o texto nao chegar com sobra */
+    while(linhas.length && linhas[linhas.length - 1] === '') linhas.pop();
+    return linhas.join('\n');
+  }
+
+  window.textoMotra = function(sid){
+    try{ return montar(sid) }
+    catch(e){
+      console.warn('motra:', e && e.message);
+      return antigo.apply(this, arguments);   /* na duvida, o de antes */
+    }
+  };
+
+  window.bqMotra = {
+    ver: function(sid){
+      var k = sid || (typeof sessaoAcademiaDe === 'function'
+                      ? sessaoAcademiaDe(iso(HOJE)) : 'PERNAS');
+      return (SESSOES_ACADEMIA[k] ? SESSOES_ACADEMIA[k].nome + '\n\n' : '') + montar(k);
+    },
+    sessoes: function(){ return Object.keys(SESSOES_ACADEMIA) }
+  };
+});
+
+
 /* ─────────── selo de diagnóstico ─────────── */
 (function(){
   function montar(){
@@ -9867,7 +9948,7 @@ PARTE('visual da aba coach', function(){
         var l = window.planoBQ.ligado();
         var diag = '';
         try{ diag = window.bqDiag ? '\n\n── diagnóstico ──\n' + window.bqDiag() : '' }catch(e){}
-        if(confirm('fix.js ' + FIX_VERSAO + ' — as quarenta e seis partes carregaram.\n\n'
+        if(confirm('fix.js ' + FIX_VERSAO + ' — as quarenta e sete partes carregaram.\n\n'
           + 'Plano PEI Marathon: ' + (l ? 'LIGADO' : 'desligado') + diag
           + '\n\nOK ' + (l ? 'desliga o plano e volta ao automático do app.'
                              : 'liga o plano da maratona.'))){
@@ -9890,7 +9971,7 @@ PARTE('visual da aba coach', function(){
         return;
       }
       alert(ok
-        ? 'fix.js ' + FIX_VERSAO + ' — as quarenta e seis partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
+        ? 'fix.js ' + FIX_VERSAO + ' — as quarenta e sete partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
         : 'fix.js ' + FIX_VERSAO + '\n\nFalharam:\n\n' + FIX_FALHAS.join('\n\n'));
     };
     barra.insertBefore(s, barra.firstChild.nextSibling);
