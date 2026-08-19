@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '04c';
+const FIX_VERSAO = '04d';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -4515,6 +4515,21 @@ PARTE('aba kpi', function(){
     }
     return s;
   }
+  /* Rotulo da semana pela DATA da segunda-feira.
+     O eixo dizia S1, S2, S3... contando da semana mais antiga desta
+     aba — numeracao diferente da do card do ciclo, onde S1 e a semana
+     passada. Dois "S3" com significados diferentes na mesma tela e o
+     que tornava este grafico impossivel de ler. Data nao tem esse
+     problema: 10/08 e 10/08 em qualquer tela. */
+  function rotSem(lista){
+    return function(i){
+      var w = lista[i];
+      if(!w || !w.ini) return '';
+      var d = dt(w.ini);
+      return String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0');
+    };
+  }
+
   function eixoX(n, rotulo){
     var s = '', passo = IW / Math.max(1, n), salto = n > 9 ? 2 : 1;
     for(var i = 0; i < n; i++){
@@ -4797,7 +4812,14 @@ PARTE('aba kpi', function(){
     /* ── 1. aderência ── */
     /* semanas sem planejado registrado ficam de fora da aderencia — nao
        da para cobrar cumprimento de um plano que nunca existiu */
-    var comPlano = passadas.filter(function(w){ return w.planKm > 0 });
+    /* A SEMANA EM CURSO NAO ENTRA NA ADERENCIA.
+       Ela aparecia aqui como se estivesse terminada: o plano da semana
+       inteira no denominador, e so os dias ja corridos no numerador.
+       Uma terca-feira virava "fracasso". Volume e um FATO e continua
+       mostrando a semana em curso; aderencia e um JULGAMENTO, e so
+       julga o que acabou. */
+    var fechadas = passadas.filter(function(w){ return w.fim < iso(HOJE) });
+    var comPlano = fechadas.filter(function(w){ return w.planKm > 0 });
     var totPlan = comPlano.reduce(function(s,w){ return s+w.planKm }, 0);
     var totFeito = comPlano.reduce(function(s,w){ return s+w.feitoKm }, 0);
     var ader = totPlan > 0 ? totFeito/totPlan*100 : 0;
@@ -4808,13 +4830,13 @@ PARTE('aba kpi', function(){
     var maxA = Math.max(115, Math.max.apply(null, perSem.concat([100])));
     var d4 = perSem.length >= 5 ? perSem[perSem.length-1] - perSem[perSem.length-5] : null;
 
-    h += '<div class="kcard"><div class="kcab"><h3>Aderência ao plano</h3>' + chip(d4, '% vs S-4') + '</div>' +
+    h += '<div class="kcard"><div class="kcab"><h3>Aderência ao plano</h3>' + chip(d4, '% vs 4 semanas atrás') + '</div>' +
       '<div class="kbig" style="color:' + corA(ader) + '">' + ader.toFixed(0) + '%' +
         '<small>' + totFeito.toFixed(0) + ' km feitos dos ' + totPlan.toFixed(0) + ' km que o plano pediu até hoje</small></div>' +
       svgBox(grade(maxA, 0, function(v){ return v.toFixed(0) + '%' }) +
         refLinha(100, 0, maxA, 'var(--ok)', 'plano cheio') +
         paresDeBarras(perSem, null, maxA, corA) +
-        eixoX(perSem.length, function(i){ return 'S'+(i+1) })) +
+        eixoX(perSem.length, rotSem(comPlano))) +
       legenda([['≥85%','var(--ok)'],['65 a 84%','var(--warn)'],['<65%','var(--bad)']]) +
       '<p class="ksub"><b>' + seq + '</b> ' + (seq === 1 ? 'semana seguida' : 'semanas seguidas') +
         ' fechando 85% ou mais. ' + (seq >= 3 ? 'É a sequência que constrói prova longa.'
@@ -4829,13 +4851,13 @@ PARTE('aba kpi', function(){
     var tV = tendencia(vFeito, 0, maxV, 'var(--run)');
     var dV = vFeito.length >= 5 ? vFeito[vFeito.length-1] - vFeito[vFeito.length-5] : null;
 
-    h += '<div class="kcard"><div class="kcab"><h3>Volume semanal</h3>' + chip(dV, ' km vs S-4') + '</div>' +
+    h += '<div class="kcard"><div class="kcab"><h3>Volume semanal</h3>' + chip(dV, ' km vs 4 semanas atrás') + '</div>' +
       '<div class="kbig">' + ult.feitoKm.toFixed(0) + '<small>km nesta semana, de ' + ult.planKm.toFixed(0) +
         ' planejados · a linha tracejada é a tendência do ciclo</small></div>' +
       svgBox(grade(maxV, 0, function(v){ return v.toFixed(0) }) +
         paresDeBarras(vFeito, vPlan, maxV, 'var(--run)') +
         tV.svg +
-        eixoX(vFeito.length, function(i){ return 'S'+(i+1) })) +
+        eixoX(vFeito.length, rotSem(passadas))) +
       legenda([['realizado','var(--run)'],['planejado','', 'gh'],['tendência','var(--run)','ln']]) +
       '<p class="ksub">' + (tV.incl > 0.5 ? 'Seu volume vem <b>subindo</b> ao longo do ciclo, que é o esperado até a semana de pico.'
         : tV.incl < -0.5 ? 'Seu volume vem <b>caindo</b>. Se ainda não é semana de polimento, vale entender por quê.'
@@ -4881,7 +4903,7 @@ PARTE('aba kpi', function(){
         paresDeBarras(lFeito, lPlan, maxL, 'rgba(201,242,78,.30)') +
         area(pL, 'var(--run)') + curva(pL, 'var(--run)') +
         balao(pL, maiorL.toFixed(0) + ' km', 'var(--run)') +
-        eixoX(lFeito.length, function(i){ return 'S'+(i+1) })) +
+        eixoX(lFeito.length, rotSem(passadas))) +
       legenda([['maior treino da semana','var(--run)'],['planejado','', 'gh']]) +
       '<p class="ksub">' + (maiorL >= 28
         ? 'Seus longões já estão na faixa que uma maratona pede. Daqui para frente o trabalho é <b>manter e chegar inteiro</b>, não subir mais.'
@@ -4915,7 +4937,7 @@ PARTE('aba kpi', function(){
           refLinha(alvoT, minP, maxP, 'var(--acc)', 'alvo 3:50') +
           tP.svg + curva(pts, 'var(--run)') +
           balao(pts, hm(pAtual), 'var(--run)') +
-          eixoX(prev.length, function(i){ return 'S'+(i+1) })) +
+          eixoX(prev.length, rotSem(passadas))) +
         legenda([['sua previsão','var(--run)'],['alvo','var(--acc)','ln'],['tendência','var(--tx3)','ln']]) +
         '<p class="ksub">' + (ganho > 60 ? 'A previsão melhorou <b>' + hm(ganho) + '</b> desde o começo do ciclo — a mancha vem encolhendo.'
           : ganho < -60 ? 'A previsão piorou <b>' + hm(-ganho) + '</b> desde o começo do ciclo.'
@@ -4940,7 +4962,7 @@ PARTE('aba kpi', function(){
         svgBox(grade(maxE, minE, function(v){ return v.toFixed(1) }) +
           area(ptsE, 'var(--swim)') + tE.svg + curva(ptsE, 'var(--swim)') +
           balao(ptsE, eAtual.toFixed(1), 'var(--swim)') +
-          eixoX(efs.length, function(i){ return 'S'+(i+1) })) +
+          eixoX(efs.length, rotSem(passadas))) +
         legenda([['eficiência','var(--swim)'],['tendência','var(--swim)','ln']]) +
         '<p class="ksub">' + (varia >= 2 ? 'Você está correndo <b>mais rápido com o mesmo esforço do coração</b>. É a definição de evoluir.'
           : varia <= -2 ? 'A linha caiu. Fadiga acumulada, calor ou noites ruins costumam explicar antes de perda de forma.'
@@ -9109,37 +9131,42 @@ PARTE('um plano só', function(){
     });
     var ad = somaP > 0 ? somaR / somaP : null;
 
+    /* Para a semana SEM plano registrado eu mostrava "39/— km" e uma
+       barra cheia e chapada. Os km estavam la, mas o "/—" fazia a linha
+       parecer vazia — e ela nao esta vazia: e uma semana que voce
+       cumpriu, so que o app ainda nao guardava o que tinha pedido.
+       Agora ela mostra "39 km", e a barra tem o tamanho do volume
+       comparado a maior semana da lista. Informa sem julgar. */
+    var maiorReal = 0;
+    L.forEach(function(w){ if(w.real > maiorReal) maiorReal = w.real });
+
     var linhas = L.map(function(w){
       var temPlano = w.plan != null && w.plan > 0;
       var p = temPlano ? Math.min(1.15, w.real / w.plan) : 0;
 
-      /* TRES CASOS, e nao dois:
-           vazia    = ainda nao comecou e nao tem plano
-           orfa     = ja passou e nao havia plano registrado
-           normal   = tem plano e ja comecou, da para comparar
-         SEMANA QUE AINDA NAO COMECOU NAO LEVA NOTA. Ter plano nao a
-         torna avaliavel; so o tempo passar torna. Antes uma semana
-         futura com plano aparecia como 0% em vermelho. */
       var comecou  = !w.futura;
       var vazia    = !temPlano && w.futura;
       var orfa     = !temPlano && comecou;
       var julgavel = temPlano && comecou && !w.atual;
 
+      var larg = orfa ? (maiorReal > 0 ? Math.round(w.real / maiorReal * 100) : 0)
+                      : Math.round(Math.min(1, p) * 100);
+
       var fundo = (vazia || !comecou) ? 'transparent'
-                : orfa                ? 'rgba(128,128,128,.30)'
+                : orfa                ? 'rgba(155,169,188,.55)'
                 : w.atual             ? 'var(--acc,#C9F24E)'
                                       : cor(p);
 
       return '<div class="lin' + (w.atual ? ' hoje' : '') + '">'
         + '<b>' + (w.prova ? 'PEI' : 'S' + w.n) + '</b>'
-        + '<span class="bar"><i style="width:'
-        + (orfa ? 100 : Math.round(Math.min(1, p) * 100))
-        + '%;background:' + fundo + '"></i></span>'
-        + '<span class="km">' + w.real.toFixed(0) + '/'
-        + (temPlano ? w.plan.toFixed(0) + ' km' : '— km') + '</span>'
+        + '<span class="bar"><i style="width:' + larg + '%;background:' + fundo + '"></i></span>'
+        + '<span class="km">' + (orfa ? w.real.toFixed(0) + ' km'
+             : w.real.toFixed(0) + '/' + (temPlano ? w.plan.toFixed(0) + ' km' : '— km')) + '</span>'
         + '<span class="p" style="opacity:' + (julgavel ? '1' : w.atual ? '.7' : '.35')
         + ';color:' + (julgavel ? cor(p) : 'inherit') + '">'
-        + (temPlano && comecou ? Math.round(p * 100) + '%' : '—') + '</span></div>';
+        + (temPlano && comecou ? Math.round(p * 100) + '%'
+           : orfa ? '<span style="font-size:9px;letter-spacing:0">s/ plano</span>' : '—')
+        + '</span></div>';
     }).join('');
 
     var semPlano = L.filter(function(w){ return w.plan == null }).length;
@@ -9179,10 +9206,10 @@ PARTE('um plano só', function(){
       + '<div class="topo">' + cabeca + '</div>'
       + '<p class="sub">' + sub + '</p>'
       + linhas
-      + '<p class="nota">Cada linha compara o que você correu com o que <b>o bloco daquela quinzena '
-      + 'realmente pediu</b>. As semanas com <b>—</b> ainda não têm plano: ele é composto de duas em '
-      + 'duas semanas, a partir do que você treinou. '
-      + (semPlano ? 'Faltam compor <b>' + semPlano + '</b> delas. ' : '')
+      + '<p class="nota">Cada linha compara o que você correu com o que <b>o bloco daquela '
+      + 'quinzena realmente pediu</b>. As marcadas <b>s/ plano</b> são anteriores ao registro de '
+      + 'planos: o app não guardava o previsto, então mostro só o que o relógio marcou — a barra '
+      + 'ali é o volume comparado à sua maior semana. As com <b>—</b> ainda não começaram. '
       + 'A semana em curso não entra na aderência enquanto não fechar.</p>';
   }
 
