@@ -552,6 +552,61 @@ def _workout_dto(sessao):
     }
 
 
+def _agendados_em(g, data):
+    """O que ja esta no calendario naquele dia.
+
+    O CALENDARIO E A VERDADE, nao o meu caderninho. O registro em
+    garminEnviado so conhece o que ESTE script criou — nao sabe de nada
+    que tenha entrado por fora. Se eu confiar so nele, o que entrou por
+    fora vira duplicata para sempre.
+
+    Melhor esforco: se o endpoint mudar, devolvo lista vazia e o
+    mecanismo principal (o par workoutId + scheduleId guardado) segura
+    sozinho.
+    """
+    try:
+        ano, mes = int(data[:4]), int(data[5:7])
+        # o calendario do Garmin conta os meses a partir de zero
+        r = _chamar(g, "GET", f"/calendar-service/year/{ano}/month/{mes - 1}")
+        itens = (r or {}).get("calendarItems") or []
+        out = []
+        for it in itens:
+            if it.get("itemType") != "workout":
+                continue
+            if str(it.get("date") or it.get("calendarDate") or "")[:10] != data:
+                continue
+            out.append({"sched": it.get("id"), "workout": it.get("workoutId"),
+                        "nome": it.get("title") or it.get("workoutName")})
+        return out
+    except Exception as e:
+        log(f"Garmin: nao consegui ler o calendario de {data}: {e}")
+        return None          # None = nao sei, diferente de [] = vazio
+
+
+def _remover(g, sched, wid):
+    """Tira do calendario e so depois apaga o modelo.
+
+    ERA AQUI O DEFEITO DA DUPLICIDADE. Eu apagava so o WORKOUT e
+    achava que a agenda ia junto. Nao vai: a entrada do calendario tem
+    id proprio e continua la, apontando para um modelo que nem existe
+    mais. Como o codigo seguia em frente e criava o novo, cada
+    recomposicao do bloco somava mais uma linha no seu dia.
+    """
+    ok = True
+    if sched:
+        try:
+            _chamar(g, "DELETE", f"/workout-service/schedule/{sched}")
+        except Exception as e:
+            log(f"Garmin: falhei ao desagendar {sched}: {e}")
+            ok = False
+    if wid:
+        try:
+            _chamar(g, "DELETE", f"/workout-service/workout/{wid}")
+        except Exception as e:
+            log(f"Garmin: falhei ao apagar o modelo {wid}: {e}")
+    return ok
+
+
 def subir_semana_garmin(api, token, pacote):
     """Cria e agenda no Garmin as corridas da semana.
 
@@ -593,13 +648,32 @@ def subir_semana_garmin(api, token, pacote):
         if ja.get("gerado") == carimbo and ja.get("id"):
             continue                      # ja subiu, nada mudou
 
-        # o plano mudou para este dia: tira o antigo antes de por o novo
-        if ja.get("id"):
-            try:
-                _chamar(g, "DELETE", f"/workout-service/workout/{ja['id']}")
-                log(f"Garmin: workout antigo de {data} removido")
-            except Exception as e:
-                log(f"Garmin: nao consegui remover o antigo de {data}: {e}")
+        # ── limpar o dia ANTES de criar ──
+        # Primeiro o que eu mesmo criei, depois o que o calendario
+        # mostrar. Se a limpeza falhar, NAO crio: um treino velho no
+        # dia e um problema pequeno; dois treinos no dia e o que voce
+        # viu, e nao da para saber qual seguir.
+        limpo = True
+        if ja.get("id") or ja.get("sched"):
+            if not _remover(g, ja.get("sched"), ja.get("id")):
+                limpo = False
+
+        naquele_dia = _agendados_em(g, data)
+        if naquele_dia is None:
+            # nao consegui ler o calendario: sigo so com o meu registro
+            pass
+        else:
+            for it in naquele_dia:
+                if it.get("sched") and it.get("sched") != ja.get("sched"):
+                    log(f"Garmin: {data} tinha outro treino agendado, removendo")
+                    if not _remover(g, it.get("sched"), it.get("workout")):
+                        limpo = False
+
+        if not limpo:
+            erros += 1
+            log(f"Garmin: {data} NAO subiu — nao consegui limpar o dia antes. "
+                f"Melhor deixar o antigo do que criar duplicata.")
+            continue
 
         try:
             criado = _chamar(g, "POST", "/workout-service/workout", _workout_dto(s))
@@ -607,9 +681,13 @@ def subir_semana_garmin(api, token, pacote):
             if not wid:
                 raise RuntimeError("resposta sem workoutId")
 
-            _chamar(g, "POST", f"/workout-service/schedule/{wid}", {"date": data})
+            ag = _chamar(g, "POST", f"/workout-service/schedule/{wid}", {"date": data})
+            sched = (ag or {}).get("workoutScheduleId") or (ag or {}).get("id")
 
-            envio[data] = {"id": wid, "gerado": carimbo, "nome": s.get("nome")}
+            # guardo TAMBEM o id da agenda: sem ele nao da para desagendar,
+            # e foi essa falta que produziu as duplicatas
+            envio[data] = {"id": wid, "sched": sched,
+                           "gerado": carimbo, "nome": s.get("nome")}
             if ja.get("id"):
                 trocados += 1
             else:
