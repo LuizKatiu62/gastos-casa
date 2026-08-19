@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '04d';
+const FIX_VERSAO = '04e';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -9067,6 +9067,20 @@ PARTE('um plano só', function(){
 
   window.bqCiclo = {
     semanas: semanas,
+    /* Para as semanas anteriores ao registro de planos, o previsto nao
+       existe em lugar nenhum — o ST.hist so comecou a ser gravado
+       agora. Em vez de inventar um numero, deixo voce dizer qual era:
+         bqCiclo.registrar('2026-08-10', 42)
+       A partir dai a linha passa a ter plano, porcentagem e a entrar
+       na aderencia do ciclo, como qualquer outra. */
+    registrar: function(segunda, km){
+      if(!segunda || !(km > 0)) return 'use bqCiclo.registrar("2026-08-10", 42)';
+      ST.hist = ST.hist || {};
+      ST.hist[segunda] = ST.hist[segunda] || { planKm: 0, longoPlan: 0 };
+      ST.hist[segunda].planKm = +km;
+      try{ montar(); persistir() }catch(e){}
+      return 'semana de ' + segunda + ' agora tem plano de ' + km + ' km';
+    },
     ver: function(){
       var L = semanas();
       if(!L.length) return 'sem semanas para mostrar';
@@ -9164,8 +9178,7 @@ PARTE('um plano só', function(){
              : w.real.toFixed(0) + '/' + (temPlano ? w.plan.toFixed(0) + ' km' : '— km')) + '</span>'
         + '<span class="p" style="opacity:' + (julgavel ? '1' : w.atual ? '.7' : '.35')
         + ';color:' + (julgavel ? cor(p) : 'inherit') + '">'
-        + (temPlano && comecou ? Math.round(p * 100) + '%'
-           : orfa ? '<span style="font-size:9px;letter-spacing:0">s/ plano</span>' : '—')
+        + (temPlano && comecou ? Math.round(p * 100) + '%' : orfa ? '' : '—')
         + '</span></div>';
     }).join('');
 
@@ -9207,10 +9220,10 @@ PARTE('um plano só', function(){
       + '<p class="sub">' + sub + '</p>'
       + linhas
       + '<p class="nota">Cada linha compara o que você correu com o que <b>o bloco daquela '
-      + 'quinzena realmente pediu</b>. As marcadas <b>s/ plano</b> são anteriores ao registro de '
-      + 'planos: o app não guardava o previsto, então mostro só o que o relógio marcou — a barra '
-      + 'ali é o volume comparado à sua maior semana. As com <b>—</b> ainda não começaram. '
-      + 'A semana em curso não entra na aderência enquanto não fechar.</p>';
+      + 'quinzena pediu</b>. As primeiras não têm previsto porque o app ainda não guardava esse '
+      + 'registro — mostro os quilômetros que você fez, e a barra é o volume comparado à sua maior '
+      + 'semana. As com <b>—</b> ainda não começaram, e a semana em curso só entra na aderência '
+      + 'quando fechar.</p>';
   }
 
   ['renderCoach','renderDia','renderSemana'].forEach(function(nome){
