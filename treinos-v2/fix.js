@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '04j';
+const FIX_VERSAO = '04k';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -3153,10 +3153,29 @@ PARTE('analise feito x planejado', function(){
       var corridaNaJanela = naJanela.filter(function(k){
         var x = ST.plano[k]; return x && x.mod === 'corrida' && !x.prova });
 
+      /* Listar os dias, e nao so contar. Com 11 dias na mao eu vejo de
+         imediato se e o bloco, se e o objetivo ou se sao cancelamentos
+         — tres causas diferentes que a contagem nao distingue. */
+      var lista = todas.slice(0, 16).map(function(k){
+        var x = ST.plano[k] || {};
+        return k.slice(5) + ' ' + (x.prova ? 'PROVA' : (x.mod || '?').slice(0,4) +
+               (x.km ? ' ' + x.km : ''));
+      }).join(' · ');
+
+      var jan = (typeof window.bqJanela === 'object' && window.bqJanela.ligado)
+                ? (window.bqJanela.ligado() ? 'ligada' : 'DESLIGADA') : 'ausente';
+      var blo = (window.bqBloco && window.bqBloco.atual && window.bqBloco.atual())
+                ? 'sim' : 'NENHUM';
+      var obj = null;
+      try{ obj = (typeof objetivoAtivo === 'function') ? objetivoAtivo() : null }catch(e){}
+
       var diag = 'Plano: ' + todas.length + ' dia' + (todas.length === 1 ? '' : 's') +
                  (todas.length ? ' (' + todas[0] + ' a ' + todas[todas.length-1] + ')' : '') +
-                 ' · na janela de ' + JANELA + ' dias: ' + naJanela.length +
-                 ', sendo ' + corridaNaJanela.length + ' de corrida.';
+                 ' · na janela: ' + naJanela.length + '. ' +
+                 'Objetivo: ' + (obj ? (obj.nome || obj.n) + ' em ' + obj.data +
+                                       ', ' + (obj.sem || '?') + ' semanas' : 'NENHUM') +
+                 ' · janela 14d: ' + jan + ' · bloco vigente: ' + blo + '. ' +
+                 'Dias: ' + lista;
 
       return {classe:'info', t:'Nenhum treino do plano avaliado ainda',
         d: (naJanela.length === 0
