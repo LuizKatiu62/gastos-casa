@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '04h';
+const FIX_VERSAO = '04i';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -2933,7 +2933,13 @@ PARTE('analise feito x planejado', function(){
         return r.d >= de && r.d < ate && !r.walk && (r.mod || 'corrida') === 'corrida'
             && r.km >= 5 && isFinite(r.fc) && r.fc > 90 && r.pace > PERFIL.paceLimiar + 25;
       });
-      if(v.length < 2) return null;
+      /* AMOSTRA MINIMA DE TRES, e nao duas.
+         Com duas corridas de cada lado, o numero diz mais sobre qual
+         treino caiu em qual balde do que sobre o seu condicionamento —
+         uma rodagem fria a mais de um lado move o resultado em dez
+         pontos. Preferi um traco a um numero que engana, ainda mais
+         num indicador que voce usa para decidir treino. */
+      if(v.length < 3) return null;
       const m = v.map(r => (60000 / r.pace) / r.fc);
       return {v: m.reduce((a, b) => a + b, 0) / m.length, n: v.length};
     }
@@ -3226,12 +3232,23 @@ PARTE('analise feito x planejado', function(){
 
     h += '<div class="bqa-g">'
       + '<div class="bqa-c"><i>Sessões</i><b>' + b.done + '/' + b.plan + '</b><u>' + num(b.pctSessoes) + ' do plano</u></div>'
-      + '<div class="bqa-c"><i>Volume</i><b>' + Math.round(b.kmFeito) + ' km</b><u>de ' + Math.round(b.kmPlan) + ' km · ' + num(b.pctKm) + '</u></div>'
+      /* O "Volume" mostrava so o kmFeito — os quilometros de corridas
+         que casaram com um dia PLANEJADO. Tudo que voce correu num dia
+         sem sessao prevista ia para kmExtra e nao aparecia em lugar
+         nenhum: 111,7 km reais viravam "34 km" na tela. Rotulo de uma
+         coisa, medida de outra, o mesmo defeito do "189%".
+         Agora o numero grande e o que voce CORREU DE VERDADE, e a
+         linha de baixo diz quanto disso saiu do plano. */
+      + '<div class="bqa-c"><i>Volume</i><b>' + Math.round(b.kmFeito + b.kmExtra) + ' km</b><u>'
+        + Math.round(b.kmFeito) + ' de ' + Math.round(b.kmPlan) + ' km do plano'
+        + (b.kmExtra >= 1 ? ' · +' + Math.round(b.kmExtra) + ' fora dele' : '') + '</u></div>'
       + '<div class="bqa-c"><i>Carga 7d ÷ média</i><b>' + (b.acwr ? b.acwr.toFixed(2) : '—') + '</b><u>'
         + (b.acwr ? (b.acwr > 1.45 ? 'subindo rápido' : b.acwr < 0.8 ? 'caindo' : 'faixa segura') : 'sem dados') + '</u></div>'
       + '<div class="bqa-c"><i>Eficiência aeróbica</i><b>'
         + (b.efDelta === null ? '—' : (b.efDelta >= 0 ? '+' : '') + (b.efDelta * 100).toFixed(1) + '%')
-        + '</b><u>' + (b.efDelta === null ? 'faltam corridas com FC' : 'contra as 3 semanas antes') + '</u></div>'
+        + '</b><u>' + (b.efDelta === null
+             ? 'precisa de 3 rodagens com FC em cada período'
+             : 'contra as 3 semanas antes · ' + b.efN + ' rodagens') + '</u></div>'
       + '</div>';
 
     if(!proj){
