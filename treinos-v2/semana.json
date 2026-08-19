@@ -2,15 +2,48 @@
  "ate": "2026-08-25",
  "de": "2026-08-19",
  "fcMax": 163,
- "gerado": "2026-08-19T11:22:42.938Z",
+ "gerado": "2026-08-19T20:28:30.405Z",
  "limiar": "5:16",
  "sessoes": [
   {
-   "data": "2026-08-19",
+   "data": "2026-08-20",
+   "foco": "facil",
+   "km": 5.2,
+   "min": 34,
+   "nome": "20/08 · Rodagem moderada · 5.2 km total",
+   "nota": "Total porta a porta 5.2 km. Alongamentos e educativos ANTES do start, relogio parado.",
+   "paceMedio": "6:32",
+   "passos": [
+    {
+     "fim": "time",
+     "lento": 2.2676,
+     "rapido": 2.4331,
+     "texto": "8 min subindo devagar, 6:51–7:21/km. Se chegar ofegante ao fim, foi rapido demais.",
+     "tipo": "warmup",
+     "valor": 480
+    },
+    {
+     "fim": "distance",
+     "lento": 2.5575,
+     "rapido": 2.7701,
+     "texto": "3.4 km em 6:01–6:31/km. Voce deve conseguir falar frases inteiras.",
+     "tipo": "interval",
+     "valor": 3400
+    },
+    {
+     "fim": "time",
+     "texto": "5 min de trote muito leve ate a respiracao normalizar.",
+     "tipo": "cooldown",
+     "valor": 300
+    }
+   ]
+  },
+  {
+   "data": "2026-08-21",
    "foco": "vo2",
    "km": 5.6,
    "min": 35,
-   "nome": "19/08 · Intervalado VO₂ · 5.6 km total",
+   "nome": "21/08 · Intervalado VO₂ · 5.6 km total",
    "nota": "Total porta a porta 5.6 km. Alongamentos e educativos ANTES do start, relogio parado.",
    "paceMedio": "6:15",
    "passos": [
@@ -47,39 +80,6 @@
      "texto": "8 min de trote muito leve ate a respiracao normalizar.",
      "tipo": "cooldown",
      "valor": 480
-    }
-   ]
-  },
-  {
-   "data": "2026-08-20",
-   "foco": "facil",
-   "km": 5.2,
-   "min": 34,
-   "nome": "20/08 · Rodagem moderada · 5.2 km total",
-   "nota": "Total porta a porta 5.2 km. Alongamentos e educativos ANTES do start, relogio parado.",
-   "paceMedio": "6:32",
-   "passos": [
-    {
-     "fim": "time",
-     "lento": 2.2676,
-     "rapido": 2.4331,
-     "texto": "8 min subindo devagar, 6:51–7:21/km. Se chegar ofegante ao fim, foi rapido demais.",
-     "tipo": "warmup",
-     "valor": 480
-    },
-    {
-     "fim": "distance",
-     "lento": 2.5575,
-     "rapido": 2.7701,
-     "texto": "3.4 km em 6:01–6:31/km. Voce deve conseguir falar frases inteiras.",
-     "tipo": "interval",
-     "valor": 3400
-    },
-    {
-     "fim": "time",
-     "texto": "5 min de trote muito leve ate a respiracao normalizar.",
-     "tipo": "cooldown",
-     "valor": 300
     }
    ]
   },
