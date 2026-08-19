@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '04e';
+const FIX_VERSAO = '04f';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -9011,21 +9011,48 @@ PARTE('um plano só', function(){
   /* planejado por semana: hist para o passado, bloco para o presente */
   function planejado(){
     var m = {};
-    Object.keys(ST.hist || {}).forEach(function(s){
-      var h = ST.hist[s];
-      if(h && h.planKm > 0) m[s] = { km: +h.planKm, de: 'bloco anterior' };
+
+    /* FONTE 1 — o ST.plano, que e onde o plano das semanas JA PASSADAS
+       continua morando.
+
+       Este era o meu erro, e ele custou varias respostas erradas: a
+       janela de 14 dias corta o FUTURO distante, mas guarda o passado
+       de proposito, "para voce ver o que fez e o que faltou". O plano
+       da semana passada esteve o tempo todo ali, e eu ficava
+       respondendo que nao existia em lugar nenhum porque so procurava
+       no ST.hist e no bloco vigente. Procurei no lugar errado e
+       transformei isso numa limitacao que nao era real. */
+    var acc = {};
+    Object.keys(ST.plano || {}).forEach(function(k){
+      var x = ST.plano[k];
+      if(!x || x.mod !== 'corrida' || x.prova) return;
+      var seg = segDe(k);
+      acc[seg] = +((acc[seg] || 0) + (+x.km || 0)).toFixed(1);
     });
+    Object.keys(acc).forEach(function(seg){
+      if(acc[seg] > 0) m[seg] = { km: acc[seg], de: 'plano do calendário' };
+    });
+
+    /* FONTE 2 — o registro que cada bloco deixou. Mais confiavel que o
+       calendario, porque nao sofre com sessao apagada ou movida. */
+    Object.keys(ST.hist || {}).forEach(function(seg){
+      var h = ST.hist[seg];
+      if(h && h.planKm > 0) m[seg] = { km: +h.planKm, de: 'bloco anterior' };
+    });
+
+    /* FONTE 3 — o bloco vigente manda nas duas semanas dele. */
     var B = ST.bloco;
     if(B && B.sessoes){
-      var acc = {};
+      var bl = {};
       Object.keys(B.sessoes).forEach(function(k){
         var x = B.sessoes[k];
         if(!x || x.mod !== 'corrida' || x.prova) return;
-        var s = segDe(k);
-        acc[s] = +((acc[s] || 0) + (+x.km || 0)).toFixed(1);
+        var seg = segDe(k);
+        bl[seg] = +((bl[seg] || 0) + (+x.km || 0)).toFixed(1);
       });
-      Object.keys(acc).forEach(function(s){ m[s] = { km: acc[s], de: 'bloco vigente' } });
+      Object.keys(bl).forEach(function(seg){ m[seg] = { km: bl[seg], de: 'bloco vigente' } });
     }
+
     return m;
   }
 
