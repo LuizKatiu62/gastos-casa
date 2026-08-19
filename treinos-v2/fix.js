@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '04k';
+const FIX_VERSAO = '04l';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -9474,6 +9474,122 @@ PARTE('o dia vira à meia-noite', function(){
 });
 
 
+/* ═══ 45. UM ALVO SO: PEI, 18/10/2026 ═══
+
+   O DEFEITO, e ele foi causado por mim ontem.
+
+   O cartao "Feito x planejado" mostrava 0/0, o plano comecava HOJE e
+   ia ate 09/12. O diagnostico na tela deu a resposta:
+
+       Objetivo: Maratona em 2026-12-09, 16 semanas
+
+   O objetivo ativo do app nao era a PEI. Era a "Maratona" generica do
+   catalogo, de 16 semanas. E 09/12 menos 16 semanas da exatamente
+   19/08 — por isso o ciclo inteiro nasceu hoje e o passado sumiu.
+
+   POR QUE ACONTECEU. A parte que marca a PEI como objetivo e a MESMA
+   que gerava o plano fixo de dez semanas:
+
+       function aplicar(){
+         if(!ligado()) return;
+         ST.objetivo = {fam:'corrida', id:'bq42', data:'2026-10-18', ...};
+         rebuild(); ...
+       }
+
+   Quando a parte 43 chamou planoBQ.desligar() para tirar o plano
+   pronto de dez semanas — que voce mandou tirar, com razao —, ela
+   desligou junto a atribuicao do objetivo. As duas coisas moravam
+   atras da mesma chave. O app entao caiu no objetivo padrao dele.
+
+   E o resto continuou mirando 18/10: a projecao, o contador de dias,
+   o gerador de blocos. O app passou a ter dois alvos, e todo numero
+   que dependia do ciclo saiu errado.
+
+   O CONSERTO. O alvo passa a ter dono proprio, separado do plano
+   fixo. Esta parte garante, a cada arranque, que o objetivo ativo e a
+   PEI de 18/10/2026, com as 10 semanas de ciclo — independente de o
+   plano fixo estar ligado ou desligado.
+
+   NAO E CRAVAR DE NOVO NO CODIGO: se um dia voce escolher outra prova
+   pela tela, o app respeita, porque so corrijo quando o objetivo esta
+   no item generico '42k' que ninguem escolheu de proposito. Trocar de
+   alvo continua sendo decisao sua; cair no padrao por acidente, nao.
+
+   NO CONSOLE:
+     bqAlvo.ver()      — o objetivo ativo e o que o ciclo cobre
+     bqAlvo.fixar()    — forca a PEI agora
+   ══════════════════════════════════════════════════════════════════ */
+
+PARTE('um alvo só: PEI', function(){
+  if(typeof ST !== 'object') throw new Error('sem ST');
+  if(typeof OBJETIVOS !== 'object') throw new Error('sem OBJETIVOS');
+
+  var ALVO = { fam:'corrida', id:'bq42', data:'2026-10-18',
+               nome:'PEI Marathon · índice Boston' };
+
+  /* o item precisa existir no catalogo, senao objetivoAtivo() devolve
+     null e o app fica sem plano nenhum */
+  function garantirItem(){
+    try{
+      var itens = OBJETIVOS.corrida && OBJETIVOS.corrida.itens;
+      if(!itens) return false;
+      if(!itens.some(function(x){ return x.id === ALVO.id })){
+        itens.push({ id: ALVO.id, n: ALVO.nome, dist: 42.2, sem: 10,
+                     longoMax: 32, volBase: 60 });
+        console.log('alvo: item da PEI recolocado no catálogo');
+      }
+      return true;
+    }catch(e){ return false }
+  }
+
+  function precisaCorrigir(){
+    var o = ST.objetivo;
+    if(!o) return true;
+    if(o.id === ALVO.id && o.data === ALVO.data) return false;
+    /* se voce escolheu outra prova de proposito, eu nao mexo.
+       So corrijo o caso do item generico '42k', que e onde o app cai
+       sozinho quando perde o objetivo. */
+    if(o.id === '42k' || !o.id) return true;
+    return false;
+  }
+
+  function fixar(forcado){
+    if(!garantirItem()) return 'catálogo sem corrida';
+    if(!forcado && !precisaCorrigir()) return 'objetivo já é a PEI';
+    var antes = ST.objetivo ? (ST.objetivo.nome || ST.objetivo.id) + ' em ' + ST.objetivo.data : 'nenhum';
+    ST.objetivo = { fam: ALVO.fam, id: ALVO.id, data: ALVO.data,
+                    nome: ALVO.nome, dataManual: true };
+    console.log('alvo corrigido: ' + antes + ' → PEI em ' + ALVO.data);
+    try{ if(ST.cache) ST.cache = {} }catch(e){}
+    try{ if(typeof rebuild === 'function') rebuild() }catch(e){}
+    try{ if(typeof selecionarProximo === 'function') selecionarProximo() }catch(e){}
+    try{ if(typeof renderTudo === 'function') renderTudo() }catch(e){}
+    try{ if(typeof persistir === 'function') persistir() }catch(e){}
+    return 'objetivo agora é a PEI em ' + ALVO.data;
+  }
+
+  window.bqAlvo = {
+    fixar: function(){ return fixar(true) },
+    ver: function(){
+      var o = null;
+      try{ o = (typeof objetivoAtivo === 'function') ? objetivoAtivo() : null }catch(e){}
+      var ks = Object.keys(ST.plano || {}).sort();
+      return ['objetivo em ST : ' + (ST.objetivo ? ST.objetivo.id + ' · ' + ST.objetivo.data : 'nenhum'),
+              'objetivo ativo : ' + (o ? (o.nome || o.n) + ' · ' + o.data + ' · ' + o.sem + ' semanas' : 'nenhum'),
+              'plano          : ' + ks.length + ' dias' +
+                (ks.length ? ' (' + ks[0] + ' a ' + ks[ks.length-1] + ')' : ''),
+              'precisa corrigir: ' + (precisaCorrigir() ? 'SIM' : 'não')].join('\n');
+    }
+  };
+
+  /* no arranque, e de novo depois que a nuvem responde — o boot do app
+     e assincrono e sobrescreve ST.objetivo com o que veio do Firebase */
+  fixar(false);
+  setTimeout(function(){ try{ fixar(false) }catch(e){} }, 3000);
+  setTimeout(function(){ try{ fixar(false) }catch(e){} }, 9500);
+});
+
+
 /* ─────────── selo de diagnóstico ─────────── */
 (function(){
   function montar(){
@@ -9493,7 +9609,7 @@ PARTE('o dia vira à meia-noite', function(){
         var l = window.planoBQ.ligado();
         var diag = '';
         try{ diag = window.bqDiag ? '\n\n── diagnóstico ──\n' + window.bqDiag() : '' }catch(e){}
-        if(confirm('fix.js ' + FIX_VERSAO + ' — as quarenta e quatro partes carregaram.\n\n'
+        if(confirm('fix.js ' + FIX_VERSAO + ' — as quarenta e cinco partes carregaram.\n\n'
           + 'Plano PEI Marathon: ' + (l ? 'LIGADO' : 'desligado') + diag
           + '\n\nOK ' + (l ? 'desliga o plano e volta ao automático do app.'
                              : 'liga o plano da maratona.'))){
@@ -9516,7 +9632,7 @@ PARTE('o dia vira à meia-noite', function(){
         return;
       }
       alert(ok
-        ? 'fix.js ' + FIX_VERSAO + ' — as quarenta e quatro partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
+        ? 'fix.js ' + FIX_VERSAO + ' — as quarenta e cinco partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
         : 'fix.js ' + FIX_VERSAO + '\n\nFalharam:\n\n' + FIX_FALHAS.join('\n\n'));
     };
     barra.insertBefore(s, barra.firstChild.nextSibling);
