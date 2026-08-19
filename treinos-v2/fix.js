@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '04m';
+const FIX_VERSAO = '04n';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -9642,6 +9642,173 @@ PARTE('um alvo só: PEI', function(){
 });
 
 
+/* ═══ 46. A ABA COACH GANHA HIERARQUIA E COR ═══
+
+   O QUE VOCE PEDIU: a aba Coach esta monocromatica, sem vida, e nao
+   da para saber onde olhar primeiro.
+
+   O DIAGNOSTICO. Tudo na tela tem o mesmo peso visual: titulo de
+   secao, nome do treino, texto explicativo e numero importante usam
+   pesos e tamanhos parecidos, e quase tudo e cinza. Quando tudo grita
+   igual, nada e ouvido. E o oposto do que a planilha fez do outro
+   lado, onde a cor carrega significado.
+
+   O QUE ESTA PARTE FAZ — e o que ela NAO faz.
+
+   NAO MEXE EM NENHUMA CONTA. Nenhum numero muda, nenhuma regra muda,
+   nenhuma funcao e embrulhada. E so folha de estilo e uma marcacao de
+   cor na etapa principal do dia. Se voce apagar esta parte, os mesmos
+   numeros continuam na tela, so que sem enfase.
+
+   AS TRES REGRAS DE ESTILO:
+
+   1. HIERARQUIA. Titulo de secao (o "kicker") fica maior e mais
+      claro, com um filete na cor de destaque a esquerda. Nome de
+      treino ganha peso. Texto explicativo diminui e recua. Assim o
+      olho encontra a ordem: onde estou, o que e hoje, os detalhes.
+
+   2. COR COM SIGNIFICADO, nunca decorativa. Uso a mesma paleta da
+      planilha, para verde continuar querendo dizer "leve" e vermelho
+      "forte" nas duas telas. A etapa PRINCIPAL do dia recebe a cor da
+      intensidade do treino; as etapas de apoio ficam discretas.
+
+   3. O NUMERO GRANDE E O PROTAGONISTA. Dias para a prova, km do dia e
+      ritmo alvo ganham tamanho e cor. Eram do mesmo tamanho do texto
+      ao lado.
+
+   NO CONSOLE:
+     bqVisual.desligar()   — volta ao visual anterior
+     bqVisual.ligar()
+   ══════════════════════════════════════════════════════════════════ */
+
+PARTE('visual da aba coach', function(){
+  var OFF = 'bq.visual.off';
+  var ligado = function(){ try{ return localStorage.getItem(OFF) !== '1' }catch(e){ return true } };
+
+  /* mesma paleta da planilha: a cor quer dizer a mesma coisa nas duas telas */
+  var ZC = {
+    prova:'#FFFFFF', soltura:'#7C93A8', rec:'#7C93A8', facil:'#3FD98A',
+    longo:'#C9F24E', mp:'#F5C544', progressivo:'#F5C544', limiar:'#F79256',
+    tempo:'#F79256', vo2:'#F2685C', intervalado:'#F2685C', fartlek:'#F2685C',
+    tiros:'#C77DFF', ladeira:'#C77DFF', forca:'#9AA5B8', cross:'#4FA6F5', brick:'#4FA6F5'
+  };
+  var MODC = { bike:'#4FA6F5', natacao:'#3FE0C4', forca:'#9AA5B8' };
+
+  function corDe(s){
+    if(!s) return null;
+    if(s.prova) return ZC.prova;
+    if(s.mod && s.mod !== 'corrida') return MODC[s.mod] || ZC.forca;
+    return ZC[s.foco] || ZC.facil;
+  }
+
+  var css = document.createElement('style');
+  css.id = 'bqVisualCSS';
+  css.textContent = [
+/* ── 1. hierarquia: o titulo de secao vira ancora ── */
+'body.bqv .kicker{font-size:10.5px;letter-spacing:.14em;color:var(--tx2);',
+'  display:inline-flex;align-items:center;gap:7px}',
+'body.bqv .kicker:before{content:"";width:3px;height:11px;border-radius:2px;',
+'  background:var(--acc);flex:none;opacity:.85}',
+
+/* ── 2. o hero: o contador de dias e o protagonista ── */
+'body.bqv .hero h1{font-weight:800;letter-spacing:-.02em}',
+'body.bqv .hero .cd .n{font-weight:800;letter-spacing:-.04em}',
+'body.bqv .hero .barlab{font-weight:700}',
+'body.bqv .hero .barlab span:first-child{color:var(--acc)}',
+
+/* ── 3. o treino do dia ── */
+'body.bqv .sess .et .t{font-size:14.5px;font-weight:800;letter-spacing:-.015em;color:var(--tx)}',
+'body.bqv .sess .et .d{font-size:12px;line-height:1.55;color:var(--tx3)}',
+/* a etapa principal recebe a cor da intensidade */
+'body.bqv .sess .et.bq-principal{background:var(--bqw,rgba(255,255,255,.03));border-radius:14px}',
+'body.bqv .sess .et.bq-principal .t{color:var(--bqc,var(--tx))}',
+'body.bqv .sess .et.bq-principal .box{border-color:var(--bqc,var(--s3))}',
+/* as de apoio ficam discretas, para nao competir */
+'body.bqv .sess .et.bq-apoio .t{font-weight:700;font-size:13.5px;color:var(--tx2)}',
+'body.bqv .sess .et.bq-apoio .d{font-size:11.5px;opacity:.85}',
+
+/* ── 4. etiquetas: ritmo em destaque, FC em tom proprio ── */
+'body.bqv .tg{font-weight:800;letter-spacing:.01em}',
+'body.bqv .tg.z{background:var(--acc-wash);color:var(--acc)}',
+'body.bqv .tg.hr{background:rgba(242,104,92,.14);color:#F2685C}',
+
+/* ── 5. a barra de progresso do dia ── */
+'body.bqv .prog .ptrack i{background:linear-gradient(90deg,var(--acc),var(--ok))}',
+'body.bqv .prog .plab{font-weight:700;color:var(--tx2)}',
+
+/* ── 6. cartoes com separacao mais clara ── */
+'body.bqv .card,body.bqv .sess{border:1px solid rgba(255,255,255,.055)}',
+'body.bqv #bqCic .pct{letter-spacing:-.035em}',
+
+/* ── 7. o objetivo ── */
+'body.bqv #objAtual{font-weight:800;letter-spacing:-.01em}',
+'body.bqv .objacao{color:var(--acc);font-weight:800}'
+  ].join('\n');
+  document.head.appendChild(css);
+
+  /* ── marca a etapa principal e injeta a cor do dia ── */
+  var RE_PRINCIPAL = /principal|contínuo|continuo|bloco|longo|tiros|ritmo|limiar|intervalado/i;
+  var RE_APOIO = /aquecimento|alongamento|educativo|mobilidade|desaquecimento|hidrat|nutri|conta fecha/i;
+
+  function pintar(){
+    if(!ligado()) return;
+    try{
+      var el = document.querySelector('#sess');
+      if(!el) return;
+      var s = (typeof sessaoDe === 'function') ? sessaoDe(ST.sel) : (ST.plano || {})[ST.sel];
+      var cor = corDe(s);
+
+      Array.prototype.forEach.call(el.querySelectorAll('.et'), function(et){
+        et.classList.remove('bq-principal', 'bq-apoio');
+        var t = '';
+        try{ t = (et.querySelector('.t') || {}).textContent || '' }catch(e){}
+        if(RE_APOIO.test(t)) et.classList.add('bq-apoio');
+        else if(RE_PRINCIPAL.test(t)){
+          et.classList.add('bq-principal');
+          if(cor){
+            et.style.setProperty('--bqc', cor);
+            et.style.setProperty('--bqw', alfa(cor, 0.09));
+          }
+        }
+      });
+    }catch(e){ console.warn('visual:', e && e.message) }
+  }
+
+  function alfa(hex, a){
+    var h = String(hex).replace('#','');
+    if(h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+    var n = parseInt(h, 16);
+    return 'rgba(' + ((n>>16)&255) + ',' + ((n>>8)&255) + ',' + (n&255) + ',' + a + ')';
+  }
+
+  function aplicar(){
+    try{
+      document.body.classList.toggle('bqv', ligado());
+      pintar();
+    }catch(e){}
+  }
+
+  ['renderDia','renderCoach'].forEach(function(nome){
+    var orig = window[nome];
+    if(typeof orig !== 'function') return;
+    window[nome] = function(){
+      var r = orig.apply(this, arguments);
+      try{ aplicar() }catch(e){}
+      return r;
+    };
+  });
+
+  window.bqVisual = {
+    ligar: function(){ try{ localStorage.removeItem(OFF) }catch(e){} aplicar(); return 'visual novo' },
+    desligar: function(){ try{ localStorage.setItem(OFF, '1') }catch(e){} aplicar(); return 'visual anterior' },
+    ligado: ligado
+  };
+
+  aplicar();
+  setTimeout(aplicar, 2000);
+});
+
+
 /* ─────────── selo de diagnóstico ─────────── */
 (function(){
   function montar(){
@@ -9661,7 +9828,7 @@ PARTE('um alvo só: PEI', function(){
         var l = window.planoBQ.ligado();
         var diag = '';
         try{ diag = window.bqDiag ? '\n\n── diagnóstico ──\n' + window.bqDiag() : '' }catch(e){}
-        if(confirm('fix.js ' + FIX_VERSAO + ' — as quarenta e cinco partes carregaram.\n\n'
+        if(confirm('fix.js ' + FIX_VERSAO + ' — as quarenta e seis partes carregaram.\n\n'
           + 'Plano PEI Marathon: ' + (l ? 'LIGADO' : 'desligado') + diag
           + '\n\nOK ' + (l ? 'desliga o plano e volta ao automático do app.'
                              : 'liga o plano da maratona.'))){
@@ -9684,7 +9851,7 @@ PARTE('um alvo só: PEI', function(){
         return;
       }
       alert(ok
-        ? 'fix.js ' + FIX_VERSAO + ' — as quarenta e cinco partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
+        ? 'fix.js ' + FIX_VERSAO + ' — as quarenta e seis partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
         : 'fix.js ' + FIX_VERSAO + '\n\nFalharam:\n\n' + FIX_FALHAS.join('\n\n'));
     };
     barra.insertBefore(s, barra.firstChild.nextSibling);
