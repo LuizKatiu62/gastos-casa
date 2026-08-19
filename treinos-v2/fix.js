@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '04n';
+const FIX_VERSAO = '04o';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -9742,7 +9742,46 @@ PARTE('visual da aba coach', function(){
 
 /* ── 7. o objetivo ── */
 'body.bqv #objAtual{font-weight:800;letter-spacing:-.01em}',
-'body.bqv .objacao{color:var(--acc);font-weight:800}'
+'body.bqv .objacao{color:var(--acc);font-weight:800}',
+
+/* ── 8. O CARTAO DE ANALISE (bqa-*) ──
+   Foi o que voce me mostrou e o que eu nao tinha tocado: ele tem
+   classes proprias, entao nada do estilo acima o alcancava. E onde
+   moram "Projecao", "Ultimo treino comparado", "Hoje", "Fora do
+   plano" — os titulos que estavam cinza e apagados. */
+'body.bqv .bqa-t{font-size:10.5px;letter-spacing:.13em;opacity:1;color:var(--tx2);',
+'  font-weight:800;display:inline-flex;align-items:center;gap:7px;margin:18px 0 8px}',
+'body.bqv .bqa-t:before{content:"";width:3px;height:11px;border-radius:2px;',
+'  background:var(--acc);flex:none;opacity:.85}',
+
+/* os blocos de texto ganham respiro e um filete lateral discreto */
+'body.bqv .bqa-u{background:rgba(255,255,255,.035);border-left:2px solid rgba(255,255,255,.10);',
+'  border-radius:0 10px 10px 0;padding:11px 12px;font-size:12.5px;color:var(--tx2)}',
+
+/* o veredito no topo: titulo com peso de verdade */
+'body.bqv .bqa-v b{font-size:15.5px;font-weight:800;letter-spacing:-.015em}',
+'body.bqv .bqa-v span{opacity:1;color:var(--tx3)}',
+'body.bqv .bqa-bom b{color:var(--ok)}',
+'body.bqv .bqa-atencao b{color:var(--warn)}',
+'body.bqv .bqa-ruim b{color:var(--bad)}',
+'body.bqv .bqa-info b{color:var(--tx)}',
+
+/* os quatro numeros: rotulo apagado, numero em destaque */
+'body.bqv .bqa-c{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.06)}',
+'body.bqv .bqa-c i{color:var(--tx3);font-weight:800;letter-spacing:.09em}',
+'body.bqv .bqa-c b{font-size:21px;font-weight:800;letter-spacing:-.035em;color:var(--tx)}',
+'body.bqv .bqa-c u{text-decoration:none;color:var(--tx3);font-size:10.5px;line-height:1.4}',
+
+/* dentro dos blocos, o que e numero vira monoespacado e claro */
+'body.bqv .bqa-u b,body.bqv .bqa-p b{color:var(--tx);font-weight:800}',
+'body.bqv .bqa-di{color:var(--tx3)}',
+
+/* a projecao e a pergunta central: "da para a PEI?" */
+'body.bqv .bqa-p{background:var(--acc-wash);border:1px solid rgba(201,242,78,.18)}',
+'body.bqv .bqa-p b:first-child{color:var(--acc)}',
+
+/* a legenda recolhida fica com cara de botao, nao de texto solto */
+'body.bqv .bqa-leg>summary{color:var(--acc);font-weight:800}'
   ].join('\n');
   document.head.appendChild(css);
 
