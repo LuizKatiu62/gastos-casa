@@ -1,8 +1,8 @@
 {
- "ate": "2026-08-25",
- "de": "2026-08-19",
+ "ate": "2026-08-26",
+ "de": "2026-08-20",
  "fcMax": 163,
- "gerado": "2026-08-19T20:28:30.405Z",
+ "gerado": "2026-08-20T10:33:32.570Z",
  "limiar": "5:16",
  "sessoes": [
   {
@@ -146,6 +146,51 @@
      "texto": "5 min de trote muito leve ate a respiracao normalizar.",
      "tipo": "cooldown",
      "valor": 300
+    }
+   ]
+  },
+  {
+   "data": "2026-08-26",
+   "foco": "vo2",
+   "km": 4.4,
+   "min": 28,
+   "nome": "26/08 · Intervalado VO₂ · 4.4 km total",
+   "nota": "Total porta a porta 4.4 km. Alongamentos e educativos ANTES do start, relogio parado.",
+   "paceMedio": "6:22",
+   "passos": [
+    {
+     "fim": "time",
+     "lento": 2.2676,
+     "rapido": 2.4331,
+     "texto": "10 min subindo devagar, 6:51–7:21/km. Se chegar ofegante ao fim, foi rapido demais.",
+     "tipo": "warmup",
+     "valor": 600
+    },
+    {
+     "passos": [
+      {
+       "fim": "distance",
+       "lento": 3.3898,
+       "rapido": 3.5587,
+       "texto": "600 m em 4:41–4:55/km, FC ate 148-158 bpm.",
+       "tipo": "interval",
+       "valor": 600
+      },
+      {
+       "fim": "time",
+       "texto": "2 min de trote leve. Nao pare de correr.",
+       "tipo": "recovery",
+       "valor": 90
+      }
+     ],
+     "tipo": "repetir",
+     "vezes": 3
+    },
+    {
+     "fim": "time",
+     "texto": "7 min de trote muito leve ate a respiracao normalizar.",
+     "tipo": "cooldown",
+     "valor": 420
     }
    ]
   }
