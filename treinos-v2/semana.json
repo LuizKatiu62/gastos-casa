@@ -1,43 +1,10 @@
 {
- "ate": "2026-08-26",
- "de": "2026-08-20",
+ "ate": "2026-08-27",
+ "de": "2026-08-21",
  "fcMax": 163,
- "gerado": "2026-08-21T01:21:12.162Z",
+ "gerado": "2026-08-21T10:01:09.137Z",
  "limiar": "5:16",
  "sessoes": [
-  {
-   "data": "2026-08-20",
-   "foco": "facil",
-   "km": 5.2,
-   "min": 34,
-   "nome": "20/08 · Rodagem moderada · 5.2 km total",
-   "nota": "Total porta a porta 5.2 km. Alongamentos e educativos ANTES do start, relogio parado.",
-   "paceMedio": "6:32",
-   "passos": [
-    {
-     "fim": "time",
-     "lento": 2.2676,
-     "rapido": 2.4331,
-     "texto": "8 min subindo devagar, 6:51–7:21/km. Se chegar ofegante ao fim, foi rapido demais.",
-     "tipo": "warmup",
-     "valor": 480
-    },
-    {
-     "fim": "distance",
-     "lento": 2.5575,
-     "rapido": 2.7701,
-     "texto": "3.4 km em 6:01–6:31/km. Voce deve conseguir falar frases inteiras.",
-     "tipo": "interval",
-     "valor": 3400
-    },
-    {
-     "fim": "time",
-     "texto": "5 min de trote muito leve ate a respiracao normalizar.",
-     "tipo": "cooldown",
-     "valor": 300
-    }
-   ]
-  },
   {
    "data": "2026-08-21",
    "foco": "vo2",
@@ -191,6 +158,39 @@
      "texto": "7 min de trote muito leve ate a respiracao normalizar.",
      "tipo": "cooldown",
      "valor": 420
+    }
+   ]
+  },
+  {
+   "data": "2026-08-27",
+   "foco": "facil",
+   "km": 4.1,
+   "min": 27,
+   "nome": "27/08 · Rodagem moderada · 4.1 km total",
+   "nota": "Total porta a porta 4.1 km. Alongamentos e educativos ANTES do start, relogio parado.",
+   "paceMedio": "6:35",
+   "passos": [
+    {
+     "fim": "time",
+     "lento": 2.2676,
+     "rapido": 2.4331,
+     "texto": "8 min subindo devagar, 6:51–7:21/km. Se chegar ofegante ao fim, foi rapido demais.",
+     "tipo": "warmup",
+     "valor": 480
+    },
+    {
+     "fim": "distance",
+     "lento": 2.5575,
+     "rapido": 2.7701,
+     "texto": "2.3 km em 6:01–6:31/km. Voce deve conseguir falar frases inteiras.",
+     "tipo": "interval",
+     "valor": 2300
+    },
+    {
+     "fim": "time",
+     "texto": "5 min de trote muito leve ate a respiracao normalizar.",
+     "tipo": "cooldown",
+     "valor": 300
     }
    ]
   }
