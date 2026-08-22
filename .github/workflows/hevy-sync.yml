@@ -1,0 +1,187 @@
+name: Hevy Sync
+
+# Recebe uma sessao de forca do app treinos-v2 e atualiza a rotina
+# correspondente no Hevy. A chave da API vem do cofre de secrets do
+# repositorio (HEVY_API_KEY) e nunca aparece no codigo nem no log.
+
+on:
+  workflow_dispatch:
+    inputs:
+      payload:
+        description: 'JSON da sessao: {rotina, data, itens:[{n,s,c}]}'
+        required: true
+        type: string
+
+jobs:
+  enviar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enviar rotina ao Hevy
+        env:
+          HEVY_API_KEY: ${{ secrets.HEVY_API_KEY }}
+          PAYLOAD: ${{ inputs.payload }}
+        run: |
+          cat > enviar.mjs <<'FIMDOSCRIPT'
+          const CHAVE = process.env.HEVY_API_KEY;
+          const BASE  = 'https://api.hevyapp.com/v1';
+
+          if (!CHAVE) {
+            console.error('Falta o secret HEVY_API_KEY no repositorio.');
+            process.exit(1);
+          }
+
+          let dados;
+          try { dados = JSON.parse(process.env.PAYLOAD); }
+          catch (e) { console.error('Payload invalido:', e.message); process.exit(1); }
+
+          if (!dados.rotina || !Array.isArray(dados.itens) || !dados.itens.length) {
+            console.error('Payload sem rotina ou sem exercicios.');
+            process.exit(1);
+          }
+
+          console.log('Rotina alvo: ' + dados.rotina);
+          console.log('Exercicios : ' + dados.itens.length);
+          console.log('');
+
+          const cab = { 'api-key': CHAVE, 'Content-Type': 'application/json' };
+
+          async function pegar(caminho) {
+            const r = await fetch(BASE + caminho, { headers: cab });
+            if (r.status === 401) throw new Error('Chave recusada pelo Hevy (401). Confira o secret HEVY_API_KEY.');
+            if (!r.ok) throw new Error('GET ' + caminho + ' devolveu ' + r.status);
+            return r.json();
+          }
+
+          // junta todas as paginas de um endpoint
+          async function tudo(rota, campo) {
+            const out = [];
+            for (let p = 1; p <= 40; p++) {
+              const j = await pegar(rota + '?page=' + p + '&pageSize=100');
+              const lote = j[campo] || [];
+              out.push(...lote);
+              if (lote.length < 100) break;
+            }
+            return out;
+          }
+
+          // normaliza para comparar nomes: sem acento, so letras e numeros
+          const nrm = s => String(s || '')
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase().replace(/[^a-z0-9]/g, '');
+
+          // "3x12" -> 3 series de 12 | "3x40s" -> 3 series de 40 segundos
+          // Blocos com "+" ("3x15 + 3x15"): usa o primeiro.
+          function series(txt) {
+            const primeiro = String(txt || '').split('+')[0];
+            const m = primeiro.match(/(\d+)\s*[x\u00d7]\s*(\d+)\s*(s|seg)?/i);
+            if (!m) return [{ type: 'normal', weight_kg: null, reps: null,
+                              distance_meters: null, duration_seconds: null, custom_metric: null }];
+            const n = Math.min(parseInt(m[1], 10), 10);
+            const v = parseInt(m[2], 10);
+            const tempo = !!m[3];
+            const um = { type: 'normal', weight_kg: null,
+                         reps: tempo ? null : v,
+                         distance_meters: null,
+                         duration_seconds: tempo ? v : null,
+                         custom_metric: null };
+            return Array.from({ length: n }, () => ({ ...um }));
+          }
+
+          function acharTemplate(nome, mapa, lista) {
+            const alvo = nrm(nome);
+            if (mapa[alvo]) return mapa[alvo];
+            // "Plank + Side Plank" -> tenta cada parte
+            for (const parte of String(nome).split('+')) {
+              const p = nrm(parte);
+              if (p && mapa[p]) return mapa[p];
+            }
+            // comeca com / contem
+            let c = lista.find(t => nrm(t.title).startsWith(alvo) || alvo.startsWith(nrm(t.title)));
+            if (c) return c.id;
+            c = lista.find(t => nrm(t.title).includes(alvo) || alvo.includes(nrm(t.title)));
+            if (c) return c.id;
+
+            // ultimo recurso: por palavras. "Banded Hip Abduction" casa com
+            // "Hip Abduction (Band)" porque as raizes band/hip/abduc batem.
+            const pal = String(nome).split(/[^A-Za-z]+/)
+              .map(nrm).filter(p => p.length >= 3).map(p => p.slice(0, 4));
+            if (!pal.length) return null;
+            let melhor = null, nota = 0;
+            for (const t of lista) {
+              const alvoT = nrm(t.title);
+              const n = pal.filter(p => alvoT.includes(p)).length;
+              if (n > nota) { nota = n; melhor = t; }
+            }
+            return (melhor && nota >= Math.ceil(pal.length / 2)) ? melhor.id : null;
+          }
+
+          (async () => {
+            const templates = await tudo('/exercise_templates', 'exercise_templates');
+            console.log('Templates de exercicio disponiveis: ' + templates.length);
+
+            const mapa = {};
+            for (const t of templates) if (!mapa[nrm(t.title)]) mapa[nrm(t.title)] = t.id;
+
+            const rotinas = await tudo('/routines', 'routines');
+            console.log('Rotinas na conta: ' + rotinas.length);
+            console.log('');
+
+            const alvo = nrm(dados.rotina);
+            const rotina = rotinas.find(r => nrm(r.title) === alvo)
+                        || rotinas.find(r => nrm(r.title).includes(alvo) || alvo.includes(nrm(r.title)));
+
+            if (!rotina) {
+              console.error('Nao achei a rotina "' + dados.rotina + '" no Hevy.');
+              console.error('Rotinas encontradas:');
+              for (const r of rotinas) console.error('  - ' + r.title);
+              process.exit(1);
+            }
+            console.log('Casou com a rotina: ' + rotina.title);
+
+            const exercicios = [];
+            const perdidos = [];
+            for (const it of dados.itens) {
+              const id = acharTemplate(it.n, mapa, templates);
+              if (!id) { perdidos.push(it.n); continue; }
+              exercicios.push({
+                exercise_template_id: id,
+                superset_id: null,
+                rest_seconds: 90,
+                notes: (it.c || '').slice(0, 250),
+                sets: series(it.s)
+              });
+              console.log('  ok  ' + it.n + '  (' + (it.s || '-') + ')');
+            }
+
+            for (const p of perdidos) console.log('  --  ' + p + '  sem template equivalente, ficou de fora');
+
+            if (!exercicios.length) {
+              console.error('Nenhum exercicio pode ser mapeado. Nada foi enviado.');
+              process.exit(1);
+            }
+
+            const corpo = {
+              routine: {
+                title: rotina.title,
+                notes: 'Enviado pelo app treinos-v2 em ' + (dados.data || new Date().toISOString().slice(0, 10)),
+                exercises: exercicios
+              }
+            };
+
+            const r = await fetch(BASE + '/routines/' + rotina.id, {
+              method: 'PUT', headers: cab, body: JSON.stringify(corpo)
+            });
+
+            if (!r.ok) {
+              console.error('PUT devolveu ' + r.status);
+              console.error(await r.text());
+              process.exit(1);
+            }
+
+            console.log('');
+            console.log('PRONTO - ' + exercicios.length + ' exercicios gravados em "' + rotina.title + '"');
+            if (perdidos.length) console.log('AVISO - ' + perdidos.length + ' ficaram de fora (lista acima)');
+          })().catch(e => { console.error('FALHOU: ' + e.message); process.exit(1); });
+          FIMDOSCRIPT
+
+          node enviar.mjs
