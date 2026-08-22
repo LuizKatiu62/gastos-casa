@@ -2,7 +2,7 @@
  "ate": "2026-08-28",
  "de": "2026-08-22",
  "fcMax": 163,
- "gerado": "2026-08-22T17:39:17.939Z",
+ "gerado": "2026-08-22T18:01:45.889Z",
  "limiar": "5:16",
  "sessoes": [
   {
@@ -41,10 +41,10 @@
   {
    "data": "2026-08-25",
    "foco": "facil",
-   "km": 4.3,
-   "min": 28,
-   "nome": "25/08 · Rodagem leve + tiros curtos · 4.3 km total",
-   "nota": "Total porta a porta 4.3 km. Alongamentos e educativos ANTES do start, relogio parado.",
+   "km": 4,
+   "min": 26,
+   "nome": "25/08 · Rodagem leve + tiros curtos · 4.0 km total",
+   "nota": "Total porta a porta 4.0 km. Alongamentos e educativos ANTES do start, relogio parado.",
    "paceMedio": "6:31",
    "passos": [
     {
@@ -119,10 +119,10 @@
   {
    "data": "2026-08-27",
    "foco": "facil",
-   "km": 4.3,
-   "min": 28,
-   "nome": "27/08 · Rodagem moderada · 4.3 km total",
-   "nota": "Total porta a porta 4.3 km. Alongamentos e educativos ANTES do start, relogio parado.",
+   "km": 4,
+   "min": 26,
+   "nome": "27/08 · Rodagem moderada · 4.0 km total",
+   "nota": "Total porta a porta 4.0 km. Alongamentos e educativos ANTES do start, relogio parado.",
    "paceMedio": "6:31",
    "passos": [
     {
