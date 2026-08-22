@@ -1764,6 +1764,22 @@ const cofre = {
 
 async function fbToken(){
   if(FB_TOKEN) return FB_TOKEN;
+    const rt = cofre.ler('bq.rt');
+  if(rt){
+    try{
+      const rr = await fetch(`https://securetoken.googleapis.com/v1/token?key=${FB_KEY}`,
+        {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
+         body:'grant_type=refresh_token&refresh_token='+encodeURIComponent(rt)});
+      const jj = await rr.json();
+      if(rr.ok && jj.id_token){
+        if(jj.refresh_token) cofre.gravar('bq.rt', jj.refresh_token);
+        FB_TOKEN = jj.id_token;
+        return FB_TOKEN;
+      }
+      cofre.apagar('bq.rt');
+    }catch(e){ console.warn('fbToken sessao:', e.message) }
+  }
+  
   try{
     const r = await Promise.race([
       fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${FB_KEY}`,
