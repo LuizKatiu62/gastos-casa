@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '04q';
+const FIX_VERSAO = '05a';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -9981,3 +9981,99 @@ PARTE('texto do MOTRA', function(){
   else montar();
   setTimeout(montar, 1500);
 })();
+
+PARTE('botão hevy', function(){
+  if(typeof SESSOES_ACADEMIA !== 'object') throw new Error('app sem SESSOES_ACADEMIA');
+  var WF = 'hevy-sync.yml';
+
+  function payload(s){
+    var sid = s.sessao || (typeof sessaoAcademiaDe === 'function' ? sessaoAcademiaDe(s.data) : null);
+    var ses = sid && SESSOES_ACADEMIA[sid];
+    if(!ses) throw new Error('sessão de força não identificada');
+    return { rotina: ses.nome, data: s.data,
+      itens: ses.itens.map(function(it){
+        var e = ACADEMIA[it.k] || {};
+        return { n: e.n || it.k, s: e.s || '', c: e.c || '' };
+      }) };
+  }
+
+  function token(){
+    try{ return (typeof GH_TOKEN === 'string' && GH_TOKEN) ? GH_TOKEN : (cofre.ler('gh_token') || '') }
+    catch(e){ return '' }
+  }
+
+  function aviso(t, tipo){
+    if(typeof avisar === 'function') avisar(t, tipo || 'ok'); else alert(t.replace(/<[^>]+>/g,''));
+  }
+
+  async function enviar(s, botao){
+    var t = token();
+    if(!t){ aviso('Conecte o GitHub pelo botão <b>Sync Garmin</b> primeiro.','err'); return }
+    var dados;
+    try{ dados = payload(s) }catch(e){ aviso(e.message,'err'); return }
+    var rotulo = botao ? botao.textContent : '';
+    if(botao){ botao.disabled = true; botao.textContent = 'Enviando…' }
+    var solta = function(txt, av){
+      if(botao){ botao.disabled = false; botao.textContent = txt || rotulo;
+        if(txt) setTimeout(function(){ botao.textContent = rotulo }, 2600) }
+      if(av) aviso(av[0], av[1]);
+    };
+    var cab = {'Authorization':'Bearer ' + t, 'Accept':'application/vnd.github.v3+json', 'Content-Type':'application/json'};
+    var desde = new Date(Date.now() - 60000).toISOString();
+    try{
+      var r = await fetch('https://api.github.com/repos/' + GH_REPO + '/actions/workflows/' + WF + '/dispatches',
+        {method:'POST', headers:cab, body:JSON.stringify({ref:'main', inputs:{payload: JSON.stringify(dados)}})});
+      if(r.status === 401){ solta('', ['Token recusado. Gere outro pelo Sync Garmin.','err']); return }
+      if(r.status === 403){ solta('', ['Erro 403. O token precisa da permissão <b>workflow</b>.','err']); return }
+      if(r.status === 404){ solta('', ['Não achei o ' + WF + ' no repositório.','err']); return }
+      if(r.status !== 204){ solta('', ['Erro ' + r.status + ' ao disparar.','err']); return }
+      var espera = function(ms){ return new Promise(function(x){ setTimeout(x, ms) }) };
+      var t0 = Date.now();
+      while(Date.now() - t0 < 5*60*1000){
+        await espera(6000);
+        var run = null, podeLer = true;
+        try{
+          var u = 'https://api.github.com/repos/' + GH_REPO + '/actions/workflows/' + WF +
+                  '/runs?event=workflow_dispatch&per_page=5&created=>=' + encodeURIComponent(desde);
+          var rr = await fetch(u, {headers:cab});
+          if(!rr.ok) podeLer = false;
+          else{ var j = await rr.json();
+            run = (j.workflow_runs || []).sort(function(a,c){ return new Date(c.created_at) - new Date(a.created_at) })[0] || null }
+        }catch(e){ podeLer = false }
+        if(!podeLer){ solta('✓ Disparado', ['Enviado ao Hevy. Confira em um minuto.','ok']); return }
+        if(!run) continue;
+        if(run.status !== 'completed'){
+          if(botao) botao.textContent = run.status === 'in_progress' ? 'Processando…' : 'Na fila…';
+          continue;
+        }
+        if(run.conclusion === 'success'){ solta('✓ No Hevy', ['Rotina <b>' + dados.rotina + '</b> atualizada.','ok']); return }
+        solta('', ['O envio falhou (' + run.conclusion + '). Veja a aba Actions.','err']); return;
+      }
+      solta('', ['Demorou mais que o esperado.','err']);
+    }catch(e){ solta('', ['Erro de rede: ' + e.message,'err']) }
+  }
+
+  function coloca(){
+    document.querySelectorAll('button').forEach(function(b){
+      if(!/MOTRA/i.test(b.textContent)) return;
+      if(b.dataset.hevyOk) return;
+      b.dataset.hevyOk = '1';
+      var k = b.dataset.exmotra || null;
+      var h = document.createElement('button');
+      h.textContent = 'Hevy';
+      h.className = b.className;
+      h.onclick = function(ev){
+        ev.preventDefault(); ev.stopPropagation();
+        var s = null;
+        if(k && ST.extras && ST.extras[k]) s = ST.extras[k];
+        else if(typeof ST === 'object' && ST.sel && typeof sessaoDe === 'function') s = sessaoDe(ST.sel);
+        if(!s){ aviso('Não identifiquei a sessão desta tela.','err'); return }
+        enviar(s, h);
+      };
+      b.insertAdjacentElement('afterend', h);
+    });
+  }
+  coloca();
+  new MutationObserver(coloca).observe(document.body, {childList:true, subtree:true});
+  window.bqHevy = { enviar: enviar };
+});
