@@ -53,13 +53,13 @@ jobs:
           }
 
           // junta todas as paginas de um endpoint
-          async function tudo(rota, campo) {
+          async function tudo(rota, campo, tam) {
             const out = [];
             for (let p = 1; p <= 40; p++) {
-              const j = await pegar(rota + '?page=' + p + '&pageSize=100');
+            const j = await pegar(rota + '?page=' + p + '&pageSize=' + (tam || 100));
               const lote = j[campo] || [];
               out.push(...lote);
-              if (lote.length < 100) break;
+              if (lote.length < (tam || 100)) break;
             }
             return out;
           }
@@ -122,7 +122,7 @@ jobs:
             const mapa = {};
             for (const t of templates) if (!mapa[nrm(t.title)]) mapa[nrm(t.title)] = t.id;
 
-            const rotinas = await tudo('/routines', 'routines');
+            const rotinas = await tudo('/routines', 'routines',10);
             console.log('Rotinas na conta: ' + rotinas.length);
             console.log('');
 
