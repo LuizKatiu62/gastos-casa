@@ -2,7 +2,9 @@ name: Garmin Sync
 
 on:
   schedule:
-    - cron: '0 * * * *'      # toda hora
+      - cron: '0 10 * * *'    # 07h em Saint John
+      - cron: '0 16 * * *'    # 13h em Saint John
+      - cron: '0 23 * * *'    # 20h em Saint John
   workflow_dispatch:          # botão manual no GitHub
     inputs:
       health_days:
