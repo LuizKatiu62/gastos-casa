@@ -2,7 +2,7 @@
  "ate": "2026-08-29",
  "de": "2026-08-23",
  "fcMax": 163,
- "gerado": "2026-08-23T17:11:14.808Z",
+ "gerado": "2026-08-23T17:01:54.522Z",
  "limiar": "5:16",
  "sessoes": [
   {
@@ -117,11 +117,11 @@
    ]
   },
   {
-   "data": "2026-08-28",
+   "data": "2026-08-29",
    "foco": "longo",
    "km": 21.1,
    "min": 131,
-   "nome": "28/08 · Longão · 21.1 km total",
+   "nome": "29/08 · Longão · 21.1 km total",
    "nota": "Total porta a porta 21.1 km. Alongamentos e educativos ANTES do start, relogio parado.",
    "paceMedio": "6:13",
    "passos": [
