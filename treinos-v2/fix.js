@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '05a';
+const FIX_VERSAO = '05b';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -6489,6 +6489,8 @@ PARTE('blocos de 14 dias', function(){
       var s = B.sessoes[k];
       if(!s || s.mod !== 'corrida' || s.prova) return;
       var seg = iso(addD(dt(k), -(dow(dt(k)) - 1)));       /* segunda da semana */
+             var segHoje2 = iso(addD(HOJE, -(dow(HOJE) - 1)));
+      if(seg <= segHoje2 && ST.hist[seg] && ST.hist[seg].planKm > 0) return;
       ST.hist[seg] = ST.hist[seg] || { planKm: 0, longoPlan: 0 };
       ST.hist[seg].planKm = +(ST.hist[seg].planKm + (+s.km || 0)).toFixed(1);
       if((+s.km || 0) > ST.hist[seg].longoPlan) ST.hist[seg].longoPlan = +s.km;
@@ -6504,7 +6506,7 @@ PARTE('blocos de 14 dias', function(){
       /* comparava chave de SEGUNDA com a data de HOJE: numa terca a
          semana em curso nao era limpa e o plano somava duas vezes */
       var segHoje = iso(addD(HOJE, -(dow(HOJE) - 1)));
-      if(seg >= segHoje) delete ST.hist[seg];
+      if(seg > segHoje) delete ST.hist[seg];
     });
     ST.bloco = gerarBloco(ini || iso(HOJE));
     registrarHistorico(ST.bloco);
