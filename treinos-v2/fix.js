@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '05c';
+const FIX_VERSAO = '05d';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -10203,4 +10203,48 @@ PARTE('só força no plano', function(){
     refazer: function(){ return window.bqBloco.criar() && 'bloco refeito só com força' },
     dias: DIAS
   };
+});
+
+
+PARTE('ciclo mostra volume', function(){
+  function limpar(){ try{ if(ST.hist) ST.hist = {} }catch(e){} }
+  limpar();
+
+  function texto(){
+    var box = document.getElementById('bqCic');
+    if(!box) return;
+    var kms = [].map.call(box.querySelectorAll('.lin .km'), function(s){
+      return parseFloat(String(s.textContent).replace(',', '.')) || 0;
+    });
+    var tot = kms.reduce(function(a, b){ return a + b }, 0);
+    var faltam = Math.max(0, Math.ceil(diff(iso(HOJE), ST.objetivo && ST.objetivo.data) / 7));
+
+    var topo = box.querySelector('.topo');
+    if(topo) topo.innerHTML =
+      '<span class="pct">' + Math.round(tot) +
+      '<span style="font-size:15px;opacity:.55"> km</span></span>' +
+      '<span style="font-size:11.5px;opacity:.65">no ciclo · faltam ' + faltam + ' até a prova</span>';
+
+    var sub = box.querySelector('.sub');
+    if(sub) sub.textContent = 'Volume de corrida por semana desde o início do ciclo.';
+
+    var nota = box.querySelector('.nota');
+    if(nota) nota.innerHTML = 'A corrida é prescrita pelo seu coach, fora do app — por isso ' +
+      'aqui não há alvo nem percentual. Cada barra é o volume da semana comparado à sua maior ' +
+      'semana. A força continua sendo planejada pelo app, às segundas, quartas e sextas.';
+  }
+
+  ['renderCoach','renderDia','renderSemana'].forEach(function(nome){
+    var orig = window[nome];
+    if(typeof orig !== 'function') return;
+    window[nome] = function(){
+      var r = orig.apply(this, arguments);
+      limpar();
+      setTimeout(texto, 40);
+      return r;
+    };
+  });
+  setTimeout(function(){ limpar(); texto() }, 5600);
+
+  window.bqCicloVolume = { atualizar: texto };
 });
