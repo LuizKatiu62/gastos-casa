@@ -1,18 +1,18 @@
 {
- "ate": "2026-08-29",
- "de": "2026-08-23",
+ "ate": "2026-08-30",
+ "de": "2026-08-24",
  "fcMax": 163,
- "gerado": "2026-08-23T19:56:53.088Z",
+ "gerado": "2026-08-24T23:24:23.918Z",
  "limiar": "5:16",
  "sessoes": [
   {
    "data": "2026-08-25",
    "foco": "facil",
    "km": 4,
-   "min": 26,
+   "min": 27,
    "nome": "25/08 · Rodagem leve + tiros curtos · 4.0 km total",
    "nota": "Total porta a porta 4.0 km. Alongamentos e educativos ANTES do start, relogio parado.",
-   "paceMedio": "6:31",
+   "paceMedio": "6:45",
    "passos": [
     {
      "fim": "time",
@@ -26,60 +26,15 @@
      "fim": "distance",
      "lento": 2.5575,
      "rapido": 2.7701,
-     "texto": "2.5 km em 6:01–6:31/km. Voce deve conseguir falar frases inteiras.",
+     "texto": "2.2 km em 6:01–6:31/km. Voce deve conseguir falar frases inteiras.",
      "tipo": "interval",
-     "valor": 2500
+     "valor": 2200
     },
     {
      "fim": "time",
      "texto": "5 min de trote muito leve ate a respiracao normalizar.",
      "tipo": "cooldown",
      "valor": 300
-    }
-   ]
-  },
-  {
-   "data": "2026-08-26",
-   "foco": "vo2",
-   "km": 6,
-   "min": 37,
-   "nome": "26/08 · Intervalado VO₂ · 6.0 km total",
-   "nota": "Total porta a porta 6.0 km. Alongamentos e educativos ANTES do start, relogio parado.",
-   "paceMedio": "6:10",
-   "passos": [
-    {
-     "fim": "time",
-     "lento": 2.2676,
-     "rapido": 2.4331,
-     "texto": "12 min subindo devagar, 6:51–7:21/km. Se chegar ofegante ao fim, foi rapido demais.",
-     "tipo": "warmup",
-     "valor": 720
-    },
-    {
-     "passos": [
-      {
-       "fim": "distance",
-       "lento": 3.3898,
-       "rapido": 3.5587,
-       "texto": "600 m em 4:41–4:55/km, FC ate 148-158 bpm.",
-       "tipo": "interval",
-       "valor": 600
-      },
-      {
-       "fim": "time",
-       "texto": "3 min de trote leve. Nao pare de correr.",
-       "tipo": "recovery",
-       "valor": 150
-      }
-     ],
-     "tipo": "repetir",
-     "vezes": 3
-    },
-    {
-     "fim": "time",
-     "texto": "8 min de trote muito leve ate a respiracao normalizar.",
-     "tipo": "cooldown",
-     "valor": 480
     }
    ]
   },
@@ -87,10 +42,10 @@
    "data": "2026-08-27",
    "foco": "facil",
    "km": 4,
-   "min": 26,
+   "min": 27,
    "nome": "27/08 · Rodagem moderada · 4.0 km total",
    "nota": "Total porta a porta 4.0 km. Alongamentos e educativos ANTES do start, relogio parado.",
-   "paceMedio": "6:31",
+   "paceMedio": "6:45",
    "passos": [
     {
      "fim": "time",
@@ -104,48 +59,15 @@
      "fim": "distance",
      "lento": 2.5575,
      "rapido": 2.7701,
-     "texto": "2.5 km em 6:01–6:31/km. Voce deve conseguir falar frases inteiras.",
+     "texto": "2.2 km em 6:01–6:31/km. Voce deve conseguir falar frases inteiras.",
      "tipo": "interval",
-     "valor": 2500
+     "valor": 2200
     },
     {
      "fim": "time",
      "texto": "5 min de trote muito leve ate a respiracao normalizar.",
      "tipo": "cooldown",
      "valor": 300
-    }
-   ]
-  },
-  {
-   "data": "2026-08-28",
-   "foco": "longo",
-   "km": 21.1,
-   "min": 131,
-   "nome": "28/08 · Longão · 21.1 km total",
-   "nota": "Total porta a porta 21.1 km. Alongamentos e educativos ANTES do start, relogio parado.",
-   "paceMedio": "6:13",
-   "passos": [
-    {
-     "fim": "time",
-     "lento": 2.2676,
-     "rapido": 2.4331,
-     "texto": "10 min subindo devagar, 6:51–7:21/km. Se chegar ofegante ao fim, foi rapido demais.",
-     "tipo": "warmup",
-     "valor": 600
-    },
-    {
-     "fim": "distance",
-     "lento": 2.6247,
-     "rapido": 2.849,
-     "texto": "18.8 km em 5:51–6:21/km. Voce deve conseguir falar frases inteiras.",
-     "tipo": "interval",
-     "valor": 18800
-    },
-    {
-     "fim": "time",
-     "texto": "6 min de trote muito leve ate a respiracao normalizar.",
-     "tipo": "cooldown",
-     "valor": 360
     }
    ]
   }
