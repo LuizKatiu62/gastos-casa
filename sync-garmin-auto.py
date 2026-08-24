@@ -17,6 +17,10 @@ CIRURGIA_DATA   = "2025-06-11"   # marco do projeto: dia da cirurgia
 DIAS_ATIVIDADES = max(365, (datetime.today() -
                             datetime.strptime(CIRURGIA_DATA, "%Y-%m-%d")).days + 30)
 DIAS_SAUDE      = 180
+# ── TRAVA DE SEGURANCA ────────────────────────────────────────────────
+# False = o app NUNCA cria nem apaga treino no calendario do Garmin.
+# O calendario e do coach humano; aqui so lemos. Ver subir_semana_garmin.
+ENVIAR_SEMANA_PARA_GARMIN = False
 SESSION_DIR     = os.path.expanduser("~/.garth")
 LOG_FILE        = os.path.expanduser("~/gastos-casa/sync.log")
 
@@ -608,13 +612,31 @@ def _remover(g, sched, wid):
 
 
 def subir_semana_garmin(api, token, pacote):
-    """Cria e agenda no Garmin as corridas da semana.
+    """DESLIGADA em 24/08/2026. Nao escreve mais no Garmin.
 
-    Idempotente: guarda no Firebase o que ja subiu, por data e por
-    carimbo do pacote. Rodar de hora em hora nao cria duplicata. Se o
-    app recompoe o bloco, o carimbo muda, o workout antigo daquele dia
-    e apagado e entra o novo — substituicao, nunca acumulo.
+    Motivo: quem monta as corridas agora e o coach humano, direto no
+    Garmin Connect. Esta funcao criava os treinos do coach automatico e,
+    para nao acumular dois no mesmo dia, APAGAVA o que ja estivesse
+    agendado — sem saber distinguir o que era dela e o que era do
+    treinador. Em 24/08 o pacote do app colidia com os treinos de 25/08
+    e 27/08 montados pelo coach humano, que seriam removidos na rodada
+    seguinte.
+
+    Regra do Luiz, textual: "jamais apagar o que o meu coach humano
+    colocou no garmin, jamais".
+
+    O calendario do Garmin passa a ser fonte da verdade, so de leitura.
+    Quem le e buscar_agendados(), mais abaixo.
+
+    Para reativar algum dia, ponha ENVIAR_SEMANA_PARA_GARMIN = True —
+    mas antes resolva como distinguir treino do app de treino do
+    treinador, senao o apagamento volta junto.
     """
+    if not ENVIAR_SEMANA_PARA_GARMIN:
+        log("Garmin: envio app→Garmin esta DESLIGADO "
+            "(o calendario e do coach humano). Nada foi criado nem apagado.")
+        return
+
     sessoes = pacote.get("sessoes") or []
     carimbo = pacote.get("gerado")
     if not sessoes or not carimbo:
@@ -729,6 +751,67 @@ def env_int(name, default, min_v=1, max_v=365):
     return max(min_v, min(max_v, v))
 
 
+# ── Treinos agendados pelo coach humano no Garmin Connect ─────────────
+# O calendário do Garmin não vem pelos endpoints REST comuns; é preciso
+# consultar o GraphQL. Falha aqui nunca derruba o sync: o app simplesmente
+# fica sem a agenda até a próxima rodada.
+SPORT_MAP_AGENDA = {
+    "running": "corrida", "cycling": "bike", "swimming": "natacao",
+    "strength_training": "academia", "cardio_training": "academia",
+    "other": "outro",
+}
+
+
+def buscar_agendados(api, dias_frente=35, dias_tras=7):
+    hoje = datetime.today()
+    ini  = (hoje - timedelta(days=dias_tras)).strftime("%Y-%m-%d")
+    fim  = (hoje + timedelta(days=dias_frente)).strftime("%Y-%m-%d")
+
+    try:
+        query = {
+            "query": f'query{{workoutScheduleSummariesScalar(startDate:"{ini}", endDate:"{fim}")}}'
+        }
+        result = api.query_garmin_graphql(query)
+    except Exception as e:
+        log(f"AVISO: não foi possível buscar treinos agendados: {e}")
+        return []
+
+    if not result or "data" not in result:
+        log("AVISO: resposta vazia do GraphQL de treinos agendados")
+        return []
+
+    bruto = result.get("data", {}).get("workoutScheduleSummariesScalar", []) or []
+    agenda = []
+
+    for s in bruto:
+        data = s.get("scheduleDate")
+        if not data:
+            continue
+        esporte_raw = (s.get("workoutType") or "").lower()
+        item = {
+            "data":     data,
+            "nome":     s.get("workoutName") or "Treino",
+            "esporte":  SPORT_MAP_AGENDA.get(esporte_raw, esporte_raw or "outro"),
+            "feito":    s.get("associatedActivityId") is not None,
+            "workoutId": s.get("workoutId") or s.get("workoutUuid") or "",
+        }
+        if s.get("estimatedDurationInSecs"):
+            item["duracaoSeg"] = int(s["estimatedDurationInSecs"])
+        if s.get("estimatedDistanceInMeters"):
+            item["distanciaM"] = round(float(s["estimatedDistanceInMeters"]))
+        if s.get("isRestDay"):
+            item["descanso"] = True
+        if s.get("race"):
+            item["prova"] = True
+        if s.get("tpPlanName"):
+            item["plano"] = s["tpPlanName"]
+        agenda.append(item)
+
+    agenda.sort(key=lambda x: x["data"])
+    log(f"{len(agenda)} treinos agendados encontrados ({ini} → {fim})")
+    return agenda
+
+
 def main():
     log("━━━ Iniciando sync automático ━━━")
 
@@ -797,6 +880,8 @@ def main():
         log(f"Step Speed Loss encontrado em {achou} de {len(faltando)}")
     ignorados = len(raw) - len(treinos)
     log(f"{len(treinos)} treinos para sincronizar | {ignorados} ignorados")
+
+    agendados = buscar_agendados(api)
 
     # Diagnóstico: tipos encontrados
     tipos_raw = {}
@@ -896,6 +981,7 @@ def main():
             "sono":        sono,
             "stress":      stress,
             "hrv":         hrv,
+            "agendados":   agendados,
         }
         ok = firebase_put(FIREBASE_PATH, payload, token)
         if ok:
