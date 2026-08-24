@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '05c';
+const FIX_VERSAO = '05b';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -10081,88 +10081,3 @@ PARTE('botão hevy', function(){
 });
 
 
-PARTE('plano só academia', function(){
-  if(!window.bqBloco) throw new Error('sem gerador de blocos');
-  if(typeof SESSOES_ACADEMIA !== 'object') throw new Error('sem SESSOES_ACADEMIA');
-
-  var DIAS = [1, 3, 5];
-  var ANCORA = '2026-01-05';
-
-  function par(k){
-    var p = null;
-    try{ p = ST.objetivo && ST.objetivo.data }catch(e){}
-    var sem = p ? diff(k, p) / 7 : 99;
-    if(sem <= 2) return ['BQ_MANUT', 'BQ_MANUT'];
-    if(sem <= 6) return ['BQ_PICO_A', 'BQ_PICO_B'];
-    return ['BQ_BASE_A', 'BQ_BASE_B'];
-  }
-
-  function sessaoDe(k){
-    var pos = DIAS.indexOf(dow(dt(k)));
-    if(pos < 0) return null;
-    var i = Math.floor(diff(ANCORA, k) / 7) * DIAS.length + pos;
-    var sid = par(k)[i % 2];
-    return SESSOES_ACADEMIA[sid] ? sid : null;
-  }
-  window.sessaoAcademiaDe = function(k){ return sessaoDe(k) };
-
-  function ehAuto(x){
-    return !!(x && x.mod === 'forca' &&
-      (x.auto === true || String(x.sessao || '').indexOf('BQ_') === 0));
-  }
-
-  function aplicar(B){
-    var hoje = iso(HOJE);
-
-    if(B && B.sessoes) Object.keys(B.sessoes).forEach(function(k){
-      if(k < hoje) return;
-      if(B.sessoes[k] && B.sessoes[k].prova) return;
-      delete B.sessoes[k];
-    });
-
-    ST.extras = ST.extras || {};
-    Object.keys(ST.extras).forEach(function(k){
-      if(k < hoje) return;
-      if(!ehAuto(ST.extras[k])) return;
-      if(DIAS.indexOf(dow(dt(k))) >= 0) return;
-      delete ST.extras[k];
-      if(window.bqApagar) window.bqApagar('extras', k);
-    });
-
-    if(B) for(var i = 0; i < 40; i++){
-      var c = addD(dt(B.ini), i), k = iso(c);
-      if(k > B.fim) break;
-      if(k < hoje) continue;
-      if(DIAS.indexOf(dow(c)) < 0) continue;
-      var sid = sessaoDe(k);
-      if(!sid) continue;
-      var ja = ST.extras[k];
-      if(ja && !ehAuto(ja)) continue;
-      ST.extras[k] = { id:'x' + k, data:k, mod:'forca', foco:'forca',
-                       sessao:sid, titulo:SESSOES_ACADEMIA[sid].nome,
-                       min:40, extra:true, auto:true };
-    }
-
-    try{ if(typeof rebuild === 'function') rebuild() }catch(e){}
-    try{ if(typeof renderTudo === 'function') renderTudo() }catch(e){}
-    try{ if(typeof persistir === 'function') persistir() }catch(e){}
-    return B;
-  }
-
-  var antes = window.bqBloco.criar;
-  window.bqBloco.criar = function(){ return aplicar(antes.apply(this, arguments)) };
-
-  setTimeout(function(){
-    try{ aplicar(window.bqBloco.atual()) }catch(e){ console.warn('só academia:', e && e.message) }
-  }, 6000);
-
-  window.bqSoAcademia = {
-    ver: function(){
-      var D = ['','seg','ter','qua','qui','sex','sáb','dom'];
-      return Object.keys(ST.extras || {}).sort()
-        .filter(function(k){ return k >= iso(HOJE) && ST.extras[k].mod === 'forca' })
-        .map(function(k){ return k + '  ' + D[dow(dt(k))] + '  ' + ST.extras[k].titulo });
-    },
-    refazer: function(){ window.bqBloco.criar(); return 'refeito' }
-  };
-});
