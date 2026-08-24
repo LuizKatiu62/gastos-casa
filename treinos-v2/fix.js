@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '05b';
+const FIX_VERSAO = '05c';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -10078,4 +10078,129 @@ PARTE('botão hevy', function(){
   coloca();
   new MutationObserver(coloca).observe(document.body, {childList:true, subtree:true});
   window.bqHevy = { enviar: enviar };
+});
+
+
+PARTE('só força no plano', function(){
+  if(!window.bqBloco) throw new Error('sem gerador de blocos');
+  if(typeof SESSOES_ACADEMIA !== 'object') throw new Error('sem SESSOES_ACADEMIA');
+
+  var DIAS = [1, 3, 5];
+  var ANCORA = '2026-01-05';
+
+  function provaEm(){
+    try{ return (ST.objetivo && ST.objetivo.data) || null }catch(e){ return null }
+  }
+
+  function par(k){
+    var p = provaEm();
+    var sem = p ? diff(k, p) / 7 : 99;
+    if(sem <= 2)  return ['BQ_MANUT', 'BQ_MANUT'];
+    if(sem <= 6)  return ['BQ_PICO_A', 'BQ_PICO_B'];
+    return ['BQ_BASE_A', 'BQ_BASE_B'];
+  }
+
+  function indice(k){
+    var d = dt(k);
+    var sem = Math.floor(diff(ANCORA, k) / 7);
+    var pos = DIAS.indexOf(dow(d));
+    if(pos < 0) return -1;
+    return sem * DIAS.length + pos;
+  }
+
+  function sessaoDe(k){
+    var i = indice(k);
+    if(i < 0) return null;
+    var pr = par(k);
+    var sid = pr[i % 2];
+    return SESSOES_ACADEMIA[sid] ? sid : null;
+  }
+
+  window.sessaoAcademiaDe = function(k){ return sessaoDe(k) };
+
+  function soForca(B){
+    if(!B || !B.sessoes) return;
+    var hoje = iso(HOJE);
+    Object.keys(B.sessoes).forEach(function(k){
+      if(k < hoje) return;
+      var s = B.sessoes[k];
+      if(s && s.prova) return;
+      delete B.sessoes[k];
+    });
+    for(var i = 0; i < 40; i++){
+      var c = addD(dt(B.ini), i);
+      var k = iso(c);
+      if(k > B.fim) break;
+      if(k < hoje) continue;
+      if(DIAS.indexOf(dow(c)) < 0) continue;
+      if(B.sessoes[k] && B.sessoes[k].prova) continue;
+      var sid = sessaoDe(k);
+      if(!sid) continue;
+      B.sessoes[k] = { data:k, mod:'forca', foco:'forca', forca:sid,
+                       titulo:SESSOES_ACADEMIA[sid].nome, min:40,
+                       detalhe:'Sessão de força. A corrida do dia é a que o seu coach prescreveu.' };
+    }
+  }
+
+      
+  function limparForaDeDia(){
+    if(!ST.extras) return 0;
+    var hoje = iso(HOJE), n = 0;
+    Object.keys(ST.extras).forEach(function(k){
+      if(k < hoje) return;
+      var e = ST.extras[k];
+      if(!e || e.mod !== 'forca') return;
+      if(!(e.auto === true || String(e.sessao || '').indexOf('BQ_') === 0)) return;
+      if(DIAS.indexOf(dow(dt(k))) >= 0) return;
+      delete ST.extras[k];
+      if(window.bqApagar) window.bqApagar('extras', k);
+      n++;
+    });
+    return n;
+  }
+
+  function limparAlvoFuturo(){
+    if(!ST.hist) return;
+    var segHoje = iso(addD(HOJE, -(dow(HOJE) - 1)));
+    Object.keys(ST.hist).forEach(function(seg){
+      if(seg > segHoje) delete ST.hist[seg];
+    });
+  }
+
+  function aplicar(B){
+    try{ soForca(B) }catch(e){ console.warn('só força:', e && e.message) }
+    try{ limparForaDeDia() }catch(e){}
+    try{ limparAlvoFuturo() }catch(e){}
+    try{ if(window.bqForcaBloco) window.bqForcaBloco.sincronizar() }catch(e){}
+    try{ if(typeof rebuild === 'function') rebuild() }catch(e){}
+    try{ if(typeof renderTudo === 'function') renderTudo() }catch(e){}
+    try{ if(typeof persistir === 'function') persistir() }catch(e){}
+    return B;
+  }
+
+  var criarAntes = window.bqBloco.criar;
+  window.bqBloco.criar = function(){
+    var B = criarAntes.apply(this, arguments);
+    return aplicar(B);
+  };
+
+  setTimeout(function(){
+    try{
+      var B = window.bqBloco.atual();
+      if(B) aplicar(B);
+    }catch(e){ console.warn('só força (arranque):', e && e.message) }
+  }, 6000);
+
+  window.bqSoForca = {
+    ver: function(){
+      var D = ['','seg','ter','qua','qui','sex','sáb','dom'];
+      return Object.keys(ST.extras || {}).sort()
+        .filter(function(k){ return k >= iso(HOJE) && ST.extras[k].mod === 'forca' })
+        .map(function(k){
+          return k + '  ' + D[dow(dt(k))] + '  ' + (ST.extras[k].titulo || ST.extras[k].sessao);
+        });
+    },
+    refazer: function(){ return window.bqBloco.criar() && 'bloco refeito só com força' },
+    dias: DIAS
+  };
 });
