@@ -7447,7 +7447,9 @@ PARTE('planilha de treinos', function(){
     if(s){
       tit = s.titulo || (typeof MOD === 'object' && MOD[s.mod] ? MOD[s.mod].n : s.mod);
       sub = z.n;
-      if(s.mod !== 'corrida' && ZC[s.foco] && !s.prova) sub = z.n + ' · ' + ZC[s.foco].n;
+      // juntar modalidade e foco dava "Forca · Forca" quando os dois eram o mesmo
+      if(s.mod !== 'corrida' && ZC[s.foco] && !s.prova && ZC[s.foco].n !== z.n)
+        sub = z.n + ' · ' + ZC[s.foco].n;
     } else if(x){
       tit = x.titulo || 'Academia';
       sub = 'Força';
@@ -7465,7 +7467,7 @@ PARTE('planilha de treinos', function(){
     var estado = !s ? '' : feito ? 'v' : (passado ? 'x' : 'o');
 
     /* segundo treino do dia sinalizado no titulo */
-    if(s && x) tit = tit + ' + academia';
+    /* o titulo ja diz que e academia; somar " + academia" repetia */
 
     var cls = ['linha'];
     if(hoje) cls.push('hoje');
@@ -7520,7 +7522,9 @@ PARTE('planilha de treinos', function(){
         return L.html;
       }).join('');
 
-      var fase = faseDe(w.ks);
+      /* A fase (Base, Construcao, Polimento) era a periodizacao da
+         corrida. Sem plano de corrida, a etiqueta nao diz nada. */
+      var fase = '';
       var rot = w.ks[0] <= iso(HOJE) && w.ks[w.ks.length-1] >= iso(HOJE)
                 ? 'Esta semana' : 'Semana ' + nsem;
 
@@ -7537,24 +7541,17 @@ PARTE('planilha de treinos', function(){
 
       corpo += '<tr class="tot"><td class="d">Semana</td>'
         + '<td class="t" style="text-align:left;padding-left:16px">'
-        + (pctLeve == null ? '<span class="mixtx">sem corrida na semana</span>'
-           : '<span class="mixtx" style="color:' + corMix + '">' + pctLeve + '% leve · '
-             + (100 - pctLeve) + '% forte</span>'
-             + '<span class="mixbar"><i style="width:' + pctLeve + '%;background:' + corMix + '"></i>'
-             + '<i style="width:' + (100 - pctLeve) + '%;background:#F2685C"></i></span>')
+        + '<span class="mixtx">' + (tem ? feitos + ' de ' + tem + ' sessões' : '') + '</span>'
         + '</td>'
         + '<td><span class="totn">' + (somaMin ? (somaMin / 60).toFixed(1) : '—') + '</span>'
           + '<span class="mixtx"> h</span></td>'
         + '<td class="ok"><span class="mixtx">' + (tem ? feitos + '/' + tem : '') + '</span></td></tr>';
     });
 
-    var chaves = ['facil','longo','mp','limiar','vo2','tiros'];
-    var leg = chaves.map(function(c){
-      return '<span><i style="background:' + ZC[c].c + '"></i>' + ZC[c].n + '</span>';
-    }).join('') +
-      '<span><i style="background:' + MODC.bike.c + '"></i>Bike</span>' +
-      '<span><i style="background:' + MODC.natacao.c + '"></i>Natação</span>' +
-      '<span><i style="background:' + MODC.forca.c + '"></i>Força</span>';
+    /* So academia na planilha: as zonas de corrida (Rodagem facil,
+       Longo, Limiar, VO2...) nao aparecem mais, entao a legenda delas
+       era so ruido. */
+    var leg = '<span><i style="background:' + MODC.forca.c + '"></i>Força</span>';
 
     return ''
       + '<div class="plhead"><h2>Planilha</h2><div class="sub">'
@@ -7563,10 +7560,8 @@ PARTE('planilha de treinos', function(){
       + '<th class="d">Dia</th><th class="t">Treino</th><th>min</th><th class="ok"></th>'
       + '</tr></thead><tbody>' + corpo + '</tbody></table></div>'
       + '<div class="pleg">' + leg + '</div>'
-      + '<p class="plnota">A cor é a <b>intensidade</b>, na ordem de Jack Daniels: verde é leve, '
-      + 'vermelho é forte. A barra de fechamento mostra quanto do volume da semana foi leve — '
-      + '<b>acima de 75% é o alvo</b>, e é o número que quase todo corredor erra por excesso de '
-      + 'treino forte.</p>';
+      + '<p class="plnota">Academia às segundas, quartas e sextas, 5:30. '
+      + 'A corrida fica no relógio, montada pelo seu treinador.</p>';
   }
 
   /* ── montagem e religação ── */
