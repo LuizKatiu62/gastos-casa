@@ -10115,15 +10115,41 @@ PARTE('a aba coach e so da academia', function(){
     return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
   }
 
-  /* De hoje em diante fica so a forca. O passado nao se toca: e
-     historico, e apagar ali estragaria a conta de aderencia.        */
+  var DIAS_ACADEMIA = {1:1, 3:1, 5:1};      // 1=seg 3=qua 5=sex
+
+  function diaSemana(iso){
+    var q = String(iso).split('-');
+    var d = new Date(+q[0], +q[1] - 1, +q[2]).getDay();
+    return d === 0 ? 7 : d;
+  }
+
+  /* Guarda e remove o "segundo treino do dia". Sem duracao propria ele
+     virava um card de 45 min sozinho assim que a corrida saia — era
+     por isso que terca e quinta apareciam com forca.                */
+  function tirarExtra(iso){
+    if(typeof ST !== 'object' || !ST || !ST.extras || !ST.extras[iso]) return;
+    ST.extrasGarmin = ST.extrasGarmin || {};
+    ST.extrasGarmin[iso] = ST.extras[iso];
+    delete ST.extras[iso];
+  }
+
+  /* De hoje em diante: so segunda, quarta e sexta, e so forca. O
+     passado nao se toca — e historico, e apagar estragaria a conta
+     de aderencia.                                                   */
   function sohAcademia(plano){
     var hoje = hojeIso();
     Object.keys(plano).forEach(function(iso){
       if(iso < hoje) return;
       var s = plano[iso];
       if(s && s.prova) return;              // a prova continua no calendario
-      if(!ehForca(s)) delete plano[iso];
+      if(!DIAS_ACADEMIA[diaSemana(iso)] || !ehForca(s)){
+        delete plano[iso];
+        tirarExtra(iso);
+      }
+    });
+    /* nos dias que ficam, o extra duplicaria a academia e somaria 45 */
+    Object.keys(plano).forEach(function(iso){
+      if(iso >= hoje && !(plano[iso] && plano[iso].prova)) tirarExtra(iso);
     });
     return plano;
   }
