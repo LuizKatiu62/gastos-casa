@@ -2,17 +2,16 @@
  "ate": "2026-08-30",
  "de": "2026-08-24",
  "fcMax": 163,
- "gerado": "2026-08-25T00:34:20.410Z",
- "limiar": "5:16",
+ "gerado": "2026-08-25T01:14:48.204Z",
+ "limiar": "5:24",
  "sessoes": [
   {
-   "data": "2026-08-25",
-   "foco": "facil",
-   "km": 4,
-   "min": 27,
-   "nome": "25/08 · Rodagem leve + tiros curtos · 4.0 km total",
-   "nota": "Total porta a porta 4.0 km. Alongamentos e educativos ANTES do start, relogio parado.",
-   "paceMedio": "6:45",
+   "data": "2026-08-29",
+   "foco": "coach",
+   "km": 22.1,
+   "min": 125,
+   "nome": "29/08 · Rodagem Z2 · 22.1 km total",
+   "nota": "Total porta a porta 22.1 km. Alongamentos e educativos ANTES do start, relogio parado.",
    "passos": [
     {
      "fim": "time",
@@ -26,42 +25,9 @@
      "fim": "distance",
      "lento": 2.5575,
      "rapido": 2.7701,
-     "texto": "2.2 km em 6:01–6:31/km. Voce deve conseguir falar frases inteiras.",
+     "texto": "20.3 km em 6:01–6:31/km. Voce deve conseguir falar frases inteiras.",
      "tipo": "interval",
-     "valor": 2200
-    },
-    {
-     "fim": "time",
-     "texto": "5 min de trote muito leve ate a respiracao normalizar.",
-     "tipo": "cooldown",
-     "valor": 300
-    }
-   ]
-  },
-  {
-   "data": "2026-08-27",
-   "foco": "facil",
-   "km": 4,
-   "min": 27,
-   "nome": "27/08 · Rodagem moderada · 4.0 km total",
-   "nota": "Total porta a porta 4.0 km. Alongamentos e educativos ANTES do start, relogio parado.",
-   "paceMedio": "6:45",
-   "passos": [
-    {
-     "fim": "time",
-     "lento": 2.2676,
-     "rapido": 2.4331,
-     "texto": "8 min subindo devagar, 6:51–7:21/km. Se chegar ofegante ao fim, foi rapido demais.",
-     "tipo": "warmup",
-     "valor": 480
-    },
-    {
-     "fim": "distance",
-     "lento": 2.5575,
-     "rapido": 2.7701,
-     "texto": "2.2 km em 6:01–6:31/km. Voce deve conseguir falar frases inteiras.",
-     "tipo": "interval",
-     "valor": 2200
+     "valor": 20300
     },
     {
      "fim": "time",
