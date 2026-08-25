@@ -10124,6 +10124,49 @@ PARTE('o coach humano manda', function(){
     return 0;
   }
 
+  /* Os blocos reais, como o treinador montou. Sem isto o app preenche
+     o vazio com um treino inventado dele — titulo do treinador, miolo
+     do app. Formato de saida igual ao que o card ja sabe desenhar.  */
+  function dur(p){
+    if(p.livre) return 'até apertar o botão';
+    if(p.seg){
+      var m = Math.round(p.seg / 60);
+      return m >= 60 ? Math.floor(m/60) + 'h' + ('0'+(m%60)).slice(-2) : m + ' min';
+    }
+    if(p.m) return (p.m >= 1000 ? (p.m/1000).toFixed(1).replace('.',',') + ' km' : p.m + ' m');
+    return '';
+  }
+  function passoApp(p){
+    var tags = [];
+    var d = dur(p); if(d) tags.push({t: d});
+    if(p.pace) tags.push({t: p.pace, c: 'z'});
+    return {t: p.t || 'Bloco', d: '', tags: tags};
+  }
+  function passosDoGarmin(lista){
+    var out = [];
+    (lista || []).forEach(function(p){
+      if(p && p.rep && Array.isArray(p.itens)){
+        out.push({tipo:'repetir', vezes: p.rep, passos: p.itens.map(passoApp)});
+      }else if(p){
+        out.push(passoApp(p));
+      }
+    });
+    return out;
+  }
+  function resumoTexto(lista){
+    var partes = [];
+    (lista || []).forEach(function(p){
+      if(p && p.rep && Array.isArray(p.itens)){
+        partes.push(p.rep + '× (' + p.itens.map(function(i){
+          return (i.t || '') + ' ' + dur(i);
+        }).join(' + ') + ')');
+      }else if(p){
+        partes.push((p.t || '') + ' ' + dur(p));
+      }
+    });
+    return partes.join(' · ');
+  }
+
   function sessaoDoGarmin(iso, itens){
     var principal = itens[0];
     var nomes = itens.map(function(i){ return i.nome || 'Treino' });
@@ -10148,6 +10191,17 @@ PARTE('o coach humano manda', function(){
     if(km)  s.km  = Math.round(km * 10) / 10;
     if(min) s.min = min;
     if(itens.some(function(i){ return i.prova })) s.prova = true;
+
+    // blocos reais do treinador; sem eles o card inventa os proprios
+    var blocos = [];
+    itens.forEach(function(i){ if(Array.isArray(i.passos)) blocos = blocos.concat(i.passos) });
+    if(blocos.length){
+      s.passos  = passosDoGarmin(blocos);
+      s.detalhe = resumoTexto(blocos);
+    }else{
+      s.passos  = [{t:'No relógio', d:'Seu treinador montou este treino no Garmin. Abra o treino no relógio para ver os blocos.', tags:[]}];
+      s.detalhe = 'Blocos no relógio.';
+    }
     return s;
   }
 

@@ -762,6 +762,89 @@ SPORT_MAP_AGENDA = {
 }
 
 
+def _pace_de_ms(v):
+    """O Garmin manda velocidade em m/s; o app mostra min/km."""
+    try:
+        v = float(v)
+    except (TypeError, ValueError):
+        return None
+    if v <= 0.1:
+        return None
+    seg = 1000.0 / v
+    if seg > 1800:            # mais lento que 30 min/km: e caminhada/erro
+        return None
+    return "%d:%02d" % (int(seg // 60), int(round(seg % 60)))
+
+
+def _faixa_pace(p):
+    # low = velocidade menor = pace mais lento. Mostro do lento para o rapido.
+    lento  = _pace_de_ms(p.get("target_value_low") or p.get("targetValueOne"))
+    rapido = _pace_de_ms(p.get("target_value_high") or p.get("targetValueTwo"))
+    if lento and rapido and lento != rapido:
+        return f"{lento}–{rapido}/km"
+    return f"{lento or rapido}/km" if (lento or rapido) else ""
+
+
+TIPO_PASSO = {
+    "warmup": "Aquecimento", "cooldown": "Desaquecimento",
+    "interval": "Forte", "rest": "Recuperação",
+    "recovery": "Recuperação", "other": "Bloco",
+}
+
+
+def _passo_simples(p):
+    tipo = (p.get("type") or p.get("stepType") or "other").lower()
+    seg  = p.get("end_condition_value")
+    cond = (p.get("end_condition") or "").lower()
+    item = {"t": p.get("description") or TIPO_PASSO.get(tipo, "Bloco")}
+    if cond == "time" and seg:
+        item["seg"] = int(float(seg))
+    elif cond == "distance" and seg:
+        item["m"] = int(float(seg))
+    elif "lap" in cond:
+        item["livre"] = True
+    pace = _faixa_pace(p)
+    if pace:
+        item["pace"] = pace
+    return item
+
+
+def _achatar(passos):
+    """Devolve a lista de blocos, preservando as repeticoes."""
+    out = []
+    for p in (passos or []):
+        tipo = (p.get("type") or "").lower()
+        if tipo == "repeat" or p.get("steps"):
+            vezes = int(p.get("repeat_count") or p.get("end_condition_value") or 1)
+            dentro = _achatar(p.get("steps") or [])
+            if dentro:
+                out.append({"rep": vezes, "itens": dentro})
+        else:
+            out.append(_passo_simples(p))
+    return out
+
+
+def _passos_do_workout(g, wid, cache):
+    """Os blocos reais do treino, para o app nao inventar os proprios."""
+    if not wid or g is None:
+        return None
+    wid = str(wid)
+    if wid in cache:
+        return cache[wid]
+    try:
+        w = _chamar(g, "GET", f"/workout-service/workout/{wid}")
+    except Exception as e:
+        log(f"AVISO: passos do treino {wid} nao vieram: {e}")
+        cache[wid] = None
+        return None
+    segs = (w or {}).get("workoutSegments") or []
+    passos = []
+    for s in segs:
+        passos.extend(_achatar(s.get("workoutSteps") or []))
+    cache[wid] = passos or None
+    return cache[wid]
+
+
 def buscar_agendados(api, dias_frente=35, dias_tras=7):
     hoje = datetime.today()
     ini  = (hoje - timedelta(days=dias_tras)).strftime("%Y-%m-%d")
@@ -782,6 +865,8 @@ def buscar_agendados(api, dias_frente=35, dias_tras=7):
 
     bruto = result.get("data", {}).get("workoutScheduleSummariesScalar", []) or []
     agenda = []
+    g, _via = _garth(api)
+    cache_passos = {}
 
     for s in bruto:
         data = s.get("scheduleDate")
@@ -805,6 +890,9 @@ def buscar_agendados(api, dias_frente=35, dias_tras=7):
             item["prova"] = True
         if s.get("tpPlanName"):
             item["plano"] = s["tpPlanName"]
+        passos = _passos_do_workout(g, item["workoutId"], cache_passos)
+        if passos:
+            item["passos"] = passos
         agenda.append(item)
 
     agenda.sort(key=lambda x: x["data"])
