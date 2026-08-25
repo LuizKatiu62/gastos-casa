@@ -10082,212 +10082,77 @@ PARTE('botão hevy', function(){
 
 
 
-/* ───────────── 50. O COACH HUMANO MANDA ─────────────
-   As corridas deixam de ser geradas aqui. Quem monta e o treinador,
-   direto no Garmin Connect; o sync grava a agenda em RAW.agendados e
-   esta parte troca as sessoes do dia pelo que ele marcou.
+/* ───────────── 50. A ABA COACH E SO DA ACADEMIA ─────────────
+   Decisao do Luiz, 25/08/2026. A corrida sai do app: quem monta e o
+   treinador humano, no TrainingPeaks, e ela chega ao relogio por ali.
+   O proprio Garmin Connect nao abre esses treinos na tela — so o
+   relogio mostra os blocos — entao espelhar isso aqui era construir
+   sobre um caminho que nao se sustenta.
 
-   A academia continua sendo nossa: segunda, quarta e sexta, 5:30.
-   Quando cai no mesmo dia de uma corrida do Garmin, aparece junto no
-   titulo em vez de disputar o lugar.
+   Fica na aba Coach: a academia de segunda, quarta e sexta, que o app
+   ja monta com os exercicios e que o botao Hevy manda para a rotina.
+   Mais a data da prova, como referencia.
 
-   Envolve gerarPlano em vez de reescreve-lo: se algo aqui falhar, o
-   PARTE devolve o plano do app e a tela continua de pe.            */
-PARTE('o coach humano manda', function(){
+   Sai: corrida, bike, natacao e o progresso de ciclo.
+
+   O que voce EXECUTA continua entrando pelo sync do Garmin e alimenta
+   Treinos, Indices, Evolucao, Saude e KPI — isso nao muda.
+
+   Esta parte NAO escreve no Garmin. O envio app->Garmin ja esta travado
+   no sync (ENVIAR_SEMANA_PARA_GARMIN = False); aqui so se filtra o que
+   aparece na tela.                                                   */
+PARTE('a aba coach e so da academia', function(){
   if(typeof window.gerarPlano !== 'function') throw new Error('app sem gerarPlano');
 
-  var DIAS_ACADEMIA = {1:'Academia A', 3:'Academia B', 5:'Academia A'};  // 1=seg 3=qua 5=sex
-  var MOD_POR_ESPORTE = {corrida:'corrida', bike:'bike', natacao:'natacao', academia:'forca'};
-
-  function agenda(){
-    var r = (typeof RAW === 'object' && RAW) ? RAW.agendados : null;
-    return Array.isArray(r) ? r : [];
+  function ehForca(s){
+    if(!s) return false;
+    if(s.mod === 'forca') return true;
+    return /academia|for[c\u00e7]a|muscula|core|mobilidade/i.test(String(s.titulo || ''));
   }
 
-  function porData(){
-    var mapa = {};
-    agenda().forEach(function(a){
-      if(!a || !a.data || a.descanso) return;
-      (mapa[a.data] = mapa[a.data] || []).push(a);
+  function hojeIso(){
+    var d = (typeof HOJE !== 'undefined' && HOJE) ? HOJE : new Date();
+    return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+  }
+
+  /* De hoje em diante fica so a forca. O passado nao se toca: e
+     historico, e apagar ali estragaria a conta de aderencia.        */
+  function sohAcademia(plano){
+    var hoje = hojeIso();
+    Object.keys(plano).forEach(function(iso){
+      if(iso < hoje) return;
+      var s = plano[iso];
+      if(s && s.prova) return;              // a prova continua no calendario
+      if(!ehForca(s)) delete plano[iso];
     });
-    return mapa;
-  }
-
-  function diaDaSemana(iso){
-    var p = String(iso).split('-');
-    var d = new Date(+p[0], +p[1] - 1, +p[2]).getDay();   // 0=dom
-    return d === 0 ? 7 : d;                                // 1=seg … 7=dom
-  }
-
-  function minutos(a){
-    if(a.duracaoSeg) return Math.round(a.duracaoSeg / 60);
-    return 0;
-  }
-
-  /* Os blocos reais, como o treinador montou. Sem isto o app preenche
-     o vazio com um treino inventado dele — titulo do treinador, miolo
-     do app. Formato de saida igual ao que o card ja sabe desenhar.  */
-  function dur(p){
-    if(p.livre) return 'até apertar o botão';
-    if(p.seg){
-      var m = Math.round(p.seg / 60);
-      return m >= 60 ? Math.floor(m/60) + 'h' + ('0'+(m%60)).slice(-2) : m + ' min';
-    }
-    if(p.m) return (p.m >= 1000 ? (p.m/1000).toFixed(1).replace('.',',') + ' km' : p.m + ' m');
-    return '';
-  }
-  function passoApp(p){
-    var tags = [];
-    var d = dur(p); if(d) tags.push({t: d});
-    if(p.pace) tags.push({t: p.pace, c: 'z'});
-    return {t: p.t || 'Bloco', d: '', tags: tags};
-  }
-  function passosDoGarmin(lista){
-    var out = [];
-    (lista || []).forEach(function(p){
-      if(p && p.rep && Array.isArray(p.itens)){
-        out.push({tipo:'repetir', vezes: p.rep, passos: p.itens.map(passoApp)});
-      }else if(p){
-        out.push(passoApp(p));
-      }
-    });
-    return out;
-  }
-  function resumoTexto(lista){
-    var partes = [];
-    (lista || []).forEach(function(p){
-      if(p && p.rep && Array.isArray(p.itens)){
-        partes.push(p.rep + '× (' + p.itens.map(function(i){
-          return (i.t || '') + ' ' + dur(i);
-        }).join(' + ') + ')');
-      }else if(p){
-        partes.push((p.t || '') + ' ' + dur(p));
-      }
-    });
-    return partes.join(' · ');
-  }
-
-  /* A planilha pinta a linha pelo campo 'foco'. Com foco desconhecido
-     ela chamava tudo de "rodagem facil", verde, ate um treino em Z4.
-     Leio o tipo do nome que o treinador deu.                        */
-  function focoDoNome(nome, km){
-    var t = String(nome || '').toLowerCase();
-    if(/prova|race/.test(t))                      return 'prova';
-    if(/stride|tiro|sprint|educativo/.test(t))    return 'tiros';
-    if(/ladeira|subida|hill/.test(t))             return 'ladeira';
-    if(/z4|vo2|intervalad|blocos/.test(t))        return 'vo2';
-    if(/limiar|tempo|z3/.test(t))                 return 'limiar';
-    if(/fartlek/.test(t))                         return 'fartlek';
-    if(/ritmo de prova|maraton|\bmp\b/.test(t))   return 'mp';
-    if(/long[aã]o|longo/.test(t))                 return 'longo';
-    if(km >= 18)                                  return 'longo';
-    if(/regenerat|soltura|recupera/.test(t))      return 'soltura';
-    return 'facil';
-  }
-
-  function sessaoDoGarmin(iso, itens){
-    var principal = itens[0];
-    var nomes = itens.map(function(i){ return i.nome || 'Treino' });
-    var academia = DIAS_ACADEMIA[diaDaSemana(iso)];
-    var titulo = nomes.join(' + ');
-    if(academia) titulo = '💪 ' + academia + ' 5:30 + ' + titulo;
-
-    var s = {
-      id: iso, data: iso,
-      mod: MOD_POR_ESPORTE[principal.esporte] || 'corrida',
-      foco: 'facil',                       // ajustado logo abaixo
-      fase: 'Plano do treinador',
-      titulo: titulo,
-      origem: 'garmin',
-      garmin: true
-    };
-    var km = 0, min = 0;
-    itens.forEach(function(i){
-      if(i.distanciaM) km  += i.distanciaM / 1000;
-      min += minutos(i);
-    });
-    if(km)  s.km  = Math.round(km * 10) / 10;
-    if(academia) min += 60;                // a hora de academia entra na conta
-    if(min) s.min = min;
-    s.foco = focoDoNome(nomes.join(' '), s.km || 0);
-    if(itens.some(function(i){ return i.prova })) s.prova = true;
-
-    // blocos reais do treinador; sem eles o card inventa os proprios
-    var blocos = [];
-    itens.forEach(function(i){ if(Array.isArray(i.passos)) blocos = blocos.concat(i.passos) });
-    if(blocos.length){
-      s.passos  = passosDoGarmin(blocos);
-      s.detalhe = resumoTexto(blocos);
-    }else{
-      s.passos  = [{t:'No relógio', d:'Seu treinador montou este treino no Garmin. Abra o treino no relógio para ver os blocos.', tags:[]}];
-      s.detalhe = 'Blocos no relógio.';
-    }
-    return s;
-  }
-
-  function sessaoAcademia(iso){
-    return {
-      id: iso, data: iso, mod: 'forca', foco: 'forca',
-      fase: 'Plano do treinador',
-      titulo: '💪 ' + DIAS_ACADEMIA[diaDaSemana(iso)] + ' — 5:30–6:30am',
-      min: 60, origem: 'academia'
-    };
+    return plano;
   }
 
   var gerarApp = window.gerarPlano;
   window.gerarPlano = function(){
-    var plano = gerarApp.apply(this, arguments) || {};
-    var mapa  = porData();
-    var datas = Object.keys(mapa);
-    if(!datas.length) return plano;   // sync ainda nao trouxe a agenda: nao mexe
-
-    // 1) todo dia que o treinador marcou passa a valer, exista ou nao no plano
-    datas.forEach(function(iso){
-      plano[iso] = sessaoDoGarmin(iso, mapa[iso]);
-    });
-
-    // 2) dentro da janela que o treinador cobre, os dias sem treino dele
-    //    ficam so com a academia (ou vazios). Fora da janela nao mexo.
-    datas.sort();
-    var de = datas[0], ate = datas[datas.length - 1];
-    Object.keys(plano).forEach(function(iso){
-      if(iso < de || iso > ate) return;
-      if(mapa[iso]) return;
-      if(DIAS_ACADEMIA[diaDaSemana(iso)]) plano[iso] = sessaoAcademia(iso);
-      else delete plano[iso];
-    });
-
-    return plano;
+    return sohAcademia(gerarApp.apply(this, arguments) || {});
   };
 
-  /* O plano certo era montado e logo apagado: rebuild() chama
-     aplicarTrocas() depois de gerarPlano(), e uma troca manual antiga
-     (de quando o app ainda mandava) vencia o treinador. Aqui o dia que
-     tem treino do Garmin volta a valer, por ultimo.                  */
+  /* rebuild() chama aplicarTrocas() depois de gerarPlano(), e uma troca
+     antiga podia ressuscitar uma corrida. Filtro de novo, por ultimo. */
   if(typeof window.rebuild === 'function'){
     var rebuildApp = window.rebuild;
     window.rebuild = function(){
       var r = rebuildApp.apply(this, arguments);
       try{
-        var mapa = porData();
         if(typeof ST === 'object' && ST && ST.plano){
-          Object.keys(mapa).forEach(function(iso){
-            ST.plano[iso] = sessaoDoGarmin(iso, mapa[iso]);
-            /* O "segundo treino do dia" era a academia do plano antigo.
-               Sem duracao propria, a planilha contava 45 min por conta
-               e somava: 41 do treinador viravam 86 na tela. A academia
-               agora esta no proprio card, com os 60 min dela. Guardo o
-               que tiro em ST.extrasGarmin, para nada se perder.      */
-            if(ST.extras && ST.extras[iso]){
-              ST.extrasGarmin = ST.extrasGarmin || {};
-              ST.extrasGarmin[iso] = ST.extras[iso];
-              delete ST.extras[iso];
-            }
-          });
+          sohAcademia(ST.plano);
           ST.cache = {};
         }
-      }catch(e){ console.warn('coach humano:', e && e.message) }
+      }catch(e){ console.warn('coach academia:', e && e.message) }
       return r;
     };
   }
+
+  /* progresso de ciclo sai da tela; a data da prova fica */
+  try{
+    var tag = document.createElement('style');
+    tag.textContent = '#bqCic,.bqa-ciclo,#coach-plan-levels{display:none !important}';
+    document.head.appendChild(tag);
+  }catch(e){}
 });
