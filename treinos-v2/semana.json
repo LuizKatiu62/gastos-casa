@@ -1,13 +1,13 @@
 {
- "ate": "2026-08-30",
- "de": "2026-08-24",
+ "ate": "2026-08-31",
+ "de": "2026-08-25",
  "fcMax": 163,
- "gerado": "2026-08-25T01:14:48.204Z",
- "limiar": "5:24",
+ "gerado": "2026-08-25T10:26:14.392Z",
+ "limiar": "5:21",
  "sessoes": [
   {
    "data": "2026-08-29",
-   "foco": "coach",
+   "foco": "longo",
    "km": 22.1,
    "min": 125,
    "nome": "29/08 · Rodagem Z2 · 22.1 km total",
@@ -15,25 +15,25 @@
    "passos": [
     {
      "fim": "time",
-     "lento": 2.2676,
-     "rapido": 2.4331,
-     "texto": "8 min subindo devagar, 6:51–7:21/km. Se chegar ofegante ao fim, foi rapido demais.",
+     "lento": 2.2422,
+     "rapido": 2.4038,
+     "texto": "10 min subindo devagar, 6:56–7:26/km. Se chegar ofegante ao fim, foi rapido demais.",
      "tipo": "warmup",
-     "valor": 480
+     "valor": 600
     },
     {
      "fim": "distance",
-     "lento": 2.5575,
-     "rapido": 2.7701,
-     "texto": "20.3 km em 6:01–6:31/km. Voce deve conseguir falar frases inteiras.",
+     "lento": 2.5907,
+     "rapido": 2.809,
+     "texto": "19.9 km em 5:56–6:26/km. Voce deve conseguir falar frases inteiras.",
      "tipo": "interval",
-     "valor": 20300
+     "valor": 19900
     },
     {
      "fim": "time",
-     "texto": "5 min de trote muito leve ate a respiracao normalizar.",
+     "texto": "6 min de trote muito leve ate a respiracao normalizar.",
      "tipo": "cooldown",
-     "valor": 300
+     "valor": 360
     }
    ]
   }
@@ -43,32 +43,32 @@
   "faci": {
    "fc": "111–124",
    "n": "Rodagem fácil",
-   "pace": "6:01–6:31"
+   "pace": "6:06–6:36"
   },
   "lim": {
    "fc": "140–148",
    "n": "Limiar",
-   "pace": "5:08–5:28"
+   "pace": "5:13–5:33"
   },
   "long": {
    "fc": "114–130",
    "n": "Longo",
-   "pace": "5:51–6:21"
+   "pace": "5:56–6:26"
   },
   "mp": {
    "fc": "130–140",
    "n": "Ritmo de maratona",
-   "pace": "5:29–5:41"
+   "pace": "5:38–5:50"
   },
   "rec": {
    "fc": "98–111",
    "n": "Recuperação",
-   "pace": "6:51–7:21"
+   "pace": "6:56–7:26"
   },
   "vo2": {
    "fc": "148–158",
    "n": "VO₂ máx",
-   "pace": "4:41–4:55"
+   "pace": "4:49–5:03"
   }
  }
 }
