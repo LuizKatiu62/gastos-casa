@@ -10081,3 +10081,108 @@ PARTE('botão hevy', function(){
 });
 
 
+
+/* ───────────── 50. O COACH HUMANO MANDA ─────────────
+   As corridas deixam de ser geradas aqui. Quem monta e o treinador,
+   direto no Garmin Connect; o sync grava a agenda em RAW.agendados e
+   esta parte troca as sessoes do dia pelo que ele marcou.
+
+   A academia continua sendo nossa: segunda, quarta e sexta, 5:30.
+   Quando cai no mesmo dia de uma corrida do Garmin, aparece junto no
+   titulo em vez de disputar o lugar.
+
+   Envolve gerarPlano em vez de reescreve-lo: se algo aqui falhar, o
+   PARTE devolve o plano do app e a tela continua de pe.            */
+PARTE('o coach humano manda', function(){
+  if(typeof window.gerarPlano !== 'function') throw new Error('app sem gerarPlano');
+
+  var DIAS_ACADEMIA = {1:'Academia A', 3:'Academia B', 5:'Academia A'};  // 1=seg 3=qua 5=sex
+  var MOD_POR_ESPORTE = {corrida:'corrida', bike:'bike', natacao:'natacao', academia:'forca'};
+
+  function agenda(){
+    var r = (typeof RAW === 'object' && RAW) ? RAW.agendados : null;
+    return Array.isArray(r) ? r : [];
+  }
+
+  function porData(){
+    var mapa = {};
+    agenda().forEach(function(a){
+      if(!a || !a.data || a.descanso) return;
+      (mapa[a.data] = mapa[a.data] || []).push(a);
+    });
+    return mapa;
+  }
+
+  function diaDaSemana(iso){
+    var p = String(iso).split('-');
+    var d = new Date(+p[0], +p[1] - 1, +p[2]).getDay();   // 0=dom
+    return d === 0 ? 7 : d;                                // 1=seg … 7=dom
+  }
+
+  function minutos(a){
+    if(a.duracaoSeg) return Math.round(a.duracaoSeg / 60);
+    return 0;
+  }
+
+  function sessaoDoGarmin(iso, itens){
+    var principal = itens[0];
+    var nomes = itens.map(function(i){ return i.nome || 'Treino' });
+    var academia = DIAS_ACADEMIA[diaDaSemana(iso)];
+    var titulo = nomes.join(' + ');
+    if(academia) titulo = '💪 ' + academia + ' 5:30 + ' + titulo;
+
+    var s = {
+      id: iso, data: iso,
+      mod: MOD_POR_ESPORTE[principal.esporte] || 'corrida',
+      foco: 'coach',
+      fase: 'Plano do treinador',
+      titulo: titulo,
+      origem: 'garmin',
+      garmin: true
+    };
+    var km = 0, min = 0;
+    itens.forEach(function(i){
+      if(i.distanciaM) km  += i.distanciaM / 1000;
+      min += minutos(i);
+    });
+    if(km)  s.km  = Math.round(km * 10) / 10;
+    if(min) s.min = min;
+    if(itens.some(function(i){ return i.prova })) s.prova = true;
+    return s;
+  }
+
+  function sessaoAcademia(iso){
+    return {
+      id: iso, data: iso, mod: 'forca', foco: 'forca',
+      fase: 'Plano do treinador',
+      titulo: '💪 ' + DIAS_ACADEMIA[diaDaSemana(iso)] + ' — 5:30–6:30am',
+      min: 60, origem: 'academia'
+    };
+  }
+
+  var gerarApp = window.gerarPlano;
+  window.gerarPlano = function(){
+    var plano = gerarApp.apply(this, arguments) || {};
+    var mapa  = porData();
+    var datas = Object.keys(mapa);
+    if(!datas.length) return plano;   // sync ainda nao trouxe a agenda: nao mexe
+
+    // 1) todo dia que o treinador marcou passa a valer, exista ou nao no plano
+    datas.forEach(function(iso){
+      plano[iso] = sessaoDoGarmin(iso, mapa[iso]);
+    });
+
+    // 2) dentro da janela que o treinador cobre, os dias sem treino dele
+    //    ficam so com a academia (ou vazios). Fora da janela nao mexo.
+    datas.sort();
+    var de = datas[0], ate = datas[datas.length - 1];
+    Object.keys(plano).forEach(function(iso){
+      if(iso < de || iso > ate) return;
+      if(mapa[iso]) return;
+      if(DIAS_ACADEMIA[diaDaSemana(iso)]) plano[iso] = sessaoAcademia(iso);
+      else delete plano[iso];
+    });
+
+    return plano;
+  };
+});
