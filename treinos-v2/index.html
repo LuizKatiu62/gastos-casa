@@ -1916,8 +1916,14 @@ async function salvarCoach(){
     dias:PERFIL.dias, marcoData:PERFIL.marcoData, marcoNome:PERFIL.marcoNome, periodo:ST.periodo,
     em:new Date().toISOString()};
   try{
+    // PATCH, nao PUT. PUT substitui o no inteiro: tudo que nao estivesse
+    // em 'corpo' era apagado a cada gravacao — inclusive ramos escritos
+    // por fora, como o do Hevy (treinos_coach_v2/luiz/hevy) e o
+    // garminEnviado. O robo gravava, o app abria e apagava, e o painel
+    // aparecia vazio sem explicacao. PATCH atualiza so as chaves de
+    // 'corpo' e deixa as vizinhas em paz.
     await fetch(`${FB_DB}/${FB_COACH}.json?auth=${t}`,
-      {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(corpo)});
+      {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify(corpo)});
   }catch(e){ console.warn('salvarCoach:',e.message) }
 }
 async function lerCoach(){
