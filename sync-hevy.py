@@ -245,6 +245,18 @@ def main():
         },
     }
 
+    # ── copia para o repositorio ──
+    # O Firebase e para o app ler. Este arquivo e para PESSOAS lerem: eu,
+    # voce, ou qualquer um que precise ver o que esta montado no Hevy sem
+    # abrir o app nem copiar tela. Mesmo caminho que o sync do Garmin usa
+    # para o semana.json.
+    try:
+        with open("treinos-v2/hevy.json", "w", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False, indent=1)
+        log("treinos-v2/hevy.json escrito")
+    except Exception as e:
+        log(f"AVISO: nao consegui escrever hevy.json: {e}")
+
     token = firebase_token()
     if firebase_put(FIREBASE_PATH, payload, token):
         log(f"Firebase atualizado! {len(rotinas)} rotinas · {len(cargas)} exercicios")

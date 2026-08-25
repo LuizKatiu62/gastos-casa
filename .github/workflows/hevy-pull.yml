@@ -9,6 +9,10 @@ on:
     - cron: '20 * * * *'   # toda hora, 20 min depois do sync do Garmin
   workflow_dispatch:
 
+# necessário para o passo que grava treinos-v2/hevy.json de volta no repositório
+permissions:
+  contents: write
+
 jobs:
   puxar:
     runs-on: ubuntu-latest
@@ -29,3 +33,18 @@ jobs:
           HEVY_API_KEY:      ${{ secrets.HEVY_API_KEY }}
           FIREBASE_EMAIL:    ${{ secrets.FIREBASE_EMAIL }}
           FIREBASE_PASSWORD: ${{ secrets.FIREBASE_PASSWORD }}
+
+      # Publica as rotinas como arquivo do repositorio, para poderem ser
+      # lidas sem abrir o app nem copiar tela.
+      - name: Publicar as rotinas do Hevy
+        run: |
+          if [ -n "$(git status --porcelain treinos-v2/hevy.json)" ]; then
+            git config user.name  "hevy-pull"
+            git config user.email "hevy-pull@users.noreply.github.com"
+            git add treinos-v2/hevy.json
+            git commit -m "rotinas do Hevy: $(date -u +%Y-%m-%d\ %H:%M) UTC"
+            git push
+            echo "hevy.json publicado"
+          else
+            echo "hevy.json sem mudanca"
+          fi
