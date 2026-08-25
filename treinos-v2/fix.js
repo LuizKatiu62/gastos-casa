@@ -10175,45 +10175,19 @@ PARTE('a aba coach e so da academia', function(){
     };
   }
 
-  /* Blocos que so faziam sentido com plano de corrida no app. Sem ele,
-     comparar "feito x planejado" e propor mudanca de quilometragem nao
-     tem base — quem planeja a corrida agora e o treinador.
-     Removo depois de cada pintura, porque #bqAn se reescreve inteiro. */
-  var BLOCOS_FORA = ['último treino comparado', 'treinos comparados',
-                     'fora do plano', 'o que os números dizem',
-                     'mudanças propostas'];
-  function nrmT(t){
-    return String(t || '').trim().toLowerCase()
-      .replace(/\s+/g, ' ');
-  }
-  function limparAnalise(){
-    var cx = document.getElementById('bqAn');
-    if(!cx) return 0;
-    var titulos = Array.prototype.slice.call(cx.querySelectorAll('.bqa-t'));
-    var n = 0;
-    titulos.forEach(function(t){
-      if(BLOCOS_FORA.indexOf(nrmT(t.textContent)) === -1) return;
-      var seg = t.nextElementSibling;
-      t.parentNode.removeChild(t); n++;
-      while(seg && !(seg.classList && seg.classList.contains('bqa-t'))){
-        var prox = seg.nextElementSibling;
-        seg.parentNode.removeChild(seg); n++;
-        seg = prox;
-      }
-    });
-    return n;
-  }
-  window.bqLimparAnalise = limparAnalise;   // exposta para teste
-  try{
-    limparAnalise();
-    new MutationObserver(function(){ limparAnalise() })
-      .observe(document.body, {childList:true, subtree:true});
-  }catch(e){}
+  /* A secao inteira de "feito x planejado" sai. Ela comparava o que
+     voce executou contra o plano de corrida do app — plano que nao
+     existe mais. Sem base de comparacao, todo o bloco perde sentido:
+     projecao, treinos comparados, fora do plano, o que os numeros
+     dizem e as mudancas propostas.
+
+     Escondo em vez de apagar o codigo: se um dia voltar a fazer
+     sentido, e so tirar o #bqAn desta regra de CSS.                 */
 
   /* progresso de ciclo sai da tela; a data da prova fica */
   try{
     var tag = document.createElement('style');
-    tag.textContent = '#bqCic,.bqa-ciclo,#coach-plan-levels{display:none !important}';
+    tag.textContent = '#bqAn,#bqCic,.bqa-ciclo,#coach-plan-levels{display:none !important}';
     document.head.appendChild(tag);
   }catch(e){}
 });

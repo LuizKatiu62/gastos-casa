@@ -1,0 +1,31 @@
+name: Hevy Pull
+
+# Le as rotinas e os treinos executados no Hevy e grava no Firebase,
+# para a aba Coach mostrar exercicios, series, carga e progressao.
+# So le do Hevy — nunca escreve. Quem escreve rotina la e o hevy-sync.yml.
+
+on:
+  schedule:
+    - cron: '20 * * * *'   # toda hora, 20 min depois do sync do Garmin
+  workflow_dispatch:
+
+jobs:
+  puxar:
+    runs-on: ubuntu-latest
+    if: github.repository == 'LuizKatiu62/gastos-casa'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Ler Hevy e gravar no Firebase
+        run: python sync-hevy.py
+        env:
+          HEVY_API_KEY:      ${{ secrets.HEVY_API_KEY }}
+          FIREBASE_EMAIL:    ${{ secrets.FIREBASE_EMAIL }}
+          FIREBASE_PASSWORD: ${{ secrets.FIREBASE_PASSWORD }}
