@@ -10191,3 +10191,167 @@ PARTE('a aba coach e so da academia', function(){
     document.head.appendChild(tag);
   }catch(e){}
 });
+
+/* ───────────── 51. PAINEL DA ACADEMIA ─────────────
+   O que o Hevy sabe e o Garmin nao: carga, series e repeticoes. O
+   sync-hevy.py le a conta e grava em treinos_coach_v2/luiz/hevy; aqui
+   so desenhamos.
+
+   Tres blocos, nesta ordem de utilidade:
+     sessao do dia   — o que fazer hoje, com peso da ultima vez
+     aderencia       — quantas sessoes das planejadas, 4 semanas
+     progressao      — carga de agora contra a de 12 semanas atras,
+                       e o aviso de exercicio parado
+
+   Nada de nota geral ou indice de prontidao: sem base, seria chute
+   com cara de precisao.                                             */
+PARTE('painel da academia', function(){
+  if(typeof FB_DB !== 'string' || typeof FB_COACH !== 'string')
+    throw new Error('sem FB_DB/FB_COACH');
+
+  var HEVY = null;
+  var DIAS_ACADEMIA = {1:1, 3:1, 5:1};
+
+  function esc(s){
+    return String(s == null ? '' : s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function kg(v){
+    if(v == null) return '';
+    return (Math.round(v * 10) / 10).toString().replace('.', ',') + ' kg';
+  }
+  function diaSemana(d){ var n = d.getDay(); return n === 0 ? 7 : n }
+
+  function caixa(){
+    var el = document.getElementById('bqAcad');
+    if(el) return el;
+    var alvo = document.getElementById('v-coach');
+    if(!alvo) return null;
+    el = document.createElement('section');
+    el.className = 'card'; el.id = 'bqAcad';
+    alvo.insertBefore(el, alvo.firstChild);
+    return el;
+  }
+
+  /* qual rotina cai hoje. Seg e sex sao a mesma (pernas e core), qua e
+     a outra (costas e postura) — o mesmo par que o app ja usava.     */
+  function rotinaDoDia(dia){
+    if(!HEVY || !HEVY.rotinas) return null;
+    var nomes = Object.keys(HEVY.rotinas);
+    if(!nomes.length) return null;
+    var chave = (dia === 3) ? /costas|postura|upper|puxar|b\b/i
+                            : /pernas|core|legs|inferior|a\b/i;
+    var achou = nomes.filter(function(n){ return chave.test(n) })[0];
+    return HEVY.rotinas[achou || nomes[0]];
+  }
+
+  function cargaDe(nome){
+    var c = HEVY && HEVY.cargas;
+    if(!c) return null;
+    if(c[nome]) return c[nome];
+    var alvo = String(nome).toLowerCase();
+    var k = Object.keys(c).filter(function(x){
+      return String(x).toLowerCase() === alvo;
+    })[0];
+    return k ? c[k] : null;
+  }
+
+  function blocoSessao(){
+    var hoje = new Date();
+    var dia = diaSemana(hoje);
+    if(!DIAS_ACADEMIA[dia])
+      return '<div class="bqa-t">Academia</div>'
+           + '<div class="bqa-u">Hoje não tem. Próxima sessão: '
+           + (dia < 3 ? 'quarta' : dia < 5 ? 'sexta' : 'segunda') + ', 5:30.</div>';
+
+    var r = rotinaDoDia(dia);
+    if(!r) return '<div class="bqa-t">Academia</div><div class="bqa-u">Sem rotina no Hevy ainda.</div>';
+
+    var linhas = (r.exercicios || []).map(function(e){
+      var c = cargaDe(e.nome);
+      var peso = e.peso || (c && c.atual);
+      return '<div style="display:flex;justify-content:space-between;gap:10px;padding:3px 0">'
+           + '<span>' + esc(e.nome) + '</span>'
+           + '<span style="white-space:nowrap;opacity:.85">' + esc(e.series || '')
+           + (peso ? ' · ' + kg(peso) : '') + '</span></div>';
+    }).join('');
+
+    return '<div class="bqa-t">Hoje · 5:30 · ' + esc(r.titulo) + '</div>'
+         + '<div class="bqa-u" style="font-size:13px">' + linhas + '</div>';
+  }
+
+  function blocoAderencia(){
+    if(typeof ST !== 'object' || !ST || !Array.isArray(ST.runs)) return '';
+    var corte = new Date(); corte.setDate(corte.getDate() - 28);
+    var isoCorte = corte.toISOString().slice(0,10);
+    var feitas = ST.runs.filter(function(r){
+      return r && (r.mod === 'forca' || r.esporte === 'academia') && r.data >= isoCorte;
+    }).length;
+    /* 3 por semana x 4 semanas */
+    var previstas = 12;
+    return '<div class="bqa-t">Aderência · 4 semanas</div>'
+         + '<div class="bqa-u"><b style="font-size:15px">' + feitas + '</b> de '
+         + previstas + ' sessões previstas.</div>';
+  }
+
+  function blocoProgressao(){
+    var c = HEVY && HEVY.cargas;
+    if(!c) return '';
+    var itens = Object.keys(c).map(function(k){ return c[k] })
+      .filter(function(x){ return x && x.atual });
+    if(!itens.length) return '';
+
+    itens.sort(function(a,b){ return (b.ganho || 0) - (a.ganho || 0) });
+
+    var linhas = itens.slice(0, 8).map(function(x){
+      var subiu = (x.ganho || 0) > 0;
+      var cor = subiu ? '#3FD98A' : 'inherit';
+      var de = (x.primeiro != null && x.primeiro !== x.atual)
+             ? '<span style="opacity:.6">' + kg(x.primeiro) + '</span> → ' : '';
+      return '<div style="display:flex;justify-content:space-between;gap:10px;padding:3px 0">'
+           + '<span>' + esc(x.nome) + '</span>'
+           + '<span style="white-space:nowrap">' + de
+           + '<b style="color:' + cor + '">' + kg(x.atual) + '</b></span></div>';
+    }).join('');
+
+    var parados = itens.filter(function(x){
+      return (x.ganho || 0) <= 0 && x.primeiroEm && x.primeiroEm !== x.atualEm;
+    });
+    var aviso = parados.length
+      ? '<div class="bqa-u" style="margin-top:8px;opacity:.9">'
+        + esc(parados[0].nome) + ' está no mesmo peso desde '
+        + esc((parados[0].primeiroEm || '').split('-').reverse().slice(0,2).join('/'))
+        + '.</div>'
+      : '';
+
+    return '<div class="bqa-t">Progressão de carga</div>'
+         + '<div class="bqa-u" style="font-size:13px">' + linhas + '</div>' + aviso;
+  }
+
+  function pintar(){
+    var el = caixa();
+    if(!el) return;
+    if(!HEVY){
+      el.innerHTML = '<div class="bqa-t">Academia</div>'
+                   + '<div class="bqa-u">Carregando os dados do Hevy…</div>';
+      return;
+    }
+    el.innerHTML = blocoSessao() + blocoAderencia() + blocoProgressao();
+  }
+
+  async function buscar(){
+    try{
+      var t = (typeof fbToken === 'function') ? await fbToken() : null;
+      if(!t) return;
+      var r = await fetch(FB_DB + '/' + FB_COACH + '/hevy.json?auth=' + t);
+      if(!r.ok) return;
+      HEVY = await r.json();
+      window.bqAcademia = HEVY;          // para conferir no console
+      pintar();
+    }catch(e){ console.warn('painel academia:', e && e.message) }
+  }
+
+  pintar();
+  setTimeout(buscar, 1200);
+  setTimeout(pintar, 4000);
+});
