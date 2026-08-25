@@ -10138,20 +10138,41 @@ PARTE('a aba coach e so da academia', function(){
   /* De hoje em diante: so segunda, quarta e sexta, e so forca. O
      passado nao se toca — e historico, e apagar estragaria a conta
      de aderencia.                                                   */
+  /* Segunda-feira da semana em curso. O filtro vale para a semana
+     inteira, nao so de hoje em diante: senao os dias ja passados desta
+     semana ficam mostrando o plano de corrida antigo — foi assim que
+     "Rodagem leve" reapareceu numa segunda de academia. Semanas
+     anteriores nao se tocam: sao historico de aderencia.            */
+  function inicioDaSemana(){
+    var d = new Date();
+    var n = d.getDay(); n = (n === 0 ? 7 : n);
+    d.setDate(d.getDate() - (n - 1));
+    return d.getFullYear() + '-' + ('0'+(d.getMonth()+1)).slice(-2) + '-' + ('0'+d.getDate()).slice(-2);
+  }
+
+  function sessaoAcademia(iso){
+    return {id:iso, data:iso, mod:'forca', foco:'forca',
+            titulo:'Força — academia 5:30', min:60, origem:'academia'};
+  }
+
   function sohAcademia(plano){
-    var hoje = hojeIso();
+    var deste = inicioDaSemana();
     Object.keys(plano).forEach(function(iso){
-      if(iso < hoje) return;
+      if(iso < deste) return;               // semanas passadas: historico
       var s = plano[iso];
       if(s && s.prova) return;              // a prova continua no calendario
-      if(!DIAS_ACADEMIA[diaSemana(iso)] || !ehForca(s)){
+      if(!DIAS_ACADEMIA[diaSemana(iso)]){
         delete plano[iso];
+        tirarExtra(iso);
+      }else if(!ehForca(s)){
+        /* dia de academia com sobra do plano de corrida: vira academia */
+        plano[iso] = sessaoAcademia(iso);
         tirarExtra(iso);
       }
     });
     /* nos dias que ficam, o extra duplicaria a academia e somaria 45 */
     Object.keys(plano).forEach(function(iso){
-      if(iso >= hoje && !(plano[iso] && plano[iso].prova)) tirarExtra(iso);
+      if(iso >= deste && !(plano[iso] && plano[iso].prova)) tirarExtra(iso);
     });
     return plano;
   }
