@@ -10185,4 +10185,25 @@ PARTE('o coach humano manda', function(){
 
     return plano;
   };
+
+  /* O plano certo era montado e logo apagado: rebuild() chama
+     aplicarTrocas() depois de gerarPlano(), e uma troca manual antiga
+     (de quando o app ainda mandava) vencia o treinador. Aqui o dia que
+     tem treino do Garmin volta a valer, por ultimo.                  */
+  if(typeof window.rebuild === 'function'){
+    var rebuildApp = window.rebuild;
+    window.rebuild = function(){
+      var r = rebuildApp.apply(this, arguments);
+      try{
+        var mapa = porData();
+        if(typeof ST === 'object' && ST && ST.plano){
+          Object.keys(mapa).forEach(function(iso){
+            ST.plano[iso] = sessaoDoGarmin(iso, mapa[iso]);
+          });
+          ST.cache = {};
+        }
+      }catch(e){ console.warn('coach humano:', e && e.message) }
+      return r;
+    };
+  }
 });
