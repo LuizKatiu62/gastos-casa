@@ -10339,19 +10339,48 @@ PARTE('painel da academia', function(){
     el.innerHTML = blocoSessao() + blocoAderencia() + blocoProgressao();
   }
 
+  var ultimoErro = '';
+
   async function buscar(){
     try{
-      var t = (typeof fbToken === 'function') ? await fbToken() : null;
-      if(!t) return;
+      if(typeof fbToken !== 'function'){ ultimoErro = 'sem fbToken'; return false }
+      var t = await fbToken();
+      if(!t){ ultimoErro = 'sem token do Firebase ainda'; return false }
       var r = await fetch(FB_DB + '/' + FB_COACH + '/hevy.json?auth=' + t);
-      if(!r.ok) return;
-      HEVY = await r.json();
+      if(!r.ok){ ultimoErro = 'HTTP ' + r.status; return false }
+      var j = await r.json();
+      if(!j || !j.rotinas){ ultimoErro = 'o sync do Hevy ainda não gravou'; return false }
+      HEVY = j;
       window.bqAcademia = HEVY;          // para conferir no console
       pintar();
-    }catch(e){ console.warn('painel academia:', e && e.message) }
+      return true;
+    }catch(e){
+      ultimoErro = (e && e.message) || 'erro de rede';
+      return false;
+    }
   }
 
+  /* O login no Firebase e assincrono: na primeira tentativa o token
+     costuma nao existir. Buscar uma vez so deixava o painel presa em
+     "Carregando" para sempre. Agora insiste, e se desistir diz por que
+     em vez de ficar mudo.                                            */
+  var tentativas = 0;
+  function insistir(){
+    tentativas++;
+    buscar().then(function(ok){
+      if(ok) return;
+      if(tentativas < 8){ setTimeout(insistir, 1500); return }   // 12s no total, nao 42
+      var el = caixa();
+      if(el && !HEVY){
+        el.innerHTML = '<div class="bqa-t">Academia</div>'
+          + '<div class="bqa-u">Não consegui ler os dados do Hevy: '
+          + esc(ultimoErro) + '. Rode o Hevy Pull no GitHub e recarregue.</div>';
+      }
+    });
+  }
+
+  window.bqAcademiaRecarregar = function(){ tentativas = 0; insistir(); return 'buscando…' };
+
   pintar();
-  setTimeout(buscar, 1200);
-  setTimeout(pintar, 4000);
+  setTimeout(insistir, 1200);
 });
