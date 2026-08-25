@@ -27,7 +27,10 @@ import urllib.error
 
 HEVY_BASE     = "https://api.hevyapp.com/v1"
 FIREBASE_DB   = "https://gastos-casa-7f431-default-rtdb.firebaseio.com"
-FIREBASE_PATH = "treinos_hevy/luiz"
+# treinos_hevy/luiz e recusado pelas regras do banco (401 no PUT).
+# treinos_coach_v2/luiz ja e gravavel — o sync do Garmin escreve
+# garminEnviado ali dentro. Entao o Hevy vira um ramo desse mesmo no.
+FIREBASE_PATH = "treinos_coach_v2/luiz/hevy"
 FIREBASE_KEY  = "AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU"
 SEMANAS_HIST  = 12
 
@@ -188,14 +191,18 @@ def main():
     corte = (datetime.today() - timedelta(weeks=SEMANAS_HIST)).strftime("%Y-%m-%d")
     ordenados = sorted(treinos_bruto, key=data_do_treino)     # antigo -> novo
     cargas = {}
+    fora_do_corte = 0
+    sem_peso = 0
     for w in ordenados:
         data = data_do_treino(w)
         if data < corte:
+            fora_do_corte += 1
             continue
         for ex in (w.get("exercises") or []):
             nome = nome_exercicio(ex)
             s, peso = texto_series(ex.get("sets") or [])
             if not peso:
+                sem_peso += 1
                 continue
             c = cargas.setdefault(nome, {"nome": nome})
             if "primeiro" not in c:
@@ -208,6 +215,11 @@ def main():
         if c.get("primeiro") and c.get("atual"):
             c["ganho"] = round(c["atual"] - c["primeiro"], 1)
     log(f"{len(cargas)} exercicios com carga registrada")
+    if not cargas:
+        datas = sorted(data_do_treino(w) for w in ordenados)
+        log(f"  nenhuma carga. corte={corte} · datas dos treinos: {datas}")
+        log(f"  {fora_do_corte} treinos anteriores ao corte · "
+            f"{sem_peso} exercicios sem weight_kg (peso do corpo ou so tempo)")
 
     # ── volume por semana ──
     historico = {}
