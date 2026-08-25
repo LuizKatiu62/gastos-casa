@@ -233,10 +233,39 @@ def main():
         h["sessoes"] += 1
     log(f"{len(historico)} semanas de historico")
 
+    # ── sessoes: a data de cada treino feito ──
+    # O Garmin nao sabe que voce treinou: o Hevy nao manda nada para la.
+    # Sem esta lista, a aderencia do app conta zero mesmo voce treinando
+    # todas as sessoes, e o dia ganha aquele alerta de nao cumprido.
+    sessoes = []
+    for w in ordenados:
+        data = data_do_treino(w)
+        if data < corte:
+            continue
+        dur = 0
+        try:
+            ini = w.get("start_time"); fim = w.get("end_time")
+            if ini and fim:
+                a1 = datetime.strptime(ini[:19], "%Y-%m-%dT%H:%M:%S")
+                a2 = datetime.strptime(fim[:19], "%Y-%m-%dT%H:%M:%S")
+                dur = max(0, int((a2 - a1).total_seconds() // 60))
+        except Exception:
+            dur = 0
+        item = {"data": data, "titulo": w.get("title") or "Treino"}
+        if dur:
+            item["min"] = dur
+        v = volume_do_treino(w)
+        if v:
+            item["kg"] = v
+        sessoes.append(item)
+    sessoes.sort(key=lambda x: x["data"])
+    log(f"{len(sessoes)} sessoes feitas no periodo")
+
     payload = {
         "rotinas": rotinas,
         "cargas": cargas,
         "historico": historico,
+        "sessoes": sessoes,
         "meta": {
             "ultimaSync": datetime.now().strftime("%Y-%m-%dT%H:%M:%S"),
             "totalRotinas": len(rotinas),

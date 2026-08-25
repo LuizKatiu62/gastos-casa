@@ -10361,22 +10361,42 @@ PARTE('painel da academia', function(){
            + (peso ? ' · ' + kg(peso) : '') + '</span></div>';
     }).join('');
 
-    return '<div class="bqa-t">Hoje · 5:30 · ' + esc(r.titulo) + '</div>'
+    var feito = fezNoDia(hojeIso());
+    return '<div class="bqa-t">Hoje · 5:30 · ' + esc(r.titulo)
+         + (feito ? ' <span style="color:#3FD98A">✓ feito</span>' : '') + '</div>'
          + '<div class="bqa-u" style="font-size:13px">' + linhas + '</div>';
   }
 
+  /* Contar pelo Garmin dava sempre zero: o Hevy nao envia nada para la,
+     entao uma academia feita so no Hevy nunca aparecia. Agora conta na
+     fonte onde o registro existe de verdade.                         */
+  function sessoesFeitas(){
+    return (HEVY && Array.isArray(HEVY.sessoes)) ? HEVY.sessoes : [];
+  }
+
+  function fezNoDia(iso){
+    return sessoesFeitas().some(function(s){ return s && s.data === iso });
+  }
+
   function blocoAderencia(){
-    if(typeof ST !== 'object' || !ST || !Array.isArray(ST.runs)) return '';
     var corte = new Date(); corte.setDate(corte.getDate() - 28);
     var isoCorte = corte.toISOString().slice(0,10);
-    var feitas = ST.runs.filter(function(r){
-      return r && (r.mod === 'forca' || r.esporte === 'academia') && r.data >= isoCorte;
-    }).length;
-    /* 3 por semana x 4 semanas */
-    var previstas = 12;
+    var feitas = sessoesFeitas().filter(function(s){ return s.data >= isoCorte }).length;
+    var previstas = 12;                       // 3 por semana x 4 semanas
+    if(!HEVY) return '';
+    var pct = Math.round(feitas / previstas * 100);
+    var cor = pct >= 80 ? '#3FD98A' : pct >= 60 ? '#F5C544' : '#F2685C';
     return '<div class="bqa-t">Aderência · 4 semanas</div>'
-         + '<div class="bqa-u"><b style="font-size:15px">' + feitas + '</b> de '
-         + previstas + ' sessões previstas.</div>';
+         + '<div class="bqa-u"><b style="font-size:15px;color:' + cor + '">' + feitas + '</b> de '
+         + previstas + ' sessões previstas'
+         + (feitas ? ' · última em ' + esc(ultimaSessao()) : '') + '.</div>';
+  }
+
+  function ultimaSessao(){
+    var l = sessoesFeitas();
+    if(!l.length) return '';
+    var d = l[l.length - 1].data;
+    return d.split('-').reverse().slice(0,2).join('/');
   }
 
   function blocoProgressao(){
@@ -10465,6 +10485,22 @@ PARTE('painel da academia', function(){
   }
 
   window.bqAcademiaRecarregar = function(){ tentativas = 0; insistir(); return 'buscando…' };
+
+  /* A planilha marcava o dia como nao cumprido porque concluida() exige
+     que voce toque em cada etapa no app. Quem treina abre o Hevy, nao
+     este app — entao o dia ficava com o alerta vermelho mesmo tendo
+     sido feito. Aqui: se existe treino registrado no Hevy naquela data,
+     a sessao de forca conta como concluida.                          */
+  if(typeof window.concluida === 'function'){
+    var concluidaApp = window.concluida;
+    window.concluida = function(s){
+      try{
+        if(s && s.data && (s.mod === 'forca' || /academia|for[cç]a/i.test(String(s.titulo||'')))
+           && fezNoDia(s.data)) return true;
+      }catch(e){}
+      return concluidaApp.apply(this, arguments);
+    };
+  }
 
   pintar();
   setTimeout(insistir, 1200);
