@@ -10167,6 +10167,24 @@ PARTE('o coach humano manda', function(){
     return partes.join(' · ');
   }
 
+  /* A planilha pinta a linha pelo campo 'foco'. Com foco desconhecido
+     ela chamava tudo de "rodagem facil", verde, ate um treino em Z4.
+     Leio o tipo do nome que o treinador deu.                        */
+  function focoDoNome(nome, km){
+    var t = String(nome || '').toLowerCase();
+    if(/prova|race/.test(t))                      return 'prova';
+    if(/stride|tiro|sprint|educativo/.test(t))    return 'tiros';
+    if(/ladeira|subida|hill/.test(t))             return 'ladeira';
+    if(/z4|vo2|intervalad|blocos/.test(t))        return 'vo2';
+    if(/limiar|tempo|z3/.test(t))                 return 'limiar';
+    if(/fartlek/.test(t))                         return 'fartlek';
+    if(/ritmo de prova|maraton|\bmp\b/.test(t))   return 'mp';
+    if(/long[aã]o|longo/.test(t))                 return 'longo';
+    if(km >= 18)                                  return 'longo';
+    if(/regenerat|soltura|recupera/.test(t))      return 'soltura';
+    return 'facil';
+  }
+
   function sessaoDoGarmin(iso, itens){
     var principal = itens[0];
     var nomes = itens.map(function(i){ return i.nome || 'Treino' });
@@ -10177,7 +10195,7 @@ PARTE('o coach humano manda', function(){
     var s = {
       id: iso, data: iso,
       mod: MOD_POR_ESPORTE[principal.esporte] || 'corrida',
-      foco: 'coach',
+      foco: 'facil',                       // ajustado logo abaixo
       fase: 'Plano do treinador',
       titulo: titulo,
       origem: 'garmin',
@@ -10189,7 +10207,9 @@ PARTE('o coach humano manda', function(){
       min += minutos(i);
     });
     if(km)  s.km  = Math.round(km * 10) / 10;
+    if(academia) min += 60;                // a hora de academia entra na conta
     if(min) s.min = min;
+    s.foco = focoDoNome(nomes.join(' '), s.km || 0);
     if(itens.some(function(i){ return i.prova })) s.prova = true;
 
     // blocos reais do treinador; sem eles o card inventa os proprios
@@ -10253,6 +10273,16 @@ PARTE('o coach humano manda', function(){
         if(typeof ST === 'object' && ST && ST.plano){
           Object.keys(mapa).forEach(function(iso){
             ST.plano[iso] = sessaoDoGarmin(iso, mapa[iso]);
+            /* O "segundo treino do dia" era a academia do plano antigo.
+               Sem duracao propria, a planilha contava 45 min por conta
+               e somava: 41 do treinador viravam 86 na tela. A academia
+               agora esta no proprio card, com os 60 min dela. Guardo o
+               que tiro em ST.extrasGarmin, para nada se perder.      */
+            if(ST.extras && ST.extras[iso]){
+              ST.extrasGarmin = ST.extrasGarmin || {};
+              ST.extrasGarmin[iso] = ST.extras[iso];
+              delete ST.extras[iso];
+            }
           });
           ST.cache = {};
         }
