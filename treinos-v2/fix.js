@@ -7309,14 +7309,17 @@ PARTE('planilha de treinos', function(){
 '#bqPl .plhead h2{margin:0;font-size:15px;font-weight:800;letter-spacing:-.02em}',
 '#bqPl .plhead .sub{font-size:11px;color:var(--tx3);text-align:right;line-height:1.35}',
 '#bqPl .rolo{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:thin}',
-'#bqPl table{border-collapse:separate;border-spacing:0;width:100%;min-width:430px;',
+'#bqPl table{border-collapse:separate;border-spacing:0;width:100%;',
 '  font-size:12.5px;table-layout:fixed}',
+'#bqPl th:nth-child(3){text-align:right;padding-right:12px}',
+'#bqPl td:nth-child(3){padding-right:12px}',
 '#bqPl th{font-size:9.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;',
 '  color:var(--tx3);text-align:right;padding:7px 9px;background:var(--s2);',
 '  border-bottom:1px solid var(--line);white-space:nowrap;position:sticky;top:0;z-index:3}',
 '#bqPl th.d,#bqPl th.t{text-align:left}',
-'#bqPl td{padding:0 9px;height:46px;vertical-align:middle;border-bottom:1px solid rgba(34,43,54,.75);',
+'#bqPl td{padding:9px;min-height:46px;vertical-align:middle;border-bottom:1px solid rgba(34,43,54,.75);',
 '  text-align:right;white-space:nowrap;color:var(--tx2)}',
+'#bqPl td.t{white-space:normal}',
 /* coluna do dia: congelada */
 '#bqPl td.d,#bqPl th.d{position:sticky;left:0;z-index:2;width:74px;min-width:74px;',
 '  background:var(--s1);text-align:left;padding-left:14px}',
@@ -7328,11 +7331,11 @@ PARTE('planilha de treinos', function(){
 '#bqPl tr.hoje td.d .dn{color:var(--acc)}',
 '#bqPl tr.hoje td.d .dw{color:var(--acc)}',
 /* a faixa de cor da zona */
-'#bqPl td.t{text-align:left;width:150px;min-width:150px;position:relative;padding-left:16px}',
+'#bqPl td.t{text-align:left;width:auto;position:relative;padding-left:16px}',
 '#bqPl td.t:before{content:"";position:absolute;left:0;top:6px;bottom:6px;width:4px;',
 '  border-radius:0 3px 3px 0;background:var(--zc,transparent)}',
-'#bqPl td.t .tt{display:block;font-weight:700;color:var(--tx);font-size:12.5px;',
-'  overflow:hidden;text-overflow:ellipsis;line-height:1.25}',
+'#bqPl td.t .tt{display:block;font-weight:700;color:var(--tx);font-size:13.5px;',
+'  line-height:1.3;white-space:normal;overflow-wrap:anywhere}',
 '#bqPl td.t .zz{display:block;font-size:9.5px;font-weight:800;letter-spacing:.07em;',
 '  text-transform:uppercase;color:var(--zc,var(--tx3));margin-top:1px;line-height:1.1}',
 '#bqPl tr.linha{cursor:pointer;transition:background .12s}',
@@ -7477,8 +7480,6 @@ PARTE('planilha de treinos', function(){
       + '<span class="dn">' + String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '</span></td>'
       + '<td class="t"><span class="tt">' + tit + '</span>'
       + (sub ? '<span class="zz">' + sub + '</span>' : '') + '</td>'
-      + '<td>' + (km ? '<span class="num">' + km.toFixed(km >= 10 ? 0 : 1) + '</span>' : '<span class="dim">—</span>') + '</td>'
-      + '<td>' + (pace ? '<span class="num">' + pace + '</span>' : '<span class="dim">—</span>') + '</td>'
       + '<td>' + ((min || xmin) ? '<span class="num">' + ((min || 0) + xmin) + '</span>' : '<span class="dim">—</span>') + '</td>'
       + '<td class="ok">' + (estado === 'v' ? '<span class="vv">✓</span>'
                           : estado === 'x' ? '<span class="xx">!</span>'
@@ -7499,6 +7500,15 @@ PARTE('planilha de treinos', function(){
       atual.ks.push(k);
     });
 
+    /* Só a semana em curso. A seguinte abre quando virar a semana —
+       ver duas de uma vez so enchia a tela de coisa que nao e de hoje. */
+    var hojeIso = iso(HOJE);
+    var emCurso = semanas.filter(function(w){
+      return w.ks[0] <= hojeIso && w.ks[w.ks.length - 1] >= hojeIso;
+    });
+    if(emCurso.length) semanas = emCurso;
+    else if(semanas.length) semanas = [semanas[0]];
+
     var corpo = '', nsem = 0;
     semanas.forEach(function(w){
       nsem++;
@@ -7515,7 +7525,7 @@ PARTE('planilha de treinos', function(){
                 ? 'Esta semana' : 'Semana ' + nsem;
 
       corpo += '<tr class="sem"><td class="d"><span class="semtag">' + rot + '</span></td>'
-             + '<td class="t" colspan="5" style="text-align:left">'
+             + '<td class="t" colspan="3" style="text-align:left">'
              + (fase ? '<span class="semfase">' + fase + '</span>' : '') + '</td></tr>'
              + linhas;
 
@@ -7533,8 +7543,6 @@ PARTE('planilha de treinos', function(){
              + '<span class="mixbar"><i style="width:' + pctLeve + '%;background:' + corMix + '"></i>'
              + '<i style="width:' + (100 - pctLeve) + '%;background:#F2685C"></i></span>')
         + '</td>'
-        + '<td><span class="totn">' + (somaKm ? somaKm.toFixed(somaKm >= 100 ? 0 : 1) : '—') + '</span></td>'
-        + '<td><span class="mixtx">km</span></td>'
         + '<td><span class="totn">' + (somaMin ? (somaMin / 60).toFixed(1) : '—') + '</span>'
           + '<span class="mixtx"> h</span></td>'
         + '<td class="ok"><span class="mixtx">' + (tem ? feitos + '/' + tem : '') + '</span></td></tr>';
@@ -7552,8 +7560,7 @@ PARTE('planilha de treinos', function(){
       + '<div class="plhead"><h2>Planilha</h2><div class="sub">'
       + 'toque numa linha<br>para abrir o treino</div></div>'
       + '<div class="rolo"><table><thead><tr>'
-      + '<th class="d">Dia</th><th class="t">Treino</th><th>km</th>'
-      + '<th>Ritmo</th><th>min</th><th class="ok"></th>'
+      + '<th class="d">Dia</th><th class="t">Treino</th><th>min</th><th class="ok"></th>'
       + '</tr></thead><tbody>' + corpo + '</tbody></table></div>'
       + '<div class="pleg">' + leg + '</div>'
       + '<p class="plnota">A cor é a <b>intensidade</b>, na ordem de Jack Daniels: verde é leve, '
