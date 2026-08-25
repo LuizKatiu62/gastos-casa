@@ -10235,16 +10235,68 @@ PARTE('painel da academia', function(){
     return el;
   }
 
-  /* qual rotina cai hoje. Seg e sex sao a mesma (pernas e core), qua e
-     a outra (costas e postura) — o mesmo par que o app ja usava.     */
-  function rotinaDoDia(dia){
-    if(!HEVY || !HEVY.rotinas) return null;
+  /* ══ PERIODIZAÇÃO ATÉ A MARATONA — 18/10/2026 ══
+     Montada a partir das 9 rotinas que existem no seu Hevy.
+
+     A regra que manda: forca pesada para 2 a 3 semanas antes da prova.
+     Nao por perda de forca (ela se mantem ate 4 semanas), mas pela
+     fadiga do sistema nervoso, que leva de 10 a 14 dias para sair.
+
+     O Jump Squat da "Maxima (pico)" sai antes do resto: e pliometria
+     de impacto, e aos 64 a recuperacao excentrica e mais lenta. Fica
+     ate 20/09 e depois nao volta.
+
+     Se voce mover a academia de dia — porque o longao mudou — a fase
+     acompanha a data, nao o dia da semana.                           */
+  var PROVA = '2026-10-18';
+  var FASES = [
+    {ate:'2026-09-20', nome:'Construção',
+     rotinas:['pernas e core (base)', 'quadril e core (base)', 'maxima (pico)'],
+     nota:'Fase de carga. Máxima e Pernas nunca nas 48h antes do longão.'},
+    {ate:'2026-09-27', nome:'Última semana pesada',
+     rotinas:['pernas e core (base)', 'quadril e core (base)', 'maxima (pico)'],
+     nota:'Última semana com carga alta. Tire o Jump Squat da Máxima a partir de agora.'},
+    {ate:'2026-10-11', nome:'Redução',
+     rotinas:['manutencao', 'quadril e core (pico)', 'manutencao'],
+     nota:'Nada pesado. O ganho já está feito; agora é chegar inteiro.'},
+    {ate:'2026-10-18', nome:'Semana da prova',
+     rotinas:['manutencao', null, null],
+     nota:'Só a segunda, e leve. Depois de 14/10, nada.'}
+  ];
+
+  function faseDe(iso){
+    for(var i = 0; i < FASES.length; i++) if(iso <= FASES[i].ate) return FASES[i];
+    return null;                       // depois da prova
+  }
+
+  function acharRotina(chave){
+    if(!chave || !HEVY || !HEVY.rotinas) return null;
     var nomes = Object.keys(HEVY.rotinas);
-    if(!nomes.length) return null;
-    var chave = (dia === 3) ? /costas|postura|upper|puxar|b\b/i
-                            : /pernas|core|legs|inferior|a\b/i;
-    var achou = nomes.filter(function(n){ return chave.test(n) })[0];
-    return HEVY.rotinas[achou || nomes[0]];
+    var alvo = chave.toLowerCase();
+    var achou = nomes.filter(function(n){
+      return n.toLowerCase()
+              .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+              .indexOf(alvo.normalize('NFD').replace(/[\u0300-\u036f]/g, '')) >= 0;
+    })[0];
+    return achou ? HEVY.rotinas[achou] : null;
+  }
+
+  /* Seg = 1a rotina da fase, Qua = 2a, Sex = 3a */
+  function rotinaDoDia(dia, iso){
+    var f = faseDe(iso || hojeIso());
+    if(!f) return null;
+    var pos = dia === 1 ? 0 : dia === 3 ? 1 : 2;
+    return acharRotina(f.rotinas[pos]);
+  }
+
+  function hojeIso(){
+    var d = new Date();
+    return d.getFullYear() + '-' + ('0'+(d.getMonth()+1)).slice(-2) + '-' + ('0'+d.getDate()).slice(-2);
+  }
+
+  function diasAteProva(){
+    var h = new Date(hojeIso()), p = new Date(PROVA);
+    return Math.round((p - h) / 86400000);
   }
 
   function cargaDe(nome){
@@ -10258,6 +10310,14 @@ PARTE('painel da academia', function(){
     return k ? c[k] : null;
   }
 
+  function blocoFase(){
+    var f = faseDe(hojeIso());
+    var d = diasAteProva();
+    if(!f) return '';
+    return '<div class="bqa-t">' + esc(f.nome) + ' · ' + d + ' dias para a prova</div>'
+         + '<div class="bqa-u">' + esc(f.nota) + '</div>';
+  }
+
   function blocoSessao(){
     var hoje = new Date();
     var dia = diaSemana(hoje);
@@ -10266,8 +10326,10 @@ PARTE('painel da academia', function(){
            + '<div class="bqa-u">Hoje não tem. Próxima sessão: '
            + (dia < 3 ? 'quarta' : dia < 5 ? 'sexta' : 'segunda') + ', 5:30.</div>';
 
-    var r = rotinaDoDia(dia);
-    if(!r) return '<div class="bqa-t">Academia</div><div class="bqa-u">Sem rotina no Hevy ainda.</div>';
+    var r = rotinaDoDia(dia, hojeIso());
+    if(!r) return '<div class="bqa-t">Academia</div>'
+                + '<div class="bqa-u">Descanso hoje — a fase atual não prevê sessão nesta '
+                + (dia === 1 ? 'segunda' : dia === 3 ? 'quarta' : 'sexta') + '.</div>';
 
     var linhas = (r.exercicios || []).map(function(e){
       var c = cargaDe(e.nome);
@@ -10338,7 +10400,7 @@ PARTE('painel da academia', function(){
                    + '<div class="bqa-u">Carregando os dados do Hevy…</div>';
       return;
     }
-    el.innerHTML = blocoSessao() + blocoAderencia() + blocoProgressao();
+    el.innerHTML = blocoFase() + blocoSessao() + blocoAderencia() + blocoProgressao();
   }
 
   var ultimoErro = '';
