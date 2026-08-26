@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '05b';
+const FIX_VERSAO = '05c';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -10063,7 +10063,7 @@ PARTE('texto do MOTRA', function(){
         var l = window.planoBQ.ligado();
         var diag = '';
         try{ diag = window.bqDiag ? '\n\n── diagnóstico ──\n' + window.bqDiag() : '' }catch(e){}
-        if(confirm('fix.js ' + FIX_VERSAO + ' — as quarenta e sete partes carregaram.\n\n'
+        if(confirm('fix.js ' + FIX_VERSAO + ' — as 51 partes carregaram.\n\n'
           + 'Plano PEI Marathon: ' + (l ? 'LIGADO' : 'desligado') + diag
           + '\n\nOK ' + (l ? 'desliga o plano e volta ao automático do app.'
                              : 'liga o plano da maratona.'))){
@@ -10086,7 +10086,7 @@ PARTE('texto do MOTRA', function(){
         return;
       }
       alert(ok
-        ? 'fix.js ' + FIX_VERSAO + ' — as quarenta e sete partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
+        ? 'fix.js ' + FIX_VERSAO + ' — as 51 partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
         : 'fix.js ' + FIX_VERSAO + '\n\nFalharam:\n\n' + FIX_FALHAS.join('\n\n'));
     };
     barra.insertBefore(s, barra.firstChild.nextSibling);
@@ -10747,4 +10747,411 @@ PARTE('painel da academia', function(){
 
   pintar();
   setTimeout(insistir, 1200);
+});
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   RESUMO DA SEMANA — no formato do Weekly Snapshot do TrainingPeaks.
+
+   Substitui o cartao "Carga da semana", que mostrava uma barra por dia
+   e nada mais. O que faltava era a comparacao: a barra dizia que voce
+   correu 60 minutos, mas nao dizia se o treinador tinha pedido 60 ou 90.
+
+   Tres abas, como no TrainingPeaks: Duracao, Distancia e TSS. Em cada
+   dia, duas barras — o que foi feito (cheia) e o que estava previsto
+   (contornada). Embaixo, a Aderencia: quantos dias bateram o alvo,
+   quantos ficaram fora da faixa, quantos foram perdidos e quantos
+   foram extra.
+
+   De onde vem cada numero, sem invencao nenhuma:
+     previsto  — sessaoDe(dia), que ja junta a agenda do treinador
+                 (RAW.agendados, lida do Garmin) com a academia
+     realizado — ST.runs, as atividades que o relogio gravou; e, para
+                 a academia, RAW.hevy.sessoes, porque o Hevy nao manda
+                 nada para o Garmin e sem isso o dia contaria como perdido
+     TSS       — calculado so no que foi FEITO. O previsto nao traz ritmo,
+                 entao previsto de TSS nao existe e a aba nao finge que sim.
+
+   Dia no futuro com treino marcado nao entra na aderencia: ainda da tempo.
+   ══════════════════════════════════════════════════════════════════════ */
+PARTE('resumo da semana estilo trainingpeaks', function(){
+
+  var row = document.getElementById('wkRow');
+  if(!row) return;
+  if(typeof window.renderSemana !== 'function') return;
+
+  var DIAS  = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
+  var MESES = ['jan','fev','mar','abr','mai','jun',
+               'jul','ago','set','out','nov','dez'];
+
+  /* ── estilo ── */
+  var css = document.createElement('style');
+  css.textContent = [
+    '.snapTabs{display:flex;gap:4px;background:var(--s1);padding:3px;',
+      'border-radius:10px;margin:2px 0 14px}',
+    '.snapTabs button{flex:1;border:0;background:transparent;color:var(--tx3);',
+      'font:600 12px/1 inherit;padding:8px 4px;border-radius:8px;cursor:pointer}',
+    '.snapTabs button.on{background:var(--s3);color:var(--tx)}',
+
+    '.snapG{display:flex;align-items:flex-end;gap:2px;height:104px;',
+      'padding:0 2px;border-bottom:1px solid var(--line)}',
+    '.snapD{flex:1;display:flex;flex-direction:column;align-items:center;',
+      'justify-content:flex-end;height:100%;gap:3px}',
+    '.snapD .par{display:flex;align-items:flex-end;justify-content:center;',
+      'gap:2px;width:100%;height:100%}',
+    '.snapD i{display:block;width:9px;border-radius:3px 3px 0 0;min-height:2px}',
+    '.snapD i.plan{background:transparent;border:1px dashed var(--tx3);',
+      'border-bottom:0;opacity:.75}',
+    '.snapD .vv{font:600 9px/1 inherit;color:var(--tx2);height:10px}',
+
+    '.snapX{display:flex;gap:2px;padding:6px 2px 0}',
+    '.snapX span{flex:1;text-align:center;font:600 10px/1 inherit;color:var(--tx3)}',
+    '.snapX span.hoje{color:var(--acc)}',
+
+    '.snapLeg{display:flex;gap:14px;justify-content:center;margin-top:10px;',
+      'font:500 10px/1 inherit;color:var(--tx3)}',
+    '.snapLeg b{display:inline-block;width:8px;height:8px;border-radius:2px;',
+      'margin-right:5px;vertical-align:-1px}',
+
+    '.snapAd{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}',
+    '.snapAd .t{display:flex;justify-content:space-between;align-items:baseline;',
+      'margin-bottom:8px}',
+    '.snapAd .t span{font:600 10px/1 inherit;letter-spacing:.08em;',
+      'text-transform:uppercase;color:var(--tx3)}',
+    '.snapAd .t b{font:700 15px/1 inherit;color:var(--tx)}',
+    '.snapBar{display:flex;height:8px;border-radius:5px;overflow:hidden;',
+      'background:var(--s1);gap:1px}',
+    '.snapBar i{display:block;height:100%}',
+    '.snapCt{display:flex;flex-wrap:wrap;gap:10px 16px;margin-top:10px}',
+    '.snapCt em{font:500 11px/1.3 inherit;color:var(--tx2);font-style:normal}',
+    '.snapCt em b{display:inline-block;width:7px;height:7px;border-radius:50%;',
+      'margin-right:6px;vertical-align:1px}',
+    '.snapNada{color:var(--tx3);font:500 12px/1.5 inherit;padding:18px 0;',
+      'text-align:center}'
+  ].join('');
+  document.head.appendChild(css);
+
+  /* ── datas ── */
+  function chave(d){
+    return d.getFullYear() + '-' +
+           String(d.getMonth()+1).padStart(2,'0') + '-' +
+           String(d.getDate()).padStart(2,'0');
+  }
+  function curto(d){ return d.getDate() + ' ' + MESES[d.getMonth()] }
+  var HJ = chave(new Date());
+
+  /* ── o que foi feito ──
+     ST.runs guarda r.d = quantos dias atras foi. Inverto para virar data.
+
+     Caminhada fica de fora. Ela chega marcada com walk=true e mod
+     'corrida', e o app inteiro ja a tira das contas de quilometragem
+     (linhas 1901, 2636, 2712 e 2727 do index.html). Aqui o motivo e
+     ainda mais direto: seu treinador nao prescreve caminhada, entao
+     cada uma viraria um dia "extra" na aderencia e sujaria o numero. */
+  function feitoNoDia(iso){
+    var lista = (typeof ST === 'object' && ST && ST.runs) || [];
+    var hoje = new Date(); hoje.setHours(0,0,0,0);
+    var out = [];
+    for(var i=0;i<lista.length;i++){
+      var r = lista[i];
+      if(!r || !isFinite(r.d) || r.walk) continue;
+      var d = new Date(hoje.getTime() - r.d*864e5);
+      if(chave(d) !== iso) continue;
+      out.push(r);
+    }
+    return out;
+  }
+
+  /* A academia so existe no Hevy: o Hevy nao manda nada para o Garmin. */
+  function academiaNoDia(iso){
+    var h = (typeof RAW === 'object' && RAW && RAW.hevy) || null;
+    var s = (h && h.sessoes) || [];
+    var out = [];
+    for(var i=0;i<s.length;i++){
+      if(s[i] && s[i].data === iso) out.push(s[i]);
+    }
+    return out;
+  }
+
+  var LIMIAR = (typeof PERFIL === 'object' && PERFIL && +PERFIL.paceLimiar) || 340;
+  function tssDe(r){
+    if(!r || r.mod !== 'corrida') return 0;
+    var pace = +r.pace || 0, dur = +r.dur || 0;
+    if(pace <= 0 || dur <= 0) return 0;
+    var iF = LIMIAR / pace;
+    if(iF > 1.6 || iF < 0.35) return 0;      // fora disso o dado esta sujo
+    return Math.round(dur * iF * iF / 3600 * 100);
+  }
+
+  /* ── o que conta como PREVISTO ──
+     ST.plano so foi reescrito da semana atual para frente. Em semanas
+     passadas ele ainda guarda o plano de corrida que o app gerava
+     sozinho — plano que nao vale mais nada. Comparar o que voce fez
+     contra aquilo seria inventar cobranca.
+
+     Fonte de verdade: os treinos do treinador tem origem 'garmin' e os
+     da academia tem origem 'academia'. O plano velho nao tem campo
+     origem nenhum. So esses dois entram como previsto; o resto conta
+     como sem plano, que e a verdade. */
+  function planoReal(s){
+    return !!(s && (s.origem === 'garmin' || s.origem === 'academia' || s.prova));
+  }
+
+  /* ── um dia ── */
+  function montarDia(d){
+    var iso = chave(d);
+    var s   = (typeof sessaoDe === 'function') ? sessaoDe(iso) : null;
+    if(!planoReal(s)) s = null;
+
+    var planMin = (s && +s.min) || 0;
+    var planKm  = (s && +s.km)  || 0;
+
+    var runs = feitoNoDia(iso);
+    var realMin = 0, realKm = 0, realTss = 0;
+    var temForca = false;
+    for(var i=0;i<runs.length;i++){
+      var r = runs[i];
+      realMin += Math.round((+r.dur || 0) / 60);
+      realKm  += (+r.km || 0);
+      realTss += tssDe(r);
+      if(r.mod === 'forca') temForca = true;
+    }
+    /* So conto o Hevy se o Garmin nao registrou forca no dia — senao
+       a mesma sessao entraria duas vezes. */
+    if(!temForca){
+      var g = academiaNoDia(iso);
+      for(var j=0;j<g.length;j++) realMin += (+g[j].min || 0);
+      if(g.length && !realMin) realMin = 45;   // sessao sem duracao gravada
+    }
+
+    return {
+      iso: iso, dia: d,
+      futuro: iso > HJ,
+      hoje: iso === HJ,
+      planMin: planMin, planKm: planKm,
+      realMin: realMin, realKm: Math.round(realKm*10)/10,
+      realTss: realTss,
+      fonte: (s && s.origem) || '',
+      titulo: (s && s.titulo) || ''
+    };
+  }
+
+  /* O Hevy so passou a valer agora — antes voce marcava no Motra, e o
+     Motra nao deixou historico aqui. Enquanto nao houver NENHUMA sessao
+     registrada, dia de academia sem registro nao vira falta: vira
+     "sem registro". Falta e quando ha como saber e nao foi feito. */
+  function temHevy(){
+    var h = (typeof RAW === 'object' && RAW && RAW.hevy) || null;
+    return !!(h && h.sessoes && h.sessoes.length);
+  }
+
+  /* ── aderencia ──
+     A faixa e sobre a duracao, que e o que o treinador controla. */
+  var CORES = {
+    alvo:   {c:'var(--ok)',   t:'no alvo'},
+    fora:   {c:'var(--warn)', t:'fora da faixa'},
+    perdido:{c:'var(--bad)',  t:'não feito'},
+    extra:  {c:'var(--bike)', t:'sem previsão'}
+  };
+  function classificar(x, hevy){
+    if(x.futuro) return null;                       // ainda da tempo
+    if(!x.planMin && !x.realMin) return null;       // descanso, nada a dizer
+    if(!x.planMin) return 'extra';
+    if(!x.realMin){
+      // HOJE ainda nao acabou. Marcar falta antes do fim do dia foi
+      // reclamacao sua, com razao: as 8h da manha o app ja dizia que
+      // voce tinha perdido o treino da tarde.
+      if(x.hoje) return null;
+      // academia sem fonte de dado ainda: nao acuso de falta
+      if(x.fonte === 'academia' && !hevy) return null;
+      return 'perdido';
+    }
+    var razao = x.realMin / x.planMin;
+    if(razao >= .85 && razao <= 1.25) return 'alvo';
+    if(razao >= .50 && razao <= 1.60) return 'fora';
+    return 'perdido';
+  }
+
+  /* ── formatos ── */
+  function hm(min){
+    min = Math.round(min || 0);
+    if(!min) return '';
+    if(min < 60) return min + 'm';
+    var h = Math.floor(min/60), m = min%60;
+    return m ? h + 'h' + String(m).padStart(2,'0') : h + 'h';
+  }
+  function km(v){ return v ? (Math.round(v*10)/10).toString().replace('.',',') : '' }
+
+  var ABAS = [
+    {id:'dur', nome:'Duração',   real:function(x){return x.realMin}, plan:function(x){return x.planMin}, rot:hm},
+    {id:'km',  nome:'Distância', real:function(x){return x.realKm},  plan:function(x){return x.planKm},  rot:km},
+    {id:'tss', nome:'TSS',       real:function(x){return x.realTss}, plan:function(){return 0},
+     rot:function(v){return v ? Math.round(v) : ''}}
+  ];
+  function abaAtual(){
+    var id = (typeof ST === 'object' && ST && ST.snapAba) || 'dur';
+    for(var i=0;i<ABAS.length;i++) if(ABAS[i].id === id) return ABAS[i];
+    return ABAS[0];
+  }
+
+  /* ── desenho ── */
+  function desenhar(){
+    if(typeof ST !== 'object' || !ST || !ST.sel) return false;
+    if(typeof dt !== 'function' || typeof dow !== 'function' ||
+       typeof addD !== 'function') return false;
+
+    var base = dt(ST.sel);
+    var ini  = addD(base, -(dow(base) - 1));
+    var dias = [];
+    for(var i=0;i<7;i++) dias.push(montarDia(addD(ini, i)));
+
+    var aba = abaAtual();
+    var mx  = 0;
+    dias.forEach(function(x){
+      mx = Math.max(mx, aba.real(x) || 0, aba.plan(x) || 0);
+    });
+
+    /* cabecalho: intervalo da semana e o total feito */
+    var totMin = 0, totKm = 0, totTss = 0, nTreinos = 0;
+    dias.forEach(function(x){
+      totMin += x.realMin; totKm += x.realKm; totTss += x.realTss;
+      if(x.realMin) nTreinos++;
+    });
+    var vv = document.getElementById('wkV');
+    if(vv){
+      vv.textContent = curto(ini) + ' – ' + curto(addD(ini,6));
+    }
+    var kick = document.querySelector('#wkRow');
+    kick = kick && kick.parentNode && kick.parentNode.querySelector('.kicker');
+    if(kick) kick.textContent = 'Resumo da semana';
+
+    var h = '';
+
+    /* abas */
+    h += '<div class="snapTabs">' + ABAS.map(function(a){
+      return '<button data-aba="' + a.id + '"' +
+             (a.id === aba.id ? ' class="on"' : '') + '>' + a.nome + '</button>';
+    }).join('') + '</div>';
+
+    if(!mx){
+      h += '<p class="snapNada">Nada previsto nem feito nesta semana.</p>';
+    }else{
+      /* barras */
+      h += '<div class="snapG">' + dias.map(function(x){
+        var r = aba.real(x) || 0, p = aba.plan(x) || 0;
+        var hr = r ? Math.max(3, Math.round(r/mx*82)) : 0;
+        var hp = p ? Math.max(3, Math.round(p/mx*82)) : 0;
+        var cor = x.realMin && !x.planMin ? 'var(--bike)' : 'var(--acc)';
+        return '<div class="snapD">' +
+          '<span class="vv">' + (aba.rot(r) || '') + '</span>' +
+          '<div class="par">' +
+            (hp ? '<i class="plan" style="height:' + hp + '%"></i>' : '') +
+            (hr ? '<i style="height:' + hr + '%;background:' + cor + '"></i>' : '') +
+          '</div></div>';
+      }).join('') + '</div>';
+
+      h += '<div class="snapX">' + dias.map(function(x, i){
+        return '<span' + (x.iso === HJ ? ' class="hoje"' : '') + '>' +
+               DIAS[i] + '</span>';
+      }).join('') + '</div>';
+
+      h += '<div class="snapLeg">' +
+             '<span><b style="background:var(--acc)"></b>Feito</span>' +
+             (aba.id === 'tss'
+               ? '<span>o previsto não traz ritmo, então não há TSS previsto</span>'
+               : '<span><b style="border:1px dashed var(--tx3);background:none"></b>Previsto</span>') +
+           '</div>';
+    }
+
+    /* aderencia */
+    var hevy = temHevy();
+    var contas = {alvo:0, fora:0, perdido:0, extra:0}, total = 0;
+    var temPlano = false, academiaSemFonte = 0;
+    dias.forEach(function(x){
+      if(x.planMin) temPlano = true;
+      if(x.fonte === 'academia' && !x.realMin && !x.futuro && !x.hoje && !hevy) academiaSemFonte++;
+      var c = classificar(x, hevy);
+      if(!c) return;
+      contas[c]++; total++;
+    });
+
+    h += '<div class="snapAd">';
+    if(!temPlano){
+      /* Semanas anteriores a esta nao tem plano de verdade guardado: o
+         que havia era o plano que o app gerava sozinho, e ele foi
+         aposentado. Melhor dizer isso do que marcar tudo como "sem
+         previsao" e parecer que voce treinou fora de plano. */
+      h += '<div class="t"><span>Aderência</span></div>' +
+           '<p class="snapNada" style="padding:6px 0">Não há plano registrado ' +
+           'para esta semana — nada a comparar.</p>';
+    }else if(!total){
+      h += '<div class="t"><span>Aderência</span></div>' +
+           '<p class="snapNada" style="padding:6px 0">Nada a comparar ainda ' +
+           'nesta semana.</p>';
+    }else{
+      /* O percentual mede o plano cumprido. Treino sem previsao entra
+         na barra e na contagem, mas fica FORA do denominador: se ele
+         contasse, fazer um treino a mais derrubaria sua aderencia. */
+      var comPlano = contas.alvo + contas.fora + contas.perdido;
+      var pct = comPlano ? Math.round(contas.alvo / comPlano * 100) : null;
+      h += '<div class="t"><span>Aderência</span>' +
+           (pct === null ? '' : '<b>' + pct + '%</b>') + '</div>';
+      h += '<div class="snapBar">' + ['alvo','fora','perdido','extra'].map(function(k){
+        if(!contas[k]) return '';
+        return '<i style="width:' + (contas[k]/total*100) + '%;background:' +
+               CORES[k].c + '"></i>';
+      }).join('') + '</div>';
+      h += '<div class="snapCt">' + ['alvo','fora','perdido','extra'].map(function(k){
+        if(!contas[k]) return '';
+        return '<em><b style="background:' + CORES[k].c + '"></b>' +
+               contas[k] + ' ' + CORES[k].t + '</em>';
+      }).join('') + '</div>';
+    }
+    if(academiaSemFonte){
+      h += '<p class="snapNada" style="padding:10px 0 0;text-align:left">' +
+           academiaSemFonte + (academiaSemFonte > 1 ? ' dias' : ' dia') +
+           ' de academia sem registro. Marque a sessão no Hevy para ela ' +
+           'entrar na conta.</p>';
+    }
+    h += '</div>';
+
+    row.innerHTML = h;
+    row.className = 'snapWrap';
+    return true;
+  }
+
+  /* trocar de aba sem redesenhar a aba inteira do Coach */
+  row.addEventListener('click', function(ev){
+    var b = ev.target.closest && ev.target.closest('[data-aba]');
+    if(!b || !row.contains(b)) return;
+    ST.snapAba = b.getAttribute('data-aba');
+    desenhar();
+  });
+
+  /* Chamo SEMPRE a versao anterior antes de desenhar a minha.
+
+     Motivo, achado na conferencia: outras tres partes ja embrulharam
+     renderSemana e penduraram efeito nela — o peneirar() dos treinos
+     cancelados (parte 20), o montar() da planilha (parte 46) e o
+     montar() do ciclo (parte 49). Se eu desenhasse e retornasse sem
+     chamar a cadeia, quem chamasse renderSemana sozinho (e ha quatro
+     lugares que chamam) perderia os tres.
+
+     Efeito de brinde: se o meu desenho quebrar, o cartao antigo ja
+     esta na tela. Nao sobra buraco. */
+  var antes = window.renderSemana;
+  window.renderSemana = function(){
+    var r = antes.apply(this, arguments);
+    try{
+      desenhar();
+    }catch(e){
+      console.error('resumo da semana:', e);
+      row.className = 'wrow';       // devolve o flex do cartao antigo
+    }
+    return r;
+  };
+
+  if(typeof renderCoach === 'function' && document.getElementById('wkRow')){
+    try{ desenhar() }catch(e){}
+  }
 });
