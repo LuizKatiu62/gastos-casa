@@ -7,6 +7,20 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Treinos">
 <meta name="theme-color" content="#0A0D12">
+<!-- Tema escolhido, aplicado ANTES da primeira pintura. O fix.js carrega
+     no fim da pagina; se a escolha fosse feita la, o app abriria escuro e
+     piscaria para claro a cada abertura. Sao seis linhas para evitar isso. -->
+<script>
+(function(){
+  try{
+    if(localStorage.getItem('bq_tema') === 'claro'){
+      document.documentElement.setAttribute('data-tema','claro');
+      var m = document.querySelector('meta[name="theme-color"]');
+      if(m) m.setAttribute('content','#F5F7FA');
+    }
+  }catch(e){}
+})();
+</script>
 <link rel="manifest" href="./manifest.json?v=2026-07-30-02">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='42' fill='%230A0D12'/><rect x='88' y='38' width='16' height='116' rx='4' fill='%23C9F24E'/><rect x='52' y='72' width='88' height='16' rx='4' fill='%23C9F24E'/><rect x='40' y='168' width='112' height='6' rx='3' fill='%23C9F24E' opacity='.55'/><rect x='58' y='180' width='76' height='5' rx='2.5' fill='%23C9F24E' opacity='.3'/></svg>">
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='42' fill='%230A0D12'/><rect x='88' y='38' width='16' height='116' rx='4' fill='%23C9F24E'/><rect x='52' y='72' width='88' height='16' rx='4' fill='%23C9F24E'/><rect x='40' y='168' width='112' height='6' rx='3' fill='%23C9F24E' opacity='.55'/><rect x='58' y='180' width='76' height='5' rx='2.5' fill='%23C9F24E' opacity='.3'/></svg>">

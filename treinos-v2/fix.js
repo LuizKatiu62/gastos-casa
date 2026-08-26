@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '05j';
+const FIX_VERSAO = '06a';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -10073,7 +10073,7 @@ PARTE('texto do MOTRA', function(){
         var l = window.planoBQ.ligado();
         var diag = '';
         try{ diag = window.bqDiag ? '\n\n── diagnóstico ──\n' + window.bqDiag() : '' }catch(e){}
-        if(confirm('fix.js ' + FIX_VERSAO + ' — as 53 partes carregaram.\n\n'
+        if(confirm('fix.js ' + FIX_VERSAO + ' — as 54 partes carregaram.\n\n'
           + 'Plano PEI Marathon: ' + (l ? 'LIGADO' : 'desligado') + diag
           + '\n\nOK ' + (l ? 'desliga o plano e volta ao automático do app.'
                              : 'liga o plano da maratona.'))){
@@ -10096,7 +10096,7 @@ PARTE('texto do MOTRA', function(){
         return;
       }
       alert(ok
-        ? 'fix.js ' + FIX_VERSAO + ' — as 53 partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
+        ? 'fix.js ' + FIX_VERSAO + ' — as 54 partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
         : 'fix.js ' + FIX_VERSAO + '\n\nFalharam:\n\n' + FIX_FALHAS.join('\n\n'));
     };
     barra.insertBefore(s, barra.firstChild.nextSibling);
@@ -11901,5 +11901,150 @@ PARTE('previsto x realizado no detalhe do treino', function(){
       console.error('previsto x realizado:', e);
     }
     return out;
+  };
+});
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   TEMA CLARO — escolha entre o fundo escuro de hoje e um fundo claro.
+
+   Deu para fazer sem reescrever a folha de estilo porque o app quase
+   todo ja pinta por variavel: 868 usos de var(--...) contra 140 cores
+   escritas direto. Destas, so 12 eram fundo e 18 eram texto — e essas
+   estao corrigidas aqui embaixo, uma a uma.
+
+   O verde-limao (#C9F24E) nao vem para o tema claro. Sobre branco ele
+   tem contraste 1.4 e some. No lugar entra um verde fechado (#46700C)
+   com contraste 5.9 sobre branco, que faz o mesmo papel e se le.
+
+   Todas as cores do tema claro foram medidas pela regra WCAG e passam
+   de 4.5 sobre os dois fundos (branco e o cinza de fundo). A unica
+   abaixo disso e a de descanso, de proposito: ela existe para parecer
+   apagada, e 3.5 e o suficiente para um ponto colorido.
+
+   O tema escuro nao muda em nada. Tudo aqui esta dentro de
+   html[data-tema="claro"] e so vale quando voce escolhe.
+   ══════════════════════════════════════════════════════════════════════ */
+PARTE('tema claro', function(){
+
+  var CHAVE = 'bq_tema';
+  var raiz  = document.documentElement;
+
+  function atual(){
+    try{ return localStorage.getItem(CHAVE) === 'claro' ? 'claro' : 'escuro' }
+    catch(e){ return 'escuro' }
+  }
+  function aplicar(t){
+    if(t === 'claro') raiz.setAttribute('data-tema', 'claro');
+    else raiz.removeAttribute('data-tema');
+    /* a barra de status do iPhone acompanha */
+    var m = document.querySelector('meta[name="theme-color"]');
+    if(m) m.setAttribute('content', t === 'claro' ? '#F5F7FA' : '#0A0D12');
+  }
+
+  var css = document.createElement('style');
+  css.textContent = [
+
+    /* ── a paleta clara ── */
+    'html[data-tema="claro"]{',
+      '--bg:#F5F7FA; --s1:#FFFFFF; --s2:#EEF2F7; --s3:#E2E8F0; --line:#D8E0E9;',
+      '--tx:#111820; --tx2:#44515F; --tx3:#5C6875;',
+      '--acc:#46700C; --acc-wash:rgba(70,112,12,.12);',
+      '--run:#46700C; --bike:#1A62A6; --swim:#0A6E62; --gym:#A34A08; --rest:#78859A;',
+      '--ok:#157347; --ok-wash:rgba(21,115,71,.12);',
+      '--warn:#835A00; --warn-wash:rgba(131,90,0,.14);',
+      '--bad:#B5332A; --bad-wash:rgba(181,51,42,.12);',
+      '--acc-tx:#FFFFFF;',
+    '}',
+    /* no escuro, texto sobre a cor de destaque continua sendo o preto */
+    ':root{--acc-tx:#0A0D12}',
+
+    /* ── as cores que estavam escritas direto no codigo ── */
+    'html[data-tema="claro"]{background:var(--bg)}',
+    'html[data-tema="claro"] body{background:var(--bg)}',
+
+    /* abertura do app */
+    'html[data-tema="claro"] #capa{background:var(--bg)}',
+    'html[data-tema="claro"] .clock,',
+    'html[data-tema="claro"] .clock .l3,',
+    'html[data-tema="claro"] .cresumo .v{color:var(--tx)}',
+    'html[data-tema="claro"] .cresumo{color:var(--tx2)}',
+    'html[data-tema="claro"] .centrar{color:var(--acc-tx)}',
+
+    /* calendario: dia de outro mes */
+    'html[data-tema="claro"] .day.off .dn{color:#C3CCD8}',
+
+    /* o quadro do resumo desde uma data */
+    'html[data-tema="claro"] .marco{',
+      'background:linear-gradient(140deg,#EAF1E4,#E6EDF4 55%,#E3F0E9)}',
+
+    /* botao de periodo do TSS, na aba KPI */
+    'html[data-tema="claro"] #v-kpi .bqTssPer.on{color:var(--acc-tx)}',
+
+    /* segunda linha da planilha (o "+ Academia") */
+    'html[data-tema="claro"] #bqPl td.t .zx{color:var(--tx3)}',
+
+    /* pontinhos de legenda com cor escrita direto (classe .leg > i.sq) */
+    'html[data-tema="claro"] .leg i[style*="#3A4757"],',
+    'html[data-tema="claro"] .leg i[style*="#4A5768"]{background:var(--rest)!important}',
+
+    /* sombras: no claro, sombra preta forte fica suja */
+    'html[data-tema="claro"] .card{box-shadow:0 1px 2px rgba(16,24,40,.05),',
+      '0 1px 3px rgba(16,24,40,.06)}',
+
+    /* ── o seletor, na aba Dados ── */
+    '.bqTema{display:flex;gap:6px;background:var(--s1);padding:4px;',
+      'border-radius:12px;margin-top:14px}',
+    '.bqTema button{flex:1;border:0;background:transparent;color:var(--tx3);',
+      'font:600 13px/1 inherit;padding:11px 6px;border-radius:9px;cursor:pointer}',
+    '.bqTema button.on{background:var(--s3);color:var(--tx)}',
+    '.bqTema button .am{display:inline-block;width:11px;height:11px;border-radius:50%;',
+      'margin-right:7px;vertical-align:-1px;border:1px solid var(--line)}'
+  ].join('');
+  document.head.appendChild(css);
+
+  aplicar(atual());
+
+  /* ── o cartao de escolha, na aba Dados ── */
+  var alvo = document.getElementById('v-dados');
+  if(!alvo) return;
+
+  var cartao = document.createElement('section');
+  cartao.className = 'card';
+  cartao.innerHTML =
+    '<div class="head"><div><h2>Aparência</h2></div></div>' +
+    '<p class="ajuda" style="margin-top:10px">O tema claro tem contraste maior ' +
+    'no sol. O verde de destaque fica mais fechado nele, porque o verde-limão ' +
+    'não se enxerga sobre branco.</p>' +
+    '<div class="bqTema">' +
+      '<button data-tema="escuro"><span class="am" style="background:#0A0D12"></span>Escuro</button>' +
+      '<button data-tema="claro"><span class="am" style="background:#F5F7FA"></span>Claro</button>' +
+    '</div>';
+  alvo.appendChild(cartao);
+
+  function pintarBotoes(){
+    var t = atual();
+    Array.prototype.forEach.call(cartao.querySelectorAll('[data-tema]'), function(b){
+      if(b.getAttribute('data-tema') === t) b.classList.add('on');
+      else b.classList.remove('on');
+    });
+  }
+  pintarBotoes();
+
+  cartao.addEventListener('click', function(ev){
+    var b = ev.target.closest && ev.target.closest('[data-tema]');
+    if(!b || !cartao.contains(b)) return;
+    var t = b.getAttribute('data-tema');
+    try{ localStorage.setItem(CHAVE, t) }catch(e){}
+    aplicar(t);
+    pintarBotoes();
+  });
+
+  /* para conferir pelo console sem procurar a aba */
+  window.bqTema = function(t){
+    if(t !== 'claro' && t !== 'escuro') return 'use bqTema("claro") ou bqTema("escuro")';
+    try{ localStorage.setItem(CHAVE, t) }catch(e){}
+    aplicar(t); pintarBotoes();
+    return 'tema: ' + t;
   };
 });
