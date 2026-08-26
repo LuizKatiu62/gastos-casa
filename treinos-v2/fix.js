@@ -4938,38 +4938,30 @@ PARTE('aba kpi', function(){
     var maxA = Math.max(115, Math.max.apply(null, perSem.concat([100])));
     var d4 = perSem.length >= 5 ? perSem[perSem.length-1] - perSem[perSem.length-5] : null;
 
-    h += '<div class="kcard"><div class="kcab"><h3>Aderência ao plano</h3>' + chip(d4, '% vs 4 semanas atrás') + '</div>' +
-      '<div class="kbig" style="color:' + corA(ader) + '">' + ader.toFixed(0) + '%' +
-        '<small>' + totFeito.toFixed(0) + ' km feitos dos ' + totPlan.toFixed(0) + ' km que o plano pediu até hoje</small></div>' +
-      svgBox(grade(maxA, 0, function(v){ return v.toFixed(0) + '%' }) +
-        refLinha(100, 0, maxA, 'var(--ok)', 'plano cheio') +
-        paresDeBarras(perSem, null, maxA, corA) +
-        eixoX(perSem.length, rotSem(comPlano))) +
-      legenda([['≥85%','var(--ok)'],['65 a 84%','var(--warn)'],['<65%','var(--bad)']]) +
-      '<p class="ksub"><b>' + seq + '</b> ' + (seq === 1 ? 'semana seguida' : 'semanas seguidas') +
-        ' fechando 85% ou mais. ' + (seq >= 3 ? 'É a sequência que constrói prova longa.'
-          : seq >= 1 ? 'Duas ou três seguidas já mudam o resultado.'
-          : 'Uma semana cheia recoloca a sequência de pé.') + '</p></div>';
+    /* O cartao "Aderencia ao plano" saiu em 26/08/2026.
+       Ele comparava o que voce correu contra o que o coach do app tinha
+       planejado. Sem plano de corrida no app — quem monta agora e o
+       treinador humano, no Garmin — o denominador nao existe, e uma
+       porcentagem sem denominador e so um numero bonito.             */
 
     /* ── 2. volume ── */
     var vFeito = passadas.map(function(w){ return w.feitoKm });
-    var vPlan  = passadas.map(function(w){ return w.planKm });
-    var maxV = Math.max.apply(null, vFeito.concat(vPlan).concat([10])) * 1.12;
+    /* sem barra de planejado: o plano de corrida saiu do app */
+    var maxV = Math.max.apply(null, vFeito.concat([10])) * 1.12;
     var ult = passadas[passadas.length-1];
     var tV = tendencia(vFeito, 0, maxV, 'var(--run)');
     var dV = vFeito.length >= 5 ? vFeito[vFeito.length-1] - vFeito[vFeito.length-5] : null;
 
     h += '<div class="kcard"><div class="kcab"><h3>Volume semanal</h3>' + chip(dV, ' km vs 4 semanas atrás') + '</div>' +
-      '<div class="kbig">' + ult.feitoKm.toFixed(0) + '<small>km nesta semana, de ' + ult.planKm.toFixed(0) +
-        ' planejados · a linha tracejada é a tendência do ciclo</small></div>' +
+      '<div class="kbig">' + ult.feitoKm.toFixed(0) + '<small>km nesta semana · a linha tracejada é a tendência</small></div>' +
       svgBox(grade(maxV, 0, function(v){ return v.toFixed(0) }) +
-        paresDeBarras(vFeito, vPlan, maxV, 'var(--run)') +
+        paresDeBarras(vFeito, null, maxV, 'var(--run)') +
         tV.svg +
         eixoX(vFeito.length, rotSem(passadas))) +
-      legenda([['realizado','var(--run)'],['planejado','', 'gh'],['tendência','var(--run)','ln']]) +
-      '<p class="ksub">' + (tV.incl > 0.5 ? 'Seu volume vem <b>subindo</b> ao longo do ciclo, que é o esperado até a semana de pico.'
-        : tV.incl < -0.5 ? 'Seu volume vem <b>caindo</b>. Se ainda não é semana de polimento, vale entender por quê.'
-        : 'Volume <b>estável</b> ao longo do ciclo.') + '</p></div>';
+      legenda([['realizado','var(--run)'],['tendência','var(--run)','ln']]) +
+      '<p class="ksub">' + (tV.incl > 0.5 ? 'Seu volume vem <b>subindo</b>.'
+        : tV.incl < -0.5 ? 'Seu volume vem <b>caindo</b>.'
+        : 'Volume <b>estável</b>.') + '</p></div>';
 
     /* ── 3. longão ──
        ATENCAO ao que este cartao NAO faz mais: ele nao olha o historico
