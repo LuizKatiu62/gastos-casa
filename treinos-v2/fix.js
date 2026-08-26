@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '05i';
+const FIX_VERSAO = '05j';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -10265,6 +10265,29 @@ PARTE('a aba coach e so da academia', function(){
 
      Nao piso em extra que voce criou na mao: so substituo o que este
      codigo mesmo pos ali antes (origem 'academia').                 */
+  /* ── LIMPEZA UNICA DAS LAPIDES QUE EU MESMO CAUSEI ──
+     Enquanto a academia saia com auto:true, a limpar() da outra parte
+     a apagava e gravava lapide. A lapide vale 24h e faria a academia
+     continuar sumindo mesmo depois do conserto acima.
+
+     Entao apago essas lapides uma vez so, nos dias de academia dos
+     proximos dois meses, e deixo marca no aparelho para nunca mais
+     repetir — senao eu passaria a ignorar cancelamento de verdade. */
+  try{
+    var MARCA = 'bq_lapide_academia_v1';
+    if(typeof localStorage === 'object' && !localStorage.getItem(MARCA)){
+      if(typeof window.bqDesapagar === 'function' && typeof iso === 'function'){
+        var hj = new Date(); hj.setHours(0,0,0,0);
+        for(var i = 0; i < 60; i++){
+          var dd = new Date(hj.getTime() + i * 864e5);
+          var n = dd.getDay() === 0 ? 7 : dd.getDay();
+          if(DIAS_ACADEMIA[n]) window.bqDesapagar('extras', iso(dd));
+        }
+      }
+      localStorage.setItem(MARCA, '1');
+    }
+  }catch(e){ console.warn('lapide academia:', e && e.message) }
+
   function academiaDeSegundo(iso){
     if(typeof ST !== 'object' || !ST) return;
     ST.extras = ST.extras || {};
@@ -10287,9 +10310,15 @@ PARTE('a aba coach e so da academia', function(){
        String(atual.sessao || '').indexOf('BQ_') !== 0) return;
 
     var n = nomeAcademia(iso);
+    /* SEM auto:true. Foi ele que tirou a sexta-feira.
+       A parte 'forca obedece ao bloco' tem uma rotina limpar() que
+       apaga toda academia AUTOMATICA depois do fim do bloco antigo —
+       e ainda deixa lapide. Como o bloco acabou no meio desta semana,
+       quarta ficava e sexta era apagada. Marcada so com origem
+       'academia', ela conta como sua e ninguem mais mexe.           */
     ST.extras[iso] = { id:'x' + iso, data:iso, mod:'forca', foco:'forca',
                        sessao:n.sid, titulo:n.nome, min:45,
-                       extra:true, auto:true, origem:'academia' };
+                       extra:true, origem:'academia' };
     if(ST.cache) delete ST.cache['x' + iso];
   }
 
