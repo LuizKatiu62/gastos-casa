@@ -658,7 +658,8 @@ a.btmini{text-decoration:none}
 
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 details summary::-webkit-details-marker{display:none}
-details[open] summary span:last-child{transform:rotate(45deg)}
+details[open] summary>span:last-child{transform:rotate(45deg)}
+details[open] summary .resumo{display:none}
 </style>
 </head>
 <body>
@@ -750,7 +751,7 @@ details[open] summary span:last-child{transform:rotate(45deg)}
   <section class="card" style="padding-top:0;padding-bottom:0">
     <details>
       <summary style="padding:14px 0;cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px">
-        <span><b style="font-size:15px">Calculadora de pace e splits</b><span style="display:block;font-size:12px;opacity:.6;margin-top:2px">pace necessário e o relógio em cada quilômetro</span></span>
+        <span><b style="font-size:15px">Calculadora de pace e splits</b><span class="resumo" style="display:block;font-size:12px;opacity:.6;margin-top:2px">pace necessário e o relógio em cada quilômetro</span></span>
         <span style="font-size:20px;opacity:.5">＋</span>
       </summary>
       <div style="padding-bottom:14px">
@@ -775,7 +776,7 @@ details[open] summary span:last-child{transform:rotate(45deg)}
   <section class="card" style="padding-top:0;padding-bottom:0">
     <details>
       <summary style="padding:14px 0;cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px">
-        <span><b style="font-size:15px">Simulador de estratégia</b><span style="display:block;font-size:12px;opacity:.6;margin-top:2px">três blocos de ritmo até o tempo final</span></span>
+        <span><b style="font-size:15px">Simulador de estratégia</b><span class="resumo" style="display:block;font-size:12px;opacity:.6;margin-top:2px">três blocos de ritmo até o tempo final</span></span>
         <span style="font-size:20px;opacity:.5">＋</span>
       </summary>
       <div style="padding-bottom:14px">
