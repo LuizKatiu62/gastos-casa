@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '06c';
+const FIX_VERSAO = '06d';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -10073,7 +10073,7 @@ PARTE('texto do MOTRA', function(){
         var l = window.planoBQ.ligado();
         var diag = '';
         try{ diag = window.bqDiag ? '\n\n── diagnóstico ──\n' + window.bqDiag() : '' }catch(e){}
-        if(confirm('fix.js ' + FIX_VERSAO + ' — as 54 partes carregaram.\n\n'
+        if(confirm('fix.js ' + FIX_VERSAO + ' — as 55 partes carregaram.\n\n'
           + 'Plano PEI Marathon: ' + (l ? 'LIGADO' : 'desligado') + diag
           + '\n\nOK ' + (l ? 'desliga o plano e volta ao automático do app.'
                              : 'liga o plano da maratona.'))){
@@ -10096,7 +10096,7 @@ PARTE('texto do MOTRA', function(){
         return;
       }
       alert(ok
-        ? 'fix.js ' + FIX_VERSAO + ' — as 54 partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
+        ? 'fix.js ' + FIX_VERSAO + ' — as 55 partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
         : 'fix.js ' + FIX_VERSAO + '\n\nFalharam:\n\n' + FIX_FALHAS.join('\n\n'));
     };
     barra.insertBefore(s, barra.firstChild.nextSibling);
@@ -12106,4 +12106,76 @@ PARTE('temas trainingpeaks', function(){
     aplicar();
     return 'tema: ' + t + ' (na tela: ' + efetivo(t) + ')';
   };
+});
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   O RESTO DO APP COM A MESMA VIDA DA ABA KPI, E A ABA SELECIONADA
+   VISIVEL.
+
+   Por que a KPI parecia viva e o resto nao — fui ver, e nao era
+   impressao: os cartoes dela sao outra classe.
+
+       .kcard  background + BORDA + raio 18
+       .card   background e mais nada
+
+   Sem borda, o cartao so se distingue do fundo pela diferenca entre
+   --s1 e --bg, que e de tres tons. No escuro isso quase desaparece: a
+   tela vira um bloco chapado. A KPI tinha contorno, entao cada cartao
+   se lia como um objeto.
+
+   O que muda aqui:
+     1. o cartao padrao ganha a mesma borda da KPI
+     2. --s1 e --s2 sobem um pouco no escuro, para o cartao descolar
+        do fundo mesmo antes da borda aparecer
+     3. o rotulo pequeno acima dos titulos (.kicker) deixa de ser cinza
+        e passa a usar a cor de destaque, como os cabecalhos da KPI
+     4. o brilho decorativo do topo ainda era o verde-limao aposentado,
+        escrito direto no CSS. Agora acompanha a cor de destaque
+     5. a aba selecionada ganha fundo proprio, alem da cor
+
+   Sobre a aba: antes ela so trocava a cor do icone e do texto. Num
+   icone de 20px com traco fino, trocar a cor e quase nada — e piorou
+   quando o destaque virou ambar, que e mais proximo do cinza do que o
+   limao era. Agora tem uma pilula atras, traco mais grosso e texto
+   mais pesado. Nao da para nao ver.
+   ══════════════════════════════════════════════════════════════════════ */
+PARTE('mais vida e aba selecionada visivel', function(){
+
+  var css = document.createElement('style');
+  css.textContent = [
+
+    /* ── 1 e 2. cartao com contorno, superficie um pouco mais alta ── */
+    /* SO no escuro. Um :root solto aqui sobrescreveria tambem o tema
+       claro, onde --s1 tem que continuar branco. */
+    /* medido: cartao/fundo sobe de 1.08 para 1.15, e a borda fica em
+       1.39 contra o cartao — visivel sem clarear a tela. */
+    'html[data-tema="escuro"]{--s1:#1C1C22; --s2:#25262D; --line:#33353E}',
+    '.card{border:1px solid var(--line)}',
+
+    /* No claro o branco ja descola do fundo; a borda basta e a sombra
+       fica mais leve, senao vira cartao dentro de cartao. */
+    'html[data-tema="claro"] .card{border:1px solid var(--line);',
+      'box-shadow:0 1px 2px rgba(30,27,22,.04)}',
+
+    /* ── 3. o rotulo pequeno ganha cor ── */
+    '.kicker{color:var(--acc)}',
+
+    /* ── 4. o brilho do topo seguia o limao aposentado ── */
+    '.hero:before{background:radial-gradient(circle,var(--acc-wash),transparent 65%)!important}',
+
+    /* ── 5. a aba selecionada ── */
+    '.tab{position:relative}',
+    '.tab:before{content:"";position:absolute;top:4px;left:50%;margin-left:-24px;',
+      'width:48px;height:32px;border-radius:12px;background:transparent;',
+      'transition:background .18s}',
+    '.tab svg,.tab span{position:relative}',
+    '.tab.on:before{background:var(--acc-wash)}',
+    '.tab.on svg{stroke:var(--acc);stroke-width:2.4}',
+    '.tab.on span{color:var(--acc);font-weight:800}',
+    /* um traco no alto, para se ver de relance sem olhar o icone */
+    '.tab.on:after{content:"";position:absolute;top:0;left:50%;margin-left:-13px;',
+      'width:26px;height:3px;border-radius:0 0 3px 3px;background:var(--acc)}'
+  ].join('');
+  document.head.appendChild(css);
 });
