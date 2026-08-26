@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '06a';
+const FIX_VERSAO = '06b';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -11904,48 +11904,66 @@ PARTE('previsto x realizado no detalhe do treino', function(){
   };
 });
 
-
 /* ══════════════════════════════════════════════════════════════════════
-   TEMA CLARO — escolha entre o fundo escuro de hoje e um fundo claro.
+   TEMA — botao no topo que gira entre Escuro, Claro e Auto.
 
-   Deu para fazer sem reescrever a folha de estilo porque o app quase
-   todo ja pinta por variavel: 868 usos de var(--...) contra 140 cores
-   escritas direto. Destas, so 12 eram fundo e 18 eram texto — e essas
-   estao corrigidas aqui embaixo, uma a uma.
+   Como no Debt Free: uma pilula unica na barra de cima. Um toque passa
+   para o proximo. Auto segue o ajuste do iPhone e muda sozinho quando
+   anoitece.
 
-   O verde-limao (#C9F24E) nao vem para o tema claro. Sobre branco ele
-   tem contraste 1.4 e some. No lugar entra um verde fechado (#46700C)
-   com contraste 5.9 sobre branco, que faz o mesmo papel e se le.
+   Guardo a PREFERENCIA (escuro/claro/auto) e escrevo no documento o
+   tema EFETIVO (escuro/claro). Assim a folha de estilo so precisa
+   conhecer html[data-tema="claro"], e o Auto vira contas em JS.
 
-   Todas as cores do tema claro foram medidas pela regra WCAG e passam
-   de 4.5 sobre os dois fundos (branco e o cinza de fundo). A unica
-   abaixo disso e a de descanso, de proposito: ela existe para parecer
-   apagada, e 3.5 e o suficiente para um ponto colorido.
+   O verde-limao (#C9F24E) nao vem para o claro: sobre branco tem
+   contraste 1.4 e some. Entra um verde fechado (#46700C), contraste
+   5.9. Todas as cores do tema claro foram medidas pela regra WCAG e
+   passam de 4.5 sobre os dois fundos. A unica abaixo e a de descanso,
+   de proposito — ela existe para parecer apagada.
 
-   O tema escuro nao muda em nada. Tudo aqui esta dentro de
-   html[data-tema="claro"] e so vale quando voce escolhe.
+   NOTA DE UMA FALHA MINHA, para nao repetir: na primeira versao eu
+   procurei cores fixas so em hexadecimal e deixei passar as escritas
+   em rgba(). Eram justamente a barra de cima, a barra de abas e o
+   fundo dos paineis — as tres coisas mais visiveis da tela, que
+   ficariam pretas no tema claro. Estao aqui embaixo.
    ══════════════════════════════════════════════════════════════════════ */
-PARTE('tema claro', function(){
+PARTE('tema claro e escuro', function(){
 
   var CHAVE = 'bq_tema';
   var raiz  = document.documentElement;
+  var ORDEM = ['escuro', 'claro', 'auto'];
+  var ROTULO = { escuro:'Escuro', claro:'Claro', auto:'Auto' };
+  var ICONE  = { escuro:'🌙', claro:'☀️', auto:'🌗' };
 
-  function atual(){
-    try{ return localStorage.getItem(CHAVE) === 'claro' ? 'claro' : 'escuro' }
-    catch(e){ return 'escuro' }
+  function prefere(){
+    try{
+      var v = localStorage.getItem(CHAVE);
+      return ORDEM.indexOf(v) >= 0 ? v : 'escuro';
+    }catch(e){ return 'escuro' }
   }
-  function aplicar(t){
+  function sistemaEscuro(){
+    try{ return window.matchMedia('(prefers-color-scheme: dark)').matches }
+    catch(e){ return true }
+  }
+  /* o que de fato vai para a tela */
+  function efetivo(p){
+    if(p === 'auto') return sistemaEscuro() ? 'escuro' : 'claro';
+    return p;
+  }
+
+  function aplicar(){
+    var t = efetivo(prefere());
     if(t === 'claro') raiz.setAttribute('data-tema', 'claro');
-    else raiz.removeAttribute('data-tema');
-    /* a barra de status do iPhone acompanha */
+    else raiz.setAttribute('data-tema', 'escuro');
     var m = document.querySelector('meta[name="theme-color"]');
     if(m) m.setAttribute('content', t === 'claro' ? '#F5F7FA' : '#0A0D12');
+    pintar();
   }
 
   var css = document.createElement('style');
   css.textContent = [
 
-    /* ── a paleta clara ── */
+    /* ── paleta clara ── */
     'html[data-tema="claro"]{',
       '--bg:#F5F7FA; --s1:#FFFFFF; --s2:#EEF2F7; --s3:#E2E8F0; --line:#D8E0E9;',
       '--tx:#111820; --tx2:#44515F; --tx3:#5C6875;',
@@ -11956,10 +11974,23 @@ PARTE('tema claro', function(){
       '--bad:#B5332A; --bad-wash:rgba(181,51,42,.12);',
       '--acc-tx:#FFFFFF;',
     '}',
-    /* no escuro, texto sobre a cor de destaque continua sendo o preto */
     ':root{--acc-tx:#0A0D12}',
 
-    /* ── as cores que estavam escritas direto no codigo ── */
+    /* ── AS DUAS BARRAS. Eram rgba e eu tinha deixado passar. ── */
+    'html[data-tema="claro"] .appbar{background:rgba(245,247,250,.86)!important;',
+      'border-bottom:1px solid var(--line)}',
+    'html[data-tema="claro"] .tabbar{background:rgba(245,247,250,.93)!important;',
+      'border-top:1px solid var(--line)}',
+    'html[data-tema="claro"] .ov{background:rgba(17,24,32,.42)!important}',
+
+    /* o veu sobre a foto de fundo: no escuro ele escurece a foto para
+       o texto se ler. No claro tem que clarear, senao a tela inteira
+       fica cinza-chumbo com letra preta em cima. */
+    'html[data-tema="claro"] #bqFoto::after{background:linear-gradient(180deg,',
+      'rgba(245,247,250,.86) 0%,rgba(245,247,250,.70) 38%,',
+      'rgba(245,247,250,.90) 100%)!important}',
+
+    /* fundo geral */
     'html[data-tema="claro"]{background:var(--bg)}',
     'html[data-tema="claro"] body{background:var(--bg)}',
 
@@ -11971,80 +12002,72 @@ PARTE('tema claro', function(){
     'html[data-tema="claro"] .cresumo{color:var(--tx2)}',
     'html[data-tema="claro"] .centrar{color:var(--acc-tx)}',
 
-    /* calendario: dia de outro mes */
     'html[data-tema="claro"] .day.off .dn{color:#C3CCD8}',
-
-    /* o quadro do resumo desde uma data */
     'html[data-tema="claro"] .marco{',
       'background:linear-gradient(140deg,#EAF1E4,#E6EDF4 55%,#E3F0E9)}',
-
-    /* botao de periodo do TSS, na aba KPI */
     'html[data-tema="claro"] #v-kpi .bqTssPer.on{color:var(--acc-tx)}',
-
-    /* segunda linha da planilha (o "+ Academia") */
     'html[data-tema="claro"] #bqPl td.t .zx{color:var(--tx3)}',
-
-    /* pontinhos de legenda com cor escrita direto (classe .leg > i.sq) */
     'html[data-tema="claro"] .leg i[style*="#3A4757"],',
     'html[data-tema="claro"] .leg i[style*="#4A5768"]{background:var(--rest)!important}',
-
-    /* sombras: no claro, sombra preta forte fica suja */
     'html[data-tema="claro"] .card{box-shadow:0 1px 2px rgba(16,24,40,.05),',
       '0 1px 3px rgba(16,24,40,.06)}',
 
-    /* ── o seletor, na aba Dados ── */
-    '.bqTema{display:flex;gap:6px;background:var(--s1);padding:4px;',
-      'border-radius:12px;margin-top:14px}',
-    '.bqTema button{flex:1;border:0;background:transparent;color:var(--tx3);',
-      'font:600 13px/1 inherit;padding:11px 6px;border-radius:9px;cursor:pointer}',
-    '.bqTema button.on{background:var(--s3);color:var(--tx)}',
-    '.bqTema button .am{display:inline-block;width:11px;height:11px;border-radius:50%;',
-      'margin-right:7px;vertical-align:-1px;border:1px solid var(--line)}'
+    /* ── a pilula, na barra de cima ── */
+    '.bqTemaBt{display:inline-flex;align-items:center;gap:6px;flex:none;',
+      'border:1px solid var(--line);background:var(--s2);color:var(--tx);',
+      'font:700 11.5px/1 inherit;padding:8px 12px;border-radius:999px;',
+      'cursor:pointer;white-space:nowrap}',
+    '.bqTemaBt:active{transform:scale(.96)}',
+    '.bqTemaBt .ic{font-size:12.5px;line-height:1}',
+    '@media (max-width:390px){.bqTemaBt .tx{display:none}',
+      '.bqTemaBt{padding:8px 10px}}'
   ].join('');
   document.head.appendChild(css);
 
-  aplicar(atual());
+  /* ── o botao ── */
+  var barra = document.querySelector('.appbar .in');
+  var bt = null;
+  if(barra){
+    bt = document.createElement('button');
+    bt.className = 'bqTemaBt';
+    bt.type = 'button';
+    bt.setAttribute('aria-label', 'Trocar o tema');
+    /* antes da engrenagem, para nao empurrar o Sync Garmin */
+    var engr = barra.querySelector('.engr');
+    if(engr) barra.insertBefore(bt, engr);
+    else barra.appendChild(bt);
 
-  /* ── o cartao de escolha, na aba Dados ── */
-  var alvo = document.getElementById('v-dados');
-  if(!alvo) return;
-
-  var cartao = document.createElement('section');
-  cartao.className = 'card';
-  cartao.innerHTML =
-    '<div class="head"><div><h2>Aparência</h2></div></div>' +
-    '<p class="ajuda" style="margin-top:10px">O tema claro tem contraste maior ' +
-    'no sol. O verde de destaque fica mais fechado nele, porque o verde-limão ' +
-    'não se enxerga sobre branco.</p>' +
-    '<div class="bqTema">' +
-      '<button data-tema="escuro"><span class="am" style="background:#0A0D12"></span>Escuro</button>' +
-      '<button data-tema="claro"><span class="am" style="background:#F5F7FA"></span>Claro</button>' +
-    '</div>';
-  alvo.appendChild(cartao);
-
-  function pintarBotoes(){
-    var t = atual();
-    Array.prototype.forEach.call(cartao.querySelectorAll('[data-tema]'), function(b){
-      if(b.getAttribute('data-tema') === t) b.classList.add('on');
-      else b.classList.remove('on');
+    bt.addEventListener('click', function(){
+      var i = ORDEM.indexOf(prefere());
+      var prox = ORDEM[(i + 1) % ORDEM.length];
+      try{ localStorage.setItem(CHAVE, prox) }catch(e){}
+      aplicar();
     });
   }
-  pintarBotoes();
 
-  cartao.addEventListener('click', function(ev){
-    var b = ev.target.closest && ev.target.closest('[data-tema]');
-    if(!b || !cartao.contains(b)) return;
-    var t = b.getAttribute('data-tema');
-    try{ localStorage.setItem(CHAVE, t) }catch(e){}
-    aplicar(t);
-    pintarBotoes();
-  });
+  function pintar(){
+    if(!bt) return;
+    var p = prefere();
+    var extra = p === 'auto' ? ' · ' + (efetivo(p) === 'claro' ? 'claro' : 'escuro') : '';
+    bt.innerHTML = '<span class="ic">' + ICONE[p] + '</span>' +
+                   '<span class="tx">' + ROTULO[p] + extra + '</span>';
+    bt.title = 'Tema: ' + ROTULO[p] + extra + ' — toque para trocar';
+  }
 
-  /* para conferir pelo console sem procurar a aba */
+  /* No Auto, acompanhar o iPhone quando ele virar sozinho. */
+  try{
+    var mq = window.matchMedia('(prefers-color-scheme: dark)');
+    var aoMudar = function(){ if(prefere() === 'auto') aplicar() };
+    if(mq.addEventListener) mq.addEventListener('change', aoMudar);
+    else if(mq.addListener) mq.addListener(aoMudar);
+  }catch(e){}
+
+  aplicar();
+
   window.bqTema = function(t){
-    if(t !== 'claro' && t !== 'escuro') return 'use bqTema("claro") ou bqTema("escuro")';
+    if(ORDEM.indexOf(t) < 0) return 'use bqTema("escuro"), ("claro") ou ("auto")';
     try{ localStorage.setItem(CHAVE, t) }catch(e){}
-    aplicar(t); pintarBotoes();
-    return 'tema: ' + t;
+    aplicar();
+    return 'tema: ' + t + ' (na tela: ' + efetivo(t) + ')';
   };
 });

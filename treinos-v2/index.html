@@ -13,11 +13,12 @@
 <script>
 (function(){
   try{
-    if(localStorage.getItem('bq_tema') === 'claro'){
-      document.documentElement.setAttribute('data-tema','claro');
-      var m = document.querySelector('meta[name="theme-color"]');
-      if(m) m.setAttribute('content','#F5F7FA');
-    }
+    var p = localStorage.getItem('bq_tema') || 'escuro';
+    var claro = p === 'claro' ||
+      (p === 'auto' && !window.matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.setAttribute('data-tema', claro ? 'claro' : 'escuro');
+    var m = document.querySelector('meta[name="theme-color"]');
+    if(m) m.setAttribute('content', claro ? '#F5F7FA' : '#0A0D12');
   }catch(e){}
 })();
 </script>
