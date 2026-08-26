@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '05f';
+const FIX_VERSAO = '05g';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -10284,7 +10284,7 @@ PARTE('a aba coach e so da academia', function(){
 
   function sessaoAcademia(iso){
     return {id:iso, data:iso, mod:'forca', foco:'forca',
-            titulo:'Força — academia 5:30', min:60, origem:'academia'};
+            titulo:'Academia', min:60, origem:'academia'};
   }
 
   /* ── os treinos do treinador, so para VISUALIZAR ──
@@ -10382,6 +10382,17 @@ PARTE('a aba coach e so da academia', function(){
       }else if(!ehForca(s)){
         plano[iso] = sessaoAcademia(iso);
         tirarExtra(iso);
+      }else{
+        /* Ja e forca, entao a sessao fica — mas o nome passa a ser o
+           mesmo em toda a tela. Antes, dia de academia em que o plano
+           do app ja tinha forca guardava o titulo antigo, e a mesma
+           coisa aparecia com dois nomes em telas diferentes.
+
+           Marco tambem a origem: sem ela o Resumo da semana e a lista
+           do mes tratariam este dia como plano velho e o descartariam
+           da comparacao. */
+        s.titulo = 'Academia';
+        if(!s.origem) s.origem = 'academia';
       }
     });
 
@@ -11423,11 +11434,26 @@ PARTE('treinos do mes embaixo do calendario', function(){
     var jaTem = {};
     linhas.forEach(function(l){ jaTem[l.iso] = true });
 
-    var plano = (ST.plano || {});
-    Object.keys(plano).forEach(function(iso){
+    /* O SEGUNDO TREINO DO DIA TAMBEM E TREINO.
+       Esta lista lia so ST.plano e ignorava ST.extras. Em dia que o
+       treinador marca corrida, a academia vai para o encaixe de
+       segundo treino — e sumia daqui, dando a impressao de que a
+       academia tinha virado a corrida dele. */
+    var plano = {};
+    Object.keys(ST.plano || {}).forEach(function(k){ plano[k] = ST.plano[k] });
+    Object.keys(ST.extras || {}).forEach(function(k){
+      var x = ST.extras[k];
+      if(!x || x.origem !== 'academia') return;   // so o que este app pos ali
+      if(plano['x' + k]) return;
+      plano['x' + k] = x;
+    });
+
+    Object.keys(plano).forEach(function(chaveP){
+      var iso = chaveP.charAt(0) === 'x' ? chaveP.slice(1) : chaveP;
+      var segundo = chaveP.charAt(0) === 'x';
       if(iso.slice(0,7) !== prefixo) return;
-      if(jaTem[iso]) return;
-      var s = plano[iso];
+      if(jaTem[iso] && !segundo) return;
+      var s = plano[chaveP];
       if(!planoReal(s)) return;
       var d = (typeof dt === 'function') ? dt(iso) : null;
       if(!d) return;
@@ -11436,6 +11462,7 @@ PARTE('treinos do mes embaixo do calendario', function(){
         cor: corDe(s.mod, false),
         titulo: s.titulo || nomeDe(s.mod),
         sub: (s.km ? (+s.km).toFixed(1).replace('.',',') + ' km · ' : '') +
+             (segundo ? '2º treino · ' : '') +
              (iso < HJ ? 'não registrado' : 'previsto'),
         min: +s.min || 0,
         aguardando: true
