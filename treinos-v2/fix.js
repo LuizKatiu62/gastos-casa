@@ -5025,7 +5025,7 @@ PARTE('aba kpi', function(){
             + paresDeBarras(vals, null, maxT, corT)
             + eixoX(vals.length, function(i){
                 var p = pontosTss[i];
-                return p ? brev(diasAtras(p.d)) : '';
+                return p ? diaMes(p.d) : '';
               }))
         + legenda([['até 15% acima do normal','var(--run)'],
                    ['15 a 50% acima','var(--warn)'],
@@ -5037,10 +5037,14 @@ PARTE('aba kpi', function(){
         + 'correção de altimetria.</p></div>';
     }
 
-    /* devolve a data ISO de um treino a partir do campo d (dias atras) */
-    function diasAtras(d){
+    /* dia/mes a partir do campo d (dias atras). Formatacao propria:
+       brev() existe, mas dentro da PARTE 'analise feito x planejado'.
+       Cada PARTE e uma funcao isolada — chamar de la daqui da
+       ReferenceError, a montagem da aba para no meio e tudo abaixo
+       deste cartao some da tela. Foi o que aconteceu.                */
+    function diaMes(d){
       var x = new Date(HOJE.getTime() - (+d || 0) * 86400000);
-      return x.getFullYear() + '-' + ('0'+(x.getMonth()+1)).slice(-2) + '-' + ('0'+x.getDate()).slice(-2);
+      return ('0'+x.getDate()).slice(-2) + '/' + ('0'+(x.getMonth()+1)).slice(-2);
     }
 
     /* ── 3. longão ──
