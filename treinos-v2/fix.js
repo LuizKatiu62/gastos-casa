@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '05h';
+const FIX_VERSAO = '05i';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -7447,6 +7447,8 @@ PARTE('planilha de treinos', function(){
 '  border-radius:0 3px 3px 0;background:var(--zc,transparent)}',
 '#bqPl td.t .tt{display:block;font-weight:700;color:var(--tx);font-size:13.5px;',
 '  line-height:1.3;white-space:normal;overflow-wrap:anywhere}',
+'#bqPl td.t .zx{display:block;margin-top:3px;font-size:9.5px;font-weight:800;',
+  'letter-spacing:.07em;text-transform:uppercase;color:#9AA5B8}',
 '#bqPl td.t .zz{display:block;font-size:9.5px;font-weight:800;letter-spacing:.07em;',
 '  text-transform:uppercase;color:var(--zc,var(--tx3));margin-top:1px;line-height:1.1}',
 '#bqPl tr.linha{cursor:pointer;transition:background .12s}',
@@ -7577,8 +7579,15 @@ PARTE('planilha de treinos', function(){
     var feito = s && typeof concluida === 'function' ? concluida(s) : false;
     var estado = !s ? '' : feito ? 'v' : (passado ? 'x' : 'o');
 
-    /* segundo treino do dia sinalizado no titulo */
-    /* o titulo ja diz que e academia; somar " + academia" repetia */
+    /* ── O SEGUNDO TREINO PRECISA APARECER PELO NOME ──
+       A linha ja somava os minutos dele (por isso quarta dava 80: 35
+       da corrida do treinador mais 45 da academia), mas so escrevia o
+       titulo do treino principal. Na tela ficava "Rodagem leve 35' /
+       RODAGEM FACIL" e a academia, invisivel.
+
+       So vale quando ha treino principal: se s nao existe, o proprio
+       titulo da linha ja e o do extra, logo acima.                   */
+    var segundo = (s && x) ? (x.titulo || 'Academia') : null;
 
     var cls = ['linha'];
     if(hoje) cls.push('hoje');
@@ -7592,7 +7601,8 @@ PARTE('planilha de treinos', function(){
       + '<td class="d"><span class="dw">' + D3[dow(d)] + '</span>'
       + '<span class="dn">' + String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '</span></td>'
       + '<td class="t"><span class="tt">' + tit + '</span>'
-      + (sub ? '<span class="zz">' + sub + '</span>' : '') + '</td>'
+      + (sub ? '<span class="zz">' + sub + '</span>' : '')
+      + (segundo ? '<span class="zx">+ ' + segundo + '</span>' : '') + '</td>'
       + '<td>' + ((min || xmin) ? '<span class="num">' + ((min || 0) + xmin) + '</span>' : '<span class="dim">—</span>') + '</td>'
       + '<td class="ok">' + (estado === 'v' ? '<span class="vv">✓</span>'
                           : estado === 'x' ? '<span class="xx">!</span>'
@@ -10264,6 +10274,13 @@ PARTE('a aba coach e so da academia', function(){
        antigo — e a varredura logo abaixo ia apagar de qualquer jeito.
        Entao a academia toma o lugar, em vez de eu desistir e o dia
        terminar sem nada. Foi esse o furo: eu voltava cedo demais.   */
+    /* Se VOCE cancelou a academia desse dia, ela fica cancelada.
+       O app guarda uma lapide de 24h para isso, e eu nao a consultava:
+       recriava o extra, e o bqLimparApagados apagava de novo no save
+       seguinte. Cancelar parecia nao funcionar. */
+    if(typeof window.bqFoiApagado === 'function' &&
+       window.bqFoiApagado('extras', iso)) return;
+
     var atual = ST.extras[iso];
     if(atual && atual.mod === 'forca' && atual.auto !== true &&
        atual.origem !== 'academia' &&
