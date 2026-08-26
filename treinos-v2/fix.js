@@ -10233,7 +10233,60 @@ PARTE('a aba coach e so da academia', function(){
       }
     });
 
-    /* dias que o treinador marcou e o plano do app nem tinha */
+    /* ── NAO INVENTAR ETAPAS PARA TREINO QUE NAO E NOSSO ──
+     O app monta seis etapas para qualquer corrida: pre-aquecimento,
+     alongamentos, educativos, parte principal, com pace e batimento
+     calculados dos SEUS numeros. Isso servia quando o plano era dele.
+
+     Num treino do treinador, vira mentira: aparecia "undefined km" na
+     parte principal e paces que ele nunca definiu. Quem abrisse ia
+     correr uma coisa que ninguem prescreveu.
+
+     Entao: sessao com origem 'garmin' devolve etapa nenhuma. Sem
+     etapas, o card nao abre — e o que o treinador montou fica so no
+     relogio, que e onde esta certo.                                  */
+  function doTreinador(s){
+    return !!(s && (s.origem === 'garmin' || s.soLeitura));
+  }
+
+  ['etapas', 'etapasDe'].forEach(function(nome){
+    if(typeof window[nome] !== 'function') return;
+    var antes = window[nome];
+    window[nome] = function(s){
+      if(doTreinador(s)) return [];
+      return antes.apply(this, arguments);
+    };
+  });
+
+  /* Efeito colateral do bloqueio acima: concluida() decide pelo numero
+     de etapas marcadas, e sem etapas ela diria "nao cumprido" em todo
+     treino do treinador — alerta vermelho no dia em que voce correu.
+
+     Para esses dias a verdade esta na atividade que o relogio gravou,
+     nao numa caixinha marcada no app. ST.runs guarda 'd', a distancia
+     em dias ate hoje; invertendo a conta chego na data.              */
+  function correuNoDia(iso){
+    if(typeof ST !== 'object' || !ST || !Array.isArray(ST.runs)) return false;
+    var hoje = new Date(); hoje.setHours(0,0,0,0);
+    return ST.runs.some(function(r){
+      if(!r || r.mod === 'forca') return false;
+      var d = new Date(hoje.getTime() - (+r.d || 0) * 86400000);
+      var q = d.getFullYear() + '-' + ('0'+(d.getMonth()+1)).slice(-2) + '-' + ('0'+d.getDate()).slice(-2);
+      return q === iso;
+    });
+  }
+
+  if(typeof window.concluida === 'function'){
+    var concluidaAntes = window.concluida;
+    window.concluida = function(s){
+      if(doTreinador(s)) return correuNoDia(s && s.data);
+      return concluidaAntes.apply(this, arguments);
+    };
+  }
+
+  window.bqCorreuNoDia = correuNoDia;      // para conferir no console
+
+  /* dias que o treinador marcou e o plano do app nem tinha */
     agendaDoGarmin().forEach(function(a){
       if(!a || !a.data || a.descanso || a.data < deste) return;
       if(plano[a.data] && plano[a.data].origem === 'garmin') return;
