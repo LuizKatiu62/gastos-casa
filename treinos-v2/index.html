@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Treinos">
-<meta name="theme-color" content="#0A0D12">
+<meta name="theme-color" content="#0D0D0F">
 <!-- Tema escolhido, aplicado ANTES da primeira pintura. O fix.js carrega
      no fim da pagina; se a escolha fosse feita la, o app abriria escuro e
      piscaria para claro a cada abertura. Sao seis linhas para evitar isso. -->
@@ -18,7 +18,7 @@
       (p === 'auto' && !window.matchMedia('(prefers-color-scheme: dark)').matches);
     document.documentElement.setAttribute('data-tema', claro ? 'claro' : 'escuro');
     var m = document.querySelector('meta[name="theme-color"]');
-    if(m) m.setAttribute('content', claro ? '#F5F7FA' : '#0A0D12');
+    if(m) m.setAttribute('content', claro ? '#FAF8F4' : '#0D0D0F');
   }catch(e){}
 })();
 </script>
@@ -2050,7 +2050,7 @@ async function recarregar(){
 }
 
 /* ═══════════ 5. COACH ═══════════ */
-const CHK='<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 6.2l2.4 2.4L9.6 3.9" stroke="#0A0D12" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const CHK='<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 6.2l2.4 2.4L9.6 3.9" stroke="var(--bg)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
 function renderHero(){
   const o = objetivoAtivo();
@@ -2077,7 +2077,7 @@ function renderHero(){
 
 /* ---- seletor de objetivo, sempre visível na tela ---- */
 let _famAberta = null;
-const CHECK_MINI='<svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2.5 6.2l2.4 2.4L9.6 3.9" stroke="#0A0D12" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const CHECK_MINI='<svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2.5 6.2l2.4 2.4L9.6 3.9" stroke="var(--bg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
 function renderObjetivo(){
   const o = ST.objetivo || {};
@@ -3460,7 +3460,7 @@ function grafHRV(hrv, hv){
     s2+=`<path d="${spline(cima)} L${baixo[0][0]},${baixo[0][1]} ${db.slice(db.indexOf('C'))} Z"
           fill="rgba(201,242,78,.13)"/>`;
   } else {
-    base.forEach((b,i)=>s2+=`<circle cx="${x(i)}" cy="${y(b.v)}" r="2.8" fill="#4A5768"/>`);
+    base.forEach((b,i)=>s2+=`<circle cx="${x(i)}" cy="${y(b.v)}" r="2.8" fill="var(--rest)"/>`);
   }
   const linha=pts.map((p,i)=>[x(i), y(sem?p.v:p.v)]);
   s2+=`<path d="${spline(linha)}" fill="none" stroke="var(--acc)" stroke-width="2.6" stroke-linecap="round"/>`;
@@ -3532,9 +3532,9 @@ function chartPace(){
     s+=`<path d="${spline(up)} L${dn[0][0]},${dn[0][1]} ${dd.slice(dd.indexOf('C'))} Z" fill="rgba(201,242,78,.13)"/>`;
   }
   runs.forEach(r=>s+=`<circle cx="${x(r.d)}" cy="${y(r.pace)}" r="3.4" fill="#3A4757"/>`);
-  s+=`<path d="${spline(stats.map(a=>[x(a.k*7+3),y(a.med)]))}" fill="none" stroke="#C9F24E" stroke-width="3.2" stroke-linecap="round"/>`;
+  s+=`<path d="${spline(stats.map(a=>[x(a.k*7+3),y(a.med)]))}" fill="none" stroke="var(--acc)" stroke-width="3.2" stroke-linecap="round"/>`;
   const last=stats[stats.length-1];
-  s+=`<circle cx="${x(last.k*7+3)}" cy="${y(last.med)}" r="6" fill="#0A0D12" stroke="#C9F24E" stroke-width="3"/>`;
+  s+=`<circle cx="${x(last.k*7+3)}" cy="${y(last.med)}" r="6" fill="var(--bg)" stroke="var(--acc)" stroke-width="3"/>`;
   s+=`<line class="cross" x1="0" x2="0" y1="${mt}" y2="${mt+ih}" stroke="#8FA0B4" stroke-dasharray="3 3" opacity="0"/>`;
   [span,Math.round(span/2),0].forEach((d,i)=>
     s+=`<text class="axis ${d===0?'on':''}" x="${x(d)}" y="${H-11}" text-anchor="${i===0?'start':d===0?'end':'middle'}">${d===0?'hoje':dLabel(d)}</text>`);
@@ -3568,12 +3568,12 @@ function chartEff(){
     <text class="axis" x="${ml-9}" y="${Y(t)+4.5}" text-anchor="end">${t}</text>`);
   xt.forEach((t,i)=>s+=`<text class="axis" x="${X(t)}" y="${H-27}" text-anchor="${i===0?'start':i===xt.length-1?'end':'middle'}">${mmss(t)}</text>`);
   runs.forEach(r=>{ const nv=r.d<half;
-    s+=`<circle cx="${X(r.pace)}" cy="${Y(r.fc)}" r="${nv?5:4.2}" fill="${nv?'#C9F24E':'#4A5768'}" opacity="${nv?.9:.75}"/>` });
+    s+=`<circle cx="${X(r.pace)}" cy="${Y(r.fc)}" r="${nv?5:4.2}" fill="${nv?'var(--acc)':'var(--rest)'}" opacity="${nv?.9:.75}"/>` });
   const fit=g=>{ const n=g.length, sx=g.reduce((a,b)=>a+b.pace,0), sy=g.reduce((a,b)=>a+b.fc,0);
     const sxy=g.reduce((a,b)=>a+b.pace*b.fc,0), sxx=g.reduce((a,b)=>a+b.pace*b.pace,0);
     const m=(n*sxy-sx*sy)/(n*sxx-sx*sx||1); return {m, b:(sy-m*sx)/n} };
   const gA=runs.filter(r=>r.d>=half), gB=runs.filter(r=>r.d<half);
-  [[gA,'#4A5768'],[gB,'#C9F24E']].forEach(([g,c])=>{
+  [[gA,'var(--rest)'],[gB,'var(--acc)']].forEach(([g,c])=>{
     if(g.length<3) return;
     const {m,b}=fit(g);
     const p1=Math.max(xlo,Math.min(...g.map(r=>r.pace))), p2=Math.min(xhi,Math.max(...g.map(r=>r.pace)));
@@ -3620,7 +3620,7 @@ function chartCad(){
   for(let p=xhi;p>=xlo;p-=6) band.push([X(p),Y(esp(p)-5)]);
   s+=`<polygon points="${band.map(p=>p.join(',')).join(' ')}" fill="rgba(63,217,138,.12)"/>`;
   xt.forEach((t,i)=>s+=`<text class="axis" x="${X(t)}" y="${H-27}" text-anchor="${i===0?'start':i===xt.length-1?'end':'middle'}">${mmss(t)}</text>`);
-  runs.forEach(r=>s+=`<circle cx="${X(r.pace)}" cy="${Y(r.cad)}" r="4.6" fill="#C9F24E" opacity=".85"/>`);
+  runs.forEach(r=>s+=`<circle cx="${X(r.pace)}" cy="${Y(r.cad)}" r="4.6" fill="var(--acc)" opacity=".85"/>`);
   s+=`<text class="axis" x="${W-mr}" y="${H-7}" text-anchor="end">mais rápido →</text>
       <text class="axis" x="${ml-9}" y="${mt-7}" text-anchor="end">spm</text></svg>`;
   host.innerHTML=s;

@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '06b';
+const FIX_VERSAO = '06c';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -347,7 +347,7 @@ window.grafHRV = function(hrv, hv){
     s += `<path d="${spline(cima)} L${baixo[0][0]},${baixo[0][1]} ${db.slice(db.indexOf('C'))} Z" ` +
          `fill="rgba(201,242,78,.14)"/>`;
   } else {
-    base.forEach((b,i)=>{ s += `<circle cx="${x(i)}" cy="${y(b.v)}" r="3.2" fill="#4A5768"/>` });
+    base.forEach((b,i)=>{ s += `<circle cx="${x(i)}" cy="${y(b.v)}" r="3.2" fill="var(--rest)"/>` });
   }
   const linha = pts.map((p,i)=>[x(i), y(p.v)]);
   s += `<path d="${spline(linha)}" fill="none" stroke="var(--acc)" stroke-width="2.8" stroke-linecap="round"/>`;
@@ -478,9 +478,9 @@ window.chartPace = function(){
     s += `<path d="${spline(up)} L${dn[0][0]},${dn[0][1]} ${dd.slice(dd.indexOf('C'))} Z" fill="rgba(201,242,78,.15)"/>`;
   }
   runs.forEach(r=>{ s += `<circle cx="${x(r.d)}" cy="${y(r.pace)}" r="3.6" fill="#3A4757"/>` });
-  s += `<path d="${spline(stats.map(a=>[x(a.k*7+3), y(a.med)]))}" fill="none" stroke="#C9F24E" stroke-width="3" stroke-linecap="round"/>`;
+  s += `<path d="${spline(stats.map(a=>[x(a.k*7+3), y(a.med)]))}" fill="none" stroke="var(--acc)" stroke-width="3" stroke-linecap="round"/>`;
   const last = stats[stats.length-1];
-  s += `<circle cx="${x(last.k*7+3)}" cy="${y(last.med)}" r="6" fill="#0A0D12" stroke="#C9F24E" stroke-width="3"/>`;
+  s += `<circle cx="${x(last.k*7+3)}" cy="${y(last.med)}" r="6" fill="var(--bg)" stroke="var(--acc)" stroke-width="3"/>`;
   s += `<line class="cross" x1="0" x2="0" y1="${MT}" y2="${MT+IH}" stroke="#8FA0B4" stroke-dasharray="3 3" opacity="0"/>`;
   s += selo(H, mmss(last.med)+'/km', '#C9F24E');
   [span, Math.round(span*.5), 0].forEach((d,i,arr)=>{
@@ -584,7 +584,7 @@ window.chartCad = function(){
   for(let p=xhi; p>=xlo; p-=6) band.push([X(p), Y(esp(p)-5)]);
   s += `<polygon points="${band.map(p=>p.join(',')).join(' ')}" fill="rgba(63,217,138,.14)"/>`;
   xt.forEach(t=>{ s += `<text x="${X(t)}" y="${H-22}" text-anchor="middle">${mmss(t)}</text>` });
-  runs.forEach(r=>{ s += `<circle cx="${X(r.pace)}" cy="${Y(r.cad)}" r="5" fill="#C9F24E" opacity=".82"/>` });
+  runs.forEach(r=>{ s += `<circle cx="${X(r.pace)}" cy="${Y(r.cad)}" r="5" fill="var(--acc)" opacity=".82"/>` });
   s += `<text class="eixo" x="${W-MR}" y="${H-5}" text-anchor="end">mais rápido →</text>`;
   s += `<text class="eixo" x="${ML-9}" y="${MT-9}" text-anchor="end">spm</text>`;
   host.innerHTML = g(H, 'Cadência por pace', s);
@@ -11905,35 +11905,37 @@ PARTE('previsto x realizado no detalhe do treino', function(){
 });
 
 /* ══════════════════════════════════════════════════════════════════════
-   TEMA — botao no topo que gira entre Escuro, Claro e Auto.
+   TEMAS — paleta na familia do TrainingPeaks, clara e escura.
 
-   Como no Debt Free: uma pilula unica na barra de cima. Um toque passa
-   para o proximo. Auto segue o ajuste do iPhone e muda sozinho quando
-   anoitece.
+   O que mudou e por que:
 
-   Guardo a PREFERENCIA (escuro/claro/auto) e escrevo no documento o
-   tema EFETIVO (escuro/claro). Assim a folha de estilo so precisa
-   conhecer html[data-tema="claro"], e o Auto vira contas em JS.
+   O verde-limao dava o tom de tudo e puxava a tela para o frio. No
+   lugar entra amarelo-ambar como cor de destaque, e as modalidades
+   passam a ter cada uma a sua, como no TrainingPeaks: corrida verde,
+   bike azul, natacao turquesa, ACADEMIA ROXA. Antes academia era
+   laranja e corrida era o mesmo limao do destaque — duas coisas
+   diferentes com a mesma cor.
 
-   O verde-limao (#C9F24E) nao vem para o claro: sobre branco tem
-   contraste 1.4 e some. Entra um verde fechado (#46700C), contraste
-   5.9. Todas as cores do tema claro foram medidas pela regra WCAG e
-   passam de 4.5 sobre os dois fundos. A unica abaixo e a de descanso,
-   de proposito — ela existe para parecer apagada.
+   Os cinzas tambem sairam do azulado para o neutro quente. E o que
+   mais muda a sensacao de "frio" numa tela, mais que as cores fortes.
 
-   NOTA DE UMA FALHA MINHA, para nao repetir: na primeira versao eu
-   procurei cores fixas so em hexadecimal e deixei passar as escritas
-   em rgba(). Eram justamente a barra de cima, a barra de abas e o
-   fundo dos paineis — as tres coisas mais visiveis da tela, que
-   ficariam pretas no tema claro. Estao aqui embaixo.
+   NAO SAO OS HEXADECIMAIS OFICIAIS DO TRAININGPEAKS. Procurei e eles
+   nao publicam. Isto e a mesma familia — amarelo, verde, roxo, azul —
+   com cada cor medida pela regra WCAG contra os dois fundos do tema.
+   Todas passam de 4.5, que e o minimo para texto. A unica abaixo e a
+   de descanso, de proposito: ela existe para parecer apagada, e fica
+   em 3.6, acima do minimo de 3.0 que vale para elementos graficos.
+
+   O seletor mora na tela de ajustes, aberta pela engrenagem no topo.
+   Na versao anterior era uma pilula na barra, que empurrava o titulo
+   e quebrava linha no celular.
    ══════════════════════════════════════════════════════════════════════ */
-PARTE('tema claro e escuro', function(){
+PARTE('temas trainingpeaks', function(){
 
   var CHAVE = 'bq_tema';
   var raiz  = document.documentElement;
   var ORDEM = ['escuro', 'claro', 'auto'];
   var ROTULO = { escuro:'Escuro', claro:'Claro', auto:'Auto' };
-  var ICONE  = { escuro:'🌙', claro:'☀️', auto:'🌗' };
 
   function prefere(){
     try{
@@ -11945,54 +11947,59 @@ PARTE('tema claro e escuro', function(){
     try{ return window.matchMedia('(prefers-color-scheme: dark)').matches }
     catch(e){ return true }
   }
-  /* o que de fato vai para a tela */
   function efetivo(p){
     if(p === 'auto') return sistemaEscuro() ? 'escuro' : 'claro';
     return p;
   }
-
   function aplicar(){
     var t = efetivo(prefere());
-    if(t === 'claro') raiz.setAttribute('data-tema', 'claro');
-    else raiz.setAttribute('data-tema', 'escuro');
+    raiz.setAttribute('data-tema', t === 'claro' ? 'claro' : 'escuro');
     var m = document.querySelector('meta[name="theme-color"]');
-    if(m) m.setAttribute('content', t === 'claro' ? '#F5F7FA' : '#0A0D12');
+    if(m) m.setAttribute('content', t === 'claro' ? '#FAF8F4' : '#0D0D0F');
     pintar();
   }
 
   var css = document.createElement('style');
   css.textContent = [
 
-    /* ── paleta clara ── */
-    'html[data-tema="claro"]{',
-      '--bg:#F5F7FA; --s1:#FFFFFF; --s2:#EEF2F7; --s3:#E2E8F0; --line:#D8E0E9;',
-      '--tx:#111820; --tx2:#44515F; --tx3:#5C6875;',
-      '--acc:#46700C; --acc-wash:rgba(70,112,12,.12);',
-      '--run:#46700C; --bike:#1A62A6; --swim:#0A6E62; --gym:#A34A08; --rest:#78859A;',
-      '--ok:#157347; --ok-wash:rgba(21,115,71,.12);',
-      '--warn:#835A00; --warn-wash:rgba(131,90,0,.14);',
-      '--bad:#B5332A; --bad-wash:rgba(181,51,42,.12);',
-      '--acc-tx:#FFFFFF;',
+    /* ══ ESCURO — o mesmo desenho, cores quentes ══
+       Cinzas neutros no lugar dos azulados, e cada modalidade com a
+       sua cor. Nada de layout muda: so os valores das variaveis.    */
+    ':root{',
+      '--bg:#0D0D0F; --s1:#16161A; --s2:#1E1F24; --s3:#282A30; --line:#2C2E35;',
+      '--tx:#F3F1ED; --tx2:#ADA69C; --tx3:#8C857B;',
+      '--acc:#F2B441; --acc-wash:rgba(242,180,65,.14); --acc-tx:#1A1508;',
+      '--run:#6FBF3F; --bike:#3D9BE9; --swim:#28C2B8; --gym:#9B6BD6; --rest:#71717E;',
+      '--ok:#5FCB6B; --ok-wash:rgba(95,203,107,.14);',
+      '--warn:#F2B441; --warn-wash:rgba(242,180,65,.14);',
+      '--bad:#E5544B; --bad-wash:rgba(229,84,75,.14);',
     '}',
-    ':root{--acc-tx:#0A0D12}',
 
-    /* ── AS DUAS BARRAS. Eram rgba e eu tinha deixado passar. ── */
-    'html[data-tema="claro"] .appbar{background:rgba(245,247,250,.86)!important;',
+    /* ══ CLARO — branco quente, nao cinza-azulado ══ */
+    'html[data-tema="claro"]{',
+      '--bg:#FAF8F4; --s1:#FFFFFF; --s2:#F3F0EA; --s3:#E8E3DA; --line:#DFDAD1;',
+      '--tx:#1E1B16; --tx2:#57514A; --tx3:#736C63;',
+      '--acc:#8A5C00; --acc-wash:rgba(138,92,0,.12); --acc-tx:#FFFFFF;',
+      '--run:#3D7A1F; --bike:#1668B8; --swim:#0E7168; --gym:#6B3FA0; --rest:#8A8279;',
+      '--ok:#2E7331; --ok-wash:rgba(46,115,49,.12);',
+      '--warn:#8A5C00; --warn-wash:rgba(138,92,0,.13);',
+      '--bad:#BE3227; --bad-wash:rgba(190,50,39,.12);',
+    '}',
+
+    /* ══ o que estava com cor escrita direto ══ */
+
+    /* as duas barras e o fundo dos paineis vinham em rgba() */
+    'html[data-tema="claro"] .appbar{background:rgba(250,248,244,.86)!important;',
       'border-bottom:1px solid var(--line)}',
-    'html[data-tema="claro"] .tabbar{background:rgba(245,247,250,.93)!important;',
+    'html[data-tema="claro"] .tabbar{background:rgba(250,248,244,.93)!important;',
       'border-top:1px solid var(--line)}',
-    'html[data-tema="claro"] .ov{background:rgba(17,24,32,.42)!important}',
+    'html[data-tema="claro"] .ov{background:rgba(30,27,22,.42)!important}',
+    '.appbar{background:rgba(13,13,15,.86)}',
+    '.tabbar{background:rgba(13,13,15,.93)}',
 
-    /* o veu sobre a foto de fundo: no escuro ele escurece a foto para
-       o texto se ler. No claro tem que clarear, senao a tela inteira
-       fica cinza-chumbo com letra preta em cima. */
-    'html[data-tema="claro"] #bqFoto::after{background:linear-gradient(180deg,',
-      'rgba(245,247,250,.86) 0%,rgba(245,247,250,.70) 38%,',
-      'rgba(245,247,250,.90) 100%)!important}',
-
-    /* fundo geral */
     'html[data-tema="claro"]{background:var(--bg)}',
     'html[data-tema="claro"] body{background:var(--bg)}',
+    'html[data-tema="escuro"]{background:var(--bg)}',
 
     /* abertura do app */
     'html[data-tema="claro"] #capa{background:var(--bg)}',
@@ -12000,58 +12007,87 @@ PARTE('tema claro e escuro', function(){
     'html[data-tema="claro"] .clock .l3,',
     'html[data-tema="claro"] .cresumo .v{color:var(--tx)}',
     'html[data-tema="claro"] .cresumo{color:var(--tx2)}',
-    'html[data-tema="claro"] .centrar{color:var(--acc-tx)}',
+    '.centrar{color:var(--acc-tx)!important}',
 
-    'html[data-tema="claro"] .day.off .dn{color:#C3CCD8}',
+    /* o veu sobre a foto de fundo */
+    'html[data-tema="claro"] #bqFoto::after{background:linear-gradient(180deg,',
+      'rgba(250,248,244,.86) 0%,rgba(250,248,244,.70) 38%,',
+      'rgba(250,248,244,.90) 100%)!important}',
+
+    /* dia de prova: o degrade terminava num lime que nao existe mais */
+    '.day.race{background:linear-gradient(145deg,var(--acc),var(--run))!important}',
+
+    'html[data-tema="claro"] .day.off .dn{color:#CFC9BF}',
     'html[data-tema="claro"] .marco{',
-      'background:linear-gradient(140deg,#EAF1E4,#E6EDF4 55%,#E3F0E9)}',
-    'html[data-tema="claro"] #v-kpi .bqTssPer.on{color:var(--acc-tx)}',
+      'background:linear-gradient(140deg,#F1EDE0,#EFEBE3 55%,#E9F0E6)}',
+    '#v-kpi .bqTssPer.on{color:var(--acc-tx)!important}',
     'html[data-tema="claro"] #bqPl td.t .zx{color:var(--tx3)}',
     'html[data-tema="claro"] .leg i[style*="#3A4757"],',
     'html[data-tema="claro"] .leg i[style*="#4A5768"]{background:var(--rest)!important}',
-    'html[data-tema="claro"] .card{box-shadow:0 1px 2px rgba(16,24,40,.05),',
-      '0 1px 3px rgba(16,24,40,.06)}',
+    'html[data-tema="claro"] .card{box-shadow:0 1px 2px rgba(30,27,22,.05),',
+      '0 1px 3px rgba(30,27,22,.06)}',
 
-    /* ── a pilula, na barra de cima ── */
-    '.bqTemaBt{display:inline-flex;align-items:center;gap:6px;flex:none;',
-      'border:1px solid var(--line);background:var(--s2);color:var(--tx);',
-      'font:700 11.5px/1 inherit;padding:8px 12px;border-radius:999px;',
-      'cursor:pointer;white-space:nowrap}',
-    '.bqTemaBt:active{transform:scale(.96)}',
-    '.bqTemaBt .ic{font-size:12.5px;line-height:1}',
-    '@media (max-width:390px){.bqTemaBt .tx{display:none}',
-      '.bqTemaBt{padding:8px 10px}}'
+    /* ══ o seletor, na tela de ajustes ══ */
+    '.bqTema{display:flex;gap:6px;background:var(--s2);padding:4px;',
+      'border-radius:12px;margin-top:14px}',
+    '.bqTema button{flex:1;border:0;background:transparent;color:var(--tx3);',
+      'font:700 13px/1 inherit;padding:12px 6px;border-radius:9px;cursor:pointer}',
+    '.bqTema button.on{background:var(--acc);color:var(--acc-tx)}',
+    '.bqTemaAg{margin-top:9px;font:600 11px/1.4 inherit;color:var(--tx3)}',
+    '.bqPal{display:flex;gap:7px;margin-top:13px;flex-wrap:wrap}',
+    '.bqPal span{display:inline-flex;align-items:center;gap:5px;',
+      'font:600 10.5px/1 inherit;color:var(--tx3)}',
+    '.bqPal i{width:10px;height:10px;border-radius:3px;display:block}'
   ].join('');
   document.head.appendChild(css);
 
-  /* ── o botao ── */
-  var barra = document.querySelector('.appbar .in');
-  var bt = null;
-  if(barra){
-    bt = document.createElement('button');
-    bt.className = 'bqTemaBt';
-    bt.type = 'button';
-    bt.setAttribute('aria-label', 'Trocar o tema');
-    /* antes da engrenagem, para nao empurrar o Sync Garmin */
-    var engr = barra.querySelector('.engr');
-    if(engr) barra.insertBefore(bt, engr);
-    else barra.appendChild(bt);
+  /* ── o cartao, na tela aberta pela engrenagem ── */
+  var alvo = document.getElementById('v-dados');
+  var cartao = null;
+  if(alvo){
+    cartao = document.createElement('section');
+    cartao.className = 'card';
+    cartao.innerHTML =
+      '<div class="head"><div><h2>Aparência</h2></div></div>' +
+      '<p class="ajuda" style="margin-top:10px">Escuro, claro, ou Auto para ' +
+      'seguir o ajuste do iPhone e virar sozinho ao anoitecer.</p>' +
+      '<div class="bqTema">' +
+        ORDEM.map(function(t){
+          return '<button data-tema="' + t + '">' + ROTULO[t] + '</button>';
+        }).join('') +
+      '</div>' +
+      '<div class="bqTemaAg"></div>' +
+      '<div class="bqPal">' +
+        '<span><i style="background:var(--run)"></i>Corrida</span>' +
+        '<span><i style="background:var(--bike)"></i>Bike</span>' +
+        '<span><i style="background:var(--swim)"></i>Natação</span>' +
+        '<span><i style="background:var(--gym)"></i>Academia</span>' +
+        '<span><i style="background:var(--acc)"></i>Destaque</span>' +
+      '</div>';
+    /* logo depois do titulo da tela, para nao ficar no fim de tudo */
+    if(alvo.children.length > 1) alvo.insertBefore(cartao, alvo.children[1]);
+    else alvo.appendChild(cartao);
 
-    bt.addEventListener('click', function(){
-      var i = ORDEM.indexOf(prefere());
-      var prox = ORDEM[(i + 1) % ORDEM.length];
-      try{ localStorage.setItem(CHAVE, prox) }catch(e){}
+    cartao.addEventListener('click', function(ev){
+      var b = ev.target.closest && ev.target.closest('[data-tema]');
+      if(!b || !cartao.contains(b)) return;
+      try{ localStorage.setItem(CHAVE, b.getAttribute('data-tema')) }catch(e){}
       aplicar();
     });
   }
 
   function pintar(){
-    if(!bt) return;
+    if(!cartao) return;
     var p = prefere();
-    var extra = p === 'auto' ? ' · ' + (efetivo(p) === 'claro' ? 'claro' : 'escuro') : '';
-    bt.innerHTML = '<span class="ic">' + ICONE[p] + '</span>' +
-                   '<span class="tx">' + ROTULO[p] + extra + '</span>';
-    bt.title = 'Tema: ' + ROTULO[p] + extra + ' — toque para trocar';
+    Array.prototype.forEach.call(cartao.querySelectorAll('[data-tema]'), function(b){
+      if(b.getAttribute('data-tema') === p) b.classList.add('on');
+      else b.classList.remove('on');
+    });
+    var ag = cartao.querySelector('.bqTemaAg');
+    if(ag) ag.textContent = p === 'auto'
+      ? 'Agora está ' + (efetivo(p) === 'claro' ? 'claro' : 'escuro') +
+        ', porque é o que o iPhone está usando.'
+      : '';
   }
 
   /* No Auto, acompanhar o iPhone quando ele virar sozinho. */
