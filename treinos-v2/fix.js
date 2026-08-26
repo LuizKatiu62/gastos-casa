@@ -4963,6 +4963,86 @@ PARTE('aba kpi', function(){
         : tV.incl < -0.5 ? 'Seu volume vem <b>caindo</b>.'
         : 'Volume <b>estável</b>.') + '</p></div>';
 
+    /* ── 2b. TSS por treino ──
+       Como o TrainingPeaks calcula (rTSS):
+
+           IF  = pace de limiar / pace do treino
+           TSS = (segundos x IF²) / 3600 x 100
+
+       Uma hora exata no pace de limiar da 100 por definicao. Mais lento
+       da menos, mais rapido da mais, e o quadrado faz a intensidade
+       pesar mais que a duracao.
+
+       UMA DIFERENCA HONESTA: o TrainingPeaks usa Normalized Graded Pace,
+       que corrige o pace pela subida. Aqui so existe o pace medio da
+       atividade — o sync nao guarda altimetria por trecho. Em treino de
+       ladeira o numero sai abaixo do deles. Esta escrito na tela.
+
+       A LINHA DE REFERENCIA nao e um alvo: e a sua propria mediana das
+       ultimas 8 semanas. Serve para ver o treino de hoje contra o seu
+       normal, que foi o que voce pediu.                              */
+    var LIMIAR = (typeof PERFIL === 'object' && PERFIL && +PERFIL.paceLimiar) || 340;
+
+    function tssDe(r){
+      if(!r || r.mod !== 'corrida') return null;
+      var pace = +r.pace || 0, dur = +r.dur || 0;
+      if(pace <= 0 || dur <= 0) return null;
+      var iF = LIMIAR / pace;                       // >1 = mais rapido que o limiar
+      if(iF > 1.6 || iF < 0.35) return null;        // pace absurdo: dado ruim
+      return Math.round(dur * iF * iF / 3600 * 100);
+    }
+
+    var corridas = (ST.runs || []).filter(function(r){ return r.mod === 'corrida' && r.d <= 56 });
+    var pontosTss = corridas.map(function(r){
+      return { d: +r.d, tss: tssDe(r), titulo: r.titulo || '' };
+    }).filter(function(x){ return x.tss !== null })
+      .sort(function(a,b){ return b.d - a.d });      // antigo -> recente
+
+    if(pontosTss.length >= 3){
+      var vals = pontosTss.map(function(x){ return x.tss });
+      var ordenados = vals.slice().sort(function(a,b){ return a-b });
+      var mediana = ordenados.length % 2
+        ? ordenados[(ordenados.length-1)/2]
+        : Math.round((ordenados[ordenados.length/2 - 1] + ordenados[ordenados.length/2]) / 2);
+      var maxT = Math.max.apply(null, vals.concat([mediana])) * 1.15;
+      var ultimo = pontosTss[pontosTss.length - 1];
+      var dif = ultimo.tss - mediana;
+      var pct = mediana > 0 ? Math.round(dif / mediana * 100) : 0;
+
+      var corT = function(v){
+        return v >= mediana * 1.5 ? 'var(--bad)'
+             : v >= mediana * 1.15 ? 'var(--warn)'
+             : 'var(--run)';
+      };
+
+      h += '<div class="kcard"><div class="kcab"><h3>TSS por treino</h3>'
+        + chip(dif, ' vs sua mediana') + '</div>'
+        + '<div class="kbig" style="color:' + corT(ultimo.tss) + '">' + ultimo.tss
+        + '<small>no último treino · sua mediana das 8 semanas é ' + mediana
+        + (pct ? ' · ' + (pct > 0 ? '+' : '') + pct + '%' : '') + '</small></div>'
+        + svgBox(grade(maxT, 0, function(v){ return v.toFixed(0) })
+            + refLinha(mediana, 0, maxT, 'var(--ok)', 'seu normal · ' + mediana)
+            + paresDeBarras(vals, null, maxT, corT)
+            + eixoX(vals.length, function(i){
+                var p = pontosTss[i];
+                return p ? brev(diasAtras(p.d)) : '';
+              }))
+        + legenda([['até 15% acima do normal','var(--run)'],
+                   ['15 a 50% acima','var(--warn)'],
+                   ['50% acima ou mais','var(--bad)']])
+        + '<p class="ksub">Cada barra é um treino. A linha verde é a sua <b>mediana</b>, '
+        + 'não uma meta — serve para ver o treino de hoje contra o seu normal. '
+        + 'Calculado como no TrainingPeaks: uma hora no pace de limiar vale 100. '
+        + '<b>Em treino de ladeira o número sai abaixo do deles</b>, porque aqui não há '
+        + 'correção de altimetria.</p></div>';
+    }
+
+    /* devolve a data ISO de um treino a partir do campo d (dias atras) */
+    function diasAtras(d){
+      var x = new Date(HOJE.getTime() - (+d || 0) * 86400000);
+      return x.getFullYear() + '-' + ('0'+(x.getMonth()+1)).slice(-2) + '-' + ('0'+x.getDate()).slice(-2);
+    }
+
     /* ── 3. longão ──
        ATENCAO ao que este cartao NAO faz mais: ele nao olha o historico
        inteiro. Olhava, e o resultado foi absurdo — pegava a ultra de 65
