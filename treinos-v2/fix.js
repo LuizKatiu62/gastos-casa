@@ -10147,20 +10147,99 @@ PARTE('a aba coach e so da academia', function(){
             titulo:'Força — academia 5:30', min:60, origem:'academia'};
   }
 
+  /* ── os treinos do treinador, so para VISUALIZAR ──
+     Voltaram em 26/08/2026. O app nao planeja corrida nenhuma: le a
+     agenda que o treinador montou no Garmin (RAW.agendados, gravado
+     pelo sync) e mostra nome, distancia e tempo.
+
+     O motivo de voltarem: a faixa de nutricao do longao (parte 29) so
+     aparece em sessao de corrida com 90 min ou mais. Sem os treinos
+     dele na tela, ela nao tinha onde se pendurar — e a informacao de
+     gel, eletrolito e sodio sumiu junto.
+
+     Esta parte NAO escreve no Garmin. Quem escrevia era o sync, e esta
+     travado la (ENVIAR_SEMANA_PARA_GARMIN = False).                  */
+  var SPORT_ICO = {corrida:'🏃', bike:'🚴', natacao:'🏊', academia:'💪', outro:'🏅'};
+
+  function agendaDoGarmin(){
+    var l = (typeof RAW === 'object' && RAW) ? RAW.agendados : null;
+    return Array.isArray(l) ? l : [];
+  }
+
+  function doDia(iso){
+    return agendaDoGarmin().filter(function(a){
+      return a && a.data === iso && !a.descanso;
+    });
+  }
+
+  function sessaoDoTreinador(iso, itens){
+    var nomes = [], km = 0, min = 0;
+    itens.forEach(function(a){
+      nomes.push(a.nome || 'Treino');
+      if(a.distanciaM) km += a.distanciaM / 1000;
+      if(a.duracaoSeg) min += Math.round(a.duracaoSeg / 60);
+    });
+    var esporte = itens[0].esporte || 'corrida';
+    var s = {
+      id: iso, data: iso,
+      mod: esporte === 'bike' ? 'bike' : esporte === 'natacao' ? 'natacao' : 'corrida',
+      foco: focoDoNome(nomes.join(' '), km),
+      fase: 'Plano do treinador',
+      titulo: nomes.join(' + '),
+      origem: 'garmin',
+      soLeitura: true                       // o app nao mexe nele
+    };
+    if(km)  s.km  = Math.round(km * 10) / 10;
+    if(min) s.min = min;                    // e o min que aciona a nutricao
+    if(itens.some(function(i){ return i.prova })) s.prova = true;
+    return s;
+  }
+
+  /* O nome que o treinador deu diz o tipo. A planilha pinta a linha por
+     este campo, e a nutricao usa /longo/ como um dos gatilhos.        */
+  function focoDoNome(nome, km){
+    var t = String(nome || '').toLowerCase();
+    if(/prova|race/.test(t))                   return 'prova';
+    if(/stride|tiro|sprint/.test(t))           return 'tiros';
+    if(/ladeira|subida|hill/.test(t))          return 'ladeira';
+    if(/long[aã]o|longo/.test(t))              return 'longo';
+    if(/z4|vo2|intervalad|blocos/.test(t))     return 'vo2';
+    if(/limiar|tempo|z3/.test(t))              return 'limiar';
+    if(/fartlek/.test(t))                      return 'fartlek';
+    if(km >= 18)                               return 'longo';
+    if(/regenerat|soltura|recupera/.test(t))   return 'soltura';
+    return 'facil';
+  }
+
   function sohAcademia(plano){
     var deste = inicioDaSemana();
     Object.keys(plano).forEach(function(iso){
       if(iso < deste) return;               // semanas passadas: historico
       var s = plano[iso];
       if(s && s.prova) return;              // a prova continua no calendario
+
+      var doTreinador = doDia(iso);
+      if(doTreinador.length){
+        plano[iso] = sessaoDoTreinador(iso, doTreinador);
+        tirarExtra(iso);
+        return;
+      }
       if(!DIAS_ACADEMIA[diaSemana(iso)]){
         delete plano[iso];
         tirarExtra(iso);
       }else if(!ehForca(s)){
-        /* dia de academia com sobra do plano de corrida: vira academia */
         plano[iso] = sessaoAcademia(iso);
         tirarExtra(iso);
       }
+    });
+
+    /* dias que o treinador marcou e o plano do app nem tinha */
+    agendaDoGarmin().forEach(function(a){
+      if(!a || !a.data || a.descanso || a.data < deste) return;
+      if(plano[a.data] && plano[a.data].origem === 'garmin') return;
+      if(plano[a.data] && plano[a.data].prova) return;
+      plano[a.data] = sessaoDoTreinador(a.data, doDia(a.data));
+      tirarExtra(a.data);
     });
     /* nos dias que ficam, o extra duplicaria a academia e somaria 45 */
     Object.keys(plano).forEach(function(iso){
