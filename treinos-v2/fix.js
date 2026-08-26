@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '05e';
+const FIX_VERSAO = '05f';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -10246,6 +10246,27 @@ PARTE('a aba coach e so da academia', function(){
     delete ST.extras[iso];
   }
 
+  /* Poe a academia no encaixe de segundo treino do dia.
+
+     O id precisa ser 'x' + data, com extra:true — e a convencao que o
+     montarExtra usa. Se eu reaproveitasse o id da sessao principal, as
+     duas dividiriam a mesma entrada em ST.feitas e concluir uma
+     concluiria a outra.
+
+     Nao piso em extra que voce criou na mao: so substituo o que este
+     codigo mesmo pos ali antes (origem 'academia').                 */
+  function academiaDeSegundo(iso){
+    if(typeof ST !== 'object' || !ST) return;
+    ST.extras = ST.extras || {};
+    var atual = ST.extras[iso];
+    if(atual && atual.origem !== 'academia') return;
+    var s = sessaoAcademia(iso);
+    s.id = 'x' + iso;
+    s.extra = true;
+    ST.extras[iso] = s;
+    if(ST.cache) delete ST.cache[s.id];
+  }
+
   /* De hoje em diante: so segunda, quarta e sexta, e so forca. O
      passado nao se toca — e historico, e apagar estragaria a conta
      de aderencia.                                                   */
@@ -10340,7 +10361,19 @@ PARTE('a aba coach e so da academia', function(){
       var doTreinador = doDia(iso);
       if(doTreinador.length){
         plano[iso] = sessaoDoTreinador(iso, doTreinador);
-        tirarExtra(iso);
+        /* ── A ACADEMIA NAO SAI DO DIA SO PORQUE ELE MARCOU CORRIDA ──
+           Este era o defeito: em dia de academia com corrida do
+           treinador, o tirarExtra apagava a academia — e junto foi o
+           botao MOTRA/Hevy, que so existe no cartao de segundo treino.
+           Ficou invisivel ate hoje porque foi a primeira quarta-feira
+           em que o treinador marcou corrida; segunda nao teve.
+
+           Voce faz as duas: academia 5:30 e corrida depois. Entao a
+           corrida dele fica como treino principal e a academia vai
+           para o segundo treino, que e o encaixe que o app ja tem
+           para isso desde a parte 13.                               */
+        if(DIAS_ACADEMIA[diaSemana(iso)]) academiaDeSegundo(iso);
+        else tirarExtra(iso);
         return;
       }
       if(!DIAS_ACADEMIA[diaSemana(iso)]){
@@ -10403,6 +10436,32 @@ PARTE('a aba coach e so da academia', function(){
     };
   }
 
+  /* ── O CARTAO DO TREINO DELE NAO TEM ETAPAS. ENTAO NAO MOSTRE
+        BARRA DE ETAPAS. ──
+     Bloquear as etapas (acima) resolveu a mentira, mas deixou o
+     cartao com o resto do enfeite: o app calcula o progresso como
+     feitas/total, e com total zero isso da NaN. Na tela saia uma
+     barra de largura "NaN%" e o texto "0 de 0 etapas · NaN%".
+     Aqui esse bloco simplesmente sai, junto com a lista vazia. */
+  if(typeof window.renderDia === 'function'){
+    var renderDiaApp = window.renderDia;
+    window.renderDia = function(){
+      var r = renderDiaApp.apply(this, arguments);
+      try{
+        var el = document.getElementById('sess');
+        var sel = (typeof ST === 'object' && ST) ? ST.sel : null;
+        var s = (sel && typeof sessaoDe === 'function') ? sessaoDe(sel) : null;
+        if(el && doTreinador(s)){
+          var p = el.querySelector('.prog');
+          if(p && p.parentNode) p.parentNode.removeChild(p);
+          var e = el.querySelector('.etapas');
+          if(e && !e.children.length && e.parentNode) e.parentNode.removeChild(e);
+        }
+      }catch(err){ console.warn('cartao do treinador:', err && err.message) }
+      return r;
+    };
+  }
+
   window.bqCorreuNoDia = correuNoDia;      // para conferir no console
 
   /* dias que o treinador marcou e o plano do app nem tinha */
@@ -10413,9 +10472,18 @@ PARTE('a aba coach e so da academia', function(){
       plano[a.data] = sessaoDoTreinador(a.data, doDia(a.data));
       tirarExtra(a.data);
     });
-    /* nos dias que ficam, o extra duplicaria a academia e somaria 45 */
+    /* Varredura final: tira segundo treino que sobrou de plano antigo.
+
+       Ela apagava TUDO, e por isso comia tambem a academia que o
+       academiaDeSegundo acabou de por — que e justamente onde mora o
+       botao "Ver e enviar ao MOTRA", e o botao do Hevy que se pendura
+       nele. Agora a academia deste codigo passa. */
     Object.keys(plano).forEach(function(iso){
-      if(iso >= deste && !(plano[iso] && plano[iso].prova)) tirarExtra(iso);
+      if(iso < deste) return;
+      if(plano[iso] && plano[iso].prova) return;
+      var x = (typeof ST === 'object' && ST && ST.extras) ? ST.extras[iso] : null;
+      if(x && x.origem === 'academia') return;
+      tirarExtra(iso);
     });
     return plano;
   }
