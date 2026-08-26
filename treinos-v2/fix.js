@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '05d';
+const FIX_VERSAO = '05e';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -11195,8 +11195,11 @@ PARTE('treinos do mes embaixo do calendario', function(){
 
   var grade = document.getElementById('grid');
   if(!grade) return;
+  /* So preciso do cartao para pendurar a lista dentro dele. Exigir
+     que ele tivesse pai era exigencia a toa — e um jeito silencioso
+     de a lista nunca aparecer. */
   var cartao = grade.closest && grade.closest('.card');
-  if(!cartao || !cartao.parentNode) return;
+  if(!cartao) return;
   if(typeof window.renderCal !== 'function') return;
 
   /* ── estilo ── */
@@ -11223,7 +11226,40 @@ PARTE('treinos do mes embaixo do calendario', function(){
     '.mesRow .tempo span{display:block;margin-top:2px;font:600 9px/1 inherit;color:var(--tx3)}',
     '.mesRow.hoje .dd b{color:var(--acc)}',
     '.mesRow.aguardando{opacity:.62}',
-    '.mesVazio{color:var(--tx3);font:500 12px/1.5 inherit;padding:14px 0;text-align:center}'
+    '.mesVazio{color:var(--tx3);font:500 12px/1.5 inherit;padding:14px 0;text-align:center}',
+
+    /* cabecalho do mes */
+    '.mesTopo{display:flex;align-items:center;gap:11px;width:100%;border:0;',
+      'background:transparent;padding:0 2px 10px;color:inherit;font:inherit;',
+      'text-align:left;cursor:pointer}',
+    '.mesTopo .seta{flex:none;width:12px;text-align:center;color:var(--tx3);',
+      'font-size:15px;transition:transform .2s;transform:rotate(90deg)}',
+    '.mesLista.fechado .mesTopo .seta{transform:none}',
+    '.mesTopo .rot{flex:1;font:600 10px/1 inherit;letter-spacing:.08em;',
+      'text-transform:uppercase;color:var(--tx3)}',
+    '.mesTopo .tot{font:600 10px/1 inherit;color:var(--tx3)}',
+    '.mesLista.fechado .mesCorpo{display:none}',
+
+    /* cabecalho da semana */
+    '.semBloco{background:var(--s1);border-radius:var(--r-md);margin-bottom:7px;',
+      'overflow:hidden}',
+    '.semTopo{display:flex;align-items:center;gap:11px;width:100%;border:0;',
+      'background:transparent;padding:11px 12px;color:inherit;font:inherit;',
+      'text-align:left;cursor:pointer}',
+    '.semTopo .seta{flex:none;width:12px;text-align:center;color:var(--tx3);',
+      'font-size:15px;transition:transform .2s}',
+    '.semBloco.aberta .semTopo .seta{transform:rotate(90deg)}',
+    '.semTopo .rot{flex:1;min-width:0}',
+    '.semTopo .rot b{display:block;font:700 10.5px/1 inherit;letter-spacing:.09em;',
+      'text-transform:uppercase;color:var(--tx2)}',
+    '.semTopo .rot span{display:block;margin-top:3px;font:600 10.5px/1 inherit;',
+      'color:var(--tx3)}',
+    '.semTopo .mini{display:flex;align-items:flex-end;gap:2px;height:17px;flex:none}',
+    '.semTopo .mini i{display:block;width:4px;border-radius:1.5px;min-height:2px}',
+    '.semBloco .dentro{display:none;padding:0 12px 4px}',
+    '.semBloco.aberta .dentro{display:block}',
+    '.semBloco.aberta .semTopo{padding-bottom:4px}',
+    '.semBloco.atual .semTopo .rot b{color:var(--acc)}'
   ].join('');
   document.head.appendChild(css);
 
@@ -11232,13 +11268,18 @@ PARTE('treinos do mes embaixo do calendario', function(){
      nao acha devolve null em silencio e a lista some sem explicacao. */
   var caixa = document.createElement('div');
   caixa.className = 'mesLista';
-  var titulo = document.createElement('h4');
-  titulo.textContent = 'Treinos do mês';
+  var titulo = document.createElement('button');
+  titulo.type = 'button';
+  titulo.className = 'mesTopo';
   var corpo = document.createElement('div');
   corpo.className = 'mesCorpo';
   caixa.appendChild(titulo);
   caixa.appendChild(corpo);
   cartao.appendChild(caixa);
+
+  titulo.addEventListener('click', function(){
+    caixa.classList.toggle('fechado');
+  });
 
   function chave(d){
     return d.getFullYear() + '-' +
@@ -11246,6 +11287,18 @@ PARTE('treinos do mes embaixo do calendario', function(){
            String(d.getDate()).padStart(2,'0');
   }
   var HJ = chave(new Date());
+  var MESES3 = ['jan','fev','mar','abr','mai','jun',
+                'jul','ago','set','out','nov','dez'];
+  var MESES  = ['janeiro','fevereiro','março','abril','maio','junho','julho',
+                'agosto','setembro','outubro','novembro','dezembro'];
+
+  /* Data a partir de 'AAAA-MM-DD' no fuso local. new Date(str) leria a
+     string como UTC e no Brasil voltaria um dia — a semana inteira
+     escorregaria para tras. */
+  function dtLocal(iso){
+    var p = String(iso).split('-').map(Number);
+    return new Date(p[0], p[1]-1, p[2]);
+  }
 
   function hm(min){
     min = Math.round(min || 0);
@@ -11334,7 +11387,8 @@ PARTE('treinos do mes embaixo do calendario', function(){
       return d.getDay() === 0 ? 7 : d.getDay();
     };
 
-    corpo.innerHTML = linhas.map(function(l, idx){
+    /* ── uma linha ── */
+    function linhaHTML(l, idx){
       var cls = ['mesRow'];
       if(l.feito) cls.push('clic');
       if(l.aguardando) cls.push('aguardando');
@@ -11348,7 +11402,105 @@ PARTE('treinos do mes embaixo do calendario', function(){
           (l.sub ? '<span>' + l.sub + '</span>' : '') + '</span>' +
         '<span class="tempo"><b>' + hm(l.min) + '</b><span>TEMPO</span></span>' +
       '</' + (l.feito ? 'button' : 'div') + '>';
-    }).join('');
+    }
+
+    /* ── agrupar por semana ──
+       O mes inteiro aberto virava uma parede de linhas. Agrupo por
+       semana e abro so a do dia que estiver selecionado no calendario:
+       assim tocar num dia la em cima e o jeito de navegar aqui embaixo.
+
+       A chave da semana e a segunda-feira, mesmo criterio que a aba de
+       historico usa (segundaDe), para as duas telas nunca discordarem
+       sobre onde uma semana comeca.                                   */
+    var segunda = (typeof segundaDe === 'function') ? segundaDe : function(d){
+      var x = new Date(d); x.setDate(x.getDate() - (diaDaSemana(d) - 1)); return x;
+    };
+    var semanaSel = chave(segunda((typeof dt === 'function' && ST.sel)
+                                  ? dt(ST.sel) : new Date()));
+
+    var ordem = [], porSemana = {};
+    linhas.forEach(function(l, idx){
+      var k = chave(segunda(l.dia));
+      if(!porSemana[k]){ porSemana[k] = []; ordem.push(k) }
+      porSemana[k].push({l:l, idx:idx});
+    });
+
+    var maxMin = 1;
+    ordem.forEach(function(k){
+      porSemana[k].forEach(function(x){ maxMin = Math.max(maxMin, x.l.min || 0) });
+    });
+
+    /* Se o dia selecionado esta noutro mes, abro a ultima semana da
+       lista — melhor que deixar tudo fechado sem motivo aparente. */
+    var abrir = porSemana[semanaSel] ? semanaSel : ordem[ordem.length - 1];
+
+    var blocos = ordem.map(function(k){
+      var itens = porSemana[k];
+      var ini = dtLocal(k), fim = new Date(ini.getTime() + 6*864e5);
+      var min = 0, km = 0, feitos = 0;
+      itens.forEach(function(x){
+        min += x.l.min || 0;
+        if(x.l.feito){ feitos++; km += (+x.l.run.km || 0) }
+      });
+      var rotulo = k === chave(segunda(new Date())) ? 'Esta semana'
+                 : ini.getMonth() === fim.getMonth()
+                   ? ini.getDate() + ' – ' + fim.getDate() + ' ' + MESES3[fim.getMonth()]
+                   : ini.getDate() + ' ' + MESES3[ini.getMonth()] + ' – ' +
+                     fim.getDate() + ' ' + MESES3[fim.getMonth()];
+      var resumo = itens.length + (itens.length === 1 ? ' treino' : ' treinos') +
+                   (km ? ' · ' + (Math.round(km*10)/10).toString().replace('.',',') + ' km' : '') +
+                   ' · ' + hm(min);
+      var barrinhas = itens.map(function(x){
+        var a = x.l.min ? Math.max(3, Math.round(x.l.min / maxMin * 17)) : 2;
+        return '<i style="height:' + a + 'px;background:' + x.l.cor +
+               (x.l.aguardando ? ';opacity:.4' : '') + '"></i>';
+      }).join('');
+
+      var cls = ['semBloco'];
+      if(k === abrir) cls.push('aberta');
+      if(k === chave(segunda(new Date()))) cls.push('atual');
+
+      /* Monto o bloco e o cabecalho com createElement, nao com uma
+         string unica. A sanfona precisa achar os blocos depois
+         (querySelectorAll) e ligar/desligar a classe 'aberta' neles;
+         com tudo vindo de innerHTML isso funciona no navegador mas nao
+         da para testar aqui fora, e eu fico sem saber se quebrou. */
+      var bloco = document.createElement('div');
+      bloco.className = cls.join(' ');
+      bloco.setAttribute('data-sem', k);
+
+      var cabec = document.createElement('button');
+      cabec.type = 'button';
+      cabec.className = 'semTopo';
+      cabec.setAttribute('data-abre', k);
+      cabec.innerHTML =
+        '<span class="seta">›</span>' +
+        '<span class="rot"><b>' + rotulo + '</b><span>' + resumo + '</span></span>' +
+        '<span class="mini">' + barrinhas + '</span>';
+
+      var dentro = document.createElement('div');
+      dentro.className = 'dentro';
+      dentro.innerHTML = itens.map(function(x){ return linhaHTML(x.l, x.idx) }).join('');
+
+      bloco.appendChild(cabec);
+      bloco.appendChild(dentro);
+      return bloco;
+    });
+
+    corpo.innerHTML = '';
+    blocos.forEach(function(b){ corpo.appendChild(b) });
+
+    /* cabecalho do mes: nome, quantos treinos e o tempo total */
+    var totMin = 0, totFeitos = 0;
+    linhas.forEach(function(l){
+      totMin += l.min || 0;
+      if(l.feito) totFeitos++;
+    });
+    titulo.innerHTML =
+      '<span class="seta">›</span>' +
+      '<span class="rot">' + MESES[mes] + ' ' + ano + '</span>' +
+      '<span class="tot">' + totFeitos + ' de ' + linhas.length +
+        ' feitos · ' + hm(totMin) + '</span>';
 
     /* guardo as linhas para o clique achar a atividade certa sem
        depender de casar numeros de novo */
@@ -11356,7 +11508,21 @@ PARTE('treinos do mes embaixo do calendario', function(){
   }
 
   caixa.addEventListener('click', function(ev){
-    var b = ev.target.closest && ev.target.closest('[data-lin]');
+    if(!ev.target.closest) return;
+
+    /* abrir/fechar semana. Sanfona: abrir uma fecha as outras, senao o
+       cartao volta a ficar do tamanho que voce reclamou. */
+    var cab = ev.target.closest('[data-abre]');
+    if(cab && caixa.contains(cab)){
+      var bloco = cab.parentNode;
+      var jaAberta = bloco.classList.contains('aberta');
+      var todos = caixa.querySelectorAll('.semBloco');
+      for(var i=0;i<todos.length;i++) todos[i].classList.remove('aberta');
+      if(!jaAberta) bloco.classList.add('aberta');
+      return;
+    }
+
+    var b = ev.target.closest('[data-lin]');
     if(!b || !caixa.contains(b)) return;
     var l = (caixa._linhas || [])[+b.getAttribute('data-lin')];
     if(l && l.run && typeof sheetAtividade === 'function') sheetAtividade(l.run);
