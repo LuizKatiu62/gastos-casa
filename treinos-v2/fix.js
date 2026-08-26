@@ -4577,6 +4577,10 @@ PARTE('aba kpi', function(){
 '#v-kpi{padding-bottom:30px}',
 '#v-kpi .kcard{background:var(--s1);border:1px solid var(--line);border-radius:18px;padding:17px 16px 14px;margin-bottom:12px}',
 '#v-kpi .kcab{display:flex;align-items:center;gap:8px;margin-bottom:9px}',
+'#v-kpi .bqTssAtalhos{display:flex;gap:6px;margin:10px 0 2px}',
+'#v-kpi .bqTssPer{flex:1;padding:7px 0;border-radius:9px;border:1px solid var(--line);',
+'  background:var(--s2);color:var(--tx3);font:inherit;font-size:12px;font-weight:700;cursor:pointer}',
+'#v-kpi .bqTssPer.on{background:var(--acc);border-color:var(--acc);color:#0b0f14}',
 '#v-kpi .kcab h3{margin:0;font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--tx3);flex:1}',
 '#v-kpi .delta{font-size:11px;font-weight:800;padding:3px 8px;border-radius:999px;white-space:nowrap}',
 '#v-kpi .delta.up{background:rgba(63,217,138,.16);color:var(--ok)}',
@@ -4992,7 +4996,10 @@ PARTE('aba kpi', function(){
       return Math.round(dur * iF * iF / 3600 * 100);
     }
 
-    var corridas = (ST.runs || []).filter(function(r){ return r.mod === 'corrida' && r.d <= 56 });
+    /* A janela e a mesma que voce escolhe nas outras abas (ST.periodo).
+       Fixo em 8 semanas ficava um amontoado de barras finas.        */
+    var janela = (typeof ST === 'object' && ST && +ST.periodo) || 30;
+    var corridas = (ST.runs || []).filter(function(r){ return r.mod === 'corrida' && r.d <= janela });
     var pontosTss = corridas.map(function(r){
       return { d: +r.d, tss: tssDe(r), titulo: r.titulo || '' };
     }).filter(function(x){ return x.tss !== null })
@@ -5015,10 +5022,19 @@ PARTE('aba kpi', function(){
              : 'var(--run)';
       };
 
+      /* Atalhos de intervalo, no mesmo padrao das outras abas. Mudam
+         ST.periodo — a mesma variavel que Treinos, Indices, Evolucao e
+         Saude usam — entao a escolha vale para o app inteiro.        */
+      var ATALHOS_TSS = [7, 30, 90, 180];
+      var botoes = ATALHOS_TSS.map(function(v){
+        return '<button class="bqTssPer' + (janela === v ? ' on' : '') + '" data-tssper="' + v + '">'
+             + v + 'd</button>';
+      }).join('');
+
       h += '<div class="kcard"><div class="kcab"><h3>TSS por treino</h3>'
         + chip(dif, ' vs sua mediana') + '</div>'
         + '<div class="kbig" style="color:' + corT(ultimo.tss) + '">' + ultimo.tss
-        + '<small>no último treino · sua mediana das 8 semanas é ' + mediana
+        + '<small>no último treino · sua mediana em ' + janela + ' dias é ' + mediana
         + (pct ? ' · ' + (pct > 0 ? '+' : '') + pct + '%' : '') + '</small></div>'
         + svgBox(grade(maxT, 0, function(v){ return v.toFixed(0) })
             + refLinha(mediana, 0, maxT, 'var(--ok)', 'seu normal · ' + mediana)
@@ -5027,6 +5043,7 @@ PARTE('aba kpi', function(){
                 var p = pontosTss[i];
                 return p ? diaMes(p.d) : '';
               }))
+        + '<div class="bqTssAtalhos">' + botoes + '</div>'
         + legenda([['até 15% acima do normal','var(--run)'],
                    ['15 a 50% acima','var(--warn)'],
                    ['50% acima ou mais','var(--bad)']])
@@ -5194,6 +5211,24 @@ PARTE('aba kpi', function(){
     }
 
     el.innerHTML = h;
+
+    /* Liga os atalhos de intervalo. Precisa vir DEPOIS do innerHTML —
+       antes disso os botoes ainda nao existem no DOM.
+
+       Escrevem em ST.periodo, a mesma variavel das outras abas, e
+       chamam os renders delas para tudo ficar no mesmo intervalo. */
+    el.querySelectorAll('[data-tssper]').forEach(function(b){
+      b.onclick = function(){
+        var v = +b.getAttribute('data-tssper');
+        if(!v) return;
+        ST.periodo = v;
+        render();                                   // redesenha a KPI
+        ['renderTreinos','renderIndices','renderEvolucao','renderSaude'].forEach(function(fn){
+          if(typeof window[fn] === 'function'){ try{ window[fn]() }catch(e){} }
+        });
+        if(typeof persistir === 'function'){ try{ persistir() }catch(e){} }
+      };
+    });
   }
 
   /* ═══════ a aba ═══════ */
