@@ -657,6 +657,8 @@ a.btmini{text-decoration:none}
 .detm .dl b{font-weight:700}
 
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+details summary::-webkit-details-marker{display:none}
+details[open] summary span:last-child{transform:rotate(45deg)}
 </style>
 </head>
 <body>
@@ -740,6 +742,60 @@ a.btmini{text-decoration:none}
   <section class="card">
     <div class="wkh"><span class="kicker">Carga da semana</span><span class="v" id="wkV"></span></div>
     <div class="wrow" id="wkRow"></div>
+  </section>
+  <!-- Calculadora e Simulador vieram da aba Provas em 26/08/2026:
+       sao ferramentas de planejar o ritmo, e o lugar de planejar
+       e o Coach. Em Provas ficavam junto do calendario de
+       inscricoes, que e outro assunto. -->
+  <section class="card" style="padding-top:0;padding-bottom:0">
+    <details>
+      <summary style="padding:14px 0;cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px">
+        <span><b style="font-size:15px">Calculadora de pace e splits</b><span style="display:block;font-size:12px;opacity:.6;margin-top:2px">pace necessário e o relógio em cada quilômetro</span></span>
+        <span style="font-size:20px;opacity:.5">＋</span>
+      </summary>
+      <div style="padding-bottom:14px">
+    <p class="ajuda" style="margin:10px 0 16px">Informe a distância e o tempo que quer fazer.
+      O app devolve o pace necessário e o relógio em cada quilômetro.</p>
+    <div class="cgrid">
+      <div class="campo"><label>Distância</label>
+        <select id="cSplitDist">
+          <option value="5">5 km</option><option value="10">10 km</option>
+          <option value="15">15 km</option><option value="21.0975">21,1 km — meia</option>
+          <option value="25" selected>25 km</option><option value="42.195">42,2 km — maratona</option>
+          <option value="50">50 km</option>
+        </select></div>
+      <div class="campo"><label>Tempo alvo</label>
+        <input id="cSplitTempo" type="text" inputmode="numeric" placeholder="2:22:00" value="2:22:00"></div>
+    </div>
+    <div id="cSplitOut" style="margin-top:4px"></div>
+      </div>
+    </details>
+  </section>
+
+  <section class="card" style="padding-top:0;padding-bottom:0">
+    <details>
+      <summary style="padding:14px 0;cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px">
+        <span><b style="font-size:15px">Simulador de estratégia</b><span style="display:block;font-size:12px;opacity:.6;margin-top:2px">três blocos de ritmo até o tempo final</span></span>
+        <span style="font-size:20px;opacity:.5">＋</span>
+      </summary>
+      <div style="padding-bottom:14px">
+    <p class="ajuda" style="margin:10px 0 16px">Três blocos de ritmo. Defina onde troca e em que pace
+      corre cada trecho — o app mostra o tempo final.</p>
+    <div class="cgrid">
+      <div class="campo"><label>Distância (km)</label><input id="eDist" type="number" step="0.1" value="25"></div>
+      <div class="campo"><label>Troca 1 — fim do km</label><input id="eTroca1" type="number" value="13"></div>
+    </div>
+    <div class="cgrid" style="margin-top:9px">
+      <div class="campo"><label>Pace bloco 1</label><input id="eP1" type="text" value="6:00"></div>
+      <div class="campo"><label>Troca 2 — fim do km</label><input id="eTroca2" type="number" value="21"></div>
+    </div>
+    <div class="cgrid" style="margin-top:9px">
+      <div class="campo"><label>Pace bloco 2</label><input id="eP2" type="text" value="5:40"></div>
+      <div class="campo"><label>Pace bloco 3</label><input id="eP3" type="text" value="5:20"></div>
+    </div>
+    <div id="eOut" style="margin-top:16px"></div>
+      </div>
+    </details>
   </section>
 </main>
 
@@ -892,42 +948,6 @@ a.btmini{text-decoration:none}
   <div class="filtros" id="pvDist" style="padding-bottom:14px"></div>
   <div id="pvLista"></div>
 
-  <section class="card">
-    <div class="head"><div><h2>Calculadora de pace e splits</h2></div></div>
-    <p class="ajuda" style="margin:10px 0 16px">Informe a distância e o tempo que quer fazer.
-      O app devolve o pace necessário e o relógio em cada quilômetro.</p>
-    <div class="cgrid">
-      <div class="campo"><label>Distância</label>
-        <select id="cSplitDist">
-          <option value="5">5 km</option><option value="10">10 km</option>
-          <option value="15">15 km</option><option value="21.0975">21,1 km — meia</option>
-          <option value="25" selected>25 km</option><option value="42.195">42,2 km — maratona</option>
-          <option value="50">50 km</option>
-        </select></div>
-      <div class="campo"><label>Tempo alvo</label>
-        <input id="cSplitTempo" type="text" inputmode="numeric" placeholder="2:22:00" value="2:22:00"></div>
-    </div>
-    <div id="cSplitOut" style="margin-top:4px"></div>
-  </section>
-
-  <section class="card">
-    <div class="head"><div><h2>Simulador de estratégia</h2></div></div>
-    <p class="ajuda" style="margin:10px 0 16px">Três blocos de ritmo. Defina onde troca e em que pace
-      corre cada trecho — o app mostra o tempo final.</p>
-    <div class="cgrid">
-      <div class="campo"><label>Distância (km)</label><input id="eDist" type="number" step="0.1" value="25"></div>
-      <div class="campo"><label>Troca 1 — fim do km</label><input id="eTroca1" type="number" value="13"></div>
-    </div>
-    <div class="cgrid" style="margin-top:9px">
-      <div class="campo"><label>Pace bloco 1</label><input id="eP1" type="text" value="6:00"></div>
-      <div class="campo"><label>Troca 2 — fim do km</label><input id="eTroca2" type="number" value="21"></div>
-    </div>
-    <div class="cgrid" style="margin-top:9px">
-      <div class="campo"><label>Pace bloco 2</label><input id="eP2" type="text" value="5:40"></div>
-      <div class="campo"><label>Pace bloco 3</label><input id="eP3" type="text" value="5:20"></div>
-    </div>
-    <div id="eOut" style="margin-top:16px"></div>
-  </section>
 
   <p class="foot">Datas e status de inscrição conferidos em 30/07/2026.<br>
     Confirme sempre no site oficial antes de pagar.</p>
