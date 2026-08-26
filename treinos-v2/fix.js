@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '05g';
+const FIX_VERSAO = '05h';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -10258,13 +10258,22 @@ PARTE('a aba coach e so da academia', function(){
   function academiaDeSegundo(iso){
     if(typeof ST !== 'object' || !ST) return;
     ST.extras = ST.extras || {};
+
+    /* Academia que VOCE montou na mao fica intacta.
+       Qualquer outra coisa no encaixe e sobra do plano de corrida
+       antigo — e a varredura logo abaixo ia apagar de qualquer jeito.
+       Entao a academia toma o lugar, em vez de eu desistir e o dia
+       terminar sem nada. Foi esse o furo: eu voltava cedo demais.   */
     var atual = ST.extras[iso];
-    if(atual && atual.origem !== 'academia') return;
-    var s = sessaoAcademia(iso);
-    s.id = 'x' + iso;
-    s.extra = true;
-    ST.extras[iso] = s;
-    if(ST.cache) delete ST.cache[s.id];
+    if(atual && atual.mod === 'forca' && atual.auto !== true &&
+       atual.origem !== 'academia' &&
+       String(atual.sessao || '').indexOf('BQ_') !== 0) return;
+
+    var n = nomeAcademia(iso);
+    ST.extras[iso] = { id:'x' + iso, data:iso, mod:'forca', foco:'forca',
+                       sessao:n.sid, titulo:n.nome, min:45,
+                       extra:true, auto:true, origem:'academia' };
+    if(ST.cache) delete ST.cache['x' + iso];
   }
 
   /* De hoje em diante: so segunda, quarta e sexta, e so forca. O
@@ -10282,9 +10291,31 @@ PARTE('a aba coach e so da academia', function(){
     return d.getFullYear() + '-' + ('0'+(d.getMonth()+1)).slice(-2) + '-' + ('0'+d.getDate()).slice(-2);
   }
 
+  /* O NOME E A SESSAO SAO OS DO PROPRIO APP.
+     O app ja tem duas sessoes de academia — Pernas e Core, Costas e
+     Postura — que alternam por semana (SESSOES_ACADEMIA e
+     sessaoAcademiaDe, no index.html). E o campo 'sessao' que faz
+     aparecer a lista de exercicios e o texto do MOTRA.
+
+     Eu tinha inventado um titulo solto, sem esse campo: o bloco vinha
+     sem exercicio nenhum. Aqui volto a usar o que o app ja sabe, com
+     o nome comecando por "Academia", que foi o que voce pediu.      */
+  function nomeAcademia(iso){
+    var sid = null;
+    try{
+      if(typeof sessaoAcademiaDe === 'function') sid = sessaoAcademiaDe(iso);
+    }catch(e){}
+    if(sid && typeof SESSOES_ACADEMIA === 'object' && SESSOES_ACADEMIA[sid])
+      return {sid:sid,
+              nome:'Academia — ' +
+                   String(SESSOES_ACADEMIA[sid].nome).replace(/^Força\s*—\s*/, '')};
+    return {sid:null, nome:'Academia'};
+  }
+
   function sessaoAcademia(iso){
     return {id:iso, data:iso, mod:'forca', foco:'forca',
-            titulo:'Academia', min:60, origem:'academia'};
+            titulo:nomeAcademia(iso).nome, sessao:nomeAcademia(iso).sid,
+            min:60, origem:'academia'};
   }
 
   /* ── os treinos do treinador, so para VISUALIZAR ──
@@ -10391,7 +10422,8 @@ PARTE('a aba coach e so da academia', function(){
            Marco tambem a origem: sem ela o Resumo da semana e a lista
            do mes tratariam este dia como plano velho e o descartariam
            da comparacao. */
-        s.titulo = 'Academia';
+        s.titulo = nomeAcademia(iso).nome;
+        if(!s.sessao) s.sessao = nomeAcademia(iso).sid;
         if(!s.origem) s.origem = 'academia';
       }
     });
@@ -10492,8 +10524,12 @@ PARTE('a aba coach e so da academia', function(){
     Object.keys(plano).forEach(function(iso){
       if(iso < deste) return;
       if(plano[iso] && plano[iso].prova) return;
+      /* Nenhum segundo treino de FORCA e apagado aqui. Era isso que
+         comia a academia — inclusive a que o proprio app semeia. O que
+         esta varredura existe para tirar e sobra de corrida do plano
+         antigo, nao musculacao. */
       var x = (typeof ST === 'object' && ST && ST.extras) ? ST.extras[iso] : null;
-      if(x && x.origem === 'academia') return;
+      if(x && x.mod === 'forca') return;
       tirarExtra(iso);
     });
     return plano;
@@ -11400,7 +11436,11 @@ PARTE('treinos do mes embaixo do calendario', function(){
   /* So conta como previsto o que tem procedencia. Mesmo criterio do
      Resumo da semana — ver a parte anterior. */
   function planoReal(s){
-    return !!(s && (s.origem === 'garmin' || s.origem === 'academia' || s.prova));
+    if(!s) return false;
+    if(s.origem === 'garmin' || s.origem === 'academia' || s.prova) return true;
+    /* academia como 2o treino montada por voce nao tem origem, mas e
+       treino de verdade e precisa aparecer na lista */
+    return !!(s.extra && s.mod === 'forca');
   }
 
   function montar(){
@@ -11443,7 +11483,9 @@ PARTE('treinos do mes embaixo do calendario', function(){
     Object.keys(ST.plano || {}).forEach(function(k){ plano[k] = ST.plano[k] });
     Object.keys(ST.extras || {}).forEach(function(k){
       var x = ST.extras[k];
-      if(!x || x.origem !== 'academia') return;   // so o que este app pos ali
+      /* qualquer segundo treino de forca entra — inclusive academia que
+         voce montou na mao, que nao tem o campo origem */
+      if(!x || x.mod !== 'forca') return;
       if(plano['x' + k]) return;
       plano['x' + k] = x;
     });
