@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '05c';
+const FIX_VERSAO = '05d';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -10063,7 +10063,7 @@ PARTE('texto do MOTRA', function(){
         var l = window.planoBQ.ligado();
         var diag = '';
         try{ diag = window.bqDiag ? '\n\n── diagnóstico ──\n' + window.bqDiag() : '' }catch(e){}
-        if(confirm('fix.js ' + FIX_VERSAO + ' — as 51 partes carregaram.\n\n'
+        if(confirm('fix.js ' + FIX_VERSAO + ' — as 53 partes carregaram.\n\n'
           + 'Plano PEI Marathon: ' + (l ? 'LIGADO' : 'desligado') + diag
           + '\n\nOK ' + (l ? 'desliga o plano e volta ao automático do app.'
                              : 'liga o plano da maratona.'))){
@@ -10086,7 +10086,7 @@ PARTE('texto do MOTRA', function(){
         return;
       }
       alert(ok
-        ? 'fix.js ' + FIX_VERSAO + ' — as 51 partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
+        ? 'fix.js ' + FIX_VERSAO + ' — as 53 partes carregaram.\n\nPlano PEI Marathon: ' + (window.planoBQ && window.planoBQ.ligado() ? 'LIGADO' : 'desligado') + '\n\nOK para trocar.'
         : 'fix.js ' + FIX_VERSAO + '\n\nFalharam:\n\n' + FIX_FALHAS.join('\n\n'));
     };
     barra.insertBefore(s, barra.firstChild.nextSibling);
@@ -10897,6 +10897,17 @@ PARTE('resumo da semana estilo trainingpeaks', function(){
     return !!(s && (s.origem === 'garmin' || s.origem === 'academia' || s.prova));
   }
 
+  /* A barra do feito usa a cor da modalidade, como o resto do app
+     (MOD[m].c). Antes eu pintava de azul o dia sem previsao, e como
+     esta semana so ha um treino, e justamente sem previsao, o grafico
+     inteiro ficava azul e brigava com a legenda, que diz "Feito" em
+     verde-limao. Quem informa "sem previsao" e a Aderencia, abaixo. */
+  function corDoDia(x){
+    var m = x.modFeito || 'corrida';
+    var M = (typeof MOD === 'object' && MOD) ? MOD[m] : null;
+    return (M && M.c) || 'var(--acc)';
+  }
+
   /* ── um dia ── */
   function montarDia(d){
     var iso = chave(d);
@@ -10908,13 +10919,15 @@ PARTE('resumo da semana estilo trainingpeaks', function(){
 
     var runs = feitoNoDia(iso);
     var realMin = 0, realKm = 0, realTss = 0;
-    var temForca = false;
+    var temForca = false, modFeito = '', maisLongo = 0;
     for(var i=0;i<runs.length;i++){
       var r = runs[i];
       realMin += Math.round((+r.dur || 0) / 60);
       realKm  += (+r.km || 0);
       realTss += tssDe(r);
       if(r.mod === 'forca') temForca = true;
+      // a modalidade do treino mais longo do dia manda na cor
+      if(!maisLongo || (+r.dur||0) > maisLongo){ maisLongo = +r.dur||0; modFeito = r.mod }
     }
     /* So conto o Hevy se o Garmin nao registrou forca no dia — senao
        a mesma sessao entraria duas vezes. */
@@ -10922,6 +10935,7 @@ PARTE('resumo da semana estilo trainingpeaks', function(){
       var g = academiaNoDia(iso);
       for(var j=0;j<g.length;j++) realMin += (+g[j].min || 0);
       if(g.length && !realMin) realMin = 45;   // sessao sem duracao gravada
+      if(g.length && !modFeito) modFeito = 'forca';
     }
 
     return {
@@ -10932,6 +10946,7 @@ PARTE('resumo da semana estilo trainingpeaks', function(){
       realMin: realMin, realKm: Math.round(realKm*10)/10,
       realTss: realTss,
       fonte: (s && s.origem) || '',
+      modFeito: modFeito,
       titulo: (s && s.titulo) || ''
     };
   }
@@ -11041,7 +11056,7 @@ PARTE('resumo da semana estilo trainingpeaks', function(){
         var r = aba.real(x) || 0, p = aba.plan(x) || 0;
         var hr = r ? Math.max(3, Math.round(r/mx*82)) : 0;
         var hp = p ? Math.max(3, Math.round(p/mx*82)) : 0;
-        var cor = x.realMin && !x.planMin ? 'var(--bike)' : 'var(--acc)';
+        var cor = corDoDia(x);
         return '<div class="snapD">' +
           '<span class="vv">' + (aba.rot(r) || '') + '</span>' +
           '<div class="par">' +
@@ -11056,10 +11071,10 @@ PARTE('resumo da semana estilo trainingpeaks', function(){
       }).join('') + '</div>';
 
       h += '<div class="snapLeg">' +
-             '<span><b style="background:var(--acc)"></b>Feito</span>' +
+             '<span>Barra cheia: feito</span>' +
              (aba.id === 'tss'
                ? '<span>o previsto não traz ritmo, então não há TSS previsto</span>'
-               : '<span><b style="border:1px dashed var(--tx3);background:none"></b>Previsto</span>') +
+               : '<span><b style="border:1px dashed var(--tx3);background:none"></b>Tracejada: previsto</span>') +
            '</div>';
     }
 
@@ -11154,4 +11169,388 @@ PARTE('resumo da semana estilo trainingpeaks', function(){
   if(typeof renderCoach === 'function' && document.getElementById('wkRow')){
     try{ desenhar() }catch(e){}
   }
+});
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   TREINOS DO MES — a lista que fica embaixo do calendario, como no
+   TrainingPeaks: uma linha por treino, com data, titulo e tempo.
+
+   O calendario ja existia e ja funciona: grade do mes, bolinha colorida
+   por modalidade, dia de hoje destacado. O que faltava era poder ler o
+   mes sem ter que tocar em cada dia para descobrir o que tinha nele.
+
+   O que entra na lista, do mes que estiver aberto no calendario:
+     feito     — ST.runs, as atividades que o relogio gravou
+     previsto  — ST.plano, mas so o que tem origem de verdade: o
+                 treinador ('garmin') ou a academia ('academia'). O
+                 plano de corrida que o app gerava sozinho foi
+                 aposentado e nao pode voltar por aqui.
+
+   Dia com treino feito abre o detalhe da atividade — a mesma tela que
+   ja existe na aba de historico. Dia so previsto nao abre nada: o que
+   o treinador montou fica no relogio, e o app nao inventa o conteudo.
+   ══════════════════════════════════════════════════════════════════════ */
+PARTE('treinos do mes embaixo do calendario', function(){
+
+  var grade = document.getElementById('grid');
+  if(!grade) return;
+  var cartao = grade.closest && grade.closest('.card');
+  if(!cartao || !cartao.parentNode) return;
+  if(typeof window.renderCal !== 'function') return;
+
+  /* ── estilo ── */
+  var css = document.createElement('style');
+  css.textContent = [
+    '.mesLista{margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}',
+    '.mesLista>h4{margin:0 0 10px;font:600 10px/1 inherit;letter-spacing:.08em;',
+      'text-transform:uppercase;color:var(--tx3)}',
+    '.mesRow{display:flex;align-items:center;gap:11px;width:100%;border:0;',
+      'background:transparent;padding:9px 2px;text-align:left;',
+      'border-bottom:1px solid var(--line);color:inherit;font:inherit}',
+    '.mesRow:last-child{border-bottom:0}',
+    '.mesRow.clic{cursor:pointer}',
+    '.mesRow .dd{flex:0 0 34px;text-align:center}',
+    '.mesRow .dd b{display:block;font:700 15px/1 inherit;color:var(--tx)}',
+    '.mesRow .dd span{display:block;margin-top:2px;font:600 9px/1 inherit;color:var(--tx3)}',
+    '.mesRow .risco{flex:0 0 3px;align-self:stretch;border-radius:2px;min-height:26px}',
+    '.mesRow .txt{flex:1;min-width:0}',
+    '.mesRow .txt b{display:block;font:600 13px/1.25 inherit;color:var(--tx);',
+      'overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+    '.mesRow .txt span{display:block;margin-top:2px;font:500 11px/1 inherit;color:var(--tx3)}',
+    '.mesRow .tempo{flex:0 0 auto;text-align:right}',
+    '.mesRow .tempo b{display:block;font:700 13px/1 inherit;color:var(--tx2)}',
+    '.mesRow .tempo span{display:block;margin-top:2px;font:600 9px/1 inherit;color:var(--tx3)}',
+    '.mesRow.hoje .dd b{color:var(--acc)}',
+    '.mesRow.aguardando{opacity:.62}',
+    '.mesVazio{color:var(--tx3);font:500 12px/1.5 inherit;padding:14px 0;text-align:center}'
+  ].join('');
+  document.head.appendChild(css);
+
+  /* Monto com createElement e guardo a referencia do corpo, em vez de
+     escrever innerHTML e reprocurar por seletor depois. Um seletor que
+     nao acha devolve null em silencio e a lista some sem explicacao. */
+  var caixa = document.createElement('div');
+  caixa.className = 'mesLista';
+  var titulo = document.createElement('h4');
+  titulo.textContent = 'Treinos do mês';
+  var corpo = document.createElement('div');
+  corpo.className = 'mesCorpo';
+  caixa.appendChild(titulo);
+  caixa.appendChild(corpo);
+  cartao.appendChild(caixa);
+
+  function chave(d){
+    return d.getFullYear() + '-' +
+           String(d.getMonth()+1).padStart(2,'0') + '-' +
+           String(d.getDate()).padStart(2,'0');
+  }
+  var HJ = chave(new Date());
+
+  function hm(min){
+    min = Math.round(min || 0);
+    if(!min) return '—';
+    if(min < 60) return min + 'm';
+    var hh = Math.floor(min/60), mm = min%60;
+    return mm ? hh + 'h' + String(mm).padStart(2,'0') : hh + 'h';
+  }
+
+  function corDe(mod, caminhada){
+    if(caminhada) return 'var(--rest)';
+    var M = (typeof MOD === 'object' && MOD) ? MOD[mod] : null;
+    return (M && M.c) || 'var(--rest)';
+  }
+  function nomeDe(mod){
+    var M = (typeof MOD === 'object' && MOD) ? MOD[mod] : null;
+    return (M && M.n) || 'Treino';
+  }
+
+  /* So conta como previsto o que tem procedencia. Mesmo criterio do
+     Resumo da semana — ver a parte anterior. */
+  function planoReal(s){
+    return !!(s && (s.origem === 'garmin' || s.origem === 'academia' || s.prova));
+  }
+
+  function montar(){
+    if(typeof ST !== 'object' || !ST || !ST.mes) return;
+
+    var ano = ST.mes.getFullYear(), mes = ST.mes.getMonth();
+    var prefixo = ano + '-' + String(mes+1).padStart(2,'0');
+    var linhas = [];
+
+    /* ── o que foi feito ── */
+    var runs = (ST.runs || []);
+    var hoje0 = new Date(); hoje0.setHours(0,0,0,0);
+    for(var i=0;i<runs.length;i++){
+      var r = runs[i];
+      if(!r || !isFinite(r.d)) continue;
+      var dd = new Date(hoje0.getTime() - r.d*864e5);
+      var iso = chave(dd);
+      if(iso.slice(0,7) !== prefixo) continue;
+      var min = Math.round((typeof duracaoDe === 'function' ? duracaoDe(r) : (+r.dur||0)) / 60);
+      linhas.push({
+        iso: iso, dia: dd, feito: true, run: r,
+        cor: corDe(r.mod, r.walk),
+        titulo: r.walk ? 'Caminhada' : (r.titulo || nomeDe(r.mod)),
+        sub: (r.km ? r.km.toFixed(1).replace('.',',') + ' km' : '') +
+             (isFinite(r.fc) && r.fc > 0 ? (r.km ? ' · ' : '') + r.fc + ' bpm' : ''),
+        min: min
+      });
+    }
+
+    /* ── o que esta previsto e ainda nao tem atividade no dia ── */
+    var jaTem = {};
+    linhas.forEach(function(l){ jaTem[l.iso] = true });
+
+    var plano = (ST.plano || {});
+    Object.keys(plano).forEach(function(iso){
+      if(iso.slice(0,7) !== prefixo) return;
+      if(jaTem[iso]) return;
+      var s = plano[iso];
+      if(!planoReal(s)) return;
+      var d = (typeof dt === 'function') ? dt(iso) : null;
+      if(!d) return;
+      linhas.push({
+        iso: iso, dia: d, feito: false, run: null,
+        cor: corDe(s.mod, false),
+        titulo: s.titulo || nomeDe(s.mod),
+        sub: (s.km ? (+s.km).toFixed(1).replace('.',',') + ' km · ' : '') +
+             (iso < HJ ? 'não registrado' : 'previsto'),
+        min: +s.min || 0,
+        aguardando: true
+      });
+    });
+
+    if(!linhas.length){
+      corpo.innerHTML = '<p class="mesVazio">Nenhum treino neste mês.</p>';
+      return;
+    }
+
+    linhas.sort(function(a,b){ return a.iso < b.iso ? -1 : a.iso > b.iso ? 1 : 0 });
+
+    var D3 = (typeof DIA3 !== 'undefined') ? DIA3
+           : ['SEG','TER','QUA','QUI','SEX','SÁB','DOM'];
+    var diaDaSemana = (typeof dow === 'function') ? dow : function(d){
+      return d.getDay() === 0 ? 7 : d.getDay();
+    };
+
+    corpo.innerHTML = linhas.map(function(l, idx){
+      var cls = ['mesRow'];
+      if(l.feito) cls.push('clic');
+      if(l.aguardando) cls.push('aguardando');
+      if(l.iso === HJ) cls.push('hoje');
+      return '<' + (l.feito ? 'button' : 'div') + ' class="' + cls.join(' ') + '"' +
+             (l.feito ? ' data-lin="' + idx + '" type="button"' : '') + '>' +
+        '<span class="dd"><b>' + l.dia.getDate() + '</b><span>' +
+          D3[diaDaSemana(l.dia)-1] + '</span></span>' +
+        '<span class="risco" style="background:' + l.cor + '"></span>' +
+        '<span class="txt"><b>' + l.titulo + '</b>' +
+          (l.sub ? '<span>' + l.sub + '</span>' : '') + '</span>' +
+        '<span class="tempo"><b>' + hm(l.min) + '</b><span>TEMPO</span></span>' +
+      '</' + (l.feito ? 'button' : 'div') + '>';
+    }).join('');
+
+    /* guardo as linhas para o clique achar a atividade certa sem
+       depender de casar numeros de novo */
+    caixa._linhas = linhas;
+  }
+
+  caixa.addEventListener('click', function(ev){
+    var b = ev.target.closest && ev.target.closest('[data-lin]');
+    if(!b || !caixa.contains(b)) return;
+    var l = (caixa._linhas || [])[+b.getAttribute('data-lin')];
+    if(l && l.run && typeof sheetAtividade === 'function') sheetAtividade(l.run);
+  });
+
+  /* Chamo sempre a cadeia anterior antes de montar a minha lista:
+     outras partes penduraram efeito no renderCal e nao podem ser
+     puladas. Ver a nota na parte do Resumo da semana. */
+  var antes = window.renderCal;
+  window.renderCal = function(){
+    var r = antes.apply(this, arguments);
+    try{ montar() }catch(e){ console.error('treinos do mes:', e) }
+    return r;
+  };
+
+  try{ montar() }catch(e){}
+});
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   PREVISTO x REALIZADO no detalhe do treino — o bloco de baixo da tela
+   de treino concluido do TrainingPeaks.
+
+   A tela de detalhe ja mostrava o que voce fez: distancia, duracao,
+   ritmo, frequencia cardiaca e a mecanica da passada. Nao dizia se
+   aquilo era o que o treinador tinha pedido. Este bloco acrescenta a
+   barra de Compliance e a tabela lado a lado.
+
+   O que da para comparar, e de onde vem:
+     Duracao   — previsto: duracaoSeg da agenda do Garmin · feito: r.dur
+     Distancia — previsto: distanciaM da agenda      · feito: r.km
+     Ritmo     — o previsto NAO traz ritmo. Fica travessao, nao chute.
+     Calorias  — so o feito. Vem de RAW.atividades, porque o mapeamento
+                 do app descarta esse campo ao montar ST.runs.
+     TSS       — so o feito, calculado do seu pace de limiar.
+
+   Sem barra de fases. Ela precisa dos dados de cada volta, que o robo
+   de sincronizacao nao guarda, e a decisao foi nao mexer no robo.
+
+   Se nao havia treino previsto no dia, o bloco diz isso em uma linha e
+   nao mostra tabela nenhuma. Inventar um previsto seria pior que nada.
+   ══════════════════════════════════════════════════════════════════════ */
+PARTE('previsto x realizado no detalhe do treino', function(){
+
+  if(typeof window.sheetAtividade !== 'function') return;
+
+  var css = document.createElement('style');
+  css.textContent = [
+    '.pxr{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}',
+    '.pxr h4{margin:0 0 10px;font:600 10px/1 inherit;letter-spacing:.08em;',
+      'text-transform:uppercase;color:var(--tx3)}',
+    '.pxrTopo{display:flex;justify-content:space-between;align-items:baseline;',
+      'margin-bottom:7px}',
+    '.pxrTopo b{font:700 15px/1 inherit;color:var(--tx)}',
+    '.pxrTrilho{height:8px;border-radius:5px;background:var(--s1);overflow:hidden}',
+    '.pxrTrilho i{display:block;height:100%;border-radius:5px}',
+    '.pxrTab{width:100%;border-collapse:collapse;margin-top:14px}',
+    '.pxrTab th{font:600 9px/1 inherit;letter-spacing:.06em;text-transform:uppercase;',
+      'color:var(--tx3);text-align:right;padding:0 0 7px;font-weight:600}',
+    '.pxrTab th:first-child{text-align:left}',
+    '.pxrTab td{font:500 12px/1 inherit;color:var(--tx2);text-align:right;',
+      'padding:8px 0;border-top:1px solid var(--line)}',
+    '.pxrTab td:first-child{text-align:left;color:var(--tx3)}',
+    '.pxrTab td.feito{color:var(--tx);font-weight:600}',
+    '.pxrNota{margin:12px 0 0;font:500 11px/1.5 inherit;color:var(--tx3)}'
+  ].join('');
+  document.head.appendChild(css);
+
+  function chave(d){
+    return d.getFullYear() + '-' +
+           String(d.getMonth()+1).padStart(2,'0') + '-' +
+           String(d.getDate()).padStart(2,'0');
+  }
+
+  function hm(min){
+    min = Math.round(min || 0);
+    if(!min) return '—';
+    if(min < 60) return min + ' min';
+    var hh = Math.floor(min/60), mm = min%60;
+    return mm ? hh + 'h' + String(mm).padStart(2,'0') : hh + 'h';
+  }
+  function kmT(v){
+    return (v && v > 0) ? (Math.round(v*100)/100).toFixed(2).replace('.',',') + ' km' : '—';
+  }
+  function paceT(seg){
+    if(!seg || seg <= 0 || !isFinite(seg)) return '—';
+    return Math.floor(seg/60) + ':' + String(Math.round(seg%60)).padStart(2,'0') + ' /km';
+  }
+
+  var LIMIAR = (typeof PERFIL === 'object' && PERFIL && +PERFIL.paceLimiar) || 340;
+  function tssDe(r){
+    if(!r || r.mod !== 'corrida' || r.walk) return 0;
+    var pace = +r.pace || 0, dur = +r.dur || 0;
+    if(pace <= 0 || dur <= 0) return 0;
+    var iF = LIMIAR / pace;
+    if(iF > 1.6 || iF < 0.35) return 0;
+    return Math.round(dur * iF * iF / 3600 * 100);
+  }
+
+  /* As calorias existem no Firebase mas somem no caminho: mapAtividade
+     (index.html) nao copia o campo para ST.runs. Entao busco na fonte
+     crua, casando pelo id do Garmin — que e o unico criterio que nao
+     erra quando ha dois treinos no mesmo dia. */
+  function caloriasDe(r){
+    var R = (typeof RAW === 'object' && RAW && RAW.atividades) ? RAW.atividades : [];
+    if(!R.length) return 0;
+    var gid = String(r.gid || '');
+    for(var i=0;i<R.length;i++){
+      var a = R[i];
+      if(!a) continue;
+      if(gid && (String(a.garminId) === gid || String(a.id) === gid))
+        return +a.calorias || 0;
+    }
+    return 0;
+  }
+
+  function planoReal(s){
+    return !!(s && (s.origem === 'garmin' || s.origem === 'academia' || s.prova));
+  }
+
+  function bloco(r){
+    if(!r) return '';
+    var dia = (typeof HOJE !== 'undefined' && typeof addD === 'function')
+              ? addD(HOJE, -r.d) : null;
+    if(!dia) return '';
+    var iso = chave(dia);
+
+    var s = (typeof sessaoDe === 'function') ? sessaoDe(iso) : null;
+    if(!planoReal(s)) s = null;
+
+    var realMin = Math.round((typeof duracaoDe === 'function'
+                              ? duracaoDe(r) : (+r.dur||0)) / 60);
+    var realKm  = +r.km || 0;
+    var realCal = caloriasDe(r);
+    var realTss = tssDe(r);
+
+    var h = '<div class="pxr"><h4>Previsto x realizado</h4>';
+
+    if(!s){
+      h += '<p class="pxrNota">Não havia treino previsto para este dia, ' +
+           'então não há o que comparar.</p></div>';
+      return h;
+    }
+
+    var planMin = +s.min || 0;
+    var planKm  = +s.km  || 0;
+
+    /* Compliance sobre a duracao, que e o que o treinador controla.
+       Passar de 100% nao e melhor: a barra pinta de laranja quando
+       estoura, igual a quando falta. */
+    if(planMin){
+      var razao = realMin / planMin;
+      var pct   = Math.round(razao * 100);
+      var cor   = (razao >= .85 && razao <= 1.25) ? 'var(--ok)'
+                : (razao >= .50 && razao <= 1.60) ? 'var(--warn)'
+                : 'var(--bad)';
+      h += '<div class="pxrTopo"><span style="font:600 10px/1 inherit;' +
+             'letter-spacing:.08em;text-transform:uppercase;color:var(--tx3)">' +
+             'Compliance</span><b>' + pct + '%</b></div>' +
+           '<div class="pxrTrilho"><i style="width:' +
+             Math.max(2, Math.min(100, razao*100)) + '%;background:' + cor +
+           '"></i></div>';
+    }
+
+    var linhas = [
+      ['Duração',   hm(planMin),   hm(realMin)],
+      ['Distância', kmT(planKm),   kmT(realKm)],
+      ['Ritmo médio', '—',         paceT(+r.pace)],
+      ['Calorias',  '—',           realCal ? realCal + ' kcal' : '—'],
+      ['TSS',       '—',           realTss ? String(realTss) : '—']
+    ];
+
+    h += '<table class="pxrTab"><thead><tr><th></th>' +
+         '<th>Previsto</th><th>Realizado</th></tr></thead><tbody>' +
+         linhas.map(function(l){
+           return '<tr><td>' + l[0] + '</td><td>' + l[1] +
+                  '</td><td class="feito">' + l[2] + '</td></tr>';
+         }).join('') + '</tbody></table>';
+
+    h += '<p class="pxrNota">O que o treinador agenda no Garmin traz ' +
+         'duração e distância, mas não ritmo — por isso os travessões.</p>';
+
+    return h + '</div>';
+  }
+
+  var antes = window.sheetAtividade;
+  window.sheetAtividade = function(r){
+    var out = antes.apply(this, arguments);
+    try{
+      var alvo = document.getElementById('sheetIn');
+      if(alvo && r) alvo.insertAdjacentHTML('beforeend', bloco(r));
+    }catch(e){
+      console.error('previsto x realizado:', e);
+    }
+    return out;
+  };
 });
