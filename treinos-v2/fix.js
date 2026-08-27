@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '06g';
+const FIX_VERSAO = '06h';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -317,7 +317,7 @@ window.grafSono = function(sono){
     `Média de <b>${md} h</b> por noite. <b>${boas}</b> de ${sono.length} ` +
     `${sem?'semanas':'dias'} acima de 7 h somando noite e soneca. ` +
     (comNap.length
-      ? `O pedaço laranja no alto é a soneca: <b>${comNap.length}</b> ` +
+      ? `O pedaço no alto de cada barra é a soneca: <b>${comNap.length}</b> ` +
         `${comNap.length===1?'dia':'dias'} com cochilo, média de <b>${mdNap} h</b>. `
       : '') +
     `A faixa verde clara é onde a recuperação acontece.`;
@@ -345,7 +345,7 @@ window.grafHRV = function(hrv, hv){
     const baixo = pts.map((p,i)=>[x(i), y(p.min_v)]).reverse();
     const db = spline(baixo);
     s += `<path d="${spline(cima)} L${baixo[0][0]},${baixo[0][1]} ${db.slice(db.indexOf('C'))} Z" ` +
-         `fill="rgba(201,242,78,.14)"/>`;
+         `fill="rgba(var(--acc-rgb),.14)"/>`;
   } else {
     base.forEach((b,i)=>{ s += `<circle cx="${x(i)}" cy="${y(b.v)}" r="3.2" fill="var(--rest)"/>` });
   }
@@ -475,7 +475,7 @@ window.chartPace = function(){
     const up = stats.map(a=>[x(a.k*7+3), y(a.lo)]);
     const dn = stats.map(a=>[x(a.k*7+3), y(a.hi)]).reverse();
     const dd = spline(dn);
-    s += `<path d="${spline(up)} L${dn[0][0]},${dn[0][1]} ${dd.slice(dd.indexOf('C'))} Z" fill="rgba(201,242,78,.15)"/>`;
+    s += `<path d="${spline(up)} L${dn[0][0]},${dn[0][1]} ${dd.slice(dd.indexOf('C'))} Z" fill="rgba(var(--acc-rgb),.15)"/>`;
   }
   runs.forEach(r=>{ s += `<circle cx="${x(r.d)}" cy="${y(r.pace)}" r="3.6" fill="#3A4757"/>` });
   s += `<path d="${spline(stats.map(a=>[x(a.k*7+3), y(a.med)]))}" fill="none" stroke="var(--acc)" stroke-width="3" stroke-linecap="round"/>`;
@@ -582,7 +582,7 @@ window.chartCad = function(){
   const band = [];
   for(let p=xlo; p<=xhi; p+=6) band.push([X(p), Y(esp(p)+5)]);
   for(let p=xhi; p>=xlo; p-=6) band.push([X(p), Y(esp(p)-5)]);
-  s += `<polygon points="${band.map(p=>p.join(',')).join(' ')}" fill="rgba(63,217,138,.14)"/>`;
+  s += `<polygon points="${band.map(p=>p.join(',')).join(' ')}" fill="rgba(var(--ok-rgb),.14)"/>`;
   xt.forEach(t=>{ s += `<text x="${X(t)}" y="${H-22}" text-anchor="middle">${mmss(t)}</text>` });
   runs.forEach(r=>{ s += `<circle cx="${X(r.pace)}" cy="${Y(r.cad)}" r="5" fill="var(--acc)" opacity=".82"/>` });
   s += `<text class="eixo" x="${W-MR}" y="${H-5}" text-anchor="end">mais rápido →</text>`;
@@ -3860,9 +3860,9 @@ PARTE('questionario do corredor', function(){
 '.qz-pular{display:block;width:100%;margin-top:14px;padding:10px;font-size:12.5px;color:var(--tx3)}',
 '.qz-res{background:var(--s1);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px}',
 '.qz-res b{color:var(--acc)}',
-'.qz-alerta{background:var(--warn-wash);border:1px solid rgba(245,197,68,.3);border-radius:16px;',
+'.qz-alerta{background:var(--warn-wash);border:1px solid rgba(var(--warn-rgb),.3);border-radius:16px;',
 '  padding:16px;margin-bottom:12px;font-size:13.5px;line-height:1.55}',
-'.qz-alerta.grave{background:var(--bad-wash);border-color:rgba(242,104,92,.35)}',
+'.qz-alerta.grave{background:var(--bad-wash);border-color:rgba(var(--bad-rgb),.35)}',
 '.qz-alerta b{display:block;margin-bottom:5px}',
 '#btQuest{width:100%;margin-top:10px;padding:13px;border-radius:14px;background:var(--s2);',
 '  border:1px solid var(--line);color:var(--tx);font-size:14px;font-weight:600}'
@@ -4589,8 +4589,8 @@ PARTE('aba kpi', function(){
 '#v-kpi .bqTssPer.on{background:var(--acc);border-color:var(--acc);color:#0b0f14}',
 '#v-kpi .kcab h3{margin:0;font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--tx3);flex:1}',
 '#v-kpi .delta{font-size:11px;font-weight:800;padding:3px 8px;border-radius:999px;white-space:nowrap}',
-'#v-kpi .delta.up{background:rgba(63,217,138,.16);color:var(--ok)}',
-'#v-kpi .delta.dn{background:rgba(242,104,92,.16);color:var(--bad)}',
+'#v-kpi .delta.up{background:rgba(var(--ok-rgb),.16);color:var(--ok)}',
+'#v-kpi .delta.dn{background:rgba(var(--bad-rgb),.16);color:var(--bad)}',
 '#v-kpi .delta.fl{background:var(--s3);color:var(--tx2)}',
 '#v-kpi .kbig{font-size:33px;font-weight:800;letter-spacing:-.035em;line-height:1;margin:0 0 5px;font-variant-numeric:tabular-nums}',
 '#v-kpi .kbig small{display:block;font-size:12.5px;font-weight:500;color:var(--tx2);margin-top:6px;letter-spacing:0;line-height:1.45}',
@@ -5107,7 +5107,7 @@ PARTE('aba kpi', function(){
         '</small></div>' +
       svgBox(grade(maxL, 0, function(v){ return v.toFixed(0) }) +
         refLinha(28, 0, maxL, 'var(--acc)', 'faixa de maratona · 28 a 32 km') +
-        paresDeBarras(lFeito, lPlan, maxL, 'rgba(201,242,78,.30)') +
+        paresDeBarras(lFeito, lPlan, maxL, 'rgba(var(--acc-rgb),.30)') +
         area(pL, 'var(--run)') + curva(pL, 'var(--run)') +
         balao(pL, maiorL.toFixed(0) + ' km', 'var(--run)') +
         eixoX(lFeito.length, rotSem(passadas))) +
@@ -7467,11 +7467,11 @@ PARTE('planilha de treinos', function(){
 '#bqPl .dim{color:var(--tx3)}',
 '#bqPl td.ok{width:34px;min-width:34px;text-align:center;padding:0 4px}',
 '#bqPl .vv{display:inline-block;width:17px;height:17px;border-radius:50%;line-height:17px;',
-'  font-size:10px;font-weight:900;background:rgba(63,217,138,.16);color:var(--ok)}',
+'  font-size:10px;font-weight:900;background:rgba(var(--ok-rgb),.16);color:var(--ok)}',
 '#bqPl .oo{display:inline-block;width:17px;height:17px;border-radius:50%;',
 '  border:1.5px dashed var(--line);box-sizing:border-box}',
 '#bqPl .xx{display:inline-block;width:17px;height:17px;border-radius:50%;line-height:17px;',
-'  font-size:10px;font-weight:900;background:rgba(242,104,92,.14);color:var(--bad)}',
+'  font-size:10px;font-weight:900;background:rgba(var(--bad-rgb),.14);color:var(--bad)}',
 /* barra de semana */
 '#bqPl tr.sem td{background:var(--s2);height:auto;padding:8px 9px 7px;border-bottom:1px solid var(--line);',
 '  border-top:1px solid var(--line)}',
@@ -9861,7 +9861,7 @@ PARTE('visual da aba coach', function(){
 /* ── 4. etiquetas: ritmo em destaque, FC em tom proprio ── */
 'body.bqv .tg{font-weight:800;letter-spacing:.01em}',
 'body.bqv .tg.z{background:var(--acc-wash);color:var(--acc)}',
-'body.bqv .tg.hr{background:rgba(242,104,92,.14);color:#F2685C}',
+'body.bqv .tg.hr{background:rgba(var(--bad-rgb),.14);color:#F2685C}',
 
 /* ── 5. a barra de progresso do dia ── */
 'body.bqv .prog .ptrack i{background:linear-gradient(90deg,var(--acc),var(--ok))}',
@@ -9908,7 +9908,7 @@ PARTE('visual da aba coach', function(){
 'body.bqv .bqa-di{color:var(--tx3)}',
 
 /* a projecao e a pergunta central: "da para a PEI?" */
-'body.bqv .bqa-p{background:var(--acc-wash);border:1px solid rgba(201,242,78,.18)}',
+'body.bqv .bqa-p{background:var(--acc-wash);border:1px solid rgba(var(--acc-rgb),.18)}',
 'body.bqv .bqa-p b:first-child{color:var(--acc)}',
 
 /* a legenda recolhida fica com cara de botao, nao de texto solto */
@@ -10072,7 +10072,7 @@ PARTE('texto do MOTRA', function(){
     s.textContent = ok ? 'fix ' + FIX_VERSAO : 'fix \u2717 ' + FIX_FALHAS.length;
     s.style.cssText = 'flex:none;padding:4px 8px;border-radius:8px;font-size:10px;' +
       "font-weight:800;font-family:'JetBrains Mono',monospace;letter-spacing:.03em;" +
-      'background:' + (ok ? 'rgba(63,217,138,.16)' : 'rgba(242,104,92,.18)') + ';' +
+      'background:' + (ok ? 'rgba(var(--ok-rgb),.16)' : 'rgba(var(--bad-rgb),.18)') + ';' +
       'color:' + (ok ? 'var(--ok)' : 'var(--bad)') + ';border:0';
     s.onclick = function(){
       if(ok && window.planoBQ){
@@ -11990,7 +11990,7 @@ PARTE('previsto x realizado no detalhe do treino', function(){
     var planKm  = +s.km  || 0;
 
     /* Compliance sobre a duracao, que e o que o treinador controla.
-       Passar de 100% nao e melhor: a barra pinta de laranja quando
+       Passar de 100% nao e melhor: a barra pinta de ambar quando
        estoura, igual a quando falta. */
     if(planMin){
       var razao = realMin / planMin;
@@ -12109,6 +12109,13 @@ PARTE('temas trainingpeaks', function(){
       '--ok:#5FCB6B; --ok-wash:rgba(95,203,107,.14);',
       '--warn:#F2B441; --warn-wash:rgba(242,180,65,.14);',
       '--bad:#E5544B; --bad-wash:rgba(229,84,75,.14);',
+      /* Os mesmos tons em componentes separados, para quem precisa de
+         transparencia propria. Trinta lugares do app escreviam
+         rgba(201,242,78,.15) e afins — o verde-limao aposentado — e
+         continuavam limao enquanto o resto virou ambar. */
+      '--acc-rgb:242,180,65; --ok-rgb:95,203,107; --warn-rgb:242,180,65;',
+      '--bad-rgb:229,84,75; --bike-rgb:61,155,233; --swim-rgb:40,194,184;',
+      '--gym-rgb:155,107,214;',
     '}',
 
     /* ══ CLARO — branco quente, nao cinza-azulado ══ */
@@ -12120,6 +12127,9 @@ PARTE('temas trainingpeaks', function(){
       '--ok:#2E7331; --ok-wash:rgba(46,115,49,.12);',
       '--warn:#8A5C00; --warn-wash:rgba(138,92,0,.13);',
       '--bad:#BE3227; --bad-wash:rgba(190,50,39,.12);',
+      '--acc-rgb:138,92,0; --ok-rgb:46,115,49; --warn-rgb:138,92,0;',
+      '--bad-rgb:190,50,39; --bike-rgb:22,104,184; --swim-rgb:14,113,104;',
+      '--gym-rgb:107,63,160;',
     '}',
 
     /* ══ o que estava com cor escrita direto ══ */

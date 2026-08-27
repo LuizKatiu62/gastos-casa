@@ -75,7 +75,7 @@ input,select{font-family:inherit}
 @keyframes pulse{50%{opacity:.25}}
 
 /* faixa de aviso persistente */
-.faixa{display:none;background:var(--warn-wash);border-bottom:1px solid rgba(245,197,68,.25);
+.faixa{display:none;background:var(--warn-wash);border-bottom:1px solid rgba(var(--warn-rgb),.25);
   color:var(--warn);font-size:11.5px;font-weight:600;line-height:1.45;text-align:left}
 .faixa.on{display:block}
 .faixa button{max-width:540px;margin:0 auto;padding:10px 16px;display:flex;gap:8px;
@@ -95,7 +95,7 @@ input,select{font-family:inherit}
 /* ===================== HERO ===================== */
 .hero{padding:24px 0 20px;position:relative;overflow:hidden}
 .hero:before{content:'';position:absolute;top:-90px;right:-70px;width:240px;height:240px;
-  background:radial-gradient(circle,rgba(201,242,78,.15),transparent 65%);pointer-events:none}
+  background:radial-gradient(circle,rgba(var(--acc-rgb),.15),transparent 65%);pointer-events:none}
 .hero h1{margin:10px 0 0;font-size:30px;font-weight:800;letter-spacing:-.035em;line-height:1.05}
 .cd{display:flex;align-items:flex-end;gap:9px;margin-top:15px}
 .cd .n{font-size:58px;font-weight:800;line-height:.82;letter-spacing:-.05em;color:var(--acc)}
@@ -126,7 +126,7 @@ input,select{font-family:inherit}
 .day.has:hover{background:var(--s2)}
 .day.today .dn{color:var(--acc);font-weight:800}
 .day.sel{background:var(--s3)} .day.sel .dn{color:var(--tx)}
-.day.done .dot{background:var(--ok)!important;box-shadow:0 0 0 2px rgba(63,217,138,.2)}
+.day.done .dot{background:var(--ok)!important;box-shadow:0 0 0 2px rgba(var(--ok-rgb),.2)}
 .day.race{background:linear-gradient(145deg,var(--acc),#9FD418)}
 .day.race .dn{color:var(--bg);font-weight:800} .day.race .dot{background:var(--bg)}
 .legend{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:10px;padding-top:9px;border-top:1px solid var(--line)}
@@ -346,7 +346,7 @@ input,select{font-family:inherit}
 #capa .fundo img.b{bottom:-4%;height:56%;opacity:.22;
   -webkit-mask-image:linear-gradient(to top,#000 24%,transparent);mask-image:linear-gradient(to top,#000 24%,transparent)}
 #capa .fundo:after{content:'';position:absolute;inset:0;
-  background:radial-gradient(ellipse at 50% 42%,rgba(201,242,78,.10),transparent 62%),
+  background:radial-gradient(ellipse at 50% 42%,rgba(var(--acc-rgb),.10),transparent 62%),
              linear-gradient(180deg,rgba(7,10,14,.55) 0%,rgba(7,10,14,.86) 46%,#070A0E 88%)}
 
 #capa .miolo{position:relative;flex:1;display:flex;flex-direction:column;align-items:center;
@@ -403,7 +403,7 @@ input[type=range].perr::-webkit-slider-thumb{-webkit-appearance:none;width:26px;
 input[type=range].perr::-webkit-slider-runnable-track{margin-top:0}
 input[type=range].perr::-moz-range-thumb{width:26px;height:26px;border-radius:50%;background:var(--acc);
   border:4px solid var(--s1);box-shadow:0 2px 8px rgba(0,0,0,.5);cursor:grab}
-input[type=range].perr:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 4px rgba(201,242,78,.3)}
+input[type=range].perr:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 4px rgba(var(--acc-rgb),.3)}
 .peratalho{display:flex;gap:5px;margin-top:9px}
 .peratalho button{flex:1;height:32px;border-radius:9px;background:var(--s2);font-size:11px;
   font-weight:700;color:var(--tx3);transition:.15s;display:flex;align-items:center;justify-content:center}
@@ -421,7 +421,7 @@ input[type=range].perr:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 4px 
 .exb i{display:block;font-style:normal;font-size:11.5px;color:var(--tx2);margin-top:5px;line-height:1.45}
 .exs{flex:none;font-size:11.5px;font-weight:700;color:var(--acc);padding-top:1px}
 .selo{display:inline-block;font-size:8.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;
-  color:var(--gym);background:rgba(247,146,86,.14);padding:2px 6px;border-radius:5px;margin-left:7px;
+  color:var(--gym);background:rgba(var(--gym-rgb),.14);padding:2px 6px;border-radius:5px;margin-left:7px;
   vertical-align:middle}
 
 /* ===================== SAÚDE ===================== */
@@ -475,8 +475,8 @@ input[type=range].perr:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 4px 
 .pvbts{margin-left:auto;display:flex;gap:6px}
 /* linha de inscrição: mostra o endereço para dar para copiar se o toque não abrir */
 .pvlink{display:flex;align-items:center;gap:11px;margin-top:11px;padding:11px 12px;border-radius:13px;
-  background:var(--acc-wash);text-decoration:none;color:inherit;transition:.15s;border:1px solid rgba(201,242,78,.18)}
-.pvlink:hover{background:rgba(201,242,78,.2)}
+  background:var(--acc-wash);text-decoration:none;color:inherit;transition:.15s;border:1px solid rgba(var(--acc-rgb),.18)}
+.pvlink:hover{background:rgba(var(--acc-rgb),.2)}
 .pvlink.frio{background:var(--s2);border-color:transparent}
 .pvlic{flex:none;color:var(--acc);display:flex}
 .pvlink.frio .pvlic{color:var(--tx3)}
@@ -594,7 +594,7 @@ a.btmini{text-decoration:none}
 .marco{background:linear-gradient(140deg,#101922,#16232F 55%,#1B2E27);border-radius:var(--r-lg);
   padding:17px 16px;margin-bottom:14px;position:relative;overflow:hidden}
 .marco:before{content:'';position:absolute;top:-60px;right:-40px;width:170px;height:170px;
-  background:radial-gradient(circle,rgba(201,242,78,.13),transparent 66%);pointer-events:none}
+  background:radial-gradient(circle,rgba(var(--acc-rgb),.13),transparent 66%);pointer-events:none}
 .marco .mt{font-size:11px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--acc)}
 .marco .ms{font-size:12px;color:var(--tx2);margin-top:6px;line-height:1.45}
 .marco .ms b{color:var(--tx);font-weight:700}
@@ -895,6 +895,7 @@ details[open] summary .resumo{display:none}
       <span><i style="background:var(--acc)"></i>Profundo</span>
       <span><i style="background:var(--swim)"></i>REM</span>
       <span><i style="background:var(--s3)"></i>Leve</span>
+      <span><i style="background:var(--gym)"></i>Soneca</span>
     </div>
     <p class="chsub" id="sSonosub"></p>
   </section>
@@ -931,7 +932,7 @@ details[open] summary .resumo{display:none}
     <div class="plot" id="pacePlot"></div>
     <div class="leg">
       <span><i style="background:#3A4757"></i>Cada corrida</span>
-      <span><i class="sq" style="background:rgba(201,242,78,.18)"></i>Faixa da semana</span>
+      <span><i class="sq" style="background:rgba(var(--acc-rgb),.18)"></i>Faixa da semana</span>
       <span><i class="sq" style="background:var(--acc);height:3px"></i>Mediana semanal</span>
     </div>
   </section>
@@ -3458,7 +3459,7 @@ function grafHRV(hrv, hv){
     const cima=pts.map((p,i)=>[x(i),y(p.max_v)]), baixo=pts.map((p,i)=>[x(i),y(p.min_v)]).reverse();
     const db=spline(baixo);
     s2+=`<path d="${spline(cima)} L${baixo[0][0]},${baixo[0][1]} ${db.slice(db.indexOf('C'))} Z"
-          fill="rgba(201,242,78,.13)"/>`;
+          fill="rgba(var(--acc-rgb),.13)"/>`;
   } else {
     base.forEach((b,i)=>s2+=`<circle cx="${x(i)}" cy="${y(b.v)}" r="2.8" fill="var(--rest)"/>`);
   }
@@ -3529,7 +3530,7 @@ function chartPace(){
   if(stats.length>1){
     const up=stats.map(a=>[x(a.k*7+3),y(a.lo)]), dn=stats.map(a=>[x(a.k*7+3),y(a.hi)]).reverse();
     const dd=spline(dn);
-    s+=`<path d="${spline(up)} L${dn[0][0]},${dn[0][1]} ${dd.slice(dd.indexOf('C'))} Z" fill="rgba(201,242,78,.13)"/>`;
+    s+=`<path d="${spline(up)} L${dn[0][0]},${dn[0][1]} ${dd.slice(dd.indexOf('C'))} Z" fill="rgba(var(--acc-rgb),.13)"/>`;
   }
   runs.forEach(r=>s+=`<circle cx="${x(r.d)}" cy="${y(r.pace)}" r="3.4" fill="#3A4757"/>`);
   s+=`<path d="${spline(stats.map(a=>[x(a.k*7+3),y(a.med)]))}" fill="none" stroke="var(--acc)" stroke-width="3.2" stroke-linecap="round"/>`;
@@ -3618,7 +3619,7 @@ function chartCad(){
   const band=[];
   for(let p=xlo;p<=xhi;p+=6) band.push([X(p),Y(esp(p)+5)]);
   for(let p=xhi;p>=xlo;p-=6) band.push([X(p),Y(esp(p)-5)]);
-  s+=`<polygon points="${band.map(p=>p.join(',')).join(' ')}" fill="rgba(63,217,138,.12)"/>`;
+  s+=`<polygon points="${band.map(p=>p.join(',')).join(' ')}" fill="rgba(var(--ok-rgb),.12)"/>`;
   xt.forEach((t,i)=>s+=`<text class="axis" x="${X(t)}" y="${H-27}" text-anchor="${i===0?'start':i===xt.length-1?'end':'middle'}">${mmss(t)}</text>`);
   runs.forEach(r=>s+=`<circle cx="${X(r.pace)}" cy="${Y(r.cad)}" r="4.6" fill="var(--acc)" opacity=".85"/>`);
   s+=`<text class="axis" x="${W-mr}" y="${H-7}" text-anchor="end">mais rápido →</text>
@@ -3996,7 +3997,7 @@ function mostrarAtualizacao(){
   if(!f) return;
   f.classList.add('on');
   f.style.background='var(--acc-wash)'; f.style.color='var(--acc)';
-  f.style.borderBottomColor='rgba(201,242,78,.25)';
+  f.style.borderBottomColor='rgba(var(--acc-rgb),.25)';
   t.innerHTML='<b>Nova versão disponível.</b> Toque para atualizar.';
   q('#faixaBt').onclick=()=>{
     navigator.serviceWorker.getRegistrations().then(rs=>
