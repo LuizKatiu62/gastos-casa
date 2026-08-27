@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '06f';
+const FIX_VERSAO = '06g';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -12314,4 +12314,75 @@ PARTE('mais vida e aba selecionada visivel', function(){
       'width:26px;height:3px;border-radius:0 0 3px 3px;background:var(--acc)}'
   ].join('');
   document.head.appendChild(css);
+});
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   "ABRIR O HEVY" NO LUGAR DO BOTAO MOTRA.
+
+   O Luiz nao usa mais o Motra. O botao abria uma tela para copiar o
+   texto do treino e colar la — um caminho que nao existe mais.
+
+   No lugar, um botao que abre o Hevy. E so isso: abre. Nao manda nada,
+   nao altera rotina, nao marca treino. A direcao app -> Hevy esta
+   travada desde o 06e, e continua travada.
+
+   POR QUE hevy.com E NAO hevy:// — o esquema proprio do app nao esta
+   documentado em lugar nenhum que eu tenha conseguido consultar. Se eu
+   chutasse "hevy://" e o esquema nao existisse, o Safari mostraria uma
+   caixa de erro. Um endereco https nao tem esse risco: se o Hevy tiver
+   link universal configurado, o iPhone abre o app; se nao tiver, abre
+   o site, onde as mesmas rotinas estao. Nos dois casos funciona.
+
+   Os dois cartoes tem botao MOTRA — o do treino principal
+   (data-act="motra") e o do segundo treino (data-exmotra) — e os dois
+   sao trocados aqui. Troco depois do render porque e o proprio app que
+   os desenha e liga o clique; sobrescrever depois e mais seguro que
+   mexer em duas funcoes de desenho.
+   ══════════════════════════════════════════════════════════════════════ */
+PARTE('abrir o hevy no lugar do motra', function(){
+
+  var ENDERECO = 'https://hevy.com/';
+
+  function abrir(ev){
+    if(ev){ ev.preventDefault(); ev.stopPropagation() }
+    try{
+      window.open(ENDERECO, '_blank');
+    }catch(e){
+      window.location.href = ENDERECO;
+    }
+    return false;
+  }
+
+  var css = document.createElement('style');
+  css.textContent = [
+    '.bqHevyBt{color:var(--gym)!important;font-weight:800!important}'
+  ].join('');
+  document.head.appendChild(css);
+
+  function trocar(){
+    var alvos = document.querySelectorAll('[data-exmotra],[data-act="motra"]');
+    for(var i = 0; i < alvos.length; i++){
+      var b = alvos[i];
+      if(b.dataset.hevyTrocado === '1' && b.textContent.indexOf('Hevy') >= 0) continue;
+      b.textContent = 'Abrir o Hevy';
+      b.classList.add('bqHevyBt');
+      b.dataset.hevyTrocado = '1';
+      b.onclick = abrir;          /* sobrescreve o sheetMotra */
+    }
+  }
+
+  /* Depois de cada desenho da aba Coach. O app redesenha e religa o
+     clique original a cada render, entao preciso passar de novo. */
+  ['renderDia', 'renderCoach'].forEach(function(nome){
+    if(typeof window[nome] !== 'function') return;
+    var antes = window[nome];
+    window[nome] = function(){
+      var r = antes.apply(this, arguments);
+      try{ trocar() }catch(e){ console.warn('abrir hevy:', e && e.message) }
+      return r;
+    };
+  });
+
+  try{ trocar() }catch(e){}
 });
