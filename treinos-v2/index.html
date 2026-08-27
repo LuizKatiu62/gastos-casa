@@ -2356,7 +2356,7 @@ function blocoExtra(k){
   }
   const ets = etapasDe(x), fe = feitasDe(x.id);
   const pct = Math.round(fe.length/ets.length*100);
-  const fim = fe.length >= ets.length;
+  const fim = ets.length > 0 && fe.length >= ets.length;   // 0>=0 dizia 'concluído'
   const cor = MOD[x.mod].c;
   return `<div class="extra" style="border-color:${cor}">
     <div class="exch">

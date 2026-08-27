@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '06e';
+const FIX_VERSAO = '06f';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -902,8 +902,14 @@ window.blocoExtra = function(k){
   if(!x) return `<div class="addex"><button data-addex="${k}">` +
     (s ? '+ Adicionar segundo treino' : '+ Incluir um treino neste dia') + `</button></div>`;
   const ets = etapasDe(x), fe = feitasDe(x.id);
-  const pct = Math.round(fe.length / ets.length * 100);
-  const fim = fe.length >= ets.length;
+  /* ZERO ETAPAS NAO E TREINO CONCLUIDO.
+     'fe.length >= ets.length' com as duas listas vazias da 0 >= 0, que
+     e verdadeiro: o cartao mostrava "✓ Concluído" num treino que o
+     Luiz nem tinha feito. Acontecia sempre que a lista de exercicios
+     ainda nao tinha chegado do Hevy.
+     E pct virava NaN pela divisao por zero. */
+  const pct = ets.length ? Math.round(fe.length / ets.length * 100) : 0;
+  const fim = ets.length > 0 && fe.length >= ets.length;
   const cor = MOD[x.mod].c;
   return `<div class="extra" style="border-color:${cor}">
     <div class="exch">
@@ -10526,11 +10532,36 @@ PARTE('a aba coach e so da academia', function(){
     return !!(s && s.origem === 'academia');
   }
 
+  /* A lista de exercicios da academia vem do Hevy — a MESMA que o
+     painel do Coach mostra. Nao e a tabela antiga do app, e nao e
+     lista nenhuma inventada aqui.
+
+     Se o Hevy ainda nao respondeu, devolve vazio; a parte do painel
+     limpa o cache quando os dados chegam e a lista aparece.        */
+  function etapasDaAcademia(s){
+    try{
+      if(typeof window.bqAcademiaDoDia !== 'function') return [];
+      var r = window.bqAcademiaDoDia(s.data);
+      if(!r || !r.itens || !r.itens.length) return [];
+      return r.itens.map(function(it, i){
+        var tags = [];
+        if(it.series) tags.push({t: it.series});
+        if(it.peso)   tags.push({t: it.peso + ' kg', c: 'z'});
+        return { id: 'ac' + i,
+                 t: it.nome,
+                 d: it.series ? (it.series + (it.peso ? ' · ' + it.peso + ' kg' : ''))
+                              : 'Como está no seu Hevy.',
+                 tags: tags };
+      });
+    }catch(e){ return [] }
+  }
+
   ['etapas', 'etapasDe'].forEach(function(nome){
     if(typeof window[nome] !== 'function') return;
     var antes = window[nome];
     window[nome] = function(s){
-      if(doTreinador(s) || daAcademia(s)) return [];
+      if(doTreinador(s)) return [];
+      if(daAcademia(s)) return etapasDaAcademia(s);
       return antes.apply(this, arguments);
     };
   });
@@ -10941,7 +10972,10 @@ PARTE('painel da academia', function(){
       if(!x || x.origem !== 'academia') return;
       var r = window.bqAcademiaDoDia(iso);
       if(!r || !r.nome) return;
-      if(x.titulo === r.nome) return;
+      /* limpo o cache mesmo quando o nome ja bate: as etapas foram
+         montadas antes do Hevy responder e vieram vazias. */
+      if(ST.cache) delete ST.cache[x.id];
+      if(x.titulo === r.nome){ mudou++; return }
       x.titulo = r.nome; mudou++;
     });
     if(mudou){
@@ -10984,7 +11018,9 @@ PARTE('painel da academia', function(){
       var r = rotinaDoDia(n, iso);
       if(!r) return null;
       return { nome: r.titulo || 'Academia',
-               exercicios: (r.exercicios || []).length };
+               itens: (r.exercicios || []).map(function(e){
+                 return { nome: e.nome, series: e.series || '', peso: e.peso || 0 };
+               }) };
     }catch(e){ return null }
   };
 
