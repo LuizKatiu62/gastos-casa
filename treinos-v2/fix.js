@@ -10754,8 +10754,16 @@ PARTE('painel da academia', function(){
     return achou ? HEVY.rotinas[achou] : null;
   }
 
-  /* Seg = 1a rotina da fase, Qua = 2a, Sex = 3a */
+  /* Seg = 1a rotina da fase, Qua = 2a, Sex = 3a.
+
+     A guarda do dia da semana ficava so em quem chamava. Sem ela aqui,
+     qualquer dia que nao fosse segunda ou quarta caia em "posicao 2" —
+     terca, quinta, sabado e domingo devolviam a rotina da sexta. Hoje
+     nao aparece na tela porque o blocoSessao filtra antes, mas era uma
+     armadilha esperando o proximo trecho que esquecesse de filtrar.
+     A regra passa a morar aqui.                                      */
   function rotinaDoDia(dia, iso){
+    if(!DIAS_ACADEMIA[dia]) return null;
     var f = faseDe(iso || hojeIso());
     if(!f) return null;
     var pos = dia === 1 ? 0 : dia === 3 ? 1 : 2;
