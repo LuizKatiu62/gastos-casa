@@ -22,8 +22,30 @@ jobs:
           PAYLOAD: ${{ inputs.payload }}
         run: |
           cat > enviar.mjs <<'FIMDOSCRIPT'
+          /* ── TRAVA DE SEGURANCA ──────────────────────────────
+             false = este workflow NUNCA escreve no Hevy.
+
+             Motivo: mais abaixo ele faz um PUT com a lista inteira de
+             exercicios, ou seja, SUBSTITUI a rotina do Luiz pela lista
+             que o app monta a partir de SESSOES_ACADEMIA — uma tabela
+             antiga, com duas sessoes fixas, que nao tem relacao com o
+             programa que ele realmente segue no Hevy.
+
+             O programa de forca vive no Hevy e e lido pelo app
+             (hevy-pull.yml). A direcao app -> Hevy nao existe mais.
+             Para reativar algum dia, ponha ESCREVER_NO_HEVY = true —
+             e antes conserte o payload, que hoje manda o conteudo
+             errado.                                                  */
+          const ESCREVER_NO_HEVY = false;
+
           const CHAVE = process.env.HEVY_API_KEY;
           const BASE  = 'https://api.hevyapp.com/v1';
+
+          if (!ESCREVER_NO_HEVY) {
+            console.log('Envio app -> Hevy esta DESLIGADO. As suas rotinas do');
+            console.log('Hevy nao foram tocadas. Nada foi criado nem alterado.');
+            process.exit(0);
+          }
 
           if (!CHAVE) {
             console.error('Falta o secret HEVY_API_KEY no repositorio.');

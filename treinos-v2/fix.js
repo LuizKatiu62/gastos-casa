@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '06d';
+const FIX_VERSAO = '06e';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -10165,20 +10165,38 @@ PARTE('botão hevy', function(){
           else{ var j = await rr.json();
             run = (j.workflow_runs || []).sort(function(a,c){ return new Date(c.created_at) - new Date(a.created_at) })[0] || null }
         }catch(e){ podeLer = false }
-        if(!podeLer){ solta('✓ Disparado', ['Enviado ao Hevy. Confira em um minuto.','ok']); return }
+        if(!podeLer){ solta('Enviado', ['Enviado ao Hevy. Confira em um minuto. Isto nao marca o treino como feito.','ok']); return }
         if(!run) continue;
         if(run.status !== 'completed'){
           if(botao) botao.textContent = run.status === 'in_progress' ? 'Processando…' : 'Na fila…';
           continue;
         }
-        if(run.conclusion === 'success'){ solta('✓ No Hevy', ['Rotina <b>' + dados.rotina + '</b> atualizada.','ok']); return }
+        /* NAO por visto aqui. Enviar a rotina para o Hevy nao e ter
+           treinado: o visto fazia o Luiz achar que o app tinha
+           registrado a sessao. O treino so conta como feito quando
+           aparece no Hevy como sessao executada — quem decide isso e
+           o fezNoDia(), na parte do painel da academia. */
+        if(run.conclusion === 'success'){ solta('Enviado', ['Rotina <b>' + dados.rotina + '</b> atualizada no Hevy. Isto NAO marca o treino como feito — ele conta quando voce registrar a sessao no Hevy.','ok']); return }
         solta('', ['O envio falhou (' + run.conclusion + '). Veja a aba Actions.','err']); return;
       }
       solta('', ['Demorou mais que o esperado.','err']);
     }catch(e){ solta('', ['Erro de rede: ' + e.message,'err']) }
   }
 
+  /* ── O BOTAO SAI DE CIRCULACAO ──
+     Ele disparava o hevy-sync, que faz um PUT trocando a lista inteira
+     de exercicios da rotina. O conteudo enviado vinha de
+     SESSOES_ACADEMIA — a tabela antiga do app, sem relacao com o seu
+     programa. Na pratica: apagava a sua rotina de verdade e punha
+     outra no lugar.
+
+     Mesma regra do Garmin: o app le o Hevy, nao escreve nele. A trava
+     de verdade esta no proprio workflow (ESCREVER_NO_HEVY = false);
+     esta aqui e a segunda camada, para o botao nem aparecer.       */
+  var MOSTRAR_BOTAO_HEVY = false;
+
   function coloca(){
+    if(!MOSTRAR_BOTAO_HEVY) return;
     document.querySelectorAll('button').forEach(function(b){
       if(!/MOTRA/i.test(b.textContent)) return;
       if(b.dataset.hevyOk) return;
@@ -10317,7 +10335,7 @@ PARTE('a aba coach e so da academia', function(){
        quarta ficava e sexta era apagada. Marcada so com origem
        'academia', ela conta como sua e ninguem mais mexe.           */
     ST.extras[iso] = { id:'x' + iso, data:iso, mod:'forca', foco:'forca',
-                       sessao:n.sid, titulo:n.nome, min:45,
+                       titulo:n.nome, min:45,
                        extra:true, origem:'academia' };
     if(ST.cache) delete ST.cache['x' + iso];
   }
@@ -10347,21 +10365,26 @@ PARTE('a aba coach e so da academia', function(){
      sem exercicio nenhum. Aqui volto a usar o que o app ja sabe, com
      o nome comecando por "Academia", que foi o que voce pediu.      */
   function nomeAcademia(iso){
-    var sid = null;
+    /* O nome vem da parte do painel, que le as rotinas de verdade do
+       seu Hevy. Se ela ainda nao respondeu — o Hevy chega segundos
+       depois do plano ser montado — fica "Academia", e ela renomeia
+       sozinha quando os dados chegam.
+
+       ANTES eu usava SESSOES_ACADEMIA, uma tabela antiga do app com
+       duas sessoes fixas (Pernas e Core, Costas e Postura) que nao
+       tem relacao nenhuma com o seu Hevy. Era a origem da confusao. */
     try{
-      if(typeof sessaoAcademiaDe === 'function') sid = sessaoAcademiaDe(iso);
+      if(typeof window.bqAcademiaDoDia === 'function'){
+        var r = window.bqAcademiaDoDia(iso);
+        if(r && r.nome) return {sid:null, nome:r.nome};
+      }
     }catch(e){}
-    if(sid && typeof SESSOES_ACADEMIA === 'object' && SESSOES_ACADEMIA[sid])
-      return {sid:sid,
-              nome:'Academia — ' +
-                   String(SESSOES_ACADEMIA[sid].nome).replace(/^Força\s*—\s*/, '')};
     return {sid:null, nome:'Academia'};
   }
 
   function sessaoAcademia(iso){
     return {id:iso, data:iso, mod:'forca', foco:'forca',
-            titulo:nomeAcademia(iso).nome, sessao:nomeAcademia(iso).sid,
-            min:60, origem:'academia'};
+            titulo:nomeAcademia(iso).nome, min:60, origem:'academia'};
   }
 
   /* ── os treinos do treinador, so para VISUALIZAR ──
@@ -10469,7 +10492,6 @@ PARTE('a aba coach e so da academia', function(){
            do mes tratariam este dia como plano velho e o descartariam
            da comparacao. */
         s.titulo = nomeAcademia(iso).nome;
-        if(!s.sessao) s.sessao = nomeAcademia(iso).sid;
         if(!s.origem) s.origem = 'academia';
       }
     });
@@ -10490,11 +10512,25 @@ PARTE('a aba coach e so da academia', function(){
     return !!(s && (s.origem === 'garmin' || s.soLeitura));
   }
 
+  /* ── NEM PARA A ACADEMIA ──
+     O app monta a lista de exercicios de forca a partir de
+     SESSOES_ACADEMIA (index.html), duas sessoes fixas que nao conhecem
+     o seu Hevy. Aberto pelo calendario, o mesmo dia mostrava
+     "Single Leg Glute Bridge, Step Up..." no painel do Coach e
+     "Pull, Row, Press..." aqui. Duas listas para um treino so.
+
+     A lista de verdade e a do painel de Academia, que le as suas
+     rotinas do Hevy. Aqui, nenhuma — mesmo criterio dos treinos do
+     treinador: nao mostrar o que nao e verdade.                    */
+  function daAcademia(s){
+    return !!(s && s.origem === 'academia');
+  }
+
   ['etapas', 'etapasDe'].forEach(function(nome){
     if(typeof window[nome] !== 'function') return;
     var antes = window[nome];
     window[nome] = function(s){
-      if(doTreinador(s)) return [];
+      if(doTreinador(s) || daAcademia(s)) return [];
       return antes.apply(this, arguments);
     };
   });
@@ -10545,6 +10581,18 @@ PARTE('a aba coach e so da academia', function(){
           if(p && p.parentNode) p.parentNode.removeChild(p);
           var e = el.querySelector('.etapas');
           if(e && !e.children.length && e.parentNode) e.parentNode.removeChild(e);
+        }
+        /* O mesmo no cartao do segundo treino. Sem etapas, o app
+           calcula feitas/total com total zero e desenha uma barra de
+           largura NaN% com o texto "0 de 0 etapas". */
+        var ex = el && el.querySelector('.extra');
+        var x  = (sel && typeof extraDe === 'function') ? extraDe(sel) : null;
+        if(ex && daAcademia(x)){
+          var p2 = ex.querySelector('.ptrack'), l2 = ex.querySelector('.plab');
+          if(p2 && p2.parentNode) p2.parentNode.removeChild(p2);
+          if(l2 && l2.parentNode) l2.parentNode.removeChild(l2);
+          var e2 = ex.querySelector('.etapas');
+          if(e2 && !e2.children.length && e2.parentNode) e2.parentNode.removeChild(e2);
         }
       }catch(err){ console.warn('cartao do treinador:', err && err.message) }
       return r;
@@ -10861,6 +10909,7 @@ PARTE('painel da academia', function(){
       if(!j || !j.rotinas){ ultimoErro = 'o sync do Hevy ainda não gravou'; return false }
       HEVY = j;
       window.bqAcademia = HEVY;          // para conferir no console
+      renomearExtras();
       pintar();
       return true;
     }catch(e){
@@ -10873,6 +10922,26 @@ PARTE('painel da academia', function(){
      costuma nao existir. Buscar uma vez so deixava o painel presa em
      "Carregando" para sempre. Agora insiste, e se desistir diz por que
      em vez de ficar mudo.                                            */
+  /* O plano e montado antes do Hevy responder, entao o segundo treino
+     nasce chamado so "Academia". Quando os dados chegam, ponho o nome
+     da rotina de verdade — a mesma que o painel mostra. */
+  function renomearExtras(){
+    if(typeof ST !== 'object' || !ST || !ST.extras) return;
+    var mudou = 0;
+    Object.keys(ST.extras).forEach(function(iso){
+      var x = ST.extras[iso];
+      if(!x || x.origem !== 'academia') return;
+      var r = window.bqAcademiaDoDia(iso);
+      if(!r || !r.nome) return;
+      if(x.titulo === r.nome) return;
+      x.titulo = r.nome; mudou++;
+    });
+    if(mudou){
+      try{ if(typeof renderCoach === 'function') renderCoach() }catch(e){}
+      try{ if(typeof window.bqPlanilha === 'object') window.bqPlanilha.ligar() }catch(e){}
+    }
+  }
+
   var tentativas = 0;
   function insistir(){
     tentativas++;
@@ -10887,6 +10956,29 @@ PARTE('painel da academia', function(){
       }
     });
   }
+
+  /* ── FONTE UNICA DA ACADEMIA ──
+     Esta parte e a dona do assunto: ela le as rotinas de verdade do
+     seu Hevy e sabe qual toca em cada dia, pela periodizacao ate a
+     prova. Publico isso para o resto do app parar de inventar a
+     propria lista.
+
+     O defeito que isto conserta: o cartao de segundo treino montava
+     exercicios a partir de SESSOES_ACADEMIA, uma tabela antiga do
+     app com duas sessoes fixas que nada tem a ver com o seu Hevy.
+     Voce via uma lista no painel do Coach e outra, diferente, ao
+     abrir o mesmo dia no calendario.                                */
+  window.bqAcademiaDoDia = function(iso){
+    try{
+      var d = new Date(iso + 'T00:00:00');
+      var n = d.getDay(); if(n === 0) n = 7;
+      if(!DIAS_ACADEMIA[n]) return null;
+      var r = rotinaDoDia(n, iso);
+      if(!r) return null;
+      return { nome: r.titulo || 'Academia',
+               exercicios: (r.exercicios || []).length };
+    }catch(e){ return null }
+  };
 
   window.bqAcademiaRecarregar = function(){ tentativas = 0; insistir(); return 'buscando…' };
 
