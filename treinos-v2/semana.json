@@ -2,38 +2,38 @@
  "ate": "2026-09-03",
  "de": "2026-08-28",
  "fcMax": 163,
- "gerado": "2026-08-28T14:40:58.846Z",
+ "gerado": "2026-08-28T14:42:47.127Z",
  "limiar": "5:21",
  "sessoes": [
   {
-   "data": "2026-08-29",
-   "foco": "longo",
-   "km": 21.1,
-   "min": 125,
-   "nome": "29/08 · Rodagem Z2 · 21.1 km total",
-   "nota": "Total porta a porta 21.1 km. Alongamentos e educativos ANTES do start, relogio parado.",
+   "data": "2026-08-30",
+   "foco": "facil",
+   "km": 17.7,
+   "min": 105,
+   "nome": "30/08 · Rodagem Z2 · 17.7 km total",
+   "nota": "Total porta a porta 17.7 km. Alongamentos e educativos ANTES do start, relogio parado.",
    "passos": [
     {
      "fim": "time",
      "lento": 2.2422,
      "rapido": 2.4038,
-     "texto": "10 min subindo devagar, 6:56–7:26/km. Se chegar ofegante ao fim, foi rapido demais.",
+     "texto": "8 min subindo devagar, 6:56–7:26/km. Se chegar ofegante ao fim, foi rapido demais.",
      "tipo": "warmup",
-     "valor": 600
+     "valor": 480
     },
     {
      "fim": "distance",
-     "lento": 2.5907,
-     "rapido": 2.809,
-     "texto": "18.9 km em 5:56–6:26/km. Voce deve conseguir falar frases inteiras.",
+     "lento": 2.5253,
+     "rapido": 2.7322,
+     "texto": "15.9 km em 6:06–6:36/km. Voce deve conseguir falar frases inteiras.",
      "tipo": "interval",
-     "valor": 18900
+     "valor": 15900
     },
     {
      "fim": "time",
-     "texto": "6 min de trote muito leve ate a respiracao normalizar.",
+     "texto": "5 min de trote muito leve ate a respiracao normalizar.",
      "tipo": "cooldown",
-     "valor": 360
+     "valor": 300
     }
    ]
   }
