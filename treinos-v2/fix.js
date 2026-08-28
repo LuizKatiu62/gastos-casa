@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '06h';
+const FIX_VERSAO = '06i';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -12395,4 +12395,221 @@ PARTE('abrir o hevy no lugar do motra', function(){
   });
 
   try{ trocar() }catch(e){}
+});
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   PRESSAO ARTERIAL na aba Saude.
+
+   As medidas vem do aparelho Omron, que ja deposita tudo no app Saude
+   do iPhone. De la, um Atalho manda para o Firebase, no ramo
+   treinos_coach_v2/luiz/pressao. E o mesmo caminho que ja traz os
+   treinos manuais, e o mesmo ramo onde o robo do Hevy grava — ou seja,
+   ramo que ja se sabe que aceita escrita autenticada.
+
+   Formato de cada medida, gravado pelo Atalho:
+     { "2026-08-27T09:15": {sis:128, dia:78, pul:58, em:"2026-08-27T09:15"} }
+   pos e opcional: "deitado" ou "em pe", quando voce anotar.
+
+   POR QUE ISTO EXISTE, alem de curiosidade: o Luiz desmaiou em 26/08
+   depois de banho quente, e a suspeita e queda de pressao ao levantar.
+   Quem confirma isso e a medida DEITADO e depois EM PE. O Omron guarda
+   o numero mas nao guarda a posicao, entao o cartao mostra a posicao
+   quando ela vier e avisa quando faltar.
+
+   O cartao NAO diagnostica. As faixas mostradas sao as de referencia
+   publicadas, para leitura, e quem interpreta e o medico. O destaque
+   aqui e para valores BAIXOS, que e o que interessa no quadro dele —
+   um app de pressao comum so olha para os altos.
+   ══════════════════════════════════════════════════════════════════════ */
+PARTE('pressao arterial', function(){
+
+  var alvo = document.getElementById('v-saude');
+  if(!alvo) return;
+
+  /* respondeu = ja sei a resposta do servidor. Sem isso o cartao
+     afirmava 'nenhuma medida ainda' durante os 12 segundos de
+     tentativas — inclusive quando o problema era outro. */
+  var DADOS = null, erro = '', respondeu = false;
+
+  var css = document.createElement('style');
+  css.textContent = [
+    '#bqPA .pa-vazio{color:var(--tx3);font:500 12.5px/1.55 inherit;margin:12px 0 0}',
+    '#bqPA .pa-topo{display:flex;align-items:flex-end;gap:14px;margin-top:14px;flex-wrap:wrap}',
+    '#bqPA .pa-num{font:800 34px/1 inherit;letter-spacing:-.03em;color:var(--tx)}',
+    '#bqPA .pa-num small{font-size:14px;font-weight:700;color:var(--tx3);margin-left:5px}',
+    '#bqPA .pa-quando{font:600 11px/1.4 inherit;color:var(--tx3)}',
+    '#bqPA .pa-tag{display:inline-block;padding:4px 9px;border-radius:999px;',
+      'font:700 10px/1 inherit;letter-spacing:.06em;text-transform:uppercase}',
+    '#bqPA .pa-g{display:flex;align-items:flex-end;gap:3px;height:96px;margin-top:16px;',
+      'padding-top:6px;border-bottom:1px solid var(--line)}',
+    '#bqPA .pa-col{flex:1;min-width:0;display:flex;flex-direction:column;',
+      'justify-content:flex-end;align-items:center;height:100%;position:relative}',
+    '#bqPA .pa-bar{width:9px;border-radius:4px;background:var(--bike);position:relative}',
+    '#bqPA .pa-bar i{position:absolute;left:0;right:0;bottom:0;border-radius:0 0 4px 4px;',
+      'background:var(--swim)}',
+    '#bqPA .pa-x{display:flex;gap:3px;padding:6px 0 0}',
+    '#bqPA .pa-x span{flex:1;text-align:center;font:600 9px/1 inherit;color:var(--tx3);',
+      'overflow:hidden;white-space:nowrap}',
+    '#bqPA .pa-leg{display:flex;gap:14px;margin-top:10px;font:600 10px/1 inherit;color:var(--tx3)}',
+    '#bqPA .pa-leg i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px}',
+    '#bqPA .pa-lista{margin-top:14px;border-top:1px solid var(--line)}',
+    '#bqPA .pa-lin{display:flex;align-items:center;gap:10px;padding:9px 0;',
+      'border-bottom:1px solid var(--line);font:500 12px/1.3 inherit}',
+    '#bqPA .pa-lin:last-child{border-bottom:0}',
+    '#bqPA .pa-lin b{font-weight:700;color:var(--tx);min-width:74px}',
+    '#bqPA .pa-lin .q{flex:1;color:var(--tx3);font-size:11px}',
+    '#bqPA .pa-lin .p{font-size:10px;font-weight:700;color:var(--tx2)}',
+    '#bqPA .pa-nota{margin:13px 0 0;font:500 11px/1.55 inherit;color:var(--tx3)}'
+  ].join('');
+  document.head.appendChild(css);
+
+  var cartao = document.createElement('section');
+  cartao.className = 'card';
+  cartao.id = 'bqPA';
+  /* logo depois do titulo da aba */
+  if(alvo.children.length > 1) alvo.insertBefore(cartao, alvo.children[1]);
+  else alvo.appendChild(cartao);
+
+  /* ── faixas de referencia, so para leitura ──
+     Nao sao diagnostico. Sistolica e diastolica sao avaliadas juntas e
+     vale sempre a pior das duas. */
+  function faixa(sis, dia){
+    if(sis < 90 || dia < 60)   return {n:'baixa',      c:'var(--warn)'};
+    if(sis < 120 && dia < 80)  return {n:'ótima',      c:'var(--ok)'};
+    if(sis < 130 && dia < 85)  return {n:'normal',     c:'var(--ok)'};
+    if(sis < 140 && dia < 90)  return {n:'limítrofe',  c:'var(--warn)'};
+    if(sis < 160 && dia < 100) return {n:'elevada 1',  c:'var(--bad)'};
+    return {n:'elevada 2', c:'var(--bad)'};
+  }
+
+  function quando(iso){
+    try{
+      var p = String(iso).replace('T',' ').split(' ');
+      var d = p[0].split('-');
+      return d[2] + '/' + d[1] + (p[1] ? ' · ' + p[1].slice(0,5) : '');
+    }catch(e){ return String(iso) }
+  }
+
+  function lista(){
+    if(!DADOS) return [];
+    return Object.keys(DADOS).map(function(k){
+      var m = DADOS[k] || {};
+      return { em: m.em || k,
+               sis: +m.sis || +m.sistolica || 0,
+               dia: +m.dia || +m.diastolica || 0,
+               pul: +m.pul || +m.pulso || 0,
+               pos: m.pos || m.posicao || '' };
+    }).filter(function(m){ return m.sis > 0 && m.dia > 0 })
+      .sort(function(a,b){ return a.em < b.em ? -1 : a.em > b.em ? 1 : 0 });
+  }
+
+  function pintar(){
+    var h = '<div class="head"><div><h2>Pressão arterial</h2></div></div>';
+
+    var ms = lista();
+    if(!ms.length){
+      h += '<p class="pa-vazio">' +
+           (!respondeu ? 'Buscando as medidas…'
+            : erro ? 'Não consegui ler as medidas: ' + erro + '.'
+                   : 'Nenhuma medida ainda. Elas chegam do app Saúde do iPhone, ' +
+                     'pelo Atalho — o mesmo caminho dos treinos manuais.') +
+           '</p>';
+      cartao.innerHTML = h;
+      return;
+    }
+
+    var u = ms[ms.length - 1];
+    var f = faixa(u.sis, u.dia);
+    h += '<div class="pa-topo">' +
+           '<span class="pa-num">' + u.sis + '<small>/</small>' + u.dia +
+             '<small>mmHg</small></span>' +
+           '<span class="pa-tag" style="background:' + f.c + '22;color:' + f.c + '">' +
+             f.n + '</span>' +
+           '<span class="pa-quando">' + quando(u.em) +
+             (u.pul ? ' · ' + u.pul + ' bpm' : '') +
+             (u.pos ? ' · ' + u.pos : '') + '</span>' +
+         '</div>';
+
+    /* grafico: ultimas 14 medidas */
+    var ult = ms.slice(-14);
+    var mx = 0, mn = 999;
+    ult.forEach(function(m){ mx = Math.max(mx, m.sis); mn = Math.min(mn, m.dia) });
+    mx = Math.max(mx, 140); mn = Math.min(mn, 60);
+    var faixaV = Math.max(1, mx - mn + 20);
+
+    h += '<div class="pa-g">' + ult.map(function(m){
+      var alt = Math.round((m.sis - (mn - 10)) / faixaV * 88);
+      var baixo = Math.round((m.dia - (mn - 10)) / faixaV * 88);
+      return '<div class="pa-col"><div class="pa-bar" style="height:' +
+             Math.max(4, alt) + '%"><i style="height:' +
+             Math.max(6, Math.round(baixo / Math.max(alt,1) * 100)) + '%"></i></div></div>';
+    }).join('') + '</div>';
+
+    h += '<div class="pa-x">' + ult.map(function(m){
+      return '<span>' + quando(m.em).split(' ·')[0] + '</span>';
+    }).join('') + '</div>';
+
+    h += '<div class="pa-leg">' +
+           '<span><i style="background:var(--bike)"></i>Sistólica</span>' +
+           '<span><i style="background:var(--swim)"></i>Diastólica</span>' +
+         '</div>';
+
+    /* ultimas seis, em lista */
+    h += '<div class="pa-lista">' + ms.slice(-6).reverse().map(function(m){
+      var ff = faixa(m.sis, m.dia);
+      return '<div class="pa-lin">' +
+        '<b>' + m.sis + '/' + m.dia + '</b>' +
+        '<span class="q">' + quando(m.em) + (m.pul ? ' · ' + m.pul + ' bpm' : '') + '</span>' +
+        '<span class="p" style="color:' + ff.c + '">' + ff.n.toUpperCase() + '</span>' +
+        (m.pos ? '<span class="p">' + m.pos + '</span>' : '') +
+      '</div>';
+    }).join('') + '</div>';
+
+    var semPos = ms.filter(function(m){ return !m.pos }).length;
+    h += '<p class="pa-nota">Faixas de referência, para leitura — quem interpreta é o médico.' +
+         (semPos === ms.length
+           ? ' Nenhuma medida traz a posição do corpo. Para investigar tontura ao ' +
+             'levantar, o que vale é medir deitado e depois em pé, com 1 e 3 minutos.'
+           : '') +
+         '</p>';
+
+    cartao.innerHTML = h;
+  }
+
+  async function buscar(){
+    try{
+      if(typeof fbToken !== 'function'){ erro = 'sem fbToken'; return false }
+      var t = await fbToken();
+      if(!t){ erro = 'sem token do Firebase ainda'; return false }
+      var r = await fetch(FB_DB + '/' + FB_COACH + '/pressao.json?auth=' + t);
+      if(!r.ok){ erro = 'HTTP ' + r.status; return false }
+      var j = await r.json();
+      DADOS = j || {}; respondeu = true;
+      window.bqPressao = DADOS;          /* para conferir no console */
+      pintar();
+      return true;
+    }catch(e){
+      erro = (e && e.message) || 'erro de rede';
+      return false;
+    }
+  }
+
+  /* O login no Firebase e assincrono: na primeira tentativa o token
+     costuma nao existir. Mesma insistencia do painel da academia. */
+  var tentativas = 0;
+  function insistir(){
+    tentativas++;
+    buscar().then(function(ok){
+      if(ok) return;
+      if(tentativas < 8){ setTimeout(insistir, 1500); return }
+      respondeu = true;              /* desisti: agora posso afirmar */
+      pintar();
+    });
+  }
+
+  pintar();
+  setTimeout(insistir, 1200);
+
+  window.bqPressaoRecarregar = function(){ tentativas = 0; insistir(); return 'buscando…' };
 });
