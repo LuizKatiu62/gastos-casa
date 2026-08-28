@@ -32,7 +32,7 @@ Grava com PATCH. PUT substituiria o no inteiro e apagaria o historico —
 ja aconteceu neste repositorio com o ramo do Hevy, e nao se repete.
 """
 
-import json, os, sys
+import json, os, re, sys
 from datetime import datetime
 import urllib.request as urlreq
 import urllib.error
@@ -47,6 +47,39 @@ def log(msg):
 
 
 # ── leitura do payload ────────────────────────────────────────────────
+def numero(v):
+    """Tira o numero de qualquer coisa que o Atalho mandar.
+
+    O app Atalhos so manda o numero limpo se voce abrir a variavel e
+    escolher a propriedade Value — um passo escondido, dentro de um
+    painel, dentro de um dicionario. Quem nao acha manda a amostra
+    inteira, que vira texto tipo "128 mmHg" ou uma frase com data.
+
+    Em vez de exigir o passo escondido, leio o numero de onde estiver.
+    Preferencia para o que vem antes de mmHg; senao, o primeiro numero
+    dentro da faixa que um medidor de pressao produz.
+    """
+    if v is None:
+        return 0
+    if isinstance(v, (int, float)):
+        return int(v)
+    txt = str(v).strip()
+    try:
+        return int(float(txt))
+    except ValueError:
+        pass
+
+    m = re.search(r"(\d+(?:[.,]\d+)?)\s*mmhg", txt, re.I)
+    if m:
+        return int(float(m.group(1).replace(",", ".")))
+
+    for achado in re.findall(r"\d+(?:[.,]\d+)?", txt):
+        n = float(achado.replace(",", "."))
+        if 30 <= n <= 260:
+            return int(n)
+    return 0
+
+
 def normalizar(bruto):
     """Aceita uma medida ou uma lista, e devolve so o que faz sentido.
 
@@ -65,12 +98,11 @@ def normalizar(bruto):
     for it in itens:
         if not isinstance(it, dict):
             continue
-        try:
-            sis = int(float(it.get("sis") or it.get("sistolica") or 0))
-            dia = int(float(it.get("dia") or it.get("diastolica") or 0))
-        except (TypeError, ValueError):
-            continue
+        cru_sis = it.get("sis") or it.get("sistolica")
+        cru_dia = it.get("dia") or it.get("diastolica")
+        sis, dia = numero(cru_sis), numero(cru_dia)
         if not sis or not dia:
+            log(f"  nao achei numero em: sis={cru_sis!r}  dia={cru_dia!r}")
             continue
         # faixas largas: barram erro de digitacao, nao julgam a medida
         if not (60 <= sis <= 260) or not (30 <= dia <= 160) or dia >= sis:
@@ -82,12 +114,9 @@ def normalizar(bruto):
             em = datetime.now().strftime("%Y-%m-%dT%H:%M")
 
         m = {"sis": sis, "dia": dia, "em": em}
-        try:
-            pul = int(float(it.get("pul") or it.get("pulso") or 0))
-            if pul:
-                m["pul"] = pul
-        except (TypeError, ValueError):
-            pass
+        pul = numero(it.get("pul") or it.get("pulso"))
+        if pul:
+            m["pul"] = pul
         pos = str(it.get("pos") or it.get("posicao") or "").strip()
         if pos:
             m["pos"] = pos
@@ -138,7 +167,7 @@ def main():
             bruto["pul"] = os.environ["PUL"].strip()
         if os.environ.get("EM", "").strip():
             bruto["em"] = os.environ["EM"].strip()
-        log("Recebido em campos soltos.")
+        log(f"Recebido em campos soltos. sis={sis!r}  dia={dia!r}")
     elif cru:
         try:
             bruto = json.loads(cru)
