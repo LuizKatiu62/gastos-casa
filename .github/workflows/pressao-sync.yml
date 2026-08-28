@@ -1,0 +1,60 @@
+name: Pressao Sync
+
+# Recebe uma medida de pressao vinda do Atalho do iPhone e grava no
+# Firebase, de onde o app le.
+#
+# O Atalho dispara este workflow com o token do GitHub que o Luiz ja
+# tem guardado no app (o mesmo do Sync Garmin). A senha do Firebase
+# fica so aqui, nos secrets do repositorio, e nunca vai para o telefone.
+#
+# Este workflow escreve APENAS em treinos_coach_v2/luiz/pressao, e com
+# PATCH. Nao toca em treino, nem em rotina do Hevy, nem no Garmin.
+
+on:
+  workflow_dispatch:
+    inputs:
+      sis:
+        description: 'Sistolica, o numero maior'
+        required: false
+        type: string
+      dia:
+        description: 'Diastolica, o numero menor'
+        required: false
+        type: string
+      pul:
+        description: 'Pulso (opcional)'
+        required: false
+        type: string
+      em:
+        description: 'Quando, AAAA-MM-DDTHH:MM (opcional, vale agora)'
+        required: false
+        type: string
+      payload:
+        description: 'Alternativa: JSON completo, para mandar varias de uma vez'
+        required: false
+        type: string
+
+jobs:
+  gravar:
+    runs-on: ubuntu-latest
+    if: github.repository == 'LuizKatiu62/gastos-casa'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Gravar a medida no Firebase
+        run: python sync-pressao.py
+        env:
+          SIS:               ${{ inputs.sis }}
+          DIA:               ${{ inputs.dia }}
+          PUL:               ${{ inputs.pul }}
+          EM:                ${{ inputs.em }}
+          PAYLOAD:           ${{ inputs.payload }}
+          FIREBASE_EMAIL:    ${{ secrets.FIREBASE_EMAIL }}
+          FIREBASE_PASSWORD: ${{ secrets.FIREBASE_PASSWORD }}
