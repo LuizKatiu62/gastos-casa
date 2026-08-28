@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '06i';
+const FIX_VERSAO = '06j';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -12431,6 +12431,7 @@ PARTE('pressao arterial', function(){
      afirmava 'nenhuma medida ainda' durante os 12 segundos de
      tentativas — inclusive quando o problema era outro. */
   var DADOS = null, erro = '', respondeu = false;
+  window.bqPressao = window.bqPressao || {};
 
   var css = document.createElement('style');
   css.textContent = [
@@ -12460,7 +12461,18 @@ PARTE('pressao arterial', function(){
     '#bqPA .pa-lin b{font-weight:700;color:var(--tx);min-width:74px}',
     '#bqPA .pa-lin .q{flex:1;color:var(--tx3);font-size:11px}',
     '#bqPA .pa-lin .p{font-size:10px;font-weight:700;color:var(--tx2)}',
-    '#bqPA .pa-nota{margin:13px 0 0;font:500 11px/1.55 inherit;color:var(--tx3)}'
+    '#bqPA .pa-nota{margin:13px 0 0;font:500 11px/1.55 inherit;color:var(--tx3)}',
+    '#bqPA .pa-add{width:100%;margin-top:14px;padding:13px;border:0;border-radius:13px;',
+      'background:var(--acc);color:var(--acc-tx);font:800 13px/1 inherit;cursor:pointer}',
+    '.pa-pos{display:flex;gap:6px;margin-top:4px}',
+    '.pa-pos button{flex:1;padding:12px 4px;border-radius:12px;border:1px solid var(--line);',
+      'background:var(--s2);color:var(--tx3);font:700 12px/1 inherit;cursor:pointer}',
+    '.pa-pos button.on{background:var(--acc);border-color:var(--acc);color:var(--acc-tx)}',
+    '.pa-salvar{width:100%;margin-top:16px;padding:15px;border:0;border-radius:14px;',
+      'background:var(--acc);color:var(--acc-tx);font:800 15px/1 inherit;cursor:pointer}',
+    '.pa-erro{margin-top:10px;font:600 12px/1.4 inherit;color:var(--bad);display:none}',
+    '#bqPA .pa-lin .x{border:0;background:transparent;color:var(--tx3);cursor:pointer;',
+      'font:700 15px/1 inherit;padding:0 2px}'
   ].join('');
   document.head.appendChild(css);
 
@@ -12495,7 +12507,8 @@ PARTE('pressao arterial', function(){
     if(!DADOS) return [];
     return Object.keys(DADOS).map(function(k){
       var m = DADOS[k] || {};
-      return { em: m.em || k,
+      return { chave: k,
+               em: m.em || k,
                sis: +m.sis || +m.sistolica || 0,
                dia: +m.dia || +m.diastolica || 0,
                pul: +m.pul || +m.pulso || 0,
@@ -12514,8 +12527,10 @@ PARTE('pressao arterial', function(){
             : erro ? 'Não consegui ler as medidas: ' + erro + '.'
                    : 'Nenhuma medida ainda. Elas chegam do app Saúde do iPhone, ' +
                      'pelo Atalho — o mesmo caminho dos treinos manuais.') +
-           '</p>';
+           '</p>' +
+           '<button class="pa-add" type="button" data-nova="1">+ Nova medida</button>';
       cartao.innerHTML = h;
+      ligar();
       return;
     }
 
@@ -12563,6 +12578,8 @@ PARTE('pressao arterial', function(){
         '<span class="q">' + quando(m.em) + (m.pul ? ' · ' + m.pul + ' bpm' : '') + '</span>' +
         '<span class="p" style="color:' + ff.c + '">' + ff.n.toUpperCase() + '</span>' +
         (m.pos ? '<span class="p">' + m.pos + '</span>' : '') +
+        '<button class="x" type="button" data-apagar="' + m.chave +
+          '" aria-label="Apagar">×</button>' +
       '</div>';
     }).join('') + '</div>';
 
@@ -12574,7 +12591,137 @@ PARTE('pressao arterial', function(){
            : '') +
          '</p>';
 
+    h += '<button class="pa-add" type="button" data-nova="1">+ Nova medida</button>';
     cartao.innerHTML = h;
+    ligar();
+  }
+
+  function ligar(){
+    var b = cartao.querySelector('[data-nova]');
+    if(b) b.onclick = formulario;
+    Array.prototype.forEach.call(cartao.querySelectorAll('[data-apagar]'), function(x){
+      x.onclick = function(){ apagar(x.getAttribute('data-apagar')) };
+    });
+  }
+
+  /* ── o formulario ──
+     Uso a folha que o app ja tem (abrir/fechar), com as classes .campo
+     dele, para nao inventar um segundo jeito de fazer formulario.
+
+     A POSICAO e o campo que justifica tudo isto existir: o Omron nao
+     guarda, e e ela que responde se a sua pressao cai ao levantar. */
+  var POSICOES = ['deitado', 'sentado', 'em pé'];
+
+  function agoraLocal(){
+    var d = new Date();
+    var p = function(n){ return String(n).padStart(2,'0') };
+    return d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate()) +
+           'T' + p(d.getHours()) + ':' + p(d.getMinutes());
+  }
+
+  function formulario(){
+    if(typeof abrir !== 'function') return;
+    abrir('<h3>Nova medida</h3>' +
+      '<p class="sd">Do seu Omron. A posição do corpo é o que mais importa ' +
+      'para investigar tontura ao levantar.</p>' +
+      '<div class="campo"><label>Sistólica · o número maior</label>' +
+        '<input id="paSis" type="number" inputmode="numeric" placeholder="120"></div>' +
+      '<div class="campo"><label>Diastólica · o número menor</label>' +
+        '<input id="paDia" type="number" inputmode="numeric" placeholder="80"></div>' +
+      '<div class="campo"><label>Pulso (opcional)</label>' +
+        '<input id="paPul" type="number" inputmode="numeric" placeholder="60"></div>' +
+      '<div class="campo"><label>Posição do corpo</label>' +
+        '<div class="pa-pos">' + POSICOES.map(function(x){
+          return '<button type="button" data-pos="' + x + '">' + x + '</button>';
+        }).join('') + '</div></div>' +
+      '<div class="campo"><label>Quando</label>' +
+        '<input id="paEm" type="datetime-local" value="' + agoraLocal() + '"></div>' +
+      '<p class="pa-erro" id="paErro"></p>' +
+      '<button class="pa-salvar" type="button" id="paOk">Salvar</button>');
+
+    var caixa = document.getElementById('sheetIn');
+    if(!caixa) return;
+    var pos = '';
+    Array.prototype.forEach.call(caixa.querySelectorAll('[data-pos]'), function(b){
+      b.onclick = function(){
+        pos = b.getAttribute('data-pos');
+        Array.prototype.forEach.call(caixa.querySelectorAll('[data-pos]'), function(o){
+          o.classList.remove('on');
+        });
+        b.classList.add('on');
+      };
+    });
+
+    var ok = document.getElementById('paOk');
+    if(ok) ok.onclick = function(){ salvar(pos, ok) };
+  }
+
+  function avisar(txt){
+    var e = document.getElementById('paErro');
+    if(!e) return;
+    e.textContent = txt;
+    e.style.display = txt ? 'block' : 'none';
+  }
+
+  function val(id){
+    var e = document.getElementById(id);
+    return e ? (+e.value || 0) : 0;
+  }
+
+  async function salvar(pos, botao){
+    var sis = val('paSis'), dia = val('paDia'), pul = val('paPul');
+    var emEl = document.getElementById('paEm');
+    var em = (emEl && emEl.value) || agoraLocal();
+
+    /* Faixas largas de propósito: só barram digitação obviamente errada,
+       tipo trocar os dois campos ou esquecer um dígito. Não julgam a
+       medida — quem julga é o médico. */
+    if(!sis || !dia){ avisar('Preencha os dois números.'); return }
+    if(sis < 60 || sis > 260){ avisar('Sistólica fora do que o aparelho mede.'); return }
+    if(dia < 30 || dia > 160){ avisar('Diastólica fora do que o aparelho mede.'); return }
+    if(dia >= sis){ avisar('O número maior tem que ser o de cima. Confira se não inverteu.'); return }
+    avisar('');
+
+    if(botao){ botao.disabled = true; botao.textContent = 'Salvando…' }
+    try{
+      var t = await fbToken();
+      if(!t) throw new Error('sem token');
+      var corpo = {};
+      corpo[em] = { sis:sis, dia:dia, em:em };
+      if(pul) corpo[em].pul = pul;
+      if(pos) corpo[em].pos = pos;
+      /* PATCH, nao PUT: PUT substituiria o no inteiro e apagaria todas
+         as medidas anteriores. Ja aconteceu neste app, com o ramo do
+         Hevy, e nao repito. */
+      var r = await fetch(FB_DB + '/' + FB_COACH + '/pressao.json?auth=' + t,
+        {method:'PATCH', headers:{'Content-Type':'application/json'},
+         body: JSON.stringify(corpo)});
+      if(!r.ok) throw new Error('HTTP ' + r.status);
+      DADOS = DADOS || {};
+      DADOS[em] = corpo[em];
+      respondeu = true;
+      pintar();
+      if(typeof fechar === 'function') fechar();
+    }catch(e){
+      avisar('Não consegui salvar: ' + ((e && e.message) || 'erro de rede') + '.');
+      if(botao){ botao.disabled = false; botao.textContent = 'Salvar' }
+    }
+  }
+
+  async function apagar(chave){
+    if(!chave) return;
+    if(typeof confirm === 'function' && !confirm('Apagar esta medida?')) return;
+    try{
+      var t = await fbToken();
+      if(!t) return;
+      var corpo = {}; corpo[chave] = null;      /* null apaga so esta */
+      var r = await fetch(FB_DB + '/' + FB_COACH + '/pressao.json?auth=' + t,
+        {method:'PATCH', headers:{'Content-Type':'application/json'},
+         body: JSON.stringify(corpo)});
+      if(!r.ok) return;
+      if(DADOS) delete DADOS[chave];
+      pintar();
+    }catch(e){ console.warn('apagar pressao:', e && e.message) }
   }
 
   async function buscar(){
@@ -12586,7 +12733,7 @@ PARTE('pressao arterial', function(){
       if(!r.ok){ erro = 'HTTP ' + r.status; return false }
       var j = await r.json();
       DADOS = j || {}; respondeu = true;
-      window.bqPressao = DADOS;          /* para conferir no console */
+      window.bqPressao.dados = DADOS;    /* para conferir no console */
       pintar();
       return true;
     }catch(e){
@@ -12611,5 +12758,14 @@ PARTE('pressao arterial', function(){
   pintar();
   setTimeout(insistir, 1200);
 
-  window.bqPressaoRecarregar = function(){ tentativas = 0; insistir(); return 'buscando…' };
+  /* Console: window.bqPressao. Serve para conferir sem procurar a aba,
+     e e por aqui que os testes alcancam salvar() e apagar(), que sao
+     internos. Mesmo padrao do bqAcademia e do bqPlanilha. */
+  window.bqPressao = {
+    dados: null,
+    nova: formulario,
+    salvar: salvar,
+    apagar: apagar,
+    recarregar: function(){ tentativas = 0; insistir(); return 'buscando…' }
+  };
 });
