@@ -27,12 +27,24 @@
   }
  },
  "cargas": {},
- "historico": {},
- "sessoes": [],
+ "historico": {
+  "2026-W36": {
+   "semana": "2026-W36",
+   "kg": 0,
+   "sessoes": 1
+  }
+ },
+ "sessoes": [
+  {
+   "data": "2026-09-02",
+   "titulo": "FORCA - QUADRIL E CORE (BASE)",
+   "min": 27
+  }
+ ],
  "meta": {
-  "ultimaSync": "2026-09-02T14:33:30",
+  "ultimaSync": "2026-09-02T18:47:28",
   "totalRotinas": 1,
-  "totalTreinos": 0,
+  "totalTreinos": 1,
   "semanas": 12
  }
 }
