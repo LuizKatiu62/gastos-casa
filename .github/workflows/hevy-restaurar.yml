@@ -1,0 +1,43 @@
+name: Hevy Restaurar Rotinas
+
+# Devolve ao Hevy as rotinas que sumiram da conta em 26/08/2026.
+#
+# So roda quando voce aperta o botao. Nao tem agendamento de proposito:
+# um robo que escreve na conta do Hevy nao deve rodar sozinho.
+#
+# O script que ele chama (restaurar-rotinas-hevy.py) faz UMA operacao,
+# POST /v1/routines, que CRIA rotina. Nao ha DELETE nem PUT no arquivo.
+# Rotina cujo titulo ja exista na conta e pulada, entao a que voce usou
+# hoje continua exatamente como esta.
+#
+# E comeca em ENSAIO: sem marcar "confirmar", ele so mostra a lista do
+# que faria e para.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmar:
+        description: 'Escreva sim para criar de verdade. Vazio = so ensaio.'
+        required: false
+        default: ''
+        type: string
+
+jobs:
+  restaurar:
+    runs-on: ubuntu-latest
+    if: github.repository == 'LuizKatiu62/gastos-casa'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Criar as rotinas que faltam no Hevy
+        run: python restaurar-rotinas-hevy.py
+        env:
+          HEVY_API_KEY: ${{ secrets.HEVY_API_KEY }}
+          CONFIRMAR:    ${{ inputs.confirmar }}

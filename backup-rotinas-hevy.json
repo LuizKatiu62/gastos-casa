@@ -1,0 +1,208 @@
+{
+ "_leiame": "Backup das rotinas do Hevy, como estavam em 26/08/2026 20:12 UTC, antes de sumirem da conta. Extraido do historico do repositorio (commit 7118ec1). As duas copias duplicadas de 'Knees exercise' foram retiradas de proposito.",
+ "capturadoEm": "2026-08-26T20:12:00Z",
+ "origem": "commit 7118ec14eb43ffe174432d4528398b52b37a9e12",
+ "rotinas": {
+  "Força- Costas e Postura": {
+   "titulo": "Força- Costas e Postura",
+   "exercicios": [
+    {
+     "nome": "Plank Pushup",
+     "series": "3×10"
+    },
+    {
+     "nome": "Seated Cable Row - Bar Grip",
+     "series": "3×12"
+    },
+    {
+     "nome": "Lat Pulldown (Cable)",
+     "series": "3×10"
+    },
+    {
+     "nome": "Bench Press (Dumbbell)",
+     "series": "3×12"
+    },
+    {
+     "nome": "Farmers Walk",
+     "series": "3 séries"
+    }
+   ]
+  },
+  "Forca - Manutencao": {
+   "titulo": "Forca - Manutencao",
+   "exercicios": [
+    {
+     "nome": "Goblet Squat",
+     "series": "2×5",
+     "nota": "Carga do pico."
+    },
+    {
+     "nome": "Romanian Deadlift (Barbell)",
+     "series": "2×6",
+     "nota": "Mesma tecnica."
+    },
+    {
+     "nome": "Standing Calf Raise",
+     "series": "3×10",
+     "nota": "Amplitude completa."
+    },
+    {
+     "nome": "Plank",
+     "series": "2×40s",
+     "nota": "Manutencao."
+    }
+   ]
+  },
+  "Forca - Quadril e Core (pico)": {
+   "titulo": "Forca - Quadril e Core (pico)",
+   "exercicios": [
+    {
+     "nome": "Single Leg Glute Bridge",
+     "series": "3×10",
+     "nota": "Volume baixo: a corrida e a prioridade do dia. 10 cada perna."
+    },
+    {
+     "nome": "Lateral Band Walks",
+     "series": "3×15",
+     "nota": "Gluteo medio, estabiliza o joelho."
+    },
+    {
+     "nome": "Single Leg Standing Calf Raise",
+     "series": "3×12",
+     "nota": "Panturrilha unilateral. 12 cada."
+    },
+    {
+     "nome": "Dead Bug",
+     "series": "3×10",
+     "nota": "Lombar colada no chao o tempo todo. 10 cada lado."
+    }
+   ]
+  },
+  "Forca - Maxima (pico)": {
+   "titulo": "Forca - Maxima (pico)",
+   "exercicios": [
+    {
+     "nome": "Squat (Barbell)",
+     "series": "4×5",
+     "nota": "Carga que voce faria 7 vezes, nao mais. Pare com 2 de sobra."
+    },
+    {
+     "nome": "Romanian Deadlift (Barbell)",
+     "series": "4×6",
+     "nota": "Mesma tecnica da base, carga alta, longe da falha."
+    },
+    {
+     "nome": "Standing Calf Raise (Dumbbell)",
+     "series": "4×8",
+     "nota": "Pausa de 2 segundos embaixo."
+    },
+    {
+     "nome": "Jump Squat",
+     "series": "2×10",
+     "nota": "Deixa o tendao devolver energia a cada passada."
+    },
+    {
+     "nome": "Jump Squat",
+     "series": "2×8",
+     "nota": "Salto vertical. Explosao, nao volume."
+    },
+    {
+     "nome": "Plank",
+     "series": "3×45s",
+     "nota": "Core."
+    }
+   ]
+  },
+  "Forca - Quadril e Core (base)": {
+   "titulo": "Forca - Quadril e Core (base)",
+   "exercicios": [
+    {
+     "nome": "Single Leg Glute Bridge",
+     "series": "3×12",
+     "nota": "Gluteo fraco vira dor lombar no fim do longo. 12 cada perna."
+    },
+    {
+     "nome": "Step Up",
+     "series": "3×10",
+     "nota": "Subida controlada, sem impulso da perna de baixo. 10 cada."
+    },
+    {
+     "nome": "Lateral Band Walks",
+     "series": "3×15",
+     "nota": "E o que evita o joelho cair para dentro com a fadiga."
+    },
+    {
+     "nome": "Bird Dog",
+     "series": "3×10",
+     "nota": "Lento. Ensina o tronco a ficar quieto enquanto as pernas trabalham."
+    },
+    {
+     "nome": "Single Leg Standing Calf Raise",
+     "series": "3×12",
+     "nota": "No degrau, descendo abaixo da linha do pe. 12 cada."
+    }
+   ]
+  },
+  "Forca - Pernas e Core (base)": {
+   "titulo": "Forca - Pernas e Core (base)",
+   "exercicios": [
+    {
+     "nome": "Goblet Squat",
+     "series": "3×12",
+     "nota": "Descida em 3 segundos, subida firme. Joelho na linha do pe."
+    },
+    {
+     "nome": "Romanian Deadlift (Dumbbell)",
+     "series": "3×12",
+     "nota": "Empurre o quadril para tras, coluna neutra."
+    },
+    {
+     "nome": "Walking Lunge",
+     "series": "3×10",
+     "nota": "Corrida e exercicio de uma perna so. 10 cada perna."
+    },
+    {
+     "nome": "Standing Calf Raise",
+     "series": "3×15",
+     "nota": "Amplitude completa, descida bem devagar."
+    },
+    {
+     "nome": "Seated Calf Raise",
+     "series": "3×15",
+     "nota": "O sentado pega o soleo, onde o aquiles do veterano rompe."
+    },
+    {
+     "nome": "Plank",
+     "series": "3×40s",
+     "nota": "Costelas para baixo, gluteo ativo, pescoco neutro."
+    },
+    {
+     "nome": "Side Plank",
+     "series": "3×30s",
+     "nota": "Core segura a postura no km 35. 30s de cada lado."
+    }
+   ]
+  },
+  "Knees exercise 1-2 weeks": {
+   "titulo": "Knees exercise 1-2 weeks",
+   "exercicios": [
+    {
+     "nome": "Wall Sit",
+     "series": "2×30s"
+    },
+    {
+     "nome": "Straight Leg Raise",
+     "series": "2×12"
+    },
+    {
+     "nome": "Clamshell",
+     "series": "2×12"
+    },
+    {
+     "nome": "Hamstring Stretch",
+     "series": "2×12"
+    }
+   ]
+  }
+ }
+}
