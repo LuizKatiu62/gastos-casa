@@ -12472,7 +12472,38 @@ PARTE('pressao arterial', function(){
       'background:var(--acc);color:var(--acc-tx);font:800 15px/1 inherit;cursor:pointer}',
     '.pa-erro{margin-top:10px;font:600 12px/1.4 inherit;color:var(--bad);display:none}',
     '#bqPA .pa-lin .x{border:0;background:transparent;color:var(--tx3);cursor:pointer;',
-      'font:700 15px/1 inherit;padding:0 2px}'
+      'font:700 15px/1 inherit;padding:0 2px}',
+    '#bqPA .pa-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}',
+    '#bqPA .pa-c{background:var(--s2);border-radius:12px;padding:10px 11px;min-width:0}',
+    '#bqPA .pa-c i{display:block;font:600 10px/1.3 inherit;font-style:normal;',
+      'color:var(--tx3);margin-bottom:6px}',
+    '#bqPA .pa-c b{font:800 19px/1 inherit;color:var(--tx);letter-spacing:-.02em}',
+    '#bqPA .pa-c b s{font-size:12px;font-weight:700;color:var(--tx3);text-decoration:none}',
+    '#bqPA .pa-c em{font:800 13px/1.15 inherit;font-style:normal;display:block;padding-top:3px}',
+    '#bqPA .pa-hn{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:12px;',
+      'font:600 11px/1.4 inherit;color:var(--tx3)}',
+    '#bqPA .pa-hn b{color:var(--tx2);font-weight:800}',
+    '#bqPA .pa-rot{margin:20px 0 8px;font:700 10px/1 inherit;letter-spacing:.07em;',
+      'text-transform:uppercase;color:var(--tx3)}',
+    '#bqPA .pa-dist{display:flex;height:26px;border-radius:8px;overflow:hidden;background:var(--s2)}',
+    '#bqPA .pa-dist span{min-width:2px}',
+    '#bqPA .pa-dl{display:flex;flex-wrap:wrap;gap:5px 14px;margin-top:9px;',
+      'font:600 10px/1.4 inherit;color:var(--tx3)}',
+    '#bqPA .pa-dl i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px}',
+    '#bqPA .pa-sv{width:100%;height:auto;display:block}',
+    '#bqPA .pa-mx{display:flex;padding:4px 0 0}',
+    '#bqPA .pa-mx span{flex:1;text-align:center;font:600 10px/1 inherit;color:var(--tx3)}',
+    '#bqPA .pa-hist{margin-top:6px}',
+    '#bqPA .pa-mes{width:100%;display:flex;align-items:center;gap:9px;padding:12px 0;',
+      'border:0;border-top:1px solid var(--line);background:transparent;color:var(--tx);',
+      'cursor:pointer;text-align:left}',
+    '#bqPA .pa-mes u{flex:1;font:700 13px/1.2 inherit;text-decoration:none;text-transform:capitalize}',
+    '#bqPA .pa-mes s{font:600 11px/1.2 inherit;color:var(--tx3);text-decoration:none;',
+      'white-space:nowrap}',
+    '#bqPA .pa-mes em{font:700 13px/1 inherit;font-style:normal;color:var(--tx3);',
+      'transition:transform .18s;display:inline-block}',
+    '#bqPA .pa-mes.on em{transform:rotate(90deg)}',
+    '#bqPA .pa-corpo{padding:2px 0 8px 2px}'
   ].join('');
   document.head.appendChild(css);
 
@@ -12517,16 +12548,160 @@ PARTE('pressao arterial', function(){
       .sort(function(a,b){ return a.em < b.em ? -1 : a.em > b.em ? 1 : 0 });
   }
 
+  /* Cor de apresentacao por faixa. Quem classifica continua sendo
+     faixa() — este mapa so escolhe a cor da barra, para nao existirem
+     dois lugares decidindo o que e "limitrofe". */
+  var COR = { 'baixa':'var(--bike)', 'ótima':'var(--ok)', 'normal':'var(--acc)',
+              'limítrofe':'var(--warn)', 'elevada 1':'var(--gym)',
+              'elevada 2':'var(--bad)' };
+  var ORDEM = ['baixa','ótima','normal','limítrofe','elevada 1','elevada 2'];
+  var MES = ['janeiro','fevereiro','março','abril','maio','junho','julho',
+             'agosto','setembro','outubro','novembro','dezembro'];
+
+  /* qual mes esta expandido. Vive fora do pintar() para sobreviver ao
+     redesenho depois de salvar ou apagar uma medida. */
+  var mesAberto = {};
+
+  function mesDe(iso){ return String(iso).slice(0,7) }
+
+  function nomeMes(ym){
+    var p = ym.split('-');
+    return (MES[+p[1]-1] || ym) + ' de ' + p[0];
+  }
+
+  function horaDe(iso){
+    var s = String(iso).replace('T',' ').split(' ')[1] || '';
+    return s ? +s.slice(0,2) : -1;
+  }
+
+  function media(ms){
+    if(!ms || !ms.length) return null;
+    var s = 0, d = 0;
+    ms.forEach(function(m){ s += m.sis; d += m.dia });
+    return { sis: Math.round(s/ms.length), dia: Math.round(d/ms.length), n: ms.length };
+  }
+
+  function ultimosDias(ms, n){
+    var c = new Date(Date.now() - n*864e5);
+    var p = function(x){ return String(x).padStart(2,'0') };
+    var corte = c.getFullYear() + '-' + p(c.getMonth()+1) + '-' + p(c.getDate());
+    return ms.filter(function(m){ return String(m.em).slice(0,10) >= corte });
+  }
+
+  function cartaoMedia(rot, m){
+    return '<div class="pa-c"><i>' + rot + '</i><b>' +
+           (m ? m.sis + '<s>/' + m.dia + '</s>' : '\u2014') + '</b></div>';
+  }
+
+  /* Barra empilhada no lugar da pizza: mesma informacao, cabe numa
+     linha e da para comparar um mes com o outro. */
+  function distribuicao(ms){
+    var c = {};
+    ms.forEach(function(m){ var n = faixa(m.sis, m.dia).n; c[n] = (c[n]||0) + 1 });
+    var barra = '', leg = '';
+    ORDEM.forEach(function(k){
+      if(!c[k]) return;
+      var pc = c[k] / ms.length * 100;
+      barra += '<span style="width:' + pc.toFixed(1) + '%;background:' + COR[k] + '"></span>';
+      leg   += '<span><i style="background:' + COR[k] + '"></i>' + k + ' ' +
+               Math.round(pc) + '%</span>';
+    });
+    return '<div class="pa-dist">' + barra + '</div>' +
+           '<div class="pa-dl">' + leg + '</div>';
+  }
+
+  /* Media por mes: seis pontos no lugar de duzentas datas. E o que
+     resolve o eixo embolado — o eixo agora tem no maximo seis rotulos. */
+  function tendencia(ms){
+    var por = {}, ordem = [];
+    ms.forEach(function(m){
+      var k = mesDe(m.em);
+      if(!por[k]){ por[k] = []; ordem.push(k) }
+      por[k].push(m);
+    });
+    if(ordem.length < 2) return '';
+    ordem = ordem.slice(-6);
+
+    var pts = ordem.map(function(k){ var a = media(por[k]); a.k = k; return a });
+    var W = 300, H = 116, pl = 24, pr = 6, pt = 10, pb = 10;
+    var vals = [145, 70];
+    pts.forEach(function(p){ vals.push(p.sis, p.dia) });
+    var mx = Math.max.apply(null, vals), mn = Math.min.apply(null, vals);
+    var esc = (H - pt - pb) / Math.max(1, mx - mn);
+    var X = function(i){ return pl + i * (W - pl - pr) / (pts.length - 1) };
+    var Y = function(v){ return pt + (mx - v) * esc };
+
+    var s = '<svg class="pa-sv" viewBox="0 0 ' + W + ' ' + H + '" aria-hidden="true">';
+
+    /* 140 e 90 sao os limites que o medico olha */
+    [[140,'var(--bike)'],[90,'var(--swim)']].forEach(function(g){
+      if(g[0] > mx || g[0] < mn) return;
+      var y = Y(g[0]).toFixed(1);
+      s += '<line x1="' + pl + '" x2="' + (W-pr) + '" y1="' + y + '" y2="' + y +
+           '" stroke="' + g[1] + '" stroke-width=".7" stroke-dasharray="3 3" opacity=".5"></line>' +
+           '<text x="0" y="' + (Y(g[0])+3).toFixed(1) + '" fill="var(--tx3)" ' +
+           'font-size="9" font-weight="700">' + g[0] + '</text>';
+    });
+
+    [['sis','var(--bike)'],['dia','var(--swim)']].forEach(function(sr){
+      s += '<polyline points="' + pts.map(function(p,i){
+             return X(i).toFixed(1) + ',' + Y(p[sr[0]]).toFixed(1);
+           }).join(' ') + '" fill="none" stroke="' + sr[1] +
+           '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></polyline>';
+      pts.forEach(function(p,i){
+        s += '<circle cx="' + X(i).toFixed(1) + '" cy="' + Y(p[sr[0]]).toFixed(1) +
+             '" r="2.6" fill="' + sr[1] + '"></circle>';
+      });
+    });
+    s += '</svg>';
+
+    s += '<div class="pa-mx">' + pts.map(function(p){
+           return '<span>' + (MES[+p.k.split('-')[1]-1] || '').slice(0,3) + '</span>';
+         }).join('') + '</div>';
+    return s;
+  }
+
+  /* Historico recolhido por mes. A media vai no cabecalho fechado, para
+     o mes valer alguma coisa sem precisar abrir. */
+  function historico(ms){
+    var por = {}, ordem = [];
+    ms.slice().reverse().forEach(function(m){
+      var k = mesDe(m.em);
+      if(!por[k]){ por[k] = []; ordem.push(k) }
+      por[k].push(m);
+    });
+    return ordem.map(function(k){
+      var a = media(por[k]), ab = !!mesAberto[k];
+      var h = '<button class="pa-mes' + (ab ? ' on' : '') + '" type="button" data-mes="' + k +
+              '" aria-expanded="' + (ab ? 'true' : 'false') + '">' +
+              '<em>\u203a</em><u>' + nomeMes(k) + '</u>' +
+              '<s>' + a.sis + '/' + a.dia + ' \u00b7 ' + a.n +
+                (a.n === 1 ? ' medida' : ' medidas') + '</s></button>';
+      if(!ab) return h;
+      return h + '<div class="pa-corpo">' + por[k].map(function(m){
+        var ff = faixa(m.sis, m.dia);
+        return '<div class="pa-lin">' +
+          '<b>' + m.sis + '/' + m.dia + '</b>' +
+          '<span class="q">' + quando(m.em) + (m.pul ? ' \u00b7 ' + m.pul + ' bpm' : '') +
+            (m.pos ? ' \u00b7 ' + m.pos : '') + '</span>' +
+          '<span class="p" style="color:' + ff.c + '">' + ff.n.toUpperCase() + '</span>' +
+          '<button class="x" type="button" data-apagar="' + m.chave +
+            '" aria-label="Apagar">\u00d7</button>' +
+        '</div>';
+      }).join('') + '</div>';
+    }).join('');
+  }
+
   function pintar(){
-    var h = '<div class="head"><div><h2>Pressão arterial</h2></div></div>';
+    var h = '<div class="head"><div><h2>Press\u00e3o arterial</h2></div></div>';
 
     var ms = lista();
     if(!ms.length){
       h += '<p class="pa-vazio">' +
-           (!respondeu ? 'Buscando as medidas…'
-            : erro ? 'Não consegui ler as medidas: ' + erro + '.'
-                   : 'Nenhuma medida ainda. Elas chegam do app Saúde do iPhone, ' +
-                     'pelo Atalho — o mesmo caminho dos treinos manuais.') +
+           (!respondeu ? 'Buscando as medidas\u2026'
+            : erro ? 'N\u00e3o consegui ler as medidas: ' + erro + '.'
+                   : 'Nenhuma medida ainda. Elas chegam do app Sa\u00fade do iPhone, ' +
+                     'pelo Atalho \u2014 o mesmo caminho dos treinos manuais.') +
            '</p>' +
            '<button class="pa-add" type="button" data-nova="1">+ Nova medida</button>';
       cartao.innerHTML = h;
@@ -12542,52 +12717,53 @@ PARTE('pressao arterial', function(){
            '<span class="pa-tag" style="background:' + f.c + '22;color:' + f.c + '">' +
              f.n + '</span>' +
            '<span class="pa-quando">' + quando(u.em) +
-             (u.pul ? ' · ' + u.pul + ' bpm' : '') +
-             (u.pos ? ' · ' + u.pos : '') + '</span>' +
+             (u.pul ? ' \u00b7 ' + u.pul + ' bpm' : '') +
+             (u.pos ? ' \u00b7 ' + u.pos : '') + '</span>' +
          '</div>';
 
-    /* grafico: ultimas 14 medidas */
-    var ult = ms.slice(-14);
-    var mx = 0, mn = 999;
-    ult.forEach(function(m){ mx = Math.max(mx, m.sis); mn = Math.min(mn, m.dia) });
-    mx = Math.max(mx, 140); mn = Math.min(mn, 60);
-    var faixaV = Math.max(1, mx - mn + 20);
-
-    h += '<div class="pa-g">' + ult.map(function(m){
-      var alt = Math.round((m.sis - (mn - 10)) / faixaV * 88);
-      var baixo = Math.round((m.dia - (mn - 10)) / faixaV * 88);
-      return '<div class="pa-col"><div class="pa-bar" style="height:' +
-             Math.max(4, alt) + '%"><i style="height:' +
-             Math.max(6, Math.round(baixo / Math.max(alt,1) * 100)) + '%"></i></div></div>';
-    }).join('') + '</div>';
-
-    h += '<div class="pa-x">' + ult.map(function(m){
-      return '<span>' + quando(m.em).split(' ·')[0] + '</span>';
-    }).join('') + '</div>';
-
-    h += '<div class="pa-leg">' +
-           '<span><i style="background:var(--bike)"></i>Sistólica</span>' +
-           '<span><i style="background:var(--swim)"></i>Diastólica</span>' +
+    /* A media e o numero que o medico usa; a medida solta nao fecha nada. */
+    var m7 = media(ultimosDias(ms, 7));
+    var m30 = media(ultimosDias(ms, 30));
+    var base = m30 || media(ms);
+    var fb = base ? faixa(base.sis, base.dia) : null;
+    h += '<div class="pa-cards">' +
+           cartaoMedia('M\u00e9dia 7 dias', m7) +
+           cartaoMedia('M\u00e9dia 30 dias', m30) +
+           '<div class="pa-c"><i>Classifica\u00e7\u00e3o</i><em style="color:' +
+             (fb ? fb.c : 'var(--tx3)') + '">' + (fb ? fb.n : '\u2014') + '</em></div>' +
          '</div>';
 
-    /* ultimas seis, em lista */
-    h += '<div class="pa-lista">' + ms.slice(-6).reverse().map(function(m){
-      var ff = faixa(m.sis, m.dia);
-      return '<div class="pa-lin">' +
-        '<b>' + m.sis + '/' + m.dia + '</b>' +
-        '<span class="q">' + quando(m.em) + (m.pul ? ' · ' + m.pul + ' bpm' : '') + '</span>' +
-        '<span class="p" style="color:' + ff.c + '">' + ff.n.toUpperCase() + '</span>' +
-        (m.pos ? '<span class="p">' + m.pos + '</span>' : '') +
-        '<button class="x" type="button" data-apagar="' + m.chave +
-          '" aria-label="Apagar">×</button>' +
-      '</div>';
-    }).join('') + '</div>';
+    var manha = ms.filter(function(m){ var x = horaDe(m.em); return x >= 0 && x < 12 });
+    var noite = ms.filter(function(m){ return horaDe(m.em) >= 12 });
+    if(manha.length >= 3 && noite.length >= 3){
+      var a1 = media(manha), a2 = media(noite);
+      h += '<div class="pa-hn">' +
+             '<span>Manh\u00e3 <b>' + a1.sis + '/' + a1.dia + '</b> \u00b7 ' + a1.n + '</span>' +
+             '<span>Tarde e noite <b>' + a2.sis + '/' + a2.dia + '</b> \u00b7 ' + a2.n + '</span>' +
+           '</div>';
+    }
+
+    var dist = ultimosDias(ms, 30), rotD = 'Distribui\u00e7\u00e3o \u00b7 \u00faltimos 30 dias';
+    if(dist.length < 3){ dist = ms; rotD = 'Distribui\u00e7\u00e3o \u00b7 todas as medidas' }
+    h += '<p class="pa-rot">' + rotD + '</p>' + distribuicao(dist);
+
+    var tend = tendencia(ms);
+    if(tend){
+      h += '<p class="pa-rot">M\u00e9dia por m\u00eas</p>' + tend +
+           '<div class="pa-leg">' +
+             '<span><i style="background:var(--bike)"></i>Sist\u00f3lica</span>' +
+             '<span><i style="background:var(--swim)"></i>Diast\u00f3lica</span>' +
+           '</div>';
+    }
+
+    h += '<p class="pa-rot">Hist\u00f3rico</p>' +
+         '<div class="pa-hist">' + historico(ms) + '</div>';
 
     var semPos = ms.filter(function(m){ return !m.pos }).length;
-    h += '<p class="pa-nota">Faixas de referência, para leitura — quem interpreta é o médico.' +
+    h += '<p class="pa-nota">Faixas de refer\u00eancia, para leitura \u2014 quem interpreta \u00e9 o m\u00e9dico.' +
          (semPos === ms.length
-           ? ' Nenhuma medida traz a posição do corpo. Para investigar tontura ao ' +
-             'levantar, o que vale é medir deitado e depois em pé, com 1 e 3 minutos.'
+           ? ' Nenhuma medida traz a posi\u00e7\u00e3o do corpo. Para investigar tontura ao ' +
+             'levantar, o que vale \u00e9 medir deitado e depois em p\u00e9, com 1 e 3 minutos.'
            : '') +
          '</p>';
 
@@ -12601,6 +12777,13 @@ PARTE('pressao arterial', function(){
     if(b) b.onclick = formulario;
     Array.prototype.forEach.call(cartao.querySelectorAll('[data-apagar]'), function(x){
       x.onclick = function(){ apagar(x.getAttribute('data-apagar')) };
+    });
+    Array.prototype.forEach.call(cartao.querySelectorAll('[data-mes]'), function(x){
+      x.onclick = function(){
+        var k = x.getAttribute('data-mes');
+        mesAberto[k] = !mesAberto[k];
+        pintar();
+      };
     });
   }
 
