@@ -52,11 +52,13 @@
     {
      "nome": "Goblet Squat",
      "series": "3×12",
+     "peso": 9.071858188712795,
      "nota": "Descida em 3 segundos, subida firme. Joelho na linha do pe."
     },
     {
      "nome": "Romanian Deadlift (Dumbbell)",
      "series": "3×12",
+     "peso": 18.14371637742559,
      "nota": "Empurre o quadril para tras, coluna neutra."
     },
     {
@@ -72,16 +74,17 @@
     {
      "nome": "Seated Calf Raise",
      "series": "3×15",
+     "peso": 22.67964547178199,
      "nota": "O sentado pega o soleo, onde o aquiles do veterano rompe."
     },
     {
      "nome": "Plank",
-     "series": "3×40s",
+     "series": "3×43s",
      "nota": "Costelas para baixo, gluteo ativo, pescoco neutro."
     },
     {
      "nome": "Side Plank",
-     "series": "3×30s",
+     "series": "4×31s",
      "nota": "Core segura a postura no km 35. 30s de cada lado."
     }
    ]
@@ -197,11 +200,44 @@
    ]
   }
  },
- "cargas": {},
+ "cargas": {
+  "Goblet Squat": {
+   "nome": "Goblet Squat",
+   "primeiro": 9.071858188712795,
+   "primeiroEm": "2026-09-14",
+   "atual": 9.071858188712795,
+   "atualEm": "2026-09-14",
+   "series": "3×12",
+   "ganho": 0.0
+  },
+  "Romanian Deadlift (Dumbbell)": {
+   "nome": "Romanian Deadlift (Dumbbell)",
+   "primeiro": 18.14371637742559,
+   "primeiroEm": "2026-09-14",
+   "atual": 18.14371637742559,
+   "atualEm": "2026-09-14",
+   "series": "3×12",
+   "ganho": 0.0
+  },
+  "Seated Calf Raise": {
+   "nome": "Seated Calf Raise",
+   "primeiro": 22.67964547178199,
+   "primeiroEm": "2026-09-14",
+   "atual": 22.67964547178199,
+   "atualEm": "2026-09-14",
+   "series": "3×15",
+   "ganho": 0.0
+  }
+ },
  "historico": {
   "2026-W36": {
    "semana": "2026-W36",
    "kg": 0,
+   "sessoes": 1
+  },
+  "2026-W38": {
+   "semana": "2026-W38",
+   "kg": 1955,
    "sessoes": 1
   }
  },
@@ -210,12 +246,18 @@
    "data": "2026-09-02",
    "titulo": "FORCA - QUADRIL E CORE (BASE)",
    "min": 27
+  },
+  {
+   "data": "2026-09-14",
+   "titulo": "Forca - Pernas e Core (base)",
+   "min": 48,
+   "kg": 1955
   }
  ],
  "meta": {
-  "ultimaSync": "2026-09-14T19:28:29",
+  "ultimaSync": "2026-09-14T23:12:22",
   "totalRotinas": 7,
-  "totalTreinos": 1,
+  "totalTreinos": 2,
   "semanas": 12
  }
 }
