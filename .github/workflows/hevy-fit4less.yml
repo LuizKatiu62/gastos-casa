@@ -1,0 +1,253 @@
+name: Hevy Fit4Less
+
+# Cria no Hevy as 5 rotinas da Fit4Less, uma para cada rotina da
+# periodizacao ("Forca — Pernas e Core (base) · Fit4Less" e assim por
+# diante), para o Luiz ver o video de cada exercicio no Hevy.
+#
+# O PROGRAMA NAO MORA AQUI: e lido do treinos-v2/fix.js (var FIT4LESS),
+# o mesmo que o app mostra. Uma fonte so, para as duas nunca divergirem.
+#
+# REGRAS DE SEGURANCA — este robo:
+#   · so faz GET e POST. Nunca PUT, nunca DELETE: nao altera nem apaga
+#     rotina nenhuma. Foi um PUT que substituiu rotinas em agosto.
+#   · pula a rotina que ja existir com o mesmo nome
+#   · no modo "ensaio" (o padrao) nao cria nada: so mostra, exercicio
+#     por exercicio, qual video do catalogo do Hevy foi encontrado
+#   · no modo "criar" recusa tudo se algum exercicio nao tiver nome
+#     identico no catalogo — nada de palpite em rotina de verdade
+#   · poe as rotinas novas na MESMA pasta das rotinas de sempre, para
+#     o hevy-pull, que alimenta o app, enxergar as duas
+
+on:
+  workflow_dispatch:
+    inputs:
+      modo:
+        description: 'ensaio = so mostra, nao cria nada · criar = cria as rotinas'
+        required: true
+        default: ensaio
+        type: choice
+        options:
+          - ensaio
+          - criar
+
+jobs:
+  fit4less:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Rotinas Fit4Less no Hevy
+        env:
+          HEVY_API_KEY: ${{ secrets.HEVY_API_KEY }}
+          MODO: ${{ inputs.modo }}
+          FIX_JS: treinos-v2/fix.js
+        run: |
+          cat > fit4less.mjs <<'FIMDOSCRIPT'
+          import fs from 'fs';
+
+          const MODO  = process.env.MODO === 'criar' ? 'criar' : 'ensaio';
+          const CHAVE = process.env.HEVY_API_KEY;
+          const BASE  = 'https://api.hevyapp.com/v1';
+          const RESUMO = process.env.GITHUB_STEP_SUMMARY || '';
+          const FIM_PLIOMETRIA = '20/09';
+
+          const linhasResumo = [];
+          const resumo = t => linhasResumo.push(t);
+          function gravarResumo(){
+            if (RESUMO) fs.appendFileSync(RESUMO, linhasResumo.join('\n') + '\n');
+          }
+          function parar(msg){
+            console.error(msg);
+            resumo('**PAROU:** ' + msg);
+            gravarResumo();
+            process.exit(1);
+          }
+
+          if (!CHAVE) parar('Falta o secret HEVY_API_KEY no repositorio.');
+
+          /* ── o programa, lido do fix.js ── */
+          function lerPrograma(caminho){
+            const txt = fs.readFileSync(caminho, 'utf8');
+            const i = txt.indexOf('var FIT4LESS = {');
+            if (i < 0) parar('Nao achei "var FIT4LESS = {" em ' + caminho + '.');
+            let k = txt.indexOf('{', i), prof = 0, aspa = null;
+            for (; k < txt.length; k++){
+              const c = txt[k];
+              if (aspa){
+                if (c === '\\') { k++; continue; }
+                if (c === aspa) aspa = null;
+                continue;
+              }
+              if (c === '"' || c === "'") { aspa = c; continue; }
+              if (c === '{') prof++;
+              if (c === '}' && --prof === 0) break;
+            }
+            const corpo = txt.slice(txt.indexOf('{', i), k + 1);
+            return new Function('return (' + corpo + ');')();
+          }
+          const PROGRAMA = lerPrograma(process.env.FIX_JS);
+          const CHAVES = Object.keys(PROGRAMA);
+          if (CHAVES.length !== 5) parar('Esperava 5 rotinas no FIT4LESS e achei ' + CHAVES.length + '.');
+
+          /* ── Hevy: so leitura ate o modo criar ── */
+          const cab = { 'api-key': CHAVE, 'Content-Type': 'application/json' };
+
+          async function pegar(caminho){
+            const r = await fetch(BASE + caminho, { headers: cab });
+            if (r.status === 401) parar('Chave recusada pelo Hevy (401). Confira o secret HEVY_API_KEY.');
+            if (!r.ok) parar('GET ' + caminho + ' devolveu ' + r.status);
+            return r.json();
+          }
+
+          async function tudo(rota, campo, tam){
+            const out = [];
+            for (let p = 1; p <= 60; p++){
+              const j = await pegar(rota + '?page=' + p + '&pageSize=' + tam);
+              const lote = j[campo] || [];
+              out.push(...lote);
+              if (lote.length < tam || (j.page_count && p >= j.page_count)) break;
+            }
+            return out;
+          }
+
+          async function criar(caminho, corpo){
+            const r = await fetch(BASE + caminho, { method: 'POST', headers: cab, body: JSON.stringify(corpo) });
+            const texto = await r.text();
+            if (!r.ok) parar('POST ' + caminho + ' devolveu ' + r.status + ': ' + texto.slice(0, 300));
+            return texto;
+          }
+
+          const nrm = s => String(s || '')
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase().replace(/[^a-z0-9]/g, '');
+          const semAcento = s => String(s || '').toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+          const ehCasa = t => /\bcasa\b/.test(semAcento(t));
+          const ehFit  = t => /fit\s*4\s*less/.test(semAcento(t));
+
+          /* Candidatos por palavras, so para o ensaio sugerir nomes. */
+          function parecidos(nome, lista){
+            const pal = String(nome).split(/[^A-Za-z]+/).map(nrm).filter(p => p.length >= 3);
+            return lista
+              .map(t => ({ t, n: pal.filter(p => nrm(t.title).includes(p)).length }))
+              .filter(x => x.n > 0)
+              .sort((a, b) => b.n - a.n || a.t.title.length - b.t.title.length)
+              .slice(0, 4)
+              .map(x => x.t.title);
+          }
+
+          /* "3×10" -> 3 series de 10 · "3×10 cada" idem, cada perna ·
+             "3×40s" -> 40 segundos */
+          function series(txt){
+            const m = String(txt || '').match(/(\d+)\s*[x\u00d7]\s*(\d+)\s*(s|seg)?\b/i);
+            if (!m) return null;
+            const n = Math.min(parseInt(m[1], 10), 10), v = parseInt(m[2], 10), tempo = !!m[3];
+            return Array.from({ length: n }, () => ({
+              type: 'normal', weight_kg: null,
+              reps: tempo ? null : v, distance_meters: null,
+              duration_seconds: tempo ? v : null, custom_metric: null
+            }));
+          }
+
+          (async () => {
+            console.log('Modo: ' + MODO.toUpperCase());
+            resumo('## Rotinas Fit4Less no Hevy — modo ' + MODO.toUpperCase());
+            resumo('');
+
+            const templates = await tudo('/exercise_templates', 'exercise_templates', 100);
+            const exato = {};
+            for (const t of templates) if (!exato[nrm(t.title)]) exato[nrm(t.title)] = t;
+            const rotinas = await tudo('/routines', 'routines', 10);
+            console.log('Catalogo: ' + templates.length + ' exercicios · Rotinas na conta: ' + rotinas.length);
+            resumo('Catálogo do Hevy: ' + templates.length + ' exercícios · rotinas na conta: ' + rotinas.length);
+            resumo('');
+
+            let faltando = 0;
+            const planos = [];
+
+            for (const chave of CHAVES){
+              const prog = PROGRAMA[chave];
+              const base = rotinas.find(r => {
+                const t = semAcento(r.title);
+                return t.includes(chave) && !ehCasa(r.title) && !ehFit(r.title);
+              });
+              if (!base) parar('Nao achei no Hevy a rotina de sempre para "' + chave + '".');
+              const titulo = base.title + ' · Fit4Less';
+              const jaExiste = rotinas.some(r => nrm(r.title) === nrm(titulo));
+
+              resumo('### ' + titulo + (jaExiste ? ' — já existe, será pulada' : ''));
+              resumo('| Exercício do app | Séries | No catálogo do Hevy |');
+              resumo('|---|---|---|');
+              console.log('');
+              console.log('== ' + titulo + (jaExiste ? '  (ja existe: sera pulada)' : ''));
+
+              const exercicios = [];
+              for (const e of prog.exercicios){
+                const t = exato[nrm(e.nome)];
+                const sets = series(e.series);
+                if (!sets) parar('Series ilegiveis em "' + e.nome + '": ' + e.series);
+                if (t){
+                  resumo('| ' + e.nome + ' | ' + e.series + ' | ✅ ' + t.title + ' |');
+                  console.log('  OK      ' + e.nome);
+                  const notas = [];
+                  if (/cada/i.test(e.series)) notas.push('Cada perna.');
+                  if (e.nota) notas.push(e.nota.charAt(0).toUpperCase() + e.nota.slice(1) + '.');
+                  exercicios.push({
+                    exercise_template_id: t.id,
+                    superset_id: null,
+                    rest_seconds: /2 min/.test(e.nota || '') ? 120 : 90,
+                    notes: notas.join(' ').slice(0, 250),
+                    sets
+                  });
+                }else{
+                  faltando++;
+                  const sug = parecidos(e.nome, templates);
+                  resumo('| ' + e.nome + ' | ' + e.series + ' | ❌ não achei · parecidos: ' + (sug.join(' / ') || '—') + ' |');
+                  console.log('  FALTA   ' + e.nome + '   parecidos: ' + (sug.join(' / ') || '-'));
+                }
+              }
+              resumo('');
+
+              const notas = ['Aquecimento: ' + prog.aquecimento + '.'];
+              if (prog.pliometria) notas.push(prog.pliometria + ' (só até ' + FIM_PLIOMETRIA + ').');
+              notas.push('Criada pelo app treinos-v2. Treino da Fit4Less: só aparelhos que não há em casa.');
+              planos.push({ titulo, jaExiste, pasta: base.folder_id, exercicios, notas: notas.join(' ') });
+            }
+
+            if (MODO === 'ensaio'){
+              const msg = faltando
+                ? 'ENSAIO: ' + faltando + ' exercicio(s) sem nome identico no catalogo. Nada foi criado.'
+                : 'ENSAIO: todos os exercicios existem no catalogo. Nada foi criado. Pode rodar no modo criar.';
+              console.log(''); console.log(msg);
+              resumo('**' + msg + '**');
+              gravarResumo();
+              return;
+            }
+
+            if (faltando) parar(faltando + ' exercicio(s) sem nome identico no catalogo. Nada foi criado. Rode o ensaio e me mande o resultado.');
+
+            let criadas = 0;
+            for (const p of planos){
+              if (p.jaExiste){ console.log('pulada (ja existe): ' + p.titulo); continue; }
+              await criar('/routines', { routine: {
+                title: p.titulo,
+                folder_id: p.pasta == null ? null : p.pasta,
+                notes: p.notas,
+                exercises: p.exercicios
+              }});
+              criadas++;
+              console.log('CRIADA: ' + p.titulo + '  (' + p.exercicios.length + ' exercicios)');
+              resumo('- ✅ criada: **' + p.titulo + '** (' + p.exercicios.length + ' exercícios)');
+            }
+            const fim = 'PRONTO: ' + criadas + ' rotina(s) criada(s). Nenhuma rotina existente foi alterada.';
+            console.log(''); console.log(fim);
+            resumo(''); resumo('**' + fim + '**');
+            gravarResumo();
+          })().catch(e => parar('FALHOU: ' + (e && e.message)));
+          FIMDOSCRIPT
+
+          node fit4less.mjs
