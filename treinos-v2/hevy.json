@@ -89,30 +89,24 @@
    "exercicios": [
     {
      "nome": "Hip Thrust (Smith Machine)",
-     "series": "3×8",
+     "series": "3×10",
+     "peso": 31.75150366049478,
      "nota": "Carga moderada, longe da falha; levante devagar."
     },
     {
      "nome": "Hip Abduction (Machine)",
-     "series": "2×15"
+     "series": "2×15",
+     "peso": 52.16318458509857
     },
     {
      "nome": "Hip Adduction (Machine)",
-     "series": "2×15"
-    },
-    {
-     "nome": "Back Extension (Hyperextension)",
-     "series": "2×12",
-     "nota": "Só o peso do corpo."
-    },
-    {
-     "nome": "Knee Raise Parallel Bars",
-     "series": "2×10",
-     "nota": "Na cadeira romana (captain's chair); se não houver, Crunch (Machine)."
+     "series": "2×15",
+     "peso": 86.18265279277155
     },
     {
      "nome": "Seated Calf Raise",
      "series": "2×15",
+     "peso": 22.67964547178199,
      "nota": "Na máquina de panturrilha sentado."
     }
    ]
@@ -381,8 +375,35 @@
    "primeiro": 22.67964547178199,
    "primeiroEm": "2026-09-14",
    "atual": 22.67964547178199,
-   "atualEm": "2026-09-14",
-   "series": "3×15",
+   "atualEm": "2026-09-16",
+   "series": "2×15",
+   "ganho": 0.0
+  },
+  "Hip Thrust (Smith Machine)": {
+   "nome": "Hip Thrust (Smith Machine)",
+   "primeiro": 31.75150366049478,
+   "primeiroEm": "2026-09-16",
+   "atual": 31.75150366049478,
+   "atualEm": "2026-09-16",
+   "series": "3×10",
+   "ganho": 0.0
+  },
+  "Hip Abduction (Machine)": {
+   "nome": "Hip Abduction (Machine)",
+   "primeiro": 52.16318458509857,
+   "primeiroEm": "2026-09-16",
+   "atual": 52.16318458509857,
+   "atualEm": "2026-09-16",
+   "series": "2×15",
+   "ganho": 0.0
+  },
+  "Hip Adduction (Machine)": {
+   "nome": "Hip Adduction (Machine)",
+   "primeiro": 86.18265279277155,
+   "primeiroEm": "2026-09-16",
+   "atual": 86.18265279277155,
+   "atualEm": "2026-09-16",
+   "series": "2×15",
    "ganho": 0.0
   }
  },
@@ -394,67 +415,83 @@
   },
   "2026-W38": {
    "semana": "2026-W38",
-   "kg": 1955,
-   "sessoes": 1
+   "kg": 7648,
+   "sessoes": 2
   }
  },
  "sessoes": [
   {
    "data": "2026-04-02",
    "titulo": "Apr 2 - ADAPTATION",
+   "hora": "14:20",
    "min": 2867,
    "kg": 846
   },
   {
    "data": "2026-04-20",
    "titulo": "Evening Workout☀️",
+   "hora": "18:11",
    "min": 58,
    "kg": 340
   },
   {
    "data": "2026-04-20",
    "titulo": "Morning workout ☀️",
+   "hora": "08:46",
    "min": 41,
    "kg": 113
   },
   {
    "data": "2026-04-21",
    "titulo": "Workout - 04/21/26",
+   "hora": "17:20",
    "min": 27,
    "kg": 1066
   },
   {
    "data": "2026-04-27",
    "titulo": "Knees exercise 1-2 weeks (copy) (copy)",
+   "hora": "18:59",
    "min": 35
   },
   {
    "data": "2026-04-28",
    "titulo": "Gym - 64km - 04/28/26",
+   "hora": "19:12",
    "min": 47,
    "kg": 1406
   },
   {
    "data": "2026-04-28",
    "titulo": "Knees exercise 1-2 weeks (copy) (copy)",
+   "hora": "19:09",
    "min": 24
   },
   {
    "data": "2026-09-02",
    "titulo": "FORCA - QUADRIL E CORE (BASE)",
+   "hora": "11:16",
    "min": 27
   },
   {
    "data": "2026-09-14",
    "titulo": "Forca - Pernas e Core (base)",
+   "hora": "18:08",
    "min": 48,
    "kg": 1955
+  },
+  {
+   "data": "2026-09-16",
+   "titulo": "Forca - Quadril e Core (pico) · Fit4Less",
+   "hora": "19:31",
+   "min": 30,
+   "kg": 5693
   }
  ],
  "meta": {
-  "ultimaSync": "2026-09-16T23:01:45",
+  "ultimaSync": "2026-09-16T23:49:31",
   "totalRotinas": 12,
-  "totalTreinos": 2,
+  "totalTreinos": 3,
   "semanas": 12,
   "semanasSessoes": 26
  }
