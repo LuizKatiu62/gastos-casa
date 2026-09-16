@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '06k';
+const FIX_VERSAO = '06l';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -10543,7 +10543,8 @@ PARTE('a aba coach e so da academia', function(){
       if(typeof window.bqAcademiaDoDia !== 'function') return [];
       var r = window.bqAcademiaDoDia(s.data);
       if(!r || !r.itens || !r.itens.length) return [];
-      return r.itens.map(function(it, i){
+      var aq = r.aquecimento ? [{ id: 'acAq', t: 'Aquecimento', d: r.aquecimento, tags: [] }] : [];
+      return aq.concat(r.itens.map(function(it, i){
         var tags = [];
         if(it.series) tags.push({t: it.series});
         if(it.peso)   tags.push({t: it.peso + ' kg', c: 'z'});
@@ -10556,7 +10557,7 @@ PARTE('a aba coach e so da academia', function(){
                  t: it.nome,
                  d: d,
                  tags: tags };
-      });
+      }));
     }catch(e){ return [] }
   }
 
@@ -10787,39 +10788,54 @@ PARTE('painel da academia', function(){
     return String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   }
   function ehDeCasa(nome){ return /\bcasa\b/.test(semAcento(nome)) }
+  function ehDaFit4less(nome){ return /fit\s*4\s*less/.test(semAcento(nome)) }
 
-  /* local: 'fit4less' ignora rotinas com "Casa" no nome; 'casa' so
-     aceita elas. Antes o casamento era por trecho do nome e pegava a
-     primeira: se voce criasse "Pernas e Core (base) · Casa" no Hevy,
-     a Fit4Less podia passar a mostrar a versao de casa.            */
-  function acharRotina(chave, local){
+  /* tipo:
+       'base'     — a rotina de sempre do Hevy (sem "Casa" nem "Fit4Less")
+       'casa'     — so rotinas com "Casa" no nome
+       'fit4less' — so rotinas com "Fit4Less" no nome
+     Antes o casamento era por trecho do nome e pegava a primeira: uma
+     rotina "... · Casa" criada no Hevy podia aparecer no lugar errado. */
+  function acharRotina(chave, tipo){
     if(!chave || !HEVY || !HEVY.rotinas) return null;
     var alvo = semAcento(chave);
-    var nomes = Object.keys(HEVY.rotinas).filter(function(n){
-      return semAcento(n).indexOf(alvo) >= 0;
-    });
-    var achou = nomes.filter(function(n){
-      return local === 'casa' ? ehDeCasa(n) : !ehDeCasa(n);
+    var achou = Object.keys(HEVY.rotinas).filter(function(n){
+      if(semAcento(n).indexOf(alvo) < 0) return false;
+      var c = ehDeCasa(n), f = ehDaFit4less(n);
+      if(tipo === 'casa') return c;
+      if(tipo === 'fit4less') return f;
+      return !c && !f;
     })[0];
     return achou ? HEVY.rotinas[achou] : null;
   }
 
   /* ══ ONDE VOCE TREINA HOJE: FIT4LESS OU CASA ══
-     Decisao do Luiz, 16/09/2026: escolher na hora, com a Fit4Less
-     como padrao. A escolha vale so para aquela data e fica neste
-     aparelho; no dia seguinte volta a Fit4Less.
+     Decisoes do Luiz, 16/09/2026:
+       · escolher na hora, com a Fit4Less como padrao; a escolha vale
+         so para aquela data e fica neste aparelho
+       · na Fit4Less, SO exercicio com aparelho que ele nao tem em casa.
+         Ir a academia para fazer ponte de gluteo e bird dog nao faz
+         sentido — foi o que a 06k mostrava, porque as 5 rotinas do
+         Hevy sao todas de casa (peso do corpo, elastico, halter).
 
-     Casa usa, nesta ordem:
-       1. a rotina do Hevy com "Casa" no nome, se voce criar uma
-       2. a rotina da academia adaptada pela tabela abaixo
+     De onde vem cada lista:
+       Fit4Less → rotina do Hevy com "Fit4Less" no nome, se existir;
+                  senao o programa FIT4LESS abaixo
+       Casa     → rotina do Hevy com "Casa" no nome, se existir;
+                  senao a rotina de sempre, passada pela adaptacao
 
-     O equipamento de casa (fotos de 16/09): estacao com polia alta e
+     Equipamento de casa (fotos de 16/09): estacao com polia alta e
      baixa, puxada e acessorio de extensora/flexora; halteres de 5 a
-     50 lb; barra olimpica e barra W; suportes e banco de supino sem
-     trava de seguranca; banco, step, elasticos, esteira e bike.     */
+     50 lb; barra olimpica e barra W; suportes e banco de supino SEM
+     trava de seguranca; banco, step, elasticos, esteira e bike.
+
+     Fit4Less (fit4less.ca): halteres de 5 a 75 lb, maquinas de forca,
+     Smith, racks, remo, escada; cadeira de massagem nos horarios com
+     equipe.                                                          */
   var LOCAL_PADRAO = 'fit4less';
   var KG_MAX_CASA = 22.7;                 // halter mais pesado: 50 lb
   var CHAVE_LOCAL = 'bq_local_';
+  var FIM_PLIOMETRIA = '2026-09-20';      // regra da periodizacao acima
 
   function localDe(iso){
     try{
@@ -10844,16 +10860,105 @@ PARTE('painel da academia', function(){
     velhas.forEach(function(kk){ localStorage.removeItem(kk) });
   }catch(e){}
 
+  /* ══ PROGRAMA DA FIT4LESS ══
+     Um por rotina da periodizacao, com o MESMO objetivo da rotina de
+     casa correspondente, mas so com o que a academia tem e a casa nao:
+     leg press, hack squat, Smith, cadeira de 45 graus, abdutora e
+     adutora, panturrilha sentado e em pe, abdominal na maquina,
+     cadeira romana, remo e escada.
+
+     Criterios, para um maratonista de 64 anos a 4 semanas da prova:
+       · 4 a 6 exercicios, 35 a 45 minutos
+       · pesado so na Construcao; Reducao e Manutencao longe da falha
+       · soleo sempre presente — e ele que segura o fim da maratona
+       · agachamento pesado so em maquina guiada: seguro sem parceiro
+       · pliometria (Jump Squat) so ate 20/09, e no aquecimento: e peso
+         do corpo, nao precisa de academia
+     Nomes no padrao do catalogo do Hevy, para a carga ganhar historico
+     quando voce registrar.                                           */
+  var FIT4LESS = {
+    'pernas e core (base)': {
+      aquecimento: '8 min no remo, leve',
+      exercicios: [
+        {nome:'Leg Press (Machine)', series:'3×10', nota:'pés na largura do quadril; desça até o joelho em 90°'},
+        {nome:'Bulgarian Split Squat (Smith Machine)', series:'3×8 cada', nota:'a barra guiada dá equilíbrio para pôr carga'},
+        {nome:'Back Extension (Weighted Hyperextension)', series:'3×10', nota:'banco de 45°; suba só até alinhar o corpo'},
+        {nome:'Seated Calf Raise (Machine)', series:'3×15', nota:'sóleo, o músculo do fim da maratona'},
+        {nome:'Calf Press (Machine)', series:'3×12', nota:'no leg press, amplitude completa'},
+        {nome:'Crunch (Machine)', series:'3×12', nota:'ao sair da máquina, levante devagar'}
+      ]},
+    'quadril e core (base)': {
+      aquecimento: '8 min na escada, leve',
+      exercicios: [
+        {nome:'Hip Thrust (Smith Machine)', series:'3×10', nota:'costas no banco, pausa de 1 s no alto; levante devagar'},
+        {nome:'Single Leg Press (Machine)', series:'3×10 cada', nota:'joelho alinhado com o pé, sem cair para dentro'},
+        {nome:'Hip Abduction (Machine)', series:'3×15', nota:'tronco um pouco à frente para pegar o glúteo médio'},
+        {nome:'Hip Adduction (Machine)', series:'3×15', nota:'volta controlada, sem soltar o peso'},
+        {nome:"Knee Raise (Captain's Chair)", series:'3×10', nota:'sem balanço; se não houver a cadeira, Crunch (Machine)'},
+        {nome:'Standing Calf Raise (Machine)', series:'3×12', nota:'pausa de 1 s embaixo, alongado'}
+      ]},
+    'maxima (pico)': {
+      aquecimento: '8 min no remo + 2 séries leves do Hack Squat',
+      pliometria: 'Jump Squat 3×5 ao fim do aquecimento',
+      exercicios: [
+        {nome:'Hack Squat (Machine)', series:'4×5', nota:'pesado; 2 min de descanso entre as séries'},
+        {nome:'Single Leg Press (Machine)', series:'3×6 cada', nota:'carga alta, desça em 2 s'},
+        {nome:'Back Extension (Weighted Hyperextension)', series:'3×8', nota:'anilha no peito'},
+        {nome:'Standing Calf Raise (Machine)', series:'4×8', nota:'carga alta'},
+        {nome:'Crunch (Machine)', series:'3×10', nota:'ao sair da máquina, levante devagar'}
+      ]},
+    'quadril e core (pico)': {
+      aquecimento: '6 min na escada, leve',
+      exercicios: [
+        {nome:'Hip Thrust (Smith Machine)', series:'3×8', nota:'carga moderada, longe da falha; levante devagar'},
+        {nome:'Hip Abduction (Machine)', series:'2×15', nota:''},
+        {nome:'Hip Adduction (Machine)', series:'2×15', nota:''},
+        {nome:'Back Extension (Hyperextension)', series:'2×12', nota:'só o peso do corpo'},
+        {nome:"Knee Raise (Captain's Chair)", series:'2×10', nota:'se não houver a cadeira, Crunch (Machine)'},
+        {nome:'Seated Calf Raise (Machine)', series:'2×15', nota:''}
+      ]},
+    'manutencao': {
+      aquecimento: '6 min no remo, leve',
+      exercicios: [
+        {nome:'Leg Press (Machine)', series:'2×8', nota:'carga do pico, longe da falha'},
+        {nome:'Hip Abduction (Machine)', series:'2×12', nota:''},
+        {nome:'Back Extension (Hyperextension)', series:'2×10', nota:'só o peso do corpo'},
+        {nome:'Seated Calf Raise (Machine)', series:'2×12', nota:''}
+      ]}
+  };
+
+  var AQUECIMENTO_CASA = '8 min na bike ou na esteira, leve';
+
+  function copiar(o){
+    var c = {};
+    Object.keys(o).forEach(function(k){ c[k] = o[k] });
+    return c;
+  }
+
+  function programaFit4less(chave, iso, base){
+    var p = FIT4LESS[semAcento(chave)];
+    if(!p) return null;
+    var aq = [p.aquecimento];
+    if(p.pliometria && iso <= FIM_PLIOMETRIA) aq.push(p.pliometria);
+    return {
+      titulo: base && base.titulo ? base.titulo : chave,
+      programa: 'fit4less',
+      aquecimento: aq.join(' · '),
+      exercicios: p.exercicios.map(function(e){
+        var c = copiar(e); c.peso = 0; return c;
+      })
+    };
+  }
+
   /* Troca de aparelho: [teste, nome em casa, observacao].
-     A ordem importa — a primeira regra que casa vence. Nomes no
-     padrao do catalogo do Hevy, para a carga de casa ganhar historico
-     proprio quando voce registrar. */
+     A ordem importa — a primeira regra que casa vence. */
   var TROCAS = [
     [/smith.*(squat|agach)|(squat|agach).*smith/, 'Squat (Barbell)', 'nos suportes, sem trava: carga que você controla'],
     [/smith.*(bench|supino)|(bench|supino).*smith/, 'Bench Press (Dumbbell)', ''],
     [/smith.*(lunge|split|afundo)|(lunge|split|afundo).*smith/, 'Bulgarian Split Squat (Dumbbell)', 'pé de trás no banco'],
     [/smith.*(hip thrust)|hip thrust.*smith/, 'Hip Thrust (Barbell)', 'costas no banco'],
     [/smith.*(calf|panturrilha)|(calf|panturrilha).*smith/, 'Standing Calf Raise (Dumbbell)', 'ponta do pé no step'],
+    [/single leg press/, 'Bulgarian Split Squat (Dumbbell)', 'pé de trás no banco'],
     [/leg press|hack squat|pendulum|belt squat|v squat/, 'Squat (Barbell)', 'nos suportes, sem trava: carga que você controla'],
     [/assisted.*(pull|chin)|barra assistid/, 'Lat Pulldown (Cable)', 'polia alta da estação'],
     [/assisted.*dip|paralela assistid/, 'Bench Dip', 'mãos no banco'],
@@ -10872,7 +10977,7 @@ PARTE('painel da academia', function(){
     [/seated calf|panturrilha sentad/, 'Seated Calf Raise (Dumbbell)', 'halter sobre os joelhos'],
     [/(calf|panturrilha).*(machine|maquina|press)|(machine|maquina).*(calf|panturrilha)/, 'Standing Calf Raise (Dumbbell)', 'ponta do pé no step'],
     [/back extension|hyperextension|lombar.*(machine|maquina)/, 'Superman', 'no chão, sem banco romano'],
-    [/crunch.*(machine|maquina)|abdominal.*(machine|maquina)/, 'Cable Crunch', 'polia alta da estação'],
+    [/captain|crunch.*(machine|maquina)|abdominal.*(machine|maquina)/, 'Cable Crunch', 'polia alta da estação'],
     [/(bicep|rosca|preacher).*(machine|maquina)/, 'EZ Bar Biceps Curl', 'barra W'],
     [/(tricep).*(machine|maquina)/, 'Triceps Pushdown (Cable)', 'polia alta da estação'],
     [/rowing machine|remo ergo|ergometer/, 'Bike no rolo', 'mesmo tempo, mesma intensidade'],
@@ -10882,24 +10987,26 @@ PARTE('painel da academia', function(){
   /* a estacao de casa tem o acessorio de rolos: estas ficam */
   var FICAM = /leg extension|leg curl|extensora|flexora/;
 
-  /* So troca o que e de academia. Halter, barra, polia, elastico e
-     peso do corpo existem em casa: "Lat Pulldown (Cable)" continua
-     igual, em vez de virar ele mesmo com "no lugar de" do lado. */
-  var SO_NA_ACADEMIA = /machine|maquina|smith|plate loaded|selectorized|leg press|hack squat|pendulum|belt squat|v squat|assisted|assistid|pec deck|butterfly|glute drive|rowing|ergometer|remo ergo|elliptical|eliptic|stair|escada|t bar row|chest supported|hyperextension|back extension|calf press/;
+  /* O que so existe na academia. Serve nos dois sentidos: a Casa troca
+     tudo que casa aqui, e a Fit4Less so pode ter exercicio que casa
+     aqui (conferido no teste e em bqLocal.conferir()).               */
+  var SO_NA_ACADEMIA = /machine|maquina|smith|plate loaded|selectorized|leg press|hack squat|pendulum|belt squat|v squat|assisted|assistid|pec deck|butterfly|glute drive|rowing|ergometer|remo ergo|elliptical|eliptic|stair|escada|t bar row|chest supported|hyperextension|back extension|calf press|captain/;
+
+  function precisaDeAcademia(nome){
+    var t = semAcento(nome);
+    return SO_NA_ACADEMIA.test(t) && !FICAM.test(t);
+  }
 
   function trocaDeCasa(nome){
     var t = semAcento(nome);
-    if(FICAM.test(t)) return null;
-    if(!SO_NA_ACADEMIA.test(t)) return null;
+    if(!precisaDeAcademia(nome)) return null;
     for(var i = 0; i < TROCAS.length; i++){
       if(TROCAS[i][0].test(t)){
         if(semAcento(TROCAS[i][1]) === t) return null;
         return {nome: TROCAS[i][1], nota: TROCAS[i][2]};
       }
     }
-    if(/machine|maquina|plate loaded|selectorized/.test(t))
-      return {nome: nome, nota: 'máquina que não existe em casa: faça com halter ou polia', semPar: true};
-    return null;
+    return {nome: nome, nota: 'máquina que não existe em casa: faça com halter ou polia', semPar: true};
   }
 
   function notaDeCasa(nome){
@@ -10911,7 +11018,13 @@ PARTE('painel da academia', function(){
     return '';
   }
 
-  function ehHalter(nome){ return /dumbbell|halter/.test(semAcento(nome)) }
+  /* goblet e sempre com halter, mesmo quando o nome nao diz */
+  function ehHalter(nome){ return /dumbbell|halter|goblet/.test(semAcento(nome)) }
+  function ehPliometria(nome){ return /jump|pogo|\bhops?\b|salto|pliometr/.test(semAcento(nome)) }
+  function ehAgachamentoComBarra(nome){
+    var t = semAcento(nome);
+    return /back squat|agachamento livre/.test(t) || (/squat/.test(t) && /barbell/.test(t));
+  }
 
   /* halter acima de 50 lb nao existe em casa */
   function pesoEmCasa(nome, peso){
@@ -10920,23 +11033,36 @@ PARTE('painel da academia', function(){
             nota: 'seu halter vai até 50 lb: suba as repetições'};
   }
 
-  /* Nao altera a rotina que veio do Hevy: devolve uma copia. */
-  function adaptarParaCasa(r){
-    var c = {};
-    Object.keys(r).forEach(function(k){ c[k] = r[k] });
+  /* Nao altera a rotina que veio do Hevy: devolve uma copia.
+     Alem das trocas de aparelho, duas regras da periodizacao:
+       · Maxima: agachamento pesado com barra nao se faz em casa, onde
+         os suportes nao tem trava — vira bulgaro com halter
+       · pliometria sai depois de 20/09                              */
+  function adaptarParaCasa(r, chave, iso){
+    var maxima = semAcento(chave).indexOf('maxima') >= 0;
+    var c = copiar(r);
     c.adaptada = true;
-    c.exercicios = (r.exercicios || []).map(function(e){
-      var novo = {};
-      Object.keys(e).forEach(function(k){ novo[k] = e[k] });
+    c.aquecimento = AQUECIMENTO_CASA;
+    c.trocas = 0;
+    c.exercicios = (r.exercicios || []).filter(function(e){
+      return !(ehPliometria(e.nome) && iso > FIM_PLIOMETRIA);
+    }).map(function(e){
+      var novo = copiar(e);
       var tr = trocaDeCasa(e.nome);
+      if(maxima && ehAgachamentoComBarra(e.nome)){
+        tr = {nome: 'Bulgarian Split Squat (Dumbbell)',
+              nota: 'agachamento pesado sem trava de segurança fica para a Fit4Less'};
+      }
       if(tr && !tr.semPar){
         novo.nome = tr.nome;
         novo.antes = e.nome;
         novo.peso = 0;              // carga de maquina nao vale para halter
         novo.nota = tr.nota;
+        c.trocas++;
       }else if(tr){
         novo.nota = tr.nota;
         novo.peso = 0;
+        c.trocas++;
       }else{
         var p = pesoEmCasa(e.nome, e.peso);
         novo.peso = p.peso;
@@ -10947,12 +11073,25 @@ PARTE('painel da academia', function(){
     return c;
   }
 
+  function daRotinaDoHevy(r, local){
+    var c = copiar(r);
+    c.doHevy = local;
+    if(!c.aquecimento) c.aquecimento = local === 'casa' ? AQUECIMENTO_CASA : '';
+    return c;
+  }
+
   function rotinaNoLocal(chave, iso){
-    if(localDe(iso) !== 'casa') return acharRotina(chave, 'fit4less');
-    var propria = acharRotina(chave, 'casa');
-    if(propria) return propria;
-    var base = acharRotina(chave, 'fit4less');
-    return base ? adaptarParaCasa(base) : null;
+    var base = acharRotina(chave, 'base');
+    if(localDe(iso) === 'casa'){
+      var pc = acharRotina(chave, 'casa');
+      if(pc) return daRotinaDoHevy(pc, 'casa');
+      return base ? adaptarParaCasa(base, chave, iso) : null;
+    }
+    var pf = acharRotina(chave, 'fit4less');
+    if(pf) return daRotinaDoHevy(pf, 'fit4less');
+    /* sem Hevy carregado nao ha titulo de verdade: nao invento um */
+    if(!base) return null;
+    return programaFit4less(chave, iso, base) || base;
   }
 
   function mudarLocal(iso, local){
@@ -11051,19 +11190,30 @@ PARTE('painel da academia', function(){
     }).join('');
 
     var feito = fezNoDia(iso);
+    var massagem = 'Depois: cadeira de massagem, nos horários com equipe. Levante devagar.';
     var rodape = '';
-    if(local === 'casa' && r.adaptada)
-      rodape = 'Adaptada da rotina da academia. No Hevy, abra a rotina de sempre e use '
+    if(local === 'casa' && r.adaptada && r.trocas)
+      rodape = 'Sua rotina do Hevy, adaptada para casa. No Hevy, abra a rotina de sempre e use '
              + '<b>Substituir exercício</b> nos itens marcados.';
+    else if(local === 'casa' && r.adaptada)
+      rodape = 'Sua rotina do Hevy, que já é toda de casa.';
     else if(local === 'casa')
       rodape = 'Rotina de casa do seu Hevy.';
+    else if(r.programa === 'fit4less')
+      rodape = 'Só aparelhos que você não tem em casa. Esta rotina ainda não existe no Hevy: '
+             + 'lá, comece um <b>treino vazio</b> e adicione estes exercícios.<br>' + massagem;
     else
-      rodape = 'Depois: cadeira de massagem, nos horários com equipe. Levante devagar.';
+      rodape = 'Rotina Fit4Less do seu Hevy.<br>' + massagem;
+
+    var aquec = r.aquecimento
+      ? '<div style="padding:0 0 6px;margin-bottom:4px;border-bottom:1px solid rgba(255,255,255,.08)">'
+        + '<span style="opacity:.6">Aquecimento:</span> ' + esc(r.aquecimento) + '</div>'
+      : '';
 
     return '<div class="bqa-t">Hoje · 5:30 · ' + esc(r.titulo)
          + (feito ? ' <span style="color:#3FD98A">✓ feito</span>' : '') + '</div>'
          + seletorLocal(iso, local)
-         + '<div class="bqa-u" style="font-size:13px">' + linhas
+         + '<div class="bqa-u" style="font-size:13px">' + aquec + linhas
          + '<div style="font-size:11.5px;opacity:.6;margin-top:8px">' + rodape + '</div></div>';
   }
 
@@ -11242,6 +11392,8 @@ PARTE('painel da academia', function(){
       var r = rotinaDoDia(n, iso);
       if(!r) return null;
       return { nome: r.titulo || 'Academia',
+               local: localDe(iso),
+               aquecimento: r.aquecimento || '',
                itens: (r.exercicios || []).map(function(e){
                  return { nome: e.nome, series: e.series || '', peso: e.peso || 0,
                           antes: e.antes || '', nota: e.nota || '' };
@@ -11256,19 +11408,41 @@ PARTE('painel da academia', function(){
     de: localDe,
     mudar: mudarLocal,
     troca: trocaDeCasa,
+    programa: FIT4LESS,
+    /* exercicio da Fit4Less que daria para fazer em casa — deve ser [] */
+    conferir: function(){
+      var ruins = [];
+      Object.keys(FIT4LESS).forEach(function(k){
+        FIT4LESS[k].exercicios.forEach(function(e){
+          if(!precisaDeAcademia(e.nome)) ruins.push(k + ': ' + e.nome);
+        });
+      });
+      if(HEVY && HEVY.rotinas) Object.keys(HEVY.rotinas).forEach(function(n){
+        if(!ehDaFit4less(n)) return;
+        (HEVY.rotinas[n].exercicios || []).forEach(function(e){
+          if(!precisaDeAcademia(e.nome)) ruins.push(n + ': ' + e.nome);
+        });
+      });
+      return ruins;
+    },
+    /* cada rotina de sempre: como fica na Fit4Less e em casa, hoje */
     relatorio: function(){
       if(!HEVY || !HEVY.rotinas) return 'Hevy ainda nao carregou';
-      var out = [];
-      Object.keys(HEVY.rotinas).forEach(function(n){
-        if(ehDeCasa(n)) return;
-        var a = adaptarParaCasa(HEVY.rotinas[n]);
-        (a.exercicios || []).forEach(function(e, i){
-          var orig = (HEVY.rotinas[n].exercicios || [])[i] || {};
-          out.push({rotina: n, academia: orig.nome, casa: e.nome, nota: e.nota || ''});
+      var hoje = hojeIso(), out = [];
+      Object.keys(FIT4LESS).forEach(function(k){
+        var base = acharRotina(k, 'base');
+        var f = programaFit4less(k, hoje, base);
+        var c = base ? adaptarParaCasa(base, k, hoje) : null;
+        (f ? f.exercicios : []).forEach(function(e){
+          out.push({rotina: k, local: 'Fit4Less', exercicio: e.nome, series: e.series});
+        });
+        (c ? c.exercicios : []).forEach(function(e){
+          out.push({rotina: k, local: 'Casa', exercicio: e.nome, series: e.series,
+                    obs: e.antes ? 'no lugar de ' + e.antes : (e.nota || '')});
         });
       });
       if(typeof console.table === 'function') console.table(out);
-      return out.length + ' exercicios';
+      return out.length + ' linhas';
     }
   };
 
