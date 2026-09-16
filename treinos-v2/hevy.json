@@ -1,5 +1,40 @@
 {
  "rotinas": {
+  "FORCA - QUADRIL E CORE (BASE) · Fit4Less": {
+   "titulo": "FORCA - QUADRIL E CORE (BASE) · Fit4Less",
+   "exercicios": [
+    {
+     "nome": "Hip Thrust (Smith Machine)",
+     "series": "3×10",
+     "nota": "Costas no banco, pausa de 1 s no alto; levante devagar."
+    },
+    {
+     "nome": "Single Leg Press (Machine)",
+     "series": "3×10",
+     "nota": "Cada perna. Joelho alinhado com o pé, sem cair para dentro."
+    },
+    {
+     "nome": "Hip Abduction (Machine)",
+     "series": "3×15",
+     "nota": "Tronco um pouco à frente para pegar o glúteo médio."
+    },
+    {
+     "nome": "Hip Adduction (Machine)",
+     "series": "3×15",
+     "nota": "Volta controlada, sem soltar o peso."
+    },
+    {
+     "nome": "Knee Raise Parallel Bars",
+     "series": "3×10",
+     "nota": "Na cadeira romana (captain's chair), sem balanço; se não houver, Crunch (Machine)."
+    },
+    {
+     "nome": "Standing Calf Raise (Machine)",
+     "series": "3×12",
+     "nota": "Pausa de 1 s embaixo, alongado."
+    }
+   ]
+  },
   "FORCA - QUADRIL E CORE (BASE)": {
    "titulo": "FORCA - QUADRIL E CORE (BASE)",
    "exercicios": [
@@ -22,6 +57,128 @@
     {
      "nome": "Single Leg Standing Calf Raise",
      "series": "3×12"
+    }
+   ]
+  },
+  "Forca - Manutencao · Fit4Less": {
+   "titulo": "Forca - Manutencao · Fit4Less",
+   "exercicios": [
+    {
+     "nome": "Leg Press (Machine)",
+     "series": "2×8",
+     "nota": "Carga do pico, longe da falha."
+    },
+    {
+     "nome": "Hip Abduction (Machine)",
+     "series": "2×12"
+    },
+    {
+     "nome": "Back Extension (Hyperextension)",
+     "series": "2×10",
+     "nota": "Só o peso do corpo."
+    },
+    {
+     "nome": "Seated Calf Raise",
+     "series": "2×12",
+     "nota": "Na máquina de panturrilha sentado."
+    }
+   ]
+  },
+  "Forca - Quadril e Core (pico) · Fit4Less": {
+   "titulo": "Forca - Quadril e Core (pico) · Fit4Less",
+   "exercicios": [
+    {
+     "nome": "Hip Thrust (Smith Machine)",
+     "series": "3×8",
+     "nota": "Carga moderada, longe da falha; levante devagar."
+    },
+    {
+     "nome": "Hip Abduction (Machine)",
+     "series": "2×15"
+    },
+    {
+     "nome": "Hip Adduction (Machine)",
+     "series": "2×15"
+    },
+    {
+     "nome": "Back Extension (Hyperextension)",
+     "series": "2×12",
+     "nota": "Só o peso do corpo."
+    },
+    {
+     "nome": "Knee Raise Parallel Bars",
+     "series": "2×10",
+     "nota": "Na cadeira romana (captain's chair); se não houver, Crunch (Machine)."
+    },
+    {
+     "nome": "Seated Calf Raise",
+     "series": "2×15",
+     "nota": "Na máquina de panturrilha sentado."
+    }
+   ]
+  },
+  "Forca - Maxima (pico) · Fit4Less": {
+   "titulo": "Forca - Maxima (pico) · Fit4Less",
+   "exercicios": [
+    {
+     "nome": "Hack Squat (Machine)",
+     "series": "4×5",
+     "nota": "Pesado; 2 min de descanso entre as séries."
+    },
+    {
+     "nome": "Single Leg Press (Machine)",
+     "series": "3×6",
+     "nota": "Cada perna. Carga alta, desça em 2 s."
+    },
+    {
+     "nome": "Back Extension (Weighted Hyperextension)",
+     "series": "3×8",
+     "nota": "Anilha no peito."
+    },
+    {
+     "nome": "Standing Calf Raise (Machine)",
+     "series": "4×8",
+     "nota": "Carga alta."
+    },
+    {
+     "nome": "Crunch (Machine)",
+     "series": "3×10",
+     "nota": "Ao sair da máquina, levante devagar."
+    }
+   ]
+  },
+  "Forca - Pernas e Core (base) · Fit4Less": {
+   "titulo": "Forca - Pernas e Core (base) · Fit4Less",
+   "exercicios": [
+    {
+     "nome": "Squat (Smith Machine)",
+     "series": "3×8",
+     "nota": "Barra guiada: carga com segurança, sem parceiro; desça até a coxa paralela."
+    },
+    {
+     "nome": "Leg Press (Machine)",
+     "series": "3×10",
+     "nota": "Pés na largura do quadril; desça até o joelho em 90°."
+    },
+    {
+     "nome": "Back Extension (Weighted Hyperextension)",
+     "series": "3×10",
+     "nota": "Banco de 45°; suba só até alinhar o corpo."
+    },
+    {
+     "nome": "Seated Calf Raise",
+     "series": "3×15",
+     "nota": "Na máquina de panturrilha sentado; sóleo, o músculo do fim da maratona."
+    },
+    {
+     "nome": "Calf Press (Machine)",
+     "series": "3×12",
+     "nota": "No leg press, amplitude completa."
+    },
+    {
+     "nome": "Crunch (Machine)",
+     "series": "3×12",
+     "nota": "Ao sair da máquina, levante devagar."
     }
    ]
   },
@@ -255,8 +412,8 @@
   }
  ],
  "meta": {
-  "ultimaSync": "2026-09-16T11:48:02",
-  "totalRotinas": 7,
+  "ultimaSync": "2026-09-16T13:57:42",
+  "totalRotinas": 12,
   "totalTreinos": 2,
   "semanas": 12
  }
