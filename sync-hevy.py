@@ -21,7 +21,8 @@ Roda pelo workflow hevy-pull.yml. Secrets necessarios:
 """
 
 import json, os, sys, time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 import urllib.request as urlreq
 import urllib.error
 
@@ -37,6 +38,10 @@ SEMANAS_HIST  = 12
 # que vai ate 180 dias. As sessoes entao vem de 26 semanas; cargas e
 # historico continuam em 12 (a progressao compara com 12 semanas).
 SEMANAS_SESSOES = 26
+# O Hevy devolve o horario em UTC e o robo roda em UTC. Sem converter,
+# um treino depois das 21h (horario do Atlantico) ganhava a data do dia
+# seguinte e o app dizia que o dia do treino ficou sem registro.
+FUSO = ZoneInfo("America/Moncton")
 
 
 def log(msg):
@@ -44,7 +49,9 @@ def log(msg):
 
 
 # ── Hevy ──────────────────────────────────────────────────────────────
-def hevy_get(caminho, chave):
+def hevy_get(caminho, chave, fim_se_404=False):
+    """GET no Hevy. Com fim_se_404, uma pagina que nao existe devolve None
+    em vez de parar o robo (ver paginar)."""
     req = urlreq.Request(HEVY_BASE + caminho, headers={"api-key": chave})
     try:
         with urlreq.urlopen(req, timeout=30) as r:
@@ -52,17 +59,31 @@ def hevy_get(caminho, chave):
     except urllib.error.HTTPError as e:
         if e.code == 401:
             raise SystemExit("Chave recusada pelo Hevy (401). Confira HEVY_API_KEY.")
+        if e.code == 404 and fim_se_404:
+            return None
         raise SystemExit(f"GET {caminho} devolveu {e.code}")
 
 
 def paginar(rota, campo, chave, tam=10, limite=40):
-    """Junta as paginas. O Hevy pagina rotinas e treinos separadamente."""
+    """Junta as paginas. O Hevy pagina rotinas e treinos separadamente.
+
+    16/09/2026: com exatamente 10 treinos, a pagina 1 vinha cheia, o robo
+    pedia a pagina 2, o Hevy respondia 404 (pagina que nao existe) e o
+    robo parava ANTES de gravar — o treino do dia nunca chegava ao app.
+    Agora: para quando chega em page_count, e 404 depois da pagina 1 e
+    simplesmente o fim da lista. Na pagina 1, 404 continua sendo erro.
+    """
     out = []
     for p in range(1, limite + 1):
-        j = hevy_get(f"{rota}?page={p}&pageSize={tam}", chave)
+        j = hevy_get(f"{rota}?page={p}&pageSize={tam}", chave, fim_se_404=(p > 1))
+        if j is None:
+            break
         lote = j.get(campo) or []
         out.extend(lote)
+        total_paginas = j.get("page_count")
         if len(lote) < tam:
+            break
+        if isinstance(total_paginas, int) and p >= total_paginas:
             break
         time.sleep(0.2)
     return out
@@ -114,9 +135,27 @@ def nome_exercicio(ex):
     return ex.get("title") or ex.get("name") or ex.get("exercise_template_id") or "Exercício"
 
 
+def instante(bruto):
+    """ISO do Hevy ("...Z" ou "+00:00") -> datetime no fuso local, ou None."""
+    try:
+        s = str(bruto or "").strip().replace("Z", "+00:00")
+        d = datetime.fromisoformat(s)
+        if d.tzinfo is None:
+            d = d.replace(tzinfo=timezone.utc)
+        return d.astimezone(FUSO)
+    except Exception:
+        return None
+
+
 def data_do_treino(w):
     bruto = w.get("start_time") or w.get("created_at") or ""
-    return str(bruto)[:10]
+    d = instante(bruto)
+    return d.strftime("%Y-%m-%d") if d else str(bruto)[:10]
+
+
+def hora_do_treino(w):
+    d = instante(w.get("start_time") or w.get("created_at"))
+    return d.strftime("%H:%M") if d else ""
 
 
 def volume_do_treino(w):
@@ -248,15 +287,12 @@ def main():
         if data < corte_sessoes:
             continue
         dur = 0
-        try:
-            ini = w.get("start_time"); fim = w.get("end_time")
-            if ini and fim:
-                a1 = datetime.strptime(ini[:19], "%Y-%m-%dT%H:%M:%S")
-                a2 = datetime.strptime(fim[:19], "%Y-%m-%dT%H:%M:%S")
-                dur = max(0, int((a2 - a1).total_seconds() // 60))
-        except Exception:
-            dur = 0
+        a1, a2 = instante(w.get("start_time")), instante(w.get("end_time"))
+        if a1 and a2:
+            dur = max(0, int((a2 - a1).total_seconds() // 60))
         item = {"data": data, "titulo": w.get("title") or "Treino"}
+        if hora_do_treino(w):
+            item["hora"] = hora_do_treino(w)
         if dur:
             item["min"] = dur
         v = volume_do_treino(w)
