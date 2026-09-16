@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '06r';
+const FIX_VERSAO = '06s';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -10891,6 +10891,7 @@ PARTE('painel da academia', function(){
     for(var li = 0; li < localStorage.length; li++){
       var kk = localStorage.key(li);
       if(kk && kk.indexOf(CHAVE_LOCAL) === 0 && kk.slice(CHAVE_LOCAL.length) < lim) velhas.push(kk);
+      if(kk && kk.indexOf('bq_troca_') === 0 && kk.slice(9, 19) < lim) velhas.push(kk);
     }
     velhas.forEach(function(kk){ localStorage.removeItem(kk) });
   }catch(e){}
@@ -11304,6 +11305,109 @@ PARTE('painel da academia', function(){
          + '<div class="bqa-u">' + esc(f.nota) + '</div>';
   }
 
+  /* ══ TROCAR UM EXERCICIO ══
+     Pedido do Luiz, 16/09/2026: "quando nao consigo fazer um
+     exercicio, quero a opcao de trocar por outro semelhante".
+     Cada exercicio ganha "trocar"; aparecem ate 4 do MESMO movimento
+     que existem no lugar escolhido (Fit4Less ou Casa). A troca vale
+     para aquele dia e aquele lugar, fica neste aparelho, e se desfaz
+     com um toque. Na Fit4Less o app lembra de fazer a mesma troca no
+     Hevy (Substituir exercicio), para a carga ir para o nome certo.
+
+     Grupos por movimento. Nomes da Fit4Less no padrao do catalogo do
+     Hevy; os marcados no ensaio de 16/09 como existentes vem primeiro. */
+  var GRUPOS = [
+    {nome: 'quadríceps, unilateral', teste: /single leg press|split squat|bulgar|step ?up|lunge|afundo/,
+     fit4less: ['Single Leg Press (Machine)', 'Leg Press (Machine)', 'Hack Squat (Machine)', 'Leg Extension (Machine)'],
+     casa: ['Bulgarian Split Squat (Dumbbell)', 'Step Up', 'Reverse Lunge (Dumbbell)', 'Goblet Squat']},
+    {nome: 'quadríceps', teste: /squat|leg press|agach|leg extension|extensora/,
+     fit4less: ['Leg Press (Machine)', 'Hack Squat (Machine)', 'Squat (Machine)', 'Squat (Smith Machine)', 'Leg Extension (Machine)'],
+     casa: ['Goblet Squat', 'Bulgarian Split Squat (Dumbbell)', 'Leg Extension (Machine)', 'Step Up']},
+    {nome: 'posterior e lombar', teste: /back extension|hyperextension|romanian|deadlift|leg curl|flexora|superman|good morning/,
+     fit4less: ['Back Extension (Hyperextension)', 'Back Extension (Weighted Hyperextension)', 'Seated Leg Curl (Machine)', 'Romanian Deadlift (Dumbbell)'],
+     casa: ['Romanian Deadlift (Dumbbell)', 'Lying Leg Curl (Machine)', 'Superman', 'Single Leg Glute Bridge']},
+    {nome: 'glúteo', teste: /hip thrust|glute bridge|glute kickback|ponte/,
+     fit4less: ['Hip Thrust (Smith Machine)', 'Hip Thrust (Barbell)', 'Glute Kickback (Machine)', 'Hip Abduction (Machine)'],
+     casa: ['Hip Thrust (Barbell)', 'Single Leg Glute Bridge', 'Glute Kickback (Cable)', 'Lateral Band Walks']},
+    {nome: 'abdutores', teste: /abduct|abdutor|band walk/,
+     fit4less: ['Hip Abduction (Machine)', 'Hip Abduction (Cable)', 'Side Plank'],
+     casa: ['Lateral Band Walks', 'Hip Abduction (Cable)', 'Side Plank', 'Clamshell']},
+    {nome: 'adutores', teste: /adduct|adutor/,
+     fit4less: ['Hip Adduction (Machine)', 'Hip Adduction (Cable)', 'Side Plank'],
+     casa: ['Hip Adduction (Cable)', 'Side Plank', 'Copenhagen Plank']},
+    {nome: 'panturrilha', teste: /calf|panturrilha/,
+     fit4less: ['Standing Calf Raise (Machine)', 'Seated Calf Raise', 'Calf Press (Machine)', 'Single Leg Standing Calf Raise (Machine)'],
+     casa: ['Standing Calf Raise (Dumbbell)', 'Single Leg Standing Calf Raise', 'Seated Calf Raise (Dumbbell)']},
+    {nome: 'abdômen', teste: /crunch|knee raise|leg raise|plank|prancha|bird dog|dead bug|abdominal|pallof/,
+     fit4less: ['Crunch (Machine)', 'Knee Raise Parallel Bars', 'Hanging Knee Raise', 'Cable Crunch', 'Lying Knee Raise'],
+     casa: ['Dead Bug', 'Plank', 'Bird Dog', 'Side Plank', 'Lying Knee Raise']},
+    {nome: 'saltos', teste: /jump|pogo|\bhops?\b|salto/,
+     fit4less: ['Jump Squat', 'Pogo Hops', 'Standing Calf Raise (Machine)'],
+     casa: ['Jump Squat', 'Pogo Hops', 'Single Leg Standing Calf Raise']}
+  ];
+
+  function grupoDe(nome){
+    var t = semAcento(nome);
+    for(var g = 0; g < GRUPOS.length; g++) if(GRUPOS[g].teste.test(t)) return GRUPOS[g];
+    return null;
+  }
+
+  var CHAVE_TROCA = 'bq_troca_';
+  function trocasDe(iso, local){
+    try{ return JSON.parse(localStorage.getItem(CHAVE_TROCA + iso + '_' + local) || '{}') || {} }
+    catch(e){ return {} }
+  }
+  function gravarTroca(iso, local, original, novo){
+    var m = trocasDe(iso, local);
+    if(novo) m[original] = novo; else delete m[original];
+    try{
+      if(Object.keys(m).length) localStorage.setItem(CHAVE_TROCA + iso + '_' + local, JSON.stringify(m));
+      else localStorage.removeItem(CHAVE_TROCA + iso + '_' + local);
+    }catch(e){}
+  }
+
+  /* alternativas para um exercicio, sem repetir o que ja esta no treino */
+  function alternativas(nome, local, jaNoTreino){
+    var g = grupoDe(nome);
+    if(!g) return [];
+    /* Mesmo exercicio = mesmo nome-base e o equipamento igual ou nao
+       dito: "Seated Calf Raise" e "Seated Calf Raise (Dumbbell)" sao o
+       mesmo; "Hip Thrust (Smith Machine)" e "Hip Thrust (Barbell)" nao
+       (Smith ocupado, barra livre e uma troca de verdade). */
+    function partes(n){
+      var t = semAcento(n), m = t.match(/\(([^)]*)\)/);
+      return {base: t.replace(/\s*\(.*?\)\s*/g, '').trim(), equip: m ? m[1].trim() : ''};
+    }
+    function mesmo(x, y){
+      var a = partes(x), b = partes(y);
+      return a.base === b.base && (!a.equip || !b.equip || a.equip === b.equip);
+    }
+    var fora = (jaNoTreino || []).concat([nome]);
+    return (g[local] || []).filter(function(n){
+      return !fora.some(function(f){ return mesmo(f, n) });
+    }).slice(0, 4);
+  }
+
+  /* aplica as trocas do dia numa copia da rotina */
+  function comTrocas(r, iso, local){
+    var m = trocasDe(iso, local);
+    if(!Object.keys(m).length) return r;
+    var c = copiar(r);
+    c.exercicios = (r.exercicios || []).map(function(e){
+      var novo = m[e.nome];
+      if(!novo) return e;
+      var x = copiar(e);
+      x.trocadoDe = e.nome;
+      x.nome = novo;
+      x.peso = 0;                       // carga de outro exercicio nao serve
+      x.nota = '';
+      return x;
+    });
+    return c;
+  }
+
+  var menuAberto = '';                  // iso|nome original
+
   /* ══ O DIA DA ACADEMIA, NUM LUGAR SO ══
      Pedido do Luiz, 16/09/2026: a aba Coach so informava; para marcar
      feito era preciso abrir o dia no calendario, e la aparecia a lista
@@ -11311,7 +11415,8 @@ PARTE('painel da academia', function(){
      lista, situacao e o botao certo — aparece no Coach (hoje) e no
      cartao do calendario (qualquer dia). Quem diz "feito" e o Hevy ou
      o botao de casa; o Concluir de caixinhas sai dos dias de academia. */
-  function linhasDoTreino(r, local){
+  function linhasDoTreino(r, local, iso){
+    var nomes = (r.exercicios || []).map(function(e){ return e.nome });
     return (r.exercicios || []).map(function(e){
       /* Casa ficou fora do Hevy: carga de exercicio que tambem esta no
          programa da Fit4Less e carga de maquina ("Seated Calf Raise"),
@@ -11324,15 +11429,49 @@ PARTE('painel da academia', function(){
         peso = pc.peso;
         if(pc.nota && !nota) nota = pc.nota;
       }
+      var original = e.trocadoDe || e.nome;
+      var chave = iso + '|' + original;
       var sub = [];
       if(e.antes) sub.push('no lugar de ' + esc(e.antes));
+      if(e.trocadoDe){
+        sub.push('<b>trocado</b> · no lugar de ' + esc(e.trocadoDe)
+          + (local === 'fit4less' ? ' · no Hevy: ⋯ › Substituir exercício' : ''));
+      }
       if(nota) sub.push(esc(nota));
+
+      var alts = e.trocadoDe ? [] : alternativas(e.nome, local, nomes);
+      var link = '';
+      if(iso && e.trocadoDe){
+        link = '<button type="button" data-bqdesfaz="' + esc(encodeURIComponent(original)) + '" data-bqdia="' + esc(iso) + '"'
+             + ' style="background:none;border:0;padding:0 0 0 6px;font:inherit;font-size:11.5px;font-weight:800;color:var(--gym,#9B6BD6);cursor:pointer">desfazer</button>';
+      }else if(iso && alts.length){
+        link = '<button type="button" data-bqtroca="' + esc(encodeURIComponent(original)) + '" data-bqdia="' + esc(iso) + '"'
+             + ' style="background:none;border:0;padding:0 0 0 6px;font:inherit;font-size:11.5px;font-weight:800;color:var(--gym,#9B6BD6);cursor:pointer">'
+             + (menuAberto === chave ? 'fechar' : 'trocar ⇄') + '</button>';
+      }
+
+      var menu = '';
+      if(iso && menuAberto === chave && alts.length){
+        menu = '<div style="margin:6px 0 4px;padding:8px;border-radius:9px;background:rgba(128,128,128,.12)">'
+          + '<div style="font-size:11px;opacity:.7;margin-bottom:6px">Mesmo movimento (' + esc(grupoDe(e.nome).nome) + '), '
+          + (local === 'casa' ? 'com o que você tem em casa' : 'com aparelhos da Fit4Less') + ':</div>'
+          + '<div style="display:flex;flex-wrap:wrap;gap:6px">'
+          + alts.map(function(n){
+              return '<button type="button" data-bqescolhe="' + esc(encodeURIComponent(n)) + '" data-bqde="'
+                + esc(encodeURIComponent(original)) + '" data-bqdia="' + esc(iso) + '"'
+                + ' style="padding:6px 10px;border-radius:8px;font:inherit;font-size:12px;font-weight:700;cursor:pointer;'
+                + 'border:1px solid var(--gym,#9B6BD6);background:transparent;color:inherit">' + esc(n) + '</button>';
+            }).join('')
+          + '</div></div>';
+      }
+
       return '<div style="padding:3px 0">'
-           + '<div style="display:flex;justify-content:space-between;gap:10px">'
-           + '<span>' + esc(e.nome) + '</span>'
+           + '<div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline">'
+           + '<span>' + esc(e.nome) + link + '</span>'
            + '<span style="white-space:nowrap;opacity:.85">' + esc(e.series || '')
            + (peso ? ' · ' + kg(peso) : '') + '</span></div>'
            + (sub.length ? '<div style="font-size:11.5px;opacity:.6">' + sub.join(' · ') + '</div>' : '')
+           + menu
            + '</div>';
     }).join('');
   }
@@ -11371,12 +11510,13 @@ PARTE('painel da academia', function(){
     var como = comoFoiFeito(iso), hoje = hojeIso();
     var s = '', b = '';
     if(como === 'hevy'){
+      var extra = RESULTADO[iso] && RESULTADO[iso].tipo === 'ok' ? resultadoHTML(iso) : '';
       var ses = sessoesHevy().filter(function(x){ return x && x.data === iso });
       var min = 0, peso = 0;
       ses.forEach(function(x){ min += +x.min || 0; peso += +x.kg || 0 });
       s = '✓ Feito no Hevy' + (min ? ' · ' + min + ' min' : '')
         + (peso ? ' · ' + Math.round(peso).toLocaleString('pt-BR') + ' kg levantados' : '');
-      return '<div class="bqAcoes" style="margin-top:10px;font-size:13px;font-weight:800;color:#3FD98A">' + s + '</div>';
+      return '<div class="bqAcoes" style="margin-top:10px;font-size:13px;font-weight:800;color:#3FD98A">' + s + '</div>' + extra;
     }
     if(como === 'casa'){
       return '<div class="bqAcoes" style="margin-top:10px">'
@@ -11397,7 +11537,22 @@ PARTE('painel da academia', function(){
     }
     return '<div class="bqAcoes" style="margin-top:10px">'
       + '<div style="font-size:12px;opacity:.7;margin-bottom:8px">' + s + '</div>'
-      + (b ? '<div style="display:flex;gap:8px">' + b + '</div>' : '') + '</div>';
+      + (b ? '<div style="display:flex;gap:8px">' + b + '</div>' : '')
+      + (local === 'fit4less' ? resultadoHTML(iso) : '') + '</div>';     // resultado do Hevy nao vale em Casa
+  }
+
+  /* O que aconteceu no ultimo "Ja registrei" deste dia. Fica escrito
+     embaixo dos botoes ate a proxima tentativa. Antes o resultado ia
+     so para avisar(), que nesta tela nao mostra nada — foi o "nao
+     aconteceu nada" de 16/09. */
+  var RESULTADO = {};
+  function resultadoHTML(iso){
+    var r = RESULTADO[iso];
+    if(!r) return '';
+    var cor = r.tipo === 'ok' ? '#3FD98A' : r.tipo === 'andando' ? 'inherit' : '#E0714F';
+    return '<div style="margin-top:8px;padding:8px 10px;border-radius:9px;font-size:12px;line-height:1.45;'
+      + 'background:rgba(128,128,128,.12);color:' + cor + '">' + r.html
+      + (r.em ? '<div style="opacity:.6;margin-top:2px">' + r.em + '</div>' : '') + '</div>';
   }
 
   /* o bloco inteiro de um dia: onde, aquecimento, lista, rodape, acoes */
@@ -11412,8 +11567,9 @@ PARTE('painel da academia', function(){
       ? '<div style="padding:0 0 6px;margin-bottom:4px;border-bottom:1px solid rgba(128,128,128,.18)">'
         + '<span style="opacity:.6">Aquecimento:</span> ' + esc(r.aquecimento) + '</div>'
       : '';
+    r = comTrocas(r, iso, local);
     return seletorLocal(iso, local)
-      + '<div class="bqa-u" style="font-size:13px">' + aquec + linhasDoTreino(r, local)
+      + '<div class="bqa-u" style="font-size:13px">' + aquec + linhasDoTreino(r, local, iso)
       + '<div style="font-size:11.5px;opacity:.6;margin-top:8px">' + rodapeDoTreino(r, local) + '</div>'
       + acoesDoDia(iso, local) + '</div>';
   }
@@ -11465,9 +11621,14 @@ PARTE('painel da academia', function(){
     try{ if(typeof GH_REPO === 'string' && GH_REPO) return GH_REPO }catch(e){}
     return 'LuizKatiu62/gastos-casa';
   }
-  function avisoApp(t, tipo){
-    try{ if(typeof avisar === 'function'){ avisar(t, tipo || 'ok'); return } }catch(e){}
-    try{ alert(String(t).replace(/<[^>]+>/g, '')) }catch(e){}
+  function horaAgora(){
+    var d = new Date();
+    return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+  }
+  function mostrar(iso, html, tipo){
+    RESULTADO[iso] = {html: html, tipo: tipo, em: tipo === 'andando' ? '' : 'às ' + horaAgora()};
+    pintar();
+    try{ if(typeof renderDia === 'function') renderDia() }catch(e){}
   }
   function rotularTodos(iso, txt){
     try{
@@ -11476,23 +11637,49 @@ PARTE('painel da academia', function(){
       });
     }catch(e){}
   }
+  function ultimoDoHevy(){
+    var l = sessoesHevy();
+    var u = l.length ? l[l.length - 1] : null;
+    if(!u) return 'nenhum treino chegou do Hevy ainda';
+    return 'o último que chegou do Hevy é de ' + dataCurta(u.data) + (u.hora ? ' às ' + u.hora : '')
+      + (u.titulo ? ' (' + esc(u.titulo) + ')' : '');
+  }
 
   async function puxarHevy(iso){
     if(puxando) return false;
-    var t = tokenGH();
-    if(!t){ avisoApp('Conecte o GitHub pelo botão <b>Sync Garmin</b> primeiro.', 'err'); return false }
     puxando = true;
-    var fim = function(msg, tipo){ puxando = false; pintar(); redesenhar(); if(msg) avisoApp(msg, tipo) ; return tipo === 'ok' };
+    var fim = function(html, tipo){ puxando = false; mostrar(iso, html, tipo); return tipo === 'ok' };
+
+    /* 1. talvez o robo da hora cheia ja tenha trazido: confiro primeiro */
+    rotularTodos(iso, 'Conferindo…');
+    try{ await buscar() }catch(e){}
+    if(comoFoiFeito(iso) === 'hevy')
+      return fim('✓ Treino de ' + dataCurta(iso) + ' encontrado no Hevy.', 'ok');
+
+    /* 2. sem token do GitHub neste aparelho: pede, na propria tela */
+    var t = tokenGH();
+    if(!t){
+      puxando = false;
+      mostrar(iso, 'Este aparelho ainda não está conectado ao GitHub. Cole o token na janela que abriu e depois toque em “Já registrei” de novo.', 'erro');
+      try{
+        if(typeof pedirToken === 'function')
+          pedirToken('Para buscar o treino no Hevy, o app precisa do mesmo token do GitHub usado no <b>Sync Garmin</b>. Ele fica salvo só neste aparelho.');
+      }catch(e){}
+      return false;
+    }
+
+    /* 3. chama o robo e acompanha */
     var cab = {'Authorization': 'Bearer ' + t, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json'};
     var base = 'https://api.github.com/repos/' + repoGH() + '/actions/workflows/' + WF_PULL;
     var desde = new Date(Date.now() - 60000).toISOString();
+    mostrar(iso, 'Pedindo ao GitHub para ler o Hevy. Leva cerca de 1 minuto — pode deixar a tela aberta.', 'andando');
     rotularTodos(iso, 'Buscando no Hevy…');
     try{
       var r = await fetch(base + '/dispatches', {method: 'POST', headers: cab, body: JSON.stringify({ref: 'main'})});
-      if(r.status === 401) return fim('Token do GitHub recusado. Gere outro pelo <b>Sync Garmin</b>.', 'err');
-      if(r.status === 403) return fim('Erro 403: o token precisa da permissão <b>workflow</b>.', 'err');
-      if(r.status === 404) return fim('Não achei o ' + WF_PULL + ' no repositório.', 'err');
-      if(r.status !== 204) return fim('Erro ' + r.status + ' ao chamar o Hevy Pull.', 'err');
+      if(r.status === 401) return fim('O GitHub recusou o token (401). Gere outro e cole pelo botão <b>Sync Garmin</b>.', 'erro');
+      if(r.status === 403) return fim('O GitHub recusou (403): o token precisa da permissão <b>workflow</b>.', 'erro');
+      if(r.status === 404) return fim('O GitHub não achou o robô ' + WF_PULL + ' (404).', 'erro');
+      if(r.status !== 204) return fim('O GitHub respondeu ' + r.status + ' ao chamar o Hevy Pull.', 'erro');
       var espera = function(ms){ return new Promise(function(x){ setTimeout(x, ms) }) };
       var t0 = Date.now(), run = null;
       while(Date.now() - t0 < 5 * 60 * 1000){
@@ -11503,23 +11690,29 @@ PARTE('painel da academia', function(){
           var j = await rr.json();
           run = (j.workflow_runs || []).sort(function(a, c){ return new Date(c.created_at) - new Date(a.created_at) })[0] || null;
         }catch(e){ continue }
-        if(!run) { rotularTodos(iso, 'Na fila…'); continue }
-        if(run.status !== 'completed'){ rotularTodos(iso, run.status === 'in_progress' ? 'Lendo o Hevy…' : 'Na fila…'); continue }
+        if(!run){ rotularTodos(iso, 'Na fila do GitHub…'); continue }
+        if(run.status !== 'completed'){ rotularTodos(iso, run.status === 'in_progress' ? 'Lendo o Hevy…' : 'Na fila do GitHub…'); continue }
         break;
       }
       if(!run || run.status !== 'completed')
-        return fim('O Hevy Pull está demorando. O app confere de novo sozinho na próxima hora.', 'err');
+        return fim('O GitHub está demorando mais de 5 minutos. O robô também roda sozinho a cada hora; toque de novo mais tarde.', 'erro');
       if(run.conclusion !== 'success')
-        return fim('O Hevy Pull falhou (' + run.conclusion + '). Veja a aba Actions no GitHub.', 'err');
+        return fim('O robô Hevy Pull terminou com erro (' + esc(run.conclusion) + '). No GitHub: aba Actions › Hevy Pull.', 'erro');
       rotularTodos(iso, 'Conferindo…');
       await buscar();
       if(comoFoiFeito(iso) === 'hevy')
-        return fim('Treino de ' + dataCurta(iso) + ' encontrado no Hevy. ✓', 'ok');
-      return fim('O Hevy ainda não tem treino em ' + dataCurta(iso)
-        + '. Confira se você tocou em <b>Finalizar</b> no fim do treino no Hevy.', 'err');
+        return fim('✓ Treino de ' + dataCurta(iso) + ' encontrado no Hevy.', 'ok');
+      return fim('O robô leu o Hevy, mas lá não há treino em ' + dataCurta(iso) + ': ' + ultimoDoHevy()
+        + '. No Hevy, confira se o treino foi <b>salvo</b> (Finalizar › Salvar) e toque de novo.', 'erro');
     }catch(e){
-      return fim('Não consegui falar com o GitHub (' + ((e && e.message) || 'rede') + ').', 'err');
+      return fim('Não consegui falar com o GitHub (' + esc((e && e.message) || 'rede') + ').', 'erro');
     }
+  }
+
+  /* so as duas telas que mostram a lista; o resto do app nao muda */
+  function redesenharTroca(){
+    pintar();
+    try{ if(typeof renderDia === 'function') renderDia() }catch(e){}
   }
 
   function abrirHevy(){
@@ -11532,10 +11725,28 @@ PARTE('painel da academia', function(){
   document.addEventListener('click', function(ev){
     var alvo = ev.target && ev.target.closest ? ev.target : null;
     if(!alvo) return;
-    var b = alvo.closest('[data-bqcasa],[data-bqlocal],[data-bqpull],[data-bqhevy]');
+    var b = alvo.closest('[data-bqcasa],[data-bqlocal],[data-bqpull],[data-bqhevy],[data-bqtroca],[data-bqescolhe],[data-bqdesfaz]');
     if(!b || b.disabled) return;
     ev.preventDefault();
     ev.stopPropagation();
+    var dia = b.getAttribute('data-bqdia');
+    if(b.hasAttribute('data-bqtroca')){
+      var ch = dia + '|' + decodeURIComponent(b.getAttribute('data-bqtroca'));
+      menuAberto = menuAberto === ch ? '' : ch;
+      redesenharTroca();
+      return;
+    }
+    if(b.hasAttribute('data-bqescolhe')){
+      gravarTroca(dia, localDe(dia), decodeURIComponent(b.getAttribute('data-bqde')), decodeURIComponent(b.getAttribute('data-bqescolhe')));
+      menuAberto = '';
+      redesenharTroca();
+      return;
+    }
+    if(b.hasAttribute('data-bqdesfaz')){
+      gravarTroca(dia, localDe(dia), decodeURIComponent(b.getAttribute('data-bqdesfaz')), null);
+      redesenharTroca();
+      return;
+    }
     if(b.hasAttribute('data-bqcasa')) alternarCasa(b.getAttribute('data-bqcasa'), b);
     else if(b.hasAttribute('data-bqlocal')) mudarLocal(b.getAttribute('data-bqdia'), b.getAttribute('data-bqlocal'));
     else if(b.hasAttribute('data-bqpull')) puxarHevy(b.getAttribute('data-bqpull'));
@@ -11753,6 +11964,7 @@ PARTE('painel da academia', function(){
     de: localDe,
     mudar: mudarLocal,
     troca: trocaDeCasa,
+    alternativas: alternativas,
     programa: FIT4LESS,
     /* exercicio da Fit4Less que daria para fazer em casa — deve ser [] */
     conferir: function(){
