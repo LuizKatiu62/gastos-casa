@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '06m';
+const FIX_VERSAO = '06n';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -11114,6 +11114,23 @@ PARTE('painel da academia', function(){
     return c;
   }
 
+  /* A rotina Fit4Less criada no Hevy (robo hevy-fit4less) chega aqui
+     so com nome, series e carga. O aquecimento e as dicas de execucao
+     continuam vindo do programa, casando pelo nome do exercicio. */
+  function comDicasDoPrograma(r, chave, iso){
+    var prog = programaFit4less(chave, iso, r);
+    if(!prog) return r;
+    if(!r.aquecimento) r.aquecimento = prog.aquecimento;
+    var dica = {};
+    prog.exercicios.forEach(function(e){ dica[semAcento(e.nome)] = e.nota });
+    r.exercicios = (r.exercicios || []).map(function(e){
+      var c = copiar(e);
+      if(!c.nota && dica[semAcento(e.nome)]) c.nota = dica[semAcento(e.nome)];
+      return c;
+    });
+    return r;
+  }
+
   function rotinaNoLocal(chave, iso){
     var base = acharRotina(chave, 'base');
     if(localDe(iso) === 'casa'){
@@ -11122,7 +11139,7 @@ PARTE('painel da academia', function(){
       return base ? adaptarParaCasa(base, chave, iso) : null;
     }
     var pf = acharRotina(chave, 'fit4less');
-    if(pf) return daRotinaDoHevy(pf, 'fit4less');
+    if(pf) return comDicasDoPrograma(daRotinaDoHevy(pf, 'fit4less'), chave, iso);
     /* sem Hevy carregado nao ha titulo de verdade: nao invento um */
     if(!base) return null;
     return programaFit4less(chave, iso, base) || base;
