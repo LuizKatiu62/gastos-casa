@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '06p';
+const FIX_VERSAO = '06r';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -10630,31 +10630,40 @@ PARTE('a aba coach e so da academia', function(){
           var e2 = ex.querySelector('.etapas');
           if(e2 && !e2.children.length && e2.parentNode) e2.parentNode.removeChild(e2);
         }
-        /* FEITO EM CASA tambem no cartao do dia — para marcar um dia que
-           ja passou e voce esqueceu. Futuro nao; dia registrado no Hevy
-           tambem nao. O guarda da classe evita botao repetido: este
-           renderDia e embrulhado mais de uma vez. */
-        if(ex && daAcademia(x) && x.data && x.data <= hojeIso() &&
-           window.bqCasa && typeof window.bqAcademiaFeita === 'function' &&
-           !ex.querySelector('.bqCasaBt')){
-          var como = window.bqAcademiaFeita(x.data);
-          if(como !== 'hevy'){
-            var bt = document.createElement('button');
-            bt.type = 'button';
-            bt.className = 'bqCasaBt';
-            bt.textContent = como === 'casa' ? '✓ Feito em casa · desfazer' : 'Marcar como feito em casa';
-            bt.style.cssText = 'display:block;width:100%;margin-top:10px;padding:9px 12px;'
-              + 'border-radius:9px;font:inherit;font-size:13px;font-weight:800;cursor:pointer;'
-              + (como === 'casa'
-                  ? 'border:1px solid #3FD98A;background:transparent;color:#3FD98A'
-                  : 'border:1px solid var(--gym,#9B6BD6);background:var(--gym,#9B6BD6);color:#fff');
-            var dataBt = x.data;
-            bt.onclick = function(ev){
-              ev.preventDefault(); ev.stopPropagation();
-              window.bqCasa.alternar(dataBt, bt);
-            };
-            ex.appendChild(bt);
-          }
+        /* O DIA DA ACADEMIA NO CARTAO: o mesmo bloco da aba Coach (onde,
+           lista, situacao, botao certo). Saem a lista de caixinhas, o
+           Concluir e o antigo botao do Hevy: marcar caixinha nao dizia
+           nada — quem diz feito e o Hevy ou o botao de casa. O guarda
+           da classe evita bloco repetido (renderDia e embrulhado mais
+           de uma vez). */
+        /* dia em que a academia e o treino PRINCIPAL (dia sem corrida no
+           plano): o mesmo bloco, no cartao principal. Saem as caixinhas,
+           a barra de etapas, o Concluir e o "Ver e enviar ao MOTRA";
+           Mover dia fica. */
+        if(el && s && daAcademia(s) && (s.data || sel) && typeof window.bqAcadCartao === 'function' &&
+           !el.querySelector(':scope > .bqAcadCard')){
+          [':scope > .prog', ':scope > .etapas', ':scope > .acts [data-act="motra"]',
+           ':scope > .acts [data-act="concluir"]'].forEach(function(sq){
+            el.querySelectorAll(sq).forEach(function(n){ if(n.parentNode) n.parentNode.removeChild(n) });
+          });
+          var blocoP = document.createElement('div');
+          blocoP.className = 'bqAcadCard';
+          blocoP.style.cssText = 'margin:0 14px 12px';
+          blocoP.innerHTML = window.bqAcadCartao(s.data || sel);
+          var actsP = el.querySelector(':scope > .acts');
+          if(actsP) el.insertBefore(blocoP, actsP); else el.appendChild(blocoP);
+        }
+        if(ex && daAcademia(x) && x.data && typeof window.bqAcadCartao === 'function' &&
+           !ex.querySelector('.bqAcadCard')){
+          ['.etapas', '.ptrack', '.plab', '[data-exok]', '[data-exmotra]'].forEach(function(sq){
+            ex.querySelectorAll(sq).forEach(function(n){ if(n.parentNode) n.parentNode.removeChild(n) });
+          });
+          var bloco = document.createElement('div');
+          bloco.className = 'bqAcadCard';
+          bloco.style.cssText = 'margin:10px 0 4px';
+          bloco.innerHTML = window.bqAcadCartao(x.data);
+          var antesDe = ex.querySelector('.acts') || ex.querySelector('.btn-cancelar');
+          if(antesDe) ex.insertBefore(bloco, antesDe); else ex.appendChild(bloco);
         }
       }catch(err){ console.warn('cartao do treinador:', err && err.message) }
       return r;
@@ -10767,20 +10776,6 @@ PARTE('painel da academia', function(){
     el = document.createElement('section');
     el.className = 'card'; el.id = 'bqAcad';
     alvo.insertBefore(el, alvo.firstChild);
-    el.addEventListener('click', function(ev){
-      var alvo = ev.target && ev.target.closest ? ev.target : null;
-      if(!alvo) return;
-      var c = alvo.closest('[data-bqcasa]');
-      if(c){
-        ev.preventDefault();
-        alternarCasa(c.getAttribute('data-bqcasa'), c);
-        return;
-      }
-      var b = alvo.closest('[data-bqlocal]');
-      if(!b) return;
-      ev.preventDefault();
-      mudarLocal(b.getAttribute('data-bqdia'), b.getAttribute('data-bqlocal'));
-    });
     return el;
   }
 
@@ -10871,25 +10866,31 @@ PARTE('painel da academia', function(){
   var CHAVE_LOCAL = 'bq_local_';
   var FIM_PLIOMETRIA = '2026-09-20';      // regra da periodizacao acima
 
+  /* A escolha fica guardada por data. Sem escolha: dia marcado como
+     feito em casa abre em Casa; os outros, na Fit4Less.
+     Antes a escolha de dia passado era apagada — mas o cartao do
+     calendario agora mostra dias passados, e precisa lembrar onde
+     voce treinou. Guardo 90 dias. */
   function localDe(iso){
     try{
-      return localStorage.getItem(CHAVE_LOCAL + iso) === 'casa' ? 'casa' : LOCAL_PADRAO;
-    }catch(e){ return LOCAL_PADRAO }
+      var v = localStorage.getItem(CHAVE_LOCAL + iso);
+      if(v === 'casa' || v === 'fit4less') return v;
+    }catch(e){}
+    try{ if(typeof CASA_FEITA === 'object' && CASA_FEITA && CASA_FEITA[iso]) return 'casa' }catch(e){}
+    return LOCAL_PADRAO;
   }
 
   function guardarLocal(iso, local){
-    try{
-      if(local === 'casa') localStorage.setItem(CHAVE_LOCAL + iso, 'casa');
-      else localStorage.removeItem(CHAVE_LOCAL + iso);
-    }catch(e){}
+    try{ localStorage.setItem(CHAVE_LOCAL + iso, local === 'casa' ? 'casa' : 'fit4less') }catch(e){}
   }
 
-  /* escolhas de dias que ja passaram nao servem para nada */
   try{
-    var hj = hojeIso(), velhas = [];
+    var limite = new Date(); limite.setDate(limite.getDate() - 90);
+    var lim = limite.getFullYear() + '-' + ('0' + (limite.getMonth() + 1)).slice(-2) + '-' + ('0' + limite.getDate()).slice(-2);
+    var velhas = [];
     for(var li = 0; li < localStorage.length; li++){
       var kk = localStorage.key(li);
-      if(kk && kk.indexOf(CHAVE_LOCAL) === 0 && kk.slice(CHAVE_LOCAL.length) < hj) velhas.push(kk);
+      if(kk && kk.indexOf(CHAVE_LOCAL) === 0 && kk.slice(CHAVE_LOCAL.length) < lim) velhas.push(kk);
     }
     velhas.forEach(function(kk){ localStorage.removeItem(kk) });
   }catch(e){}
@@ -11193,7 +11194,7 @@ PARTE('painel da academia', function(){
 
   function redesenhar(){
     pintar();
-    ['renderCoach', 'renderCal', 'renderSemana'].forEach(function(n){
+    ['renderCoach', 'renderCal', 'renderSemana', 'renderTreinos'].forEach(function(n){
       try{ if(typeof window[n] === 'function') window[n]() }
       catch(e){ console.warn('feito em casa/' + n + ':', e && e.message) }
     });
@@ -11303,22 +11304,15 @@ PARTE('painel da academia', function(){
          + '<div class="bqa-u">' + esc(f.nota) + '</div>';
   }
 
-  function blocoSessao(){
-    var hoje = new Date();
-    var dia = diaSemana(hoje);
-    if(!DIAS_ACADEMIA[dia])
-      return '<div class="bqa-t">Academia</div>'
-           + '<div class="bqa-u">Hoje não tem. Próxima sessão: '
-           + (dia < 3 ? 'quarta' : dia < 5 ? 'sexta' : 'segunda') + ', 5:30.</div>';
-
-    var r = rotinaDoDia(dia, hojeIso());
-    if(!r) return '<div class="bqa-t">Academia</div>'
-                + '<div class="bqa-u">Descanso hoje — a fase atual não prevê sessão nesta '
-                + (dia === 1 ? 'segunda' : dia === 3 ? 'quarta' : 'sexta') + '.</div>';
-
-    var iso = hojeIso();
-    var local = localDe(iso);
-    var linhas = (r.exercicios || []).map(function(e){
+  /* ══ O DIA DA ACADEMIA, NUM LUGAR SO ══
+     Pedido do Luiz, 16/09/2026: a aba Coach so informava; para marcar
+     feito era preciso abrir o dia no calendario, e la aparecia a lista
+     da Fit4Less com o botao de CASA embaixo. Agora o mesmo bloco — onde,
+     lista, situacao e o botao certo — aparece no Coach (hoje) e no
+     cartao do calendario (qualquer dia). Quem diz "feito" e o Hevy ou
+     o botao de casa; o Concluir de caixinhas sai dos dias de academia. */
+  function linhasDoTreino(r, local){
+    return (r.exercicios || []).map(function(e){
       /* Casa ficou fora do Hevy: carga de exercicio que tambem esta no
          programa da Fit4Less e carga de maquina ("Seated Calf Raise"),
          nao do seu halter. Nesses, em Casa, nao mostro. */
@@ -11341,49 +11335,212 @@ PARTE('painel da academia', function(){
            + (sub.length ? '<div style="font-size:11.5px;opacity:.6">' + sub.join(' · ') + '</div>' : '')
            + '</div>';
     }).join('');
+  }
 
-    var como = comoFoiFeito(iso);
-    var feito = !!como;
+  function rodapeDoTreino(r, local){
     var massagem = 'Depois: cadeira de massagem, nos horários com equipe. Levante devagar.';
-    var rodape = '';
     if(local === 'casa' && r.adaptada && r.trocas)
-      rodape = 'Adaptada para os aparelhos de casa. Faça sem o Hevy e, ao terminar, toque no botão abaixo.';
-    else if(local === 'casa' && r.adaptada)
-      rodape = 'Treino de casa: faça sem o Hevy e, ao terminar, toque no botão abaixo.';
-    else if(local === 'casa')
-      rodape = 'Rotina de casa do seu Hevy. Registrando lá, conta sozinho; senão, toque no botão abaixo.';
-    else if(r.programa === 'fit4less')
-      rodape = 'Só aparelhos que você não tem em casa. Esta rotina ainda não existe no Hevy: '
-             + 'lá, comece um <b>treino vazio</b> e adicione estes exercícios.<br>' + massagem;
-    else
-      rodape = 'Rotina Fit4Less do seu Hevy.<br>' + massagem;
+      return 'Adaptada para os aparelhos de casa. Faça sem o Hevy.';
+    if(local === 'casa' && r.adaptada) return 'Treino de casa: faça sem o Hevy.';
+    if(local === 'casa') return 'Rotina de casa do seu Hevy.';
+    if(r.programa === 'fit4less')
+      return 'Só aparelhos que você não tem em casa. Esta rotina ainda não existe no Hevy: '
+           + 'lá, comece um <b>treino vazio</b> e adicione estes exercícios.<br>' + massagem;
+    return 'Rotina Fit4Less do seu Hevy.<br>' + massagem;
+  }
 
+  function dataCurta(iso){ return iso.slice(8, 10) + '/' + iso.slice(5, 7) }
+
+  function botao(attrs, rotulo, tipo){
+    var cheio = tipo === 'cheio', verde = tipo === 'verde';
+    return '<button type="button" ' + attrs
+      + ' style="flex:1;min-width:0;padding:10px 12px;border-radius:10px;font:inherit;'
+      + 'font-size:13px;font-weight:800;cursor:pointer;'
+      + 'border:1px solid ' + (verde ? '#3FD98A' : 'var(--gym,#9B6BD6)') + ';'
+      + 'background:' + (cheio ? 'var(--gym,#9B6BD6)' : 'transparent') + ';'
+      + 'color:' + (cheio ? '#fff' : verde ? '#3FD98A' : 'var(--gym,#9B6BD6)') + '">'
+      + rotulo + '</button>';
+  }
+
+  /* situacao + botoes. Regras:
+       feito no Hevy  → so a situacao (nada a fazer)
+       feito em casa  → situacao + desfazer
+       Fit4Less       → Abrir o Hevy · Ja registrei no Hevy (hoje ou antes)
+       Casa           → Marcar como feito em casa (hoje ou antes)       */
+  function acoesDoDia(iso, local){
+    var como = comoFoiFeito(iso), hoje = hojeIso();
+    var s = '', b = '';
+    if(como === 'hevy'){
+      var ses = sessoesHevy().filter(function(x){ return x && x.data === iso });
+      var min = 0, peso = 0;
+      ses.forEach(function(x){ min += +x.min || 0; peso += +x.kg || 0 });
+      s = '✓ Feito no Hevy' + (min ? ' · ' + min + ' min' : '')
+        + (peso ? ' · ' + Math.round(peso).toLocaleString('pt-BR') + ' kg levantados' : '');
+      return '<div class="bqAcoes" style="margin-top:10px;font-size:13px;font-weight:800;color:#3FD98A">' + s + '</div>';
+    }
+    if(como === 'casa'){
+      return '<div class="bqAcoes" style="margin-top:10px">'
+        + '<div style="font-size:13px;font-weight:800;color:#3FD98A;margin-bottom:8px">✓ Feito em casa</div>'
+        + '<div style="display:flex;gap:8px">' + botao('data-bqcasa="' + esc(iso) + '"', 'Desfazer', 'verde') + '</div></div>';
+    }
+    if(iso > hoje){
+      s = 'Previsto para ' + dataCurta(iso) + '.';
+      b = local === 'fit4less' ? botao('data-bqhevy="1"', 'Abrir o Hevy', 'vazio') : '';
+    }else if(local === 'fit4less'){
+      s = iso === hoje ? 'Pendente. Registre o treino no Hevy e depois toque em “Já registrei”.'
+                       : 'Não registrado. Se treinou, registre no Hevy e toque em “Já registrei”.';
+      b = botao('data-bqhevy="1"', 'Abrir o Hevy', 'vazio')
+        + botao('data-bqpull="' + esc(iso) + '"', 'Já registrei no Hevy', 'cheio');
+    }else{
+      s = iso === hoje ? 'Pendente. Ao terminar, toque abaixo.' : 'Não registrado.';
+      b = botao('data-bqcasa="' + esc(iso) + '"', 'Marcar como feito em casa', 'cheio');
+    }
+    return '<div class="bqAcoes" style="margin-top:10px">'
+      + '<div style="font-size:12px;opacity:.7;margin-bottom:8px">' + s + '</div>'
+      + (b ? '<div style="display:flex;gap:8px">' + b + '</div>' : '') + '</div>';
+  }
+
+  /* o bloco inteiro de um dia: onde, aquecimento, lista, rodape, acoes */
+  function blocoDoDia(iso, r){
+    var local = localDe(iso);
+    if(!r){
+      return seletorLocal(iso, local)
+        + '<div class="bqa-u" style="font-size:12px;opacity:.7">A periodização não tem rotina para este dia.</div>'
+        + acoesDoDia(iso, local);
+    }
     var aquec = r.aquecimento
-      ? '<div style="padding:0 0 6px;margin-bottom:4px;border-bottom:1px solid rgba(255,255,255,.08)">'
+      ? '<div style="padding:0 0 6px;margin-bottom:4px;border-bottom:1px solid rgba(128,128,128,.18)">'
         + '<span style="opacity:.6">Aquecimento:</span> ' + esc(r.aquecimento) + '</div>'
       : '';
-
-    /* O botao so aparece em Casa, e some se o Hevy ja registrou o dia:
-       marcar de novo contaria a mesma sessao duas vezes. */
-    var botaoCasa = '';
-    if(local === 'casa' && como !== 'hevy'){
-      var marcado = como === 'casa';
-      botaoCasa = '<button type="button" data-bqcasa="' + esc(iso) + '"'
-        + ' style="width:100%;margin-top:10px;padding:9px 12px;border-radius:9px;font:inherit;'
-        + 'font-size:13px;font-weight:800;cursor:pointer;'
-        + 'border:1px solid ' + (marcado ? '#3FD98A' : 'var(--gym,#9B6BD6)') + ';'
-        + 'background:' + (marcado ? 'transparent' : 'var(--gym,#9B6BD6)') + ';'
-        + 'color:' + (marcado ? '#3FD98A' : '#fff') + '">'
-        + (marcado ? '✓ Feito em casa · desfazer' : 'Marcar como feito em casa') + '</button>';
-    }
-
-    return '<div class="bqa-t">Hoje · 5:30 · ' + esc(r.titulo)
-         + (feito ? ' <span style="color:#3FD98A">✓ feito' + (como === 'casa' ? ' em casa' : '') + '</span>' : '') + '</div>'
-         + seletorLocal(iso, local)
-         + '<div class="bqa-u" style="font-size:13px">' + aquec + linhas
-         + '<div style="font-size:11.5px;opacity:.6;margin-top:8px">' + rodape + '</div>'
-         + botaoCasa + '</div>';
+    return seletorLocal(iso, local)
+      + '<div class="bqa-u" style="font-size:13px">' + aquec + linhasDoTreino(r, local)
+      + '<div style="font-size:11.5px;opacity:.6;margin-top:8px">' + rodapeDoTreino(r, local) + '</div>'
+      + acoesDoDia(iso, local) + '</div>';
   }
+
+  function blocoSessao(){
+    var hoje = new Date();
+    var dia = diaSemana(hoje);
+    if(!DIAS_ACADEMIA[dia])
+      return '<div class="bqa-t">Academia</div>'
+           + '<div class="bqa-u">Hoje não tem. Próxima sessão: '
+           + (dia < 3 ? 'quarta' : dia < 5 ? 'sexta' : 'segunda') + ', 5:30.</div>';
+
+    var iso = hojeIso();
+    var r = rotinaDoDia(dia, iso);
+    if(!r) return '<div class="bqa-t">Academia</div>'
+                + '<div class="bqa-u">Descanso hoje — a fase atual não prevê sessão nesta '
+                + (dia === 1 ? 'segunda' : dia === 3 ? 'quarta' : 'sexta') + '.</div>';
+
+    var como = comoFoiFeito(iso);
+    return '<div class="bqa-t">Hoje · 5:30 · ' + esc(r.titulo)
+         + (como ? ' <span style="color:#3FD98A">✓ feito' + (como === 'casa' ? ' em casa' : '') + '</span>' : '') + '</div>'
+         + blocoDoDia(iso, r);
+  }
+
+  /* para o cartao do calendario (parte "a aba coach e so da academia") */
+  window.bqAcadCartao = function(iso){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(String(iso))) return '';
+    if(!HEVY) return '<div class="bqa-u" style="font-size:12px;opacity:.7">Carregando os dados do Hevy…</div>';
+    var d = new Date(iso + 'T00:00:00');
+    return blocoDoDia(iso, rotinaDoDia(diaSemana(d), iso));
+  };
+
+  /* ══ JA REGISTREI NO HEVY ══
+     O hevy-pull roda sozinho a cada hora (minuto 20). Este botao nao
+     espera: dispara o mesmo robo agora, acompanha, rele o Firebase e
+     diz se achou o treino do dia. Mesmo caminho e mesmo token que o
+     Sync Garmin usa. O robo so LE o Hevy. */
+  var WF_PULL = 'hevy-pull.yml';
+  var puxando = false;
+
+  function tokenGH(){
+    try{
+      if(typeof GH_TOKEN === 'string' && GH_TOKEN) return GH_TOKEN;
+      if(typeof cofre === 'object' && cofre && cofre.ler) return cofre.ler('gh_token') || '';
+    }catch(e){}
+    return '';
+  }
+  function repoGH(){
+    try{ if(typeof GH_REPO === 'string' && GH_REPO) return GH_REPO }catch(e){}
+    return 'LuizKatiu62/gastos-casa';
+  }
+  function avisoApp(t, tipo){
+    try{ if(typeof avisar === 'function'){ avisar(t, tipo || 'ok'); return } }catch(e){}
+    try{ alert(String(t).replace(/<[^>]+>/g, '')) }catch(e){}
+  }
+  function rotularTodos(iso, txt){
+    try{
+      document.querySelectorAll('[data-bqpull="' + iso + '"]').forEach(function(b){
+        b.disabled = true; b.textContent = txt;
+      });
+    }catch(e){}
+  }
+
+  async function puxarHevy(iso){
+    if(puxando) return false;
+    var t = tokenGH();
+    if(!t){ avisoApp('Conecte o GitHub pelo botão <b>Sync Garmin</b> primeiro.', 'err'); return false }
+    puxando = true;
+    var fim = function(msg, tipo){ puxando = false; pintar(); redesenhar(); if(msg) avisoApp(msg, tipo) ; return tipo === 'ok' };
+    var cab = {'Authorization': 'Bearer ' + t, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json'};
+    var base = 'https://api.github.com/repos/' + repoGH() + '/actions/workflows/' + WF_PULL;
+    var desde = new Date(Date.now() - 60000).toISOString();
+    rotularTodos(iso, 'Buscando no Hevy…');
+    try{
+      var r = await fetch(base + '/dispatches', {method: 'POST', headers: cab, body: JSON.stringify({ref: 'main'})});
+      if(r.status === 401) return fim('Token do GitHub recusado. Gere outro pelo <b>Sync Garmin</b>.', 'err');
+      if(r.status === 403) return fim('Erro 403: o token precisa da permissão <b>workflow</b>.', 'err');
+      if(r.status === 404) return fim('Não achei o ' + WF_PULL + ' no repositório.', 'err');
+      if(r.status !== 204) return fim('Erro ' + r.status + ' ao chamar o Hevy Pull.', 'err');
+      var espera = function(ms){ return new Promise(function(x){ setTimeout(x, ms) }) };
+      var t0 = Date.now(), run = null;
+      while(Date.now() - t0 < 5 * 60 * 1000){
+        await espera(6000);
+        try{
+          var rr = await fetch(base + '/runs?event=workflow_dispatch&per_page=5&created=>=' + encodeURIComponent(desde), {headers: cab});
+          if(!rr.ok) continue;
+          var j = await rr.json();
+          run = (j.workflow_runs || []).sort(function(a, c){ return new Date(c.created_at) - new Date(a.created_at) })[0] || null;
+        }catch(e){ continue }
+        if(!run) { rotularTodos(iso, 'Na fila…'); continue }
+        if(run.status !== 'completed'){ rotularTodos(iso, run.status === 'in_progress' ? 'Lendo o Hevy…' : 'Na fila…'); continue }
+        break;
+      }
+      if(!run || run.status !== 'completed')
+        return fim('O Hevy Pull está demorando. O app confere de novo sozinho na próxima hora.', 'err');
+      if(run.conclusion !== 'success')
+        return fim('O Hevy Pull falhou (' + run.conclusion + '). Veja a aba Actions no GitHub.', 'err');
+      rotularTodos(iso, 'Conferindo…');
+      await buscar();
+      if(comoFoiFeito(iso) === 'hevy')
+        return fim('Treino de ' + dataCurta(iso) + ' encontrado no Hevy. ✓', 'ok');
+      return fim('O Hevy ainda não tem treino em ' + dataCurta(iso)
+        + '. Confira se você tocou em <b>Finalizar</b> no fim do treino no Hevy.', 'err');
+    }catch(e){
+      return fim('Não consegui falar com o GitHub (' + ((e && e.message) || 'rede') + ').', 'err');
+    }
+  }
+
+  function abrirHevy(){
+    try{ window.open('https://hevy.com/', '_blank') }
+    catch(e){ window.location.href = 'https://hevy.com/' }
+  }
+
+  /* Um ouvinte so, no documento: serve ao Coach e ao cartao do dia,
+     que o app redesenha a toda hora. */
+  document.addEventListener('click', function(ev){
+    var alvo = ev.target && ev.target.closest ? ev.target : null;
+    if(!alvo) return;
+    var b = alvo.closest('[data-bqcasa],[data-bqlocal],[data-bqpull],[data-bqhevy]');
+    if(!b || b.disabled) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    if(b.hasAttribute('data-bqcasa')) alternarCasa(b.getAttribute('data-bqcasa'), b);
+    else if(b.hasAttribute('data-bqlocal')) mudarLocal(b.getAttribute('data-bqdia'), b.getAttribute('data-bqlocal'));
+    else if(b.hasAttribute('data-bqpull')) puxarHevy(b.getAttribute('data-bqpull'));
+    else abrirHevy();
+  });
 
   function seletorLocal(iso, local){
     function bt(v, rot){
@@ -11511,6 +11668,7 @@ PARTE('painel da academia', function(){
       window.bqAcademia = HEVY;          // para conferir no console
       renomearExtras();
       pintar();
+      try{ if(typeof renderTreinos === 'function') renderTreinos() }catch(e){}
       return true;
     }catch(e){
       ultimoErro = (e && e.message) || 'erro de rede';
@@ -11634,6 +11792,28 @@ PARTE('painel da academia', function(){
   };
 
   window.bqAcademiaFeita = comoFoiFeito;
+
+  /* Para a aba GYM: um item por treino. Hevy traz data, titulo, min e
+     kg (peso x repeticoes de todas as series). Casa conta so em dia
+     sem Hevy, e nao tem carga. */
+  window.bqGym = {
+    pronto: function(){ return !!HEVY },
+    sessoes: function(){
+      var out = [], tem = {};
+      sessoesHevy().forEach(function(s){
+        if(!s || !s.data) return;
+        tem[s.data] = 1;
+        out.push({data: s.data, fonte: 'hevy', titulo: s.titulo || 'Treino no Hevy',
+                  min: +s.min || 0, kg: +s.kg || 0});
+      });
+      Object.keys(CASA_FEITA || {}).forEach(function(iso){
+        if(tem[iso] || !CASA_FEITA[iso]) return;
+        out.push({data: iso, fonte: 'casa', titulo: 'Treino em casa',
+                  min: +CASA_FEITA[iso].min || MIN_CASA, kg: 0});
+      });
+      return out;
+    }
+  };
   window.bqCasa = {
     feito: feitoEmCasa,
     marcar: marcarCasa,
@@ -11673,6 +11853,195 @@ PARTE('painel da academia', function(){
   pintar();
   setTimeout(insistir, 1200);
 });
+/* ══════════════════════════════════════════════════════════════════════
+   ABA GYM na aba Treinos (pedido do Luiz, 16/09/2026).
+   O botao "Força" da fileira Tudo/Corrida/Bike/Natacao vira "GYM" e
+   mostra a academia inteira, nao so o que o relogio gravou:
+
+     Hevy     — cada treino registrado: minutos e peso total
+                (carga x repeticoes de todas as series; o sync-hevy.py
+                ja calcula e grava como "kg")
+     Casa     — dias marcados com "feito em casa" (45 min, sem carga)
+     Relogio  — sessao de forca do Garmin em dia sem Hevy nem casa
+
+   Um treino por dia de fonte: dia com Hevy nao soma o relogio nem a
+   casa de novo. Obedece ao Intervalo do alto da aba, como as outras.
+   ══════════════════════════════════════════════════════════════════════ */
+PARTE('aba gym', function(){
+  if(typeof window.renderTreinos !== 'function') throw new Error('app sem renderTreinos');
+  if(typeof ST !== 'object') throw new Error('sem ST');
+
+  var ABERTOS = {};                       // meses abertos na lista
+  var COR = 'var(--gym,#9B6BD6)';
+  var ROTULO = {hevy: 'Hevy', casa: 'Casa', relogio: 'Relógio'};
+
+  function esc(s){
+    return String(s == null ? '' : s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function milhar(n){ return Math.round(n).toLocaleString('pt-BR') }
+  function horas(min){
+    min = Math.round(min);
+    var h = Math.floor(min / 60), m = min % 60;
+    return h ? h + 'h' + (m ? ' ' + m + 'min' : '') : m + 'min';
+  }
+  function diasAtras(k){ return Math.round((HOJE - dt(k)) / 86400000) }
+
+  /* todos os treinos de academia, do mais novo para o mais antigo */
+  function treinos(){
+    var lista = (window.bqGym && window.bqGym.sessoes) ? window.bqGym.sessoes() : [];
+    var porData = {};
+    lista.forEach(function(s){ (porData[s.data] = porData[s.data] || []).push(s) });
+    (ST.runs || []).forEach(function(r){
+      if(!r || r.mod !== 'forca') return;
+      var k = iso(addD(HOJE, -r.d));
+      var min = (typeof duracaoDe === 'function' ? duracaoDe(r) : 0) / 60;
+      var ja = porData[k];
+      if(ja){
+        /* o Hevy sem duracao aproveita a do relogio */
+        ja.forEach(function(s){ if(!s.min && min) s.min = Math.round(min) });
+        return;
+      }
+      var s = {data: k, fonte: 'relogio', titulo: r.titulo || 'Força (relógio)', min: Math.round(min) || 0, kg: 0};
+      porData[k] = [s];
+      lista.push(s);
+    });
+    return lista
+      .filter(function(s){ var d = diasAtras(s.data); return d >= 0 && d < ST.periodo })
+      .sort(function(a, b){ return a.data < b.data ? 1 : a.data > b.data ? -1 : 0 });
+  }
+
+  function trocarBotao(qtd){
+    var b = document.querySelector('#tFiltros [data-f="forca"]') || document.querySelector('#tFiltros [data-f="gym"]');
+    if(!b) return;
+    b.setAttribute('data-f', 'gym');
+    b.textContent = 'GYM' + (qtd ? ' ' + qtd : '');
+    b.className = ST.filtro === 'gym' ? 'on' : '';
+    b.disabled = false;
+    b.style.opacity = qtd ? '' : '.35';
+    b.onclick = function(){
+      ST.filtro = 'gym';
+      window.renderTreinos();
+      try{ if(typeof persistir === 'function') persistir() }catch(e){}
+    };
+  }
+
+  function painel(lista){
+    var min = 0, kg = 0, n = {hevy: 0, casa: 0, relogio: 0};
+    lista.forEach(function(s){ min += s.min || 0; kg += s.kg || 0; n[s.fonte]++ });
+    var partes = [];
+    if(n.hevy) partes.push(n.hevy + ' no Hevy');
+    if(n.casa) partes.push(n.casa + ' em casa');
+    if(n.relogio) partes.push(n.relogio + ' só no relógio');
+
+    var html = '<div id="bqGymSub" style="font-size:11.5px;color:var(--tx3);margin:0 2px 12px;line-height:1.45">'
+      + 'Últimos ' + ST.periodo + ' dias'
+      + (partes.length ? ' · ' + partes.join(' · ') : '')
+      + '. Peso total = carga × repetições de todas as séries registradas no Hevy.'
+      + (ST.periodo > 182 ? ' O Hevy entrega aqui os últimos 6 meses.' : '')
+      + '</div>';
+
+    if(!lista.length){
+      var carregando = window.bqGym && window.bqGym.pronto && !window.bqGym.pronto();
+      return html + '<div class="vazio">' + (carregando ? 'Carregando os treinos do Hevy…' : 'Nenhum treino de academia neste intervalo.') + '</div>';
+    }
+
+    var meses = {};
+    lista.forEach(function(s){ (meses[s.data.slice(0, 7)] = meses[s.data.slice(0, 7)] || []).push(s) });
+    var chaves = Object.keys(meses).sort().reverse();
+    var atual = iso(HOJE).slice(0, 7);
+    if(!Object.keys(ABERTOS).length) ABERTOS[chaves.indexOf(atual) >= 0 ? atual : chaves[0]] = 1;
+
+    html += chaves.map(function(k){
+      var its = meses[k];
+      var mm = its.reduce(function(a, s){ return a + (s.min || 0) }, 0);
+      var kk = its.reduce(function(a, s){ return a + (s.kg || 0) }, 0);
+      var ano = +k.slice(0, 4), mes = +k.slice(5, 7);
+      var linhas = its.map(function(s){
+        var d = dt(s.data);
+        var sub = [];
+        if(s.min) sub.push(s.min + ' min');
+        sub.push(s.kg ? milhar(s.kg) + ' kg' : 'sem carga registrada');
+        sub.push(ROTULO[s.fonte]);
+        return '<div class="srow" style="cursor:default" data-gymdia="' + s.data + '">'
+          + '<span class="sd"><b class="mono">' + d.getDate() + '</b><span>' + DIA3[dow(d) - 1] + '</span></span>'
+          + '<span class="sl" style="background:' + COR + '"></span>'
+          + '<span class="sb"><b>' + esc(s.titulo) + '</b><span>' + sub.join(' · ') + '</span></span>'
+          + '<span class="sv"><b class="mono">' + (s.kg ? milhar(s.kg) : '—') + '</b><span>KG</span></span>'
+          + '</div>';
+      }).join('');
+      return '<div class="wk2 ' + (ABERTOS[k] ? 'open' : '') + '">'
+        + '<button class="wk2h" data-gymmes="' + k + '">'
+        + '<span class="ch">›</span>'
+        + '<span class="wq"><b>' + MES[mes - 1].replace(/^./, function(c){ return c.toUpperCase() }) + ' ' + ano + '</b>'
+        + '<span>' + its.length + ' ' + (its.length === 1 ? 'treino' : 'treinos') + ' · ' + horas(mm) + '</span></span>'
+        + '<span class="wt"><b class="mono">' + (kk ? milhar(kk) : '—') + '</b><span>KG</span></span>'
+        + '</button>'
+        + '<div class="wk2b">' + linhas + '</div></div>';
+    }).join('');
+    return html;
+  }
+
+  /* ── A CAIXA GYM ──
+     Pedido do Luiz: os tres numeros sempre a vista na aba Treinos,
+     logo abaixo do resumo de corrida — sem precisar tocar em nada.
+     Tocar na caixa abre a lista do GYM. */
+  function caixa(lista){
+    var res = document.getElementById('tResumo');
+    if(!res || !res.parentNode) return;
+    var el = document.getElementById('bqGymCaixa');
+    if(!el){
+      el = document.createElement('div');
+      el.id = 'bqGymCaixa';
+      el.style.cssText = 'margin:0 0 14px;cursor:pointer';
+      el.onclick = function(){
+        ST.filtro = 'gym';
+        window.renderTreinos();
+        try{ if(typeof persistir === 'function') persistir() }catch(e){}
+        var f = document.getElementById('tFiltros');
+        if(f && f.scrollIntoView) f.scrollIntoView({behavior: 'smooth', block: 'start'});
+      };
+    }
+    if(el.previousElementSibling !== res) res.parentNode.insertBefore(el, res.nextSibling);
+    var min = 0, kg = 0;
+    lista.forEach(function(s){ min += s.min || 0; kg += s.kg || 0 });
+    el.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:baseline;margin:0 2px 6px">'
+      + '<span style="font-size:10.5px;font-weight:800;letter-spacing:.11em;text-transform:uppercase;color:' + COR + '">GYM</span>'
+      + '<span style="font-size:10.5px;font-weight:600;color:var(--tx3)">últimos ' + ST.periodo + ' dias · ver lista ›</span></div>'
+      + '<div class="resumo" id="bqGymRes" style="margin-bottom:0">'
+      + '<div class="rz"><div class="k">Treinos</div><div class="v mono">' + lista.length + '</div></div>'
+      + '<div class="rz"><div class="k">Horas</div><div class="v mono">' + (min / 60).toFixed(1) + '<small>h</small></div></div>'
+      + '<div class="rz"><div class="k">Peso total</div><div class="v mono">' + milhar(kg) + '<small>kg</small></div></div>'
+      + '</div>';
+  }
+
+  var antes = window.renderTreinos;
+  window.renderTreinos = function(){
+    if(ST.filtro === 'forca') ST.filtro = 'gym';      // o botao antigo virou este
+    var r = antes.apply(this, arguments);
+    try{
+      var lista = treinos();
+      caixa(lista);
+      trocarBotao(lista.length);
+      if(ST.filtro !== 'gym') return r;
+      var alvo = document.getElementById('tSemanas');
+      if(!alvo) return r;
+      alvo.innerHTML = painel(lista);
+      alvo.querySelectorAll('[data-gymmes]').forEach(function(b){
+        b.onclick = function(){
+          var k = b.getAttribute('data-gymmes');
+          if(ABERTOS[k]) delete ABERTOS[k]; else ABERTOS[k] = 1;
+          window.renderTreinos();
+        };
+      });
+    }catch(e){ console.warn('aba gym:', e && e.message) }
+    return r;
+  };
+
+  window.bqGymTela = { treinos: treinos };
+  try{ if(document.getElementById('tFiltros')) window.renderTreinos() }catch(e){}
+});
+
 
 
 /* ══════════════════════════════════════════════════════════════════════
