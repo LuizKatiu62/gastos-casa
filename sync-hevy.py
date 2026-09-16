@@ -33,6 +33,10 @@ FIREBASE_DB   = "https://gastos-casa-7f431-default-rtdb.firebaseio.com"
 FIREBASE_PATH = "treinos_coach_v2/luiz/hevy"
 FIREBASE_KEY  = "AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU"
 SEMANAS_HIST  = 12
+# A aba GYM do app soma treinos, tempo e peso do Intervalo escolhido,
+# que vai ate 180 dias. As sessoes entao vem de 26 semanas; cargas e
+# historico continuam em 12 (a progressao compara com 12 semanas).
+SEMANAS_SESSOES = 26
 
 
 def log(msg):
@@ -237,10 +241,11 @@ def main():
     # O Garmin nao sabe que voce treinou: o Hevy nao manda nada para la.
     # Sem esta lista, a aderencia do app conta zero mesmo voce treinando
     # todas as sessoes, e o dia ganha aquele alerta de nao cumprido.
+    corte_sessoes = (datetime.today() - timedelta(weeks=SEMANAS_SESSOES)).strftime("%Y-%m-%d")
     sessoes = []
     for w in ordenados:
         data = data_do_treino(w)
-        if data < corte:
+        if data < corte_sessoes:
             continue
         dur = 0
         try:
@@ -271,6 +276,7 @@ def main():
             "totalRotinas": len(rotinas),
             "totalTreinos": len([w for w in ordenados if data_do_treino(w) >= corte]),
             "semanas": SEMANAS_HIST,
+            "semanasSessoes": SEMANAS_SESSOES,
         },
     }
 
