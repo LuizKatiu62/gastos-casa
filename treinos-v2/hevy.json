@@ -400,6 +400,46 @@
  },
  "sessoes": [
   {
+   "data": "2026-04-02",
+   "titulo": "Apr 2 - ADAPTATION",
+   "min": 2867,
+   "kg": 846
+  },
+  {
+   "data": "2026-04-20",
+   "titulo": "Evening Workout☀️",
+   "min": 58,
+   "kg": 340
+  },
+  {
+   "data": "2026-04-20",
+   "titulo": "Morning workout ☀️",
+   "min": 41,
+   "kg": 113
+  },
+  {
+   "data": "2026-04-21",
+   "titulo": "Workout - 04/21/26",
+   "min": 27,
+   "kg": 1066
+  },
+  {
+   "data": "2026-04-27",
+   "titulo": "Knees exercise 1-2 weeks (copy) (copy)",
+   "min": 35
+  },
+  {
+   "data": "2026-04-28",
+   "titulo": "Gym - 64km - 04/28/26",
+   "min": 47,
+   "kg": 1406
+  },
+  {
+   "data": "2026-04-28",
+   "titulo": "Knees exercise 1-2 weeks (copy) (copy)",
+   "min": 24
+  },
+  {
    "data": "2026-09-02",
    "titulo": "FORCA - QUADRIL E CORE (BASE)",
    "min": 27
@@ -412,9 +452,10 @@
   }
  ],
  "meta": {
-  "ultimaSync": "2026-09-16T17:07:34",
+  "ultimaSync": "2026-09-16T17:19:32",
   "totalRotinas": 12,
   "totalTreinos": 2,
-  "semanas": 12
+  "semanas": 12,
+  "semanasSessoes": 26
  }
 }
