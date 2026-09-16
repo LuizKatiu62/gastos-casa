@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '06n';
+const FIX_VERSAO = '06o';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -10910,14 +10910,20 @@ PARTE('painel da academia', function(){
          do corpo, nao precisa de academia
      Nomes no padrao do catalogo do Hevy, para a carga ganhar historico
      quando voce registrar.                                           */
+  /* NOMES CONFERIDOS no catalogo do Hevy pelo robo hevy-fit4less
+     (ensaio de 16/09). Dois deles nao dizem "Machine" no catalogo,
+     embora sejam de academia: "Seated Calf Raise" (maquina de
+     panturrilha sentado) e "Knee Raise Parallel Bars" (cadeira
+     romana). academia:true diz isso ao app, sem que a Casa passe a
+     trocar o "Seated Calf Raise" que voce faz com halter.           */
   var FIT4LESS = {
     'pernas e core (base)': {
       aquecimento: '8 min no remo, leve',
       exercicios: [
+        {nome:'Squat (Smith Machine)', series:'3×8', nota:'barra guiada: carga com segurança, sem parceiro; desça até a coxa paralela'},
         {nome:'Leg Press (Machine)', series:'3×10', nota:'pés na largura do quadril; desça até o joelho em 90°'},
-        {nome:'Bulgarian Split Squat (Smith Machine)', series:'3×8 cada', nota:'a barra guiada dá equilíbrio para pôr carga'},
         {nome:'Back Extension (Weighted Hyperextension)', series:'3×10', nota:'banco de 45°; suba só até alinhar o corpo'},
-        {nome:'Seated Calf Raise (Machine)', series:'3×15', nota:'sóleo, o músculo do fim da maratona'},
+        {nome:'Seated Calf Raise', academia:true, series:'3×15', nota:'na máquina de panturrilha sentado; sóleo, o músculo do fim da maratona'},
         {nome:'Calf Press (Machine)', series:'3×12', nota:'no leg press, amplitude completa'},
         {nome:'Crunch (Machine)', series:'3×12', nota:'ao sair da máquina, levante devagar'}
       ]},
@@ -10928,7 +10934,7 @@ PARTE('painel da academia', function(){
         {nome:'Single Leg Press (Machine)', series:'3×10 cada', nota:'joelho alinhado com o pé, sem cair para dentro'},
         {nome:'Hip Abduction (Machine)', series:'3×15', nota:'tronco um pouco à frente para pegar o glúteo médio'},
         {nome:'Hip Adduction (Machine)', series:'3×15', nota:'volta controlada, sem soltar o peso'},
-        {nome:"Knee Raise (Captain's Chair)", series:'3×10', nota:'sem balanço; se não houver a cadeira, Crunch (Machine)'},
+        {nome:'Knee Raise Parallel Bars', academia:true, series:'3×10', nota:"na cadeira romana (captain's chair), sem balanço; se não houver, Crunch (Machine)"},
         {nome:'Standing Calf Raise (Machine)', series:'3×12', nota:'pausa de 1 s embaixo, alongado'}
       ]},
     'maxima (pico)': {
@@ -10948,8 +10954,8 @@ PARTE('painel da academia', function(){
         {nome:'Hip Abduction (Machine)', series:'2×15', nota:''},
         {nome:'Hip Adduction (Machine)', series:'2×15', nota:''},
         {nome:'Back Extension (Hyperextension)', series:'2×12', nota:'só o peso do corpo'},
-        {nome:"Knee Raise (Captain's Chair)", series:'2×10', nota:'se não houver a cadeira, Crunch (Machine)'},
-        {nome:'Seated Calf Raise (Machine)', series:'2×15', nota:''}
+        {nome:'Knee Raise Parallel Bars', academia:true, series:'2×10', nota:"na cadeira romana (captain's chair); se não houver, Crunch (Machine)"},
+        {nome:'Seated Calf Raise', academia:true, series:'2×15', nota:'na máquina de panturrilha sentado'}
       ]},
     'manutencao': {
       aquecimento: '6 min no remo, leve',
@@ -10957,11 +10963,26 @@ PARTE('painel da academia', function(){
         {nome:'Leg Press (Machine)', series:'2×8', nota:'carga do pico, longe da falha'},
         {nome:'Hip Abduction (Machine)', series:'2×12', nota:''},
         {nome:'Back Extension (Hyperextension)', series:'2×10', nota:'só o peso do corpo'},
-        {nome:'Seated Calf Raise (Machine)', series:'2×12', nota:''}
+        {nome:'Seated Calf Raise', academia:true, series:'2×12', nota:'na máquina de panturrilha sentado'}
       ]}
   };
 
   var AQUECIMENTO_CASA = '8 min na bike ou na esteira, leve';
+
+  /* nome (sem acento) -> exercicio do programa; serve a conferir() e a
+     carga mostrada em Casa */
+  var DO_PROGRAMA = {};
+  Object.keys(FIT4LESS).forEach(function(k){
+    FIT4LESS[k].exercicios.forEach(function(e){
+      DO_PROGRAMA[String(e.nome).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')] = e;
+    });
+  });
+  function ehDeAcademia(nome, marcado){
+    if(marcado) return true;
+    var e = DO_PROGRAMA[semAcento(nome)];
+    if(e && e.academia) return true;
+    return precisaDeAcademia(nome);
+  }
 
   function copiar(o){
     var c = {};
@@ -11292,7 +11313,10 @@ PARTE('painel da academia', function(){
     var iso = hojeIso();
     var local = localDe(iso);
     var linhas = (r.exercicios || []).map(function(e){
-      var c = cargaDe(e.nome);
+      /* Casa ficou fora do Hevy: carga de exercicio que tambem esta no
+         programa da Fit4Less e carga de maquina ("Seated Calf Raise"),
+         nao do seu halter. Nesses, em Casa, nao mostro. */
+      var c = (local === 'casa' && DO_PROGRAMA[semAcento(e.nome)]) ? null : cargaDe(e.nome);
       var peso = e.peso || (c && c.atual);
       var nota = e.nota || '';
       if(local === 'casa'){
@@ -11571,13 +11595,13 @@ PARTE('painel da academia', function(){
       var ruins = [];
       Object.keys(FIT4LESS).forEach(function(k){
         FIT4LESS[k].exercicios.forEach(function(e){
-          if(!precisaDeAcademia(e.nome)) ruins.push(k + ': ' + e.nome);
+          if(!ehDeAcademia(e.nome, e.academia)) ruins.push(k + ': ' + e.nome);
         });
       });
       if(HEVY && HEVY.rotinas) Object.keys(HEVY.rotinas).forEach(function(n){
         if(!ehDaFit4less(n)) return;
         (HEVY.rotinas[n].exercicios || []).forEach(function(e){
-          if(!precisaDeAcademia(e.nome)) ruins.push(n + ': ' + e.nome);
+          if(!ehDeAcademia(e.nome)) ruins.push(n + ': ' + e.nome);
         });
       });
       return ruins;
