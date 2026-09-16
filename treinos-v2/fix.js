@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '06o';
+const FIX_VERSAO = '06p';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -11128,8 +11128,14 @@ PARTE('painel da academia', function(){
     return c;
   }
 
-  function daRotinaDoHevy(r, local){
+  /* O TITULO E SEMPRE O DA ROTINA DE SEMPRE. O print de 16/09 mostrou
+     "... (BASE) · FIT4LESS" no cabecalho: o titulo da rotina nova do
+     Hevy vazava para o nome do dia. Esse nome e gravado no treino do
+     calendario (renomearExtras), entao trocar de local renomearia o
+     treino na planilha, na lista do mes e no Firebase, ida e volta. */
+  function daRotinaDoHevy(r, local, base){
     var c = copiar(r);
+    if(base && base.titulo) c.titulo = base.titulo;
     c.doHevy = local;
     if(!c.aquecimento) c.aquecimento = local === 'casa' ? AQUECIMENTO_CASA : '';
     return c;
@@ -11156,11 +11162,11 @@ PARTE('painel da academia', function(){
     var base = acharRotina(chave, 'base');
     if(localDe(iso) === 'casa'){
       var pc = acharRotina(chave, 'casa');
-      if(pc) return daRotinaDoHevy(pc, 'casa');
+      if(pc) return daRotinaDoHevy(pc, 'casa', base);
       return base ? adaptarParaCasa(base, chave, iso) : null;
     }
     var pf = acharRotina(chave, 'fit4less');
-    if(pf) return comDicasDoPrograma(daRotinaDoHevy(pf, 'fit4less'), chave, iso);
+    if(pf) return comDicasDoPrograma(daRotinaDoHevy(pf, 'fit4less', base), chave, iso);
     /* sem Hevy carregado nao ha titulo de verdade: nao invento um */
     if(!base) return null;
     return programaFit4less(chave, iso, base) || base;
