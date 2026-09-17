@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '06u';
+const FIX_VERSAO = '06v';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -11998,6 +11998,7 @@ PARTE('painel da academia', function(){
       renomearExtras();
       pintar();
       try{ if(typeof renderTreinos === 'function') renderTreinos() }catch(e){}
+      try{ if(typeof renderSemana === 'function') renderSemana() }catch(e){}
       return true;
     }catch(e){
       ultimoErro = (e && e.message) || 'erro de rede';
@@ -12397,8 +12398,9 @@ PARTE('aba gym', function(){
      previsto  — sessaoDe(dia), que ja junta a agenda do treinador
                  (RAW.agendados, lida do Garmin) com a academia
      realizado — ST.runs, as atividades que o relogio gravou; e, para
-                 a academia, RAW.hevy.sessoes, porque o Hevy nao manda
-                 nada para o Garmin e sem isso o dia contaria como perdido
+                 a academia, window.bqGym (Hevy + botao de casa), porque o
+                 Hevy nao manda nada para o Garmin e sem isso o dia
+                 contaria como perdido
      TSS       — calculado so no que foi FEITO. O previsto nao traz ritmo,
                  entao previsto de TSS nao existe e a aba nao finge que sim.
 
@@ -12492,22 +12494,20 @@ PARTE('resumo da semana estilo trainingpeaks', function(){
     return out;
   }
 
-  /* A academia so existe no Hevy: o Hevy nao manda nada para o Garmin. */
+  /* A academia so existe no Hevy (e no botao de casa): o Hevy nao manda
+     nada para o Garmin.
+
+     DEFEITO CORRIGIDO EM 16/09/2026: aqui se lia RAW.hevy — mas RAW e o
+     no do Garmin (treinos/luiz), e o Hevy e gravado em outro lugar
+     (treinos_coach_v2/luiz/hevy). RAW.hevy nunca existiu: o resumo
+     nunca viu um treino do Hevy, a segunda-feira ficava so com o
+     previsto e aparecia "1 dia de academia sem registro". Agora a
+     fonte e a mesma do painel do Coach e da caixa GYM (bqGym). */
   function academiaNoDia(iso){
-    var h = (typeof RAW === 'object' && RAW && RAW.hevy) || null;
-    var s = (h && h.sessoes) || [];
-    var out = [];
-    for(var i=0;i<s.length;i++){
-      if(s[i] && s[i].data === iso) out.push(s[i]);
-    }
-    /* treino de casa marcado no app (o Hevy nao sabe dele) */
     try{
-      if(!out.length && window.bqCasa && window.bqCasa.feito(iso)){
-        var c = window.bqCasa.dados()[iso] || {};
-        out.push({data: iso, min: +c.min || 45, casa: true});
-      }
-    }catch(e){}
-    return out;
+      if(!window.bqGym || !window.bqGym.sessoes) return [];
+      return window.bqGym.sessoes().filter(function(g){ return g && g.data === iso });
+    }catch(e){ return [] }
   }
 
   var LIMIAR = (typeof PERFIL === 'object' && PERFIL && +PERFIL.paceLimiar) || 340;
@@ -12545,44 +12545,76 @@ PARTE('resumo da semana estilo trainingpeaks', function(){
     return (M && M.c) || 'var(--acc)';
   }
 
-  /* ── um dia ── */
+  /* ── um dia ──
+     O dia pode ter DOIS previstos: a corrida do treinador (treino
+     principal) e a academia (principal ou segundo treino). Antes so o
+     principal contava, e a academia de quarta nem entrava no previsto.
+     Agora cada um e conferido por si:
+       corrida  — pela duracao, como antes
+       academia — feita ou nao (Hevy, botao de casa, ou forca no relogio)
+     A barra tracejada mostra so o previsto QUE FALTA. Treino feito nao
+     deixa tracejado ao lado — era o "previsto aberto" de quarta, que
+     parecia treino pendente.                                         */
   function montarDia(d){
     var iso = chave(d);
     var s   = (typeof sessaoDe === 'function') ? sessaoDe(iso) : null;
     if(!planoReal(s)) s = null;
-
-    var planMin = (s && +s.min) || 0;
-    var planKm  = (s && +s.km)  || 0;
+    var x   = (typeof ST === 'object' && ST && ST.extras) ? ST.extras[iso] : null;
+    var acadPlan  = (s && s.origem === 'academia') ? s
+                  : (x && x.origem === 'academia') ? x : null;
+    var treinoPlan = (s && s.origem !== 'academia') ? s : null;
 
     var runs = feitoNoDia(iso);
-    var realMin = 0, realKm = 0, realTss = 0;
-    var temForca = false, modFeito = '', maisLongo = 0;
+    var runMin = 0, runKm = 0, realTss = 0, forcaMin = 0, temForca = false;
+    var modFeito = '', maisLongo = 0;
     for(var i=0;i<runs.length;i++){
       var r = runs[i];
-      realMin += Math.round((+r.dur || 0) / 60);
-      realKm  += (+r.km || 0);
-      realTss += tssDe(r);
-      if(r.mod === 'forca') temForca = true;
-      // a modalidade do treino mais longo do dia manda na cor
+      var m = Math.round((+r.dur || 0) / 60);
+      if(r.mod === 'forca'){ temForca = true; forcaMin += m }
+      else { runMin += m; runKm += (+r.km || 0); realTss += tssDe(r) }
       if(!maisLongo || (+r.dur||0) > maisLongo){ maisLongo = +r.dur||0; modFeito = r.mod }
     }
-    /* So conto o Hevy se o Garmin nao registrou forca no dia — senao
-       a mesma sessao entraria duas vezes. */
+    /* academia: o relogio manda na duracao quando gravou forca; senao o
+       Hevy (ou 45 min do botao de casa). Nunca os dois somados. */
+    var gym = academiaNoDia(iso);
+    var gymMin = forcaMin;
     if(!temForca){
-      var g = academiaNoDia(iso);
-      for(var j=0;j<g.length;j++) realMin += (+g[j].min || 0);
-      if(g.length && !realMin) realMin = 45;   // sessao sem duracao gravada
-      if(g.length && !modFeito) modFeito = 'forca';
+      for(var j=0;j<gym.length;j++) gymMin += (+gym[j].min || 0);
+      if(gym.length && !gymMin) gymMin = 45;   // sessao sem duracao gravada
+      if(gym.length && gymMin * 60 > maisLongo){ maisLongo = gymMin * 60; modFeito = 'forca' }
     }
+    var acadFeita = temForca || gym.length > 0;
+
+    var itens = [];
+    if(treinoPlan){
+      itens.push({tipo: 'treino', plan: +treinoPlan.min || 0, planKm: +treinoPlan.km || 0,
+                  real: runMin, feito: runMin > 0, prova: !!treinoPlan.prova});
+    }else if(runMin){
+      itens.push({tipo: 'extra', real: runMin, feito: true});
+    }
+    if(acadPlan){
+      itens.push({tipo: 'academia', plan: +acadPlan.min || 45, planKm: 0, real: gymMin, feito: acadFeita});
+    }else if(acadFeita){
+      itens.push({tipo: 'extra', real: gymMin, feito: true});
+    }
+
+    var planMin = 0, planKm = 0, pendMin = 0, pendKm = 0;
+    itens.forEach(function(it){
+      if(it.tipo === 'extra') return;
+      planMin += it.plan; planKm += it.planKm;
+      if(!it.feito){ pendMin += it.plan; pendKm += it.planKm }
+    });
 
     return {
       iso: iso, dia: d,
       futuro: iso > HJ,
       hoje: iso === HJ,
       planMin: planMin, planKm: planKm,
-      realMin: realMin, realKm: Math.round(realKm*10)/10,
+      pendMin: pendMin, pendKm: pendKm,
+      realMin: runMin + gymMin, realKm: Math.round(runKm*10)/10,
       realTss: realTss,
-      fonte: (s && s.origem) || '',
+      itens: itens,
+      fonte: acadPlan && !treinoPlan ? 'academia' : ((s && s.origem) || ''),
       modFeito: modFeito,
       titulo: (s && s.titulo) || ''
     };
@@ -12593,9 +12625,7 @@ PARTE('resumo da semana estilo trainingpeaks', function(){
      registrada, dia de academia sem registro nao vira falta: vira
      "sem registro". Falta e quando ha como saber e nao foi feito. */
   function temHevy(){
-    var h = (typeof RAW === 'object' && RAW && RAW.hevy) || null;
-    if(h && h.sessoes && h.sessoes.length) return true;
-    try{ return !!(window.bqCasa && Object.keys(window.bqCasa.dados()).length) }
+    try{ return !!(window.bqGym && window.bqGym.pronto && window.bqGym.pronto()) }
     catch(e){ return false }
   }
 
@@ -12607,20 +12637,21 @@ PARTE('resumo da semana estilo trainingpeaks', function(){
     perdido:{c:'var(--bad)',  t:'não feito'},
     extra:  {c:'var(--bike)', t:'sem previsão'}
   };
-  function classificar(x, hevy){
-    if(x.futuro) return null;                       // ainda da tempo
-    if(!x.planMin && !x.realMin) return null;       // descanso, nada a dizer
-    if(!x.planMin) return 'extra';
-    if(!x.realMin){
+  function classificar(x, it, hevy){
+    if(it.tipo === 'extra') return x.futuro ? null : 'extra';
+    if(!it.feito){
+      if(x.futuro) return null;                     // ainda da tempo
       // HOJE ainda nao acabou. Marcar falta antes do fim do dia foi
       // reclamacao sua, com razao: as 8h da manha o app ja dizia que
       // voce tinha perdido o treino da tarde.
       if(x.hoje) return null;
       // academia sem fonte de dado ainda: nao acuso de falta
-      if(x.fonte === 'academia' && !hevy) return null;
+      if(it.tipo === 'academia' && !hevy) return null;
       return 'perdido';
     }
-    var razao = x.realMin / x.planMin;
+    if(it.tipo === 'academia') return 'alvo';       // feita e feita
+    if(!it.plan) return 'alvo';                     // treinador nao deu duracao
+    var razao = it.real / it.plan;
     if(razao >= .85 && razao <= 1.25) return 'alvo';
     if(razao >= .50 && razao <= 1.60) return 'fora';
     return 'perdido';
@@ -12637,8 +12668,8 @@ PARTE('resumo da semana estilo trainingpeaks', function(){
   function km(v){ return v ? (Math.round(v*10)/10).toString().replace('.',',') : '' }
 
   var ABAS = [
-    {id:'dur', nome:'Duração',   real:function(x){return x.realMin}, plan:function(x){return x.planMin}, rot:hm},
-    {id:'km',  nome:'Distância', real:function(x){return x.realKm},  plan:function(x){return x.planKm},  rot:km},
+    {id:'dur', nome:'Duração',   real:function(x){return x.realMin}, plan:function(x){return x.pendMin}, rot:hm},
+    {id:'km',  nome:'Distância', real:function(x){return x.realKm},  plan:function(x){return x.pendKm},  rot:km},
     {id:'tss', nome:'TSS',       real:function(x){return x.realTss}, plan:function(){return 0},
      rot:function(v){return v ? Math.round(v) : ''}}
   ];
@@ -12713,7 +12744,7 @@ PARTE('resumo da semana estilo trainingpeaks', function(){
              '<span>Barra cheia: feito</span>' +
              (aba.id === 'tss'
                ? '<span>o previsto não traz ritmo, então não há TSS previsto</span>'
-               : '<span><b style="border:1px dashed var(--tx3);background:none"></b>Tracejada: previsto</span>') +
+               : '<span><b style="border:1px dashed var(--tx3);background:none"></b>Tracejada: previsto que falta</span>') +
            '</div>';
     }
 
@@ -12723,10 +12754,12 @@ PARTE('resumo da semana estilo trainingpeaks', function(){
     var temPlano = false, academiaSemFonte = 0;
     dias.forEach(function(x){
       if(x.planMin) temPlano = true;
-      if(x.fonte === 'academia' && !x.realMin && !x.futuro && !x.hoje && !hevy) academiaSemFonte++;
-      var c = classificar(x, hevy);
-      if(!c) return;
-      contas[c]++; total++;
+      x.itens.forEach(function(it){
+        if(it.tipo === 'academia' && !it.feito && !x.futuro && !x.hoje && !hevy) academiaSemFonte++;
+        var c = classificar(x, it, hevy);
+        if(!c) return;
+        contas[c]++; total++;
+      });
     });
 
     h += '<div class="snapAd">';
@@ -12764,8 +12797,8 @@ PARTE('resumo da semana estilo trainingpeaks', function(){
     if(academiaSemFonte){
       h += '<p class="snapNada" style="padding:10px 0 0;text-align:left">' +
            academiaSemFonte + (academiaSemFonte > 1 ? ' dias' : ' dia') +
-           ' de academia sem registro. Marque a sessão no Hevy para ela ' +
-           'entrar na conta.</p>';
+           ' de academia ainda sem conferência: os treinos do Hevy estão ' +
+           'carregando.</p>';
     }
     h += '</div>';
 
@@ -12773,6 +12806,8 @@ PARTE('resumo da semana estilo trainingpeaks', function(){
     row.className = 'snapWrap';
     return true;
   }
+
+  window.bqSemana = { dia: function(iso){ return montarDia(dt(iso)) }, redesenhar: desenhar };
 
   /* trocar de aba sem redesenhar a aba inteira do Coach */
   row.addEventListener('click', function(ev){
