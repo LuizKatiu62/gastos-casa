@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '06x';
+const FIX_VERSAO = '06y';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -10850,6 +10850,35 @@ PARTE('a aba coach e so da academia', function(){
       if(DIAS_ACADEMIA[diaSemana(a.data)]) academiaDeSegundo(a.data);
       else tirarExtra(a.data);
     });
+    /* ── A ACADEMIA DOS DIAS QUE JA PASSARAM NESTA SEMANA ──
+       17/09/2026: quarta (16/09) apareceu como "feito · sem previsao",
+       mas a academia de quarta estava programada pela periodizacao.
+       O gerador do app so devolve dias de hoje em diante; o laco de
+       cima so passa pelos dias que o plano tem. Resultado: no dia
+       seguinte, a academia de quarta nao existia mais em lugar nenhum.
+       Agora todo dia de academia da semana em curso que a
+       periodizacao preve ganha a sessao, se ainda nao tiver academia
+       (principal ou segundo treino). Dia que voce esvaziou ou cancelou
+       (ST.trocas) fica como voce deixou.                              */
+    (function(){
+      var q = deste.split('-');
+      var d0 = new Date(+q[0], +q[1] - 1, +q[2]);
+      for(var i = 0; i < 7; i++){
+        var d = new Date(d0.getTime()); d.setDate(d0.getDate() + i);
+        var k = d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+        if(!DIAS_ACADEMIA[diaSemana(k)]) continue;
+        if(plano[k] && (ehForca(plano[k]) || plano[k].prova)) continue;
+        var ex = (typeof ST === 'object' && ST && ST.extras) ? ST.extras[k] : null;
+        if(ex && ex.mod === 'forca') continue;
+        if(typeof ST === 'object' && ST && ST.trocas && ST.trocas[k]) continue;
+        var r = null;
+        try{ r = typeof window.bqAcademiaDoDia === 'function' ? window.bqAcademiaDoDia(k) : null }catch(e){}
+        if(!r) continue;                     // fase sem academia nesse dia, ou Hevy ainda nao chegou
+        if(plano[k]) academiaDeSegundo(k);   // corrida do treinador no dia: academia vai de segundo
+        else plano[k] = sessaoAcademia(k);
+      }
+    })();
+
     /* Varredura final: tira segundo treino que sobrou de plano antigo.
 
        Ela apagava TUDO, e por isso comia tambem a academia que o
@@ -13253,7 +13282,10 @@ PARTE('treinos do mes embaixo do calendario', function(){
         }catch(e){}
         return;
       }
-      if(jaTem[iso] && !segundo) return;
+      /* dia com atividade no relogio esconde o previsto principal — mas
+         academia nao e corrida: a do dia continua na lista (17/09/2026,
+         quarta tinha Treadmill e a academia sumia daqui) */
+      if(jaTem[iso] && !segundo && !ehAcad(s)) return;
       if(segundo && ehAcad(s) && ehAcad(plano[iso]) && planoReal(plano[iso])) return;
       var d = (typeof dt === 'function') ? dt(iso) : null;
       if(!d) return;
