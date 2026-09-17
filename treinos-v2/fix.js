@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '06t';
+const FIX_VERSAO = '06u';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -11426,6 +11426,65 @@ PARTE('painel da academia', function(){
       + 'line-height:18px;text-decoration:none;color:#fff;background:#C4302B;vertical-align:1px">▶</a>';
   }
 
+  /* ══ O QUE FOI FEITO DE VERDADE ══
+     Pedido do Luiz, 16/09/2026: "nao fiz o Standing Calf Raise e nao
+     quero que venha como feito". O sync-hevy.py passou a gravar, em
+     cada sessao, so os exercicios executados (exercicio apagado no
+     Hevy nao vem; exercicio sem nenhuma serie preenchida fica fora).
+     Aqui cada exercicio do plano e conferido contra essa lista:
+       1. mesmo nome                         → feito
+       2. outro exercicio do mesmo movimento → feito, substituido
+          (a troca feita no Hevy, pelo "Substituir exercicio")
+       3. nada                               → nao feito
+     O que foi feito e nao estava no plano aparece a parte.
+     Sessao antiga, gravada antes desta versao do sync, nao tem a lista:
+     nesse caso nao marco nada, em vez de adivinhar.                */
+  function feitosNoHevy(iso){
+    var ses = sessoesHevy().filter(function(x){ return x && x.data === iso });
+    if(!ses.length) return null;
+    if(!ses.some(function(x){ return Array.isArray(x.exercicios) })) return null;
+    var l = [];
+    ses.forEach(function(x){ (x.exercicios || []).forEach(function(e){ if(e && e.nome) l.push(e) }) });
+    return l;
+  }
+
+  function conferirExecucao(r, iso){
+    var feitos = feitosNoHevy(iso);
+    if(!feitos || !r) return null;
+    var usados = {}, porNome = {};
+    var plano = r.exercicios || [];
+    function achar(nome){
+      var alvo = semAcento(nome);
+      for(var k = 0; k < feitos.length; k++)
+        if(!usados[k] && semAcento(feitos[k].nome) === alvo) return k;
+      return -1;
+    }
+    plano.forEach(function(e){
+      var k = achar(e.nome);
+      if(k < 0 && e.trocadoDe) k = achar(e.trocadoDe);
+      if(k >= 0){ usados[k] = 1; porNome[e.nome] = {feito: feitos[k]} }
+    });
+    plano.forEach(function(e){
+      if(porNome[e.nome]) return;
+      var g = grupoDe(e.nome);
+      if(g){
+        for(var k = 0; k < feitos.length; k++){
+          if(usados[k]) continue;
+          if(grupoDe(feitos[k].nome) === g){ usados[k] = 1; porNome[e.nome] = {feito: feitos[k], substituto: true}; return }
+        }
+      }
+      porNome[e.nome] = {feito: null};
+    });
+    var extras = feitos.filter(function(x, k){ return !usados[k] });
+    var n = plano.filter(function(e){ return porNome[e.nome].feito }).length;
+    var faltou = plano.filter(function(e){ return !porNome[e.nome].feito }).map(function(e){ return e.nome });
+    return {porNome: porNome, extras: extras, feitos: n, total: plano.length, faltou: faltou};
+  }
+
+  function textoFeito(x){
+    return esc(x.series || '') + (x.peso ? ' · ' + kg(x.peso) : '');
+  }
+
   /* ══ O DIA DA ACADEMIA, NUM LUGAR SO ══
      Pedido do Luiz, 16/09/2026: a aba Coach so informava; para marcar
      feito era preciso abrir o dia no calendario, e la aparecia a lista
@@ -11433,9 +11492,9 @@ PARTE('painel da academia', function(){
      lista, situacao e o botao certo — aparece no Coach (hoje) e no
      cartao do calendario (qualquer dia). Quem diz "feito" e o Hevy ou
      o botao de casa; o Concluir de caixinhas sai dos dias de academia. */
-  function linhasDoTreino(r, local, iso){
+  function linhasDoTreino(r, local, iso, exec){
     var nomes = (r.exercicios || []).map(function(e){ return e.nome });
-    return (r.exercicios || []).map(function(e){
+    var linhasHtml = (r.exercicios || []).map(function(e){
       /* Casa ficou fora do Hevy: carga de exercicio que tambem esta no
          programa da Fit4Less e carga de maquina ("Seated Calf Raise"),
          nao do seu halter. Nesses, em Casa, nao mostro. */
@@ -11457,9 +11516,28 @@ PARTE('painel da academia', function(){
       }
       if(nota) sub.push(esc(nota));
 
-      var alts = e.trocadoDe ? [] : alternativas(e.nome, local, nomes);
+      /* dia registrado no Hevy: o que foi feito de verdade */
+      var marca = '', riscado = false;
+      var ex = exec && exec.porNome[e.nome];
+      if(ex){
+        if(ex.feito && ex.substituto){
+          marca = '<span style="color:#3FD98A;font-weight:800">✓</span> ';
+          sub.unshift('<span style="color:#3FD98A">feito como ' + esc(ex.feito.nome) + ': ' + textoFeito(ex.feito) + '</span>');
+        }else if(ex.feito){
+          marca = '<span style="color:#3FD98A;font-weight:800">✓</span> ';
+          sub.unshift('<span style="color:#3FD98A">feito: ' + textoFeito(ex.feito) + '</span>');
+        }else{
+          marca = '<span style="color:#E0714F;font-weight:800">✗</span> ';
+          riscado = true;
+          sub.unshift('<span style="color:#E0714F">não feito</span>');
+        }
+      }
+
+      var alts = (e.trocadoDe || exec) ? [] : alternativas(e.nome, local, nomes);
       var link = '';
-      if(iso && e.trocadoDe){
+      if(exec){
+        link = '';
+      }else if(iso && e.trocadoDe){
         link = '<button type="button" data-bqdesfaz="' + esc(encodeURIComponent(original)) + '" data-bqdia="' + esc(iso) + '"'
              + ' style="background:none;border:0;padding:0 0 0 6px;font:inherit;font-size:11.5px;font-weight:800;color:var(--gym,#9B6BD6);cursor:pointer">desfazer</button>';
       }else if(iso && alts.length){
@@ -11487,13 +11565,24 @@ PARTE('painel da academia', function(){
 
       return '<div style="padding:3px 0">'
            + '<div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline">'
-           + '<span>' + esc(e.nome) + link + linkVideo(e.nome) + '</span>'
+           + '<span>' + marca + '<span style="' + (riscado ? 'opacity:.55;text-decoration:line-through' : '') + '">'
+           + esc(e.nome) + '</span>' + link + linkVideo(e.nome) + '</span>'
            + '<span style="white-space:nowrap;opacity:.85">' + esc(e.series || '')
            + (peso ? ' · ' + kg(peso) : '') + '</span></div>'
            + (sub.length ? '<div style="font-size:11.5px;opacity:.6">' + sub.join(' · ') + '</div>' : '')
            + menu
            + '</div>';
     }).join('');
+    if(exec && exec.extras.length){
+      linhasHtml += '<div style="padding:6px 0 2px;font-size:12px">'
+        + '<span style="opacity:.6">Feito também no Hevy, fora do plano:</span>'
+        + exec.extras.map(function(x){
+            return '<div style="padding:2px 0"><span style="color:#3FD98A;font-weight:800">+</span> '
+              + esc(x.nome) + linkVideo(x.nome) + ' <span style="opacity:.7">' + textoFeito(x) + '</span></div>';
+          }).join('')
+        + '</div>';
+    }
+    return linhasHtml;
   }
 
   function rodapeDoTreino(r, local){
@@ -11526,7 +11615,7 @@ PARTE('painel da academia', function(){
        feito em casa  → situacao + desfazer
        Fit4Less       → Abrir o Hevy · Ja registrei no Hevy (hoje ou antes)
        Casa           → Marcar como feito em casa (hoje ou antes)       */
-  function acoesDoDia(iso, local){
+  function acoesDoDia(iso, local, exec){
     var como = comoFoiFeito(iso), hoje = hojeIso();
     var s = '', b = '';
     if(como === 'hevy'){
@@ -11534,9 +11623,17 @@ PARTE('painel da academia', function(){
       var ses = sessoesHevy().filter(function(x){ return x && x.data === iso });
       var min = 0, peso = 0;
       ses.forEach(function(x){ min += +x.min || 0; peso += +x.kg || 0 });
-      s = '✓ Feito no Hevy' + (min ? ' · ' + min + ' min' : '')
+      s = '✓ Feito no Hevy'
+        + (exec && exec.total ? ' · ' + exec.feitos + ' de ' + exec.total + ' exercícios' : '')
+        + (min ? ' · ' + min + ' min' : '')
         + (peso ? ' · ' + Math.round(peso).toLocaleString('pt-BR') + ' kg levantados' : '');
-      return '<div class="bqAcoes" style="margin-top:10px;font-size:13px;font-weight:800;color:#3FD98A">' + s + '</div>' + extra;
+      var faltou = exec && exec.faltou.length
+        ? '<div style="margin-top:4px;font-size:12px;font-weight:700;color:#E0714F">Não feito: ' + exec.faltou.map(esc).join(', ') + '</div>'
+        : '';
+      var velho = (!exec && comoFoiFeito(iso) === 'hevy')
+        ? '<div style="margin-top:4px;font-size:11.5px;font-weight:600;opacity:.6;color:inherit">Os exercícios deste dia chegam na próxima leitura do Hevy (Hevy Pull).</div>'
+        : '';
+      return '<div class="bqAcoes" style="margin-top:10px;font-size:13px;font-weight:800;color:#3FD98A">' + s + faltou + velho + '</div>' + extra;
     }
     if(como === 'casa'){
       return '<div class="bqAcoes" style="margin-top:10px">'
@@ -11588,10 +11685,11 @@ PARTE('painel da academia', function(){
         + '<span style="opacity:.6">Aquecimento:</span> ' + esc(r.aquecimento) + '</div>'
       : '';
     r = comTrocas(r, iso, local);
+    var exec = comoFoiFeito(iso) === 'hevy' ? conferirExecucao(r, iso) : null;
     return seletorLocal(iso, local)
-      + '<div class="bqa-u" style="font-size:13px">' + aquec + linhasDoTreino(r, local, iso)
+      + '<div class="bqa-u" style="font-size:13px">' + aquec + linhasDoTreino(r, local, iso, exec)
       + '<div style="font-size:11.5px;opacity:.6;margin-top:8px">' + rodapeDoTreino(r, local) + '</div>'
-      + acoesDoDia(iso, local) + '</div>';
+      + acoesDoDia(iso, local, exec) + '</div>';
   }
 
   function blocoSessao(){
@@ -11985,6 +12083,11 @@ PARTE('painel da academia', function(){
     mudar: mudarLocal,
     troca: trocaDeCasa,
     alternativas: alternativas,
+    /* o que foi feito no dia, contra o plano (console) */
+    execucao: function(iso){
+      var d = new Date(iso + 'T00:00:00');
+      return conferirExecucao(comTrocas(rotinaDoDia(diaSemana(d), iso) || {exercicios: []}, iso, localDe(iso)), iso);
+    },
     video: urlVideo,
     programa: FIT4LESS,
     /* exercicio da Fit4Less que daria para fazer em casa — deve ser [] */
