@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '06v';
+const FIX_VERSAO = '06w';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -7558,6 +7558,9 @@ PARTE('planilha de treinos', function(){
   function linha(k){
     var s = (typeof sessaoDe === 'function') ? sessaoDe(k) : (ST.plano[k] || null);
     var x = (typeof extraDe  === 'function') ? extraDe(k)  : (ST.extras && ST.extras[k]) || null;
+    /* academia principal e academia de segundo treino no mesmo dia:
+       e o mesmo treino, conta uma vez (16/09/2026) */
+    if(s && x && s.mod === 'forca' && x.mod === 'forca') x = null;
     var d = dt(k), hoje = k === iso(HOJE), passado = k < iso(HOJE);
     var z = zonaDe(s) || (x ? (MODC[x.mod] || ZC.forca) : null);
     var cor = z ? z.c : null;
@@ -10457,6 +10460,22 @@ PARTE('a aba coach e so da academia', function(){
     return 'facil';
   }
 
+  /* ACADEMIA EM DOBRO (16/09/2026): a segunda-feira aparecia duas vezes
+     — a academia principal e, de sobra, uma academia no encaixe de
+     segundo treino. tirarExtra sozinho nao bastava: a sincronia entre
+     aparelhos traz de volta do Firebase o extra que este aparelho "nao
+     conhece", e a duplicata renascia. Com a lapide, a proxima gravacao
+     manda o dia sem o extra e acaba de vez. So vale para extra de
+     FORCA (o que duplica). Se voce incluir um segundo treino neste dia,
+     o proprio botao de incluir levanta a lapide.                     */
+  function tirarAcademiaDuplicada(iso){
+    var dup = (typeof ST === 'object' && ST && ST.extras) ? ST.extras[iso] : null;
+    if(!dup || dup.mod !== 'forca') return;
+    tirarExtra(iso);
+    try{ if(typeof window.bqApagar === 'function') window.bqApagar('extras', iso) }catch(e){}
+    try{ if(typeof persistir === 'function') persistir() }catch(e){}
+  }
+
   function sohAcademia(plano){
     var deste = inicioDaSemana();
     Object.keys(plano).forEach(function(iso){
@@ -10487,6 +10506,7 @@ PARTE('a aba coach e so da academia', function(){
         tirarExtra(iso);
       }else if(!ehForca(s)){
         plano[iso] = sessaoAcademia(iso);
+        tirarAcademiaDuplicada(iso);
         tirarExtra(iso);
       }else{
         /* Ja e forca, entao a sessao fica — mas o nome passa a ser o
@@ -10499,6 +10519,8 @@ PARTE('a aba coach e so da academia', function(){
            da comparacao. */
         s.titulo = nomeAcademia(iso).nome;
         if(!s.origem) s.origem = 'academia';
+        /* ACADEMIA EM DOBRO (16/09/2026): ver tirarAcademiaDuplicada */
+        tirarAcademiaDuplicada(iso);
       }
     });
 
@@ -10652,6 +10674,12 @@ PARTE('a aba coach e so da academia', function(){
           blocoP.innerHTML = window.bqAcadCartao(s.data || sel);
           var actsP = el.querySelector(':scope > .acts');
           if(actsP) el.insertBefore(blocoP, actsP); else el.appendChild(blocoP);
+        }
+        /* academia principal + academia de segundo treino no mesmo dia
+           (dado antigo): mostro uma so, a principal */
+        if(ex && s && daAcademia(s) && x && x.mod === 'forca' && ex.parentNode){
+          ex.parentNode.removeChild(ex);
+          ex = null;
         }
         if(ex && daAcademia(x) && x.data && typeof window.bqAcadCartao === 'function' &&
            !ex.querySelector('.bqAcadCard')){
@@ -13030,8 +13058,11 @@ PARTE('treinos do mes embaixo do calendario', function(){
     }
 
     /* ── o que esta previsto e ainda nao tem atividade no dia ── */
-    var jaTem = {};
-    linhas.forEach(function(l){ jaTem[l.iso] = true });
+    var jaTem = {}, forcaNoRelogio = {};
+    linhas.forEach(function(l){
+      jaTem[l.iso] = true;
+      if(l.run && l.run.mod === 'forca') forcaNoRelogio[l.iso] = l;
+    });
 
     /* O SEGUNDO TREINO DO DIA TAMBEM E TREINO.
        Esta lista lia so ST.plano e ignorava ST.extras. Em dia que o
@@ -13049,13 +13080,34 @@ PARTE('treinos do mes embaixo do calendario', function(){
       plano['x' + k] = x;
     });
 
+    /* UMA ACADEMIA POR DIA (16/09/2026). A segunda aparecia duas vezes:
+       academia principal + academia de segundo treino. E dia em que o
+       relogio gravou forca mostrava a atividade do relogio E a academia
+       prevista ("nao registrado"). Agora:
+         relogio gravou forca → so a linha do relogio, com o nome da
+                                rotina e o "feito no Hevy" quando houver
+         academia principal   → o segundo treino de forca nao entra   */
+    function ehAcad(x){ return !!(x && x.mod === 'forca') }
     Object.keys(plano).forEach(function(chaveP){
       var iso = chaveP.charAt(0) === 'x' ? chaveP.slice(1) : chaveP;
       var segundo = chaveP.charAt(0) === 'x';
       if(iso.slice(0,7) !== prefixo) return;
-      if(jaTem[iso] && !segundo) return;
       var s = plano[chaveP];
       if(!planoReal(s)) return;
+      if(ehAcad(s) && forcaNoRelogio[iso]){
+        var lr = forcaNoRelogio[iso];
+        if(s.titulo && (!lr.run.titulo || lr.titulo === nomeDe('forca'))) lr.titulo = s.titulo;
+        try{
+          var como = typeof window.bqAcademiaFeita === 'function' ? window.bqAcademiaFeita(iso) : '';
+          if(como && !lr.comoMarcado){
+            lr.sub = (lr.sub ? lr.sub + ' · ' : '') + (como === 'casa' ? 'feito em casa ✓' : 'feito no Hevy ✓');
+            lr.comoMarcado = true;
+          }
+        }catch(e){}
+        return;
+      }
+      if(jaTem[iso] && !segundo) return;
+      if(segundo && ehAcad(s) && ehAcad(plano[iso]) && planoReal(plano[iso])) return;
       var d = (typeof dt === 'function') ? dt(iso) : null;
       if(!d) return;
       /* A academia nao tem atividade no Garmin: quem sabe se foi feita
