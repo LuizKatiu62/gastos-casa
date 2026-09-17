@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '06y';
+const FIX_VERSAO = '07a';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -1687,9 +1687,17 @@ PARTE('correções da varredura', function(){
     if(typeof fn !== 'function') return fn;
     return function(){
       const eu = this, args = arguments;
+      /* 17/09/2026: o aviso saia SEMPRE, 9 s depois de cada chamada,
+         mesmo quando o Firebase respondia em milissegundos — o relogio
+         nunca era desligado. Era alarme falso. Agora so avisa quem de
+         fato passou do prazo. */
+      let relogio = null, acabou = false;
       return Promise.race([
-        Promise.resolve().then(function(){ return fn.apply(eu, args) }),
-        new Promise(function(ok){ setTimeout(function(){
+        Promise.resolve().then(function(){ return fn.apply(eu, args) })
+          .then(function(v){ acabou = true; clearTimeout(relogio); return v },
+                function(e){ acabou = true; clearTimeout(relogio); throw e }),
+        new Promise(function(ok){ relogio = setTimeout(function(){
+          if(acabou) return;
           console.warn('fix.js · ' + nome + ' passou de ' + ms + 'ms, seguindo sem ele');
           ok(padrao);
         }, ms) })
@@ -10471,6 +10479,30 @@ PARTE('a aba coach e so da academia', function(){
   var memoAgenda = (function(){ try{ return JSON.parse(localStorage.getItem(MEMO) || '{}') || {} }catch(e){ return {} } })();
   var ultimaLista = null;
 
+  /* CAUSA CONFIRMADA em 17/09/2026, na conta Garmin do Luiz: os treinos
+     do treinador vem do TrainingPeaks, e o TrainingPeaks TIRA do
+     calendario do Garmin o treino que ja foi feito. Terca e quarta
+     sumiram do calendario depois de executadas — as atividades tem as
+     marcas de treino estruturado (workout_step_index em cada volta).
+
+     Estes dois dias o app nunca chegou a ver. Reconstruidos a partir do
+     Garmin, e so entram se nao houver nada lembrado para a data:
+       16/09 — "Rodagem leve 35'": passo ativo de exatos 35:00 +
+               desaquecimento; ha na biblioteca um "Rodagem leve 35'"
+               (1685412323) criado junto com os de 11/09 e 18/09 e sem
+               data no calendario.
+       15/09 — treino estruturado: aquecimento 8', 2 x (8' + 3'
+               recuperacao), 2 x (5' + 4' recuperacao), desaquecimento
+               5'. O modelo ja saiu da biblioteca, entao o nome e o que
+               o relogio mostra, nao o do treinador.                   */
+  var SEMENTE = {
+    '2026-09-15': [{data: '2026-09-15', nome: "Treino do treinador · intervalado 2×8' + 2×5'", duracaoSeg: 3180, esporte: 'corrida'}],
+    '2026-09-16': [{data: '2026-09-16', nome: "Rodagem leve 35'", duracaoSeg: 2100, esporte: 'corrida'}]
+  };
+  Object.keys(SEMENTE).forEach(function(d){
+    if(!memoAgenda[d]) memoAgenda[d] = SEMENTE[d];
+  });
+
   function limpoItem(a){
     var o = {data: a.data};
     ['nome','distanciaM','duracaoSeg','esporte','descanso','prova'].forEach(function(c){
@@ -10870,7 +10902,11 @@ PARTE('a aba coach e so da academia', function(){
         if(plano[k] && (ehForca(plano[k]) || plano[k].prova)) continue;
         var ex = (typeof ST === 'object' && ST && ST.extras) ? ST.extras[k] : null;
         if(ex && ex.mod === 'forca') continue;
-        if(typeof ST === 'object' && ST && ST.trocas && ST.trocas[k]) continue;
+        var feitaK = '';
+        try{ feitaK = typeof window.bqAcademiaFeita === 'function' ? window.bqAcademiaFeita(k) : '' }catch(e){}
+        /* marca antiga de troca respeitada — salvo se a academia foi
+           feita nesse dia: feita e feita, tem que aparecer */
+        if(typeof ST === 'object' && ST && ST.trocas && ST.trocas[k] && !feitaK) continue;
         var r = null;
         try{ r = typeof window.bqAcademiaDoDia === 'function' ? window.bqAcademiaDoDia(k) : null }catch(e){}
         if(!r) continue;                     // fase sem academia nesse dia, ou Hevy ainda nao chegou
