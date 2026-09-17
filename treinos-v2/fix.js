@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '06w';
+const FIX_VERSAO = '06x';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -7565,8 +7565,37 @@ PARTE('planilha de treinos', function(){
     var z = zonaDe(s) || (x ? (MODC[x.mod] || ZC.forca) : null);
     var cor = z ? z.c : null;
 
+    /* O QUE FOI FEITO NO DIA (17/09/2026). A planilha so mostrava o
+       previsto: dia passado sem previsto virava "Descanso" mesmo com
+       corrida e academia feitas. Agora o dia passado (e hoje) mostra
+       tambem o que o relogio gravou e a academia registrada. */
+    var feitosDia = [], minFeito = 0;
+    if(k <= iso(HOJE)){
+      (ST.runs || []).forEach(function(r){
+        if(!r || r.walk || !isFinite(r.d)) return;
+        if(iso(addD(HOJE, -r.d)) !== k) return;
+        if(r.mod === 'forca') return;              // forca conta como academia, abaixo
+        feitosDia.push({t: r.titulo || (MOD[r.mod] ? MOD[r.mod].n : 'Treino'), m: Math.round((+r.dur || 0) / 60), mod: r.mod});
+      });
+      var acadFeita = '';
+      try{ acadFeita = typeof window.bqAcademiaFeita === 'function' ? window.bqAcademiaFeita(k) : '' }catch(e){}
+      var forcaRel = (ST.runs || []).filter(function(r){ return r && r.mod === 'forca' && isFinite(r.d) && iso(addD(HOJE, -r.d)) === k });
+      if(acadFeita || forcaRel.length){
+        var gm = 0;
+        if(forcaRel.length) forcaRel.forEach(function(r){ gm += Math.round((+r.dur || 0) / 60) });
+        else try{ (window.bqGym ? window.bqGym.sessoes() : []).forEach(function(g){ if(g.data === k) gm += +g.min || 0 }) }catch(e){}
+        feitosDia.push({t: 'Academia' + (acadFeita === 'casa' ? ' em casa' : acadFeita === 'hevy' ? ' (Hevy)' : ''), m: gm || 45, mod: 'forca'});
+      }
+      feitosDia.forEach(function(f){ minFeito += f.m });
+    }
+
     var tit, sub;
-    if(s){
+    if(!s && !x && feitosDia.length){
+      tit = feitosDia.map(function(f){ return f.t }).join(' + ');
+      sub = 'feito · sem previsão';
+      z = MODC[feitosDia[0].mod] || ZC.facil || ZC.forca;
+      cor = z ? z.c : null;
+    } else if(s){
       tit = s.titulo || (typeof MOD === 'object' && MOD[s.mod] ? MOD[s.mod].n : s.mod);
       sub = z.n;
       // juntar modalidade e foco dava "Forca · Forca" quando os dois eram o mesmo
@@ -7585,8 +7614,18 @@ PARTE('planilha de treinos', function(){
     var pace = s && s.mod === 'corrida' ? pcNum(s) : null;
     var xmin = x ? (+x.min || 45) : 0;
 
-    var feito = s && typeof concluida === 'function' ? concluida(s) : false;
-    var estado = !s ? '' : feito ? 'v' : (passado ? 'x' : 'o');
+    var alvo = s || x;
+    var feito = alvo && typeof concluida === 'function' ? concluida(alvo) : false;
+    var estado = !alvo ? (feitosDia.length ? 'v' : '') : feito ? 'v' : (passado ? 'x' : 'o');
+    if(!alvo && feitosDia.length){ min = minFeito; feito = true }
+    /* feito a mais, que nao estava no previsto do dia */
+    var aMais = [];
+    if(alvo){
+      feitosDia.forEach(function(f){
+        var jaE = (f.mod === 'forca' && ((s && s.mod === 'forca') || x)) || (s && f.mod === s.mod);
+        if(!jaE) aMais.push(f.t + ' ' + f.m + 'm');
+      });
+    }
 
     /* ── O SEGUNDO TREINO PRECISA APARECER PELO NOME ──
        A linha ja somava os minutos dele (por isso quarta dava 80: 35
@@ -7611,7 +7650,8 @@ PARTE('planilha de treinos', function(){
       + '<span class="dn">' + String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '</span></td>'
       + '<td class="t"><span class="tt">' + tit + '</span>'
       + (sub ? '<span class="zz">' + sub + '</span>' : '')
-      + (segundo ? '<span class="zx">+ ' + segundo + '</span>' : '') + '</td>'
+      + (segundo ? '<span class="zx">+ ' + segundo + '</span>' : '')
+      + (aMais.length ? '<span class="zx">+ feito: ' + aMais.join(', ') + '</span>' : '') + '</td>'
       + '<td>' + ((min || xmin) ? '<span class="num">' + ((min || 0) + xmin) + '</span>' : '<span class="dim">—</span>') + '</td>'
       + '<td class="ok">' + (estado === 'v' ? '<span class="vv">✓</span>'
                           : estado === 'x' ? '<span class="xx">!</span>'
@@ -7621,7 +7661,7 @@ PARTE('planilha de treinos', function(){
     return { html: html, km: km || 0, min: (min || 0) + xmin,
              forte: s && FORTE[s.foco] ? (km || 0) : 0,
              corrida: s && s.mod === 'corrida' ? (km || 0) : 0,
-             feito: feito, tem: !!(s || x) };
+             feito: feito, tem: !!(s || x || feitosDia.length) };
   }
 
   /* ── a tabela inteira ── */
@@ -10329,7 +10369,14 @@ PARTE('a aba coach e so da academia', function(){
        recriava o extra, e o bqLimparApagados apagava de novo no save
        seguinte. Cancelar parecia nao funcionar. */
     if(typeof window.bqFoiApagado === 'function' &&
-       window.bqFoiApagado('extras', iso)) return;
+       window.bqFoiApagado('extras', iso)){
+      /* Academia que FOI FEITA (Hevy ou casa) nao pode ficar apagada:
+         a lapide desse dia veio de engano (versao 06w) — levanto. */
+      var feita = '';
+      try{ feita = typeof window.bqAcademiaFeita === 'function' ? window.bqAcademiaFeita(iso) : '' }catch(e){}
+      if(!feita || typeof window.bqDesapagar !== 'function') return;
+      window.bqDesapagar('extras', iso);
+    }
 
     var atual = ST.extras[iso];
     if(atual && atual.mod === 'forca' && atual.auto !== true &&
@@ -10410,10 +10457,93 @@ PARTE('a aba coach e so da academia', function(){
      travado la (ENVIAR_SEMANA_PARA_GARMIN = False).                  */
   var SPORT_ICO = {corrida:'🏃', bike:'🚴', natacao:'🏊', academia:'💪', outro:'🏅'};
 
+  /* ── A AGENDA DO TREINADOR NAO PODE SUMIR DEPOIS DO DIA ──
+     17/09/2026: quarta (16/09) apareceu como "Descanso". O sync do
+     Garmin grava em RAW.agendados so o que ainda esta por vir; no dia
+     seguinte o treino de quarta ja nao vinha, e o app perdia o previsto
+     do dia que passou. Agora cada item visto fica lembrado, neste
+     aparelho e no Firebase (treinos_coach_v2/luiz/agenda_vista, sempre
+     PATCH, um no por data). Para dia passado que o Garmin nao manda
+     mais, vale o lembrado; de hoje em diante manda o Garmin — se o
+     treinador tirar um treino futuro, ele sai daqui tambem.         */
+  var MEMO = 'bq_agenda_vista';
+  var RAMO_AGENDA = '/agenda_vista';
+  var memoAgenda = (function(){ try{ return JSON.parse(localStorage.getItem(MEMO) || '{}') || {} }catch(e){ return {} } })();
+  var ultimaLista = null;
+
+  function limpoItem(a){
+    var o = {data: a.data};
+    ['nome','distanciaM','duracaoSeg','esporte','descanso','prova'].forEach(function(c){
+      if(a[c] !== undefined && a[c] !== null) o[c] = a[c];
+    });
+    return o;
+  }
+
+  function enviarAgenda(mudou){
+    if(typeof fbToken !== 'function' || typeof FB_DB !== 'string' || typeof FB_COACH !== 'string') return;
+    fbToken().then(function(tk){
+      if(!tk) return;
+      return fetch(FB_DB + '/' + FB_COACH + RAMO_AGENDA + '.json?auth=' + tk,
+        {method: 'PATCH', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(mudou)});
+    }).catch(function(){});
+  }
+
+  function lembrarAgenda(l){
+    if(l === ultimaLista) return;
+    ultimaLista = l;
+    var hoje = hojeIso(), porDia = {}, mudou = {}, n = 0;
+    l.forEach(function(a){ if(a && a.data) (porDia[a.data] = porDia[a.data] || []).push(limpoItem(a)) });
+    Object.keys(porDia).forEach(function(d){
+      var novo = JSON.stringify(porDia[d]);
+      if(JSON.stringify(memoAgenda[d] || null) !== novo){ memoAgenda[d] = porDia[d]; mudou[d] = porDia[d]; n++ }
+    });
+    var ate = l.reduce(function(m, a){ return a && a.data > m ? a.data : m }, '');
+    Object.keys(memoAgenda).forEach(function(d){
+      /* futuro que o treinador tirou (dentro do trecho que o Garmin mandou) */
+      if(d >= hoje && d <= ate && !porDia[d]){ delete memoAgenda[d]; mudou[d] = null; n++ }
+    });
+    var lim = new Date(); lim.setDate(lim.getDate() - 70);
+    var limIso = lim.getFullYear() + '-' + ('0' + (lim.getMonth() + 1)).slice(-2) + '-' + ('0' + lim.getDate()).slice(-2);
+    Object.keys(memoAgenda).forEach(function(d){ if(d < limIso){ delete memoAgenda[d]; mudou[d] = null; n++ } });
+    if(!n) return;
+    try{ localStorage.setItem(MEMO, JSON.stringify(memoAgenda)) }catch(e){}
+    enviarAgenda(mudou);
+  }
+
   function agendaDoGarmin(){
     var l = (typeof RAW === 'object' && RAW) ? RAW.agendados : null;
-    return Array.isArray(l) ? l : [];
+    l = Array.isArray(l) ? l : [];
+    if(l.length) lembrarAgenda(l);
+    var hoje = hojeIso(), tem = {};
+    l.forEach(function(a){ if(a && a.data) tem[a.data] = 1 });
+    var out = l.slice();
+    Object.keys(memoAgenda).forEach(function(d){
+      if(d < hoje && !tem[d]) out = out.concat(memoAgenda[d] || []);
+    });
+    return out;
   }
+
+  /* o outro aparelho pode ter visto dias que este nao viu */
+  (function(){
+    if(typeof fbToken !== 'function' || typeof FB_DB !== 'string' || typeof FB_COACH !== 'string') return;
+    setTimeout(function(){
+      fbToken().then(function(tk){
+        if(!tk) return null;
+        return fetch(FB_DB + '/' + FB_COACH + RAMO_AGENDA + '.json?auth=' + tk).then(function(r){ return r.ok ? r.json() : null });
+      }).then(function(j){
+        if(!j || typeof j !== 'object') return;
+        var hoje = hojeIso(), novos = 0;
+        Object.keys(j).forEach(function(d){
+          if(d < hoje && !memoAgenda[d] && Array.isArray(j[d])){ memoAgenda[d] = j[d]; novos++ }
+        });
+        if(!novos) return;
+        try{ localStorage.setItem(MEMO, JSON.stringify(memoAgenda)) }catch(e){}
+        try{ if(typeof rebuild === 'function') rebuild() }catch(e){}
+        try{ if(typeof renderTudo === 'function') renderTudo() }catch(e){}
+      }).catch(function(){});
+    }, 2500);
+  })();
+  window.bqAgendaVista = function(){ return memoAgenda };
 
   function doDia(iso){
     return agendaDoGarmin().filter(function(a){
@@ -10472,7 +10602,13 @@ PARTE('a aba coach e so da academia', function(){
     var dup = (typeof ST === 'object' && ST && ST.extras) ? ST.extras[iso] : null;
     if(!dup || dup.mod !== 'forca') return;
     tirarExtra(iso);
-    try{ if(typeof window.bqApagar === 'function') window.bqApagar('extras', iso) }catch(e){}
+    /* 17/09/2026: a lapide so vai para a academia ANTIGA (sem origem
+       'academia'). A academia automatica o proprio app poe e tira; com
+       lapide, ela nao voltava para o segundo treino quando o dia
+       voltava a ter corrida do treinador — foi o que sumiu da quarta. */
+    if(dup.origem !== 'academia'){
+      try{ if(typeof window.bqApagar === 'function') window.bqApagar('extras', iso) }catch(e){}
+    }
     try{ if(typeof persistir === 'function') persistir() }catch(e){}
   }
 
@@ -10706,7 +10842,13 @@ PARTE('a aba coach e so da academia', function(){
       if(plano[a.data] && plano[a.data].origem === 'garmin') return;
       if(plano[a.data] && plano[a.data].prova) return;
       plano[a.data] = sessaoDoTreinador(a.data, doDia(a.data));
-      tirarExtra(a.data);
+      /* Mesma regra do laco de cima (17/09/2026): em dia de academia a
+         corrida dele vira o principal e a academia vai para o segundo
+         treino. Aqui o tirarExtra ia sozinho e apagava a academia do
+         dia que o plano do app ainda nao tinha — ela sumia e voltava
+         segundos depois, conforme quem rodasse por ultimo. */
+      if(DIAS_ACADEMIA[diaSemana(a.data)]) academiaDeSegundo(a.data);
+      else tirarExtra(a.data);
     });
     /* Varredura final: tira segundo treino que sobrou de plano antigo.
 
@@ -12023,6 +12165,11 @@ PARTE('painel da academia', function(){
       if(!j || !j.rotinas){ ultimoErro = 'o sync do Hevy ainda não gravou'; return false }
       HEVY = j;
       window.bqAcademia = HEVY;          // para conferir no console
+      /* com o Hevy em maos, o plano sabe que academias foram feitas */
+      if(!buscar.jaRefez){
+        buscar.jaRefez = true;
+        try{ if(typeof rebuild === 'function') rebuild() }catch(e){}
+      }
       renomearExtras();
       pintar();
       try{ if(typeof renderTreinos === 'function') renderTreinos() }catch(e){}
