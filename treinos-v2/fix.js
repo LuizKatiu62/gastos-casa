@@ -43,7 +43,7 @@
       mudança que só valem depois que você tocar em Aplicar
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '06s';
+const FIX_VERSAO = '06t';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -11408,6 +11408,24 @@ PARTE('painel da academia', function(){
 
   var menuAberto = '';                  // iso|nome original
 
+  /* ══ VER O MOVIMENTO ══
+     Pedido do Luiz, 16/09/2026. A animacao do Hevy nao sai do Hevy: a
+     interface publica dele entrega de cada exercicio so nome, tipo,
+     musculos e equipamento — nenhuma imagem. Entao cada exercicio
+     ganha um ▶ que abre a busca de video daquele nome no YouTube.
+     "(Smith Machine)" vira "Smith Machine" e entra "exercise form",
+     para a busca trazer execucao, nao outra coisa. */
+  function urlVideo(nome){
+    var q = String(nome || '').replace(/[()]/g, ' ').replace(/\s+/g, ' ').trim() + ' exercise form';
+    return 'https://www.youtube.com/results?search_query=' + encodeURIComponent(q);
+  }
+  function linkVideo(nome){
+    return '<a href="' + esc(urlVideo(nome)) + '" target="_blank" rel="noopener" data-bqvideo="1"'
+      + ' aria-label="Ver vídeo de ' + esc(nome) + '"'
+      + ' style="display:inline-block;margin-left:6px;padding:0 6px;border-radius:6px;font-size:11px;font-weight:800;'
+      + 'line-height:18px;text-decoration:none;color:#fff;background:#C4302B;vertical-align:1px">▶</a>';
+  }
+
   /* ══ O DIA DA ACADEMIA, NUM LUGAR SO ══
      Pedido do Luiz, 16/09/2026: a aba Coach so informava; para marcar
      feito era preciso abrir o dia no calendario, e la aparecia a lista
@@ -11457,17 +11475,19 @@ PARTE('painel da academia', function(){
           + (local === 'casa' ? 'com o que você tem em casa' : 'com aparelhos da Fit4Less') + ':</div>'
           + '<div style="display:flex;flex-wrap:wrap;gap:6px">'
           + alts.map(function(n){
-              return '<button type="button" data-bqescolhe="' + esc(encodeURIComponent(n)) + '" data-bqde="'
+              return '<span style="display:inline-flex;align-items:center">'
+                + '<button type="button" data-bqescolhe="' + esc(encodeURIComponent(n)) + '" data-bqde="'
                 + esc(encodeURIComponent(original)) + '" data-bqdia="' + esc(iso) + '"'
                 + ' style="padding:6px 10px;border-radius:8px;font:inherit;font-size:12px;font-weight:700;cursor:pointer;'
-                + 'border:1px solid var(--gym,#9B6BD6);background:transparent;color:inherit">' + esc(n) + '</button>';
+                + 'border:1px solid var(--gym,#9B6BD6);background:transparent;color:inherit">' + esc(n) + '</button>'
+                + linkVideo(n) + '</span>';
             }).join('')
           + '</div></div>';
       }
 
       return '<div style="padding:3px 0">'
            + '<div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline">'
-           + '<span>' + esc(e.nome) + link + '</span>'
+           + '<span>' + esc(e.nome) + link + linkVideo(e.nome) + '</span>'
            + '<span style="white-space:nowrap;opacity:.85">' + esc(e.series || '')
            + (peso ? ' · ' + kg(peso) : '') + '</span></div>'
            + (sub.length ? '<div style="font-size:11.5px;opacity:.6">' + sub.join(' · ') + '</div>' : '')
@@ -11965,6 +11985,7 @@ PARTE('painel da academia', function(){
     mudar: mudarLocal,
     troca: trocaDeCasa,
     alternativas: alternativas,
+    video: urlVideo,
     programa: FIT4LESS,
     /* exercicio da Fit4Less que daria para fazer em casa — deve ser [] */
     conferir: function(){
