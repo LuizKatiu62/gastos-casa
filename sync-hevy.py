@@ -158,6 +158,34 @@ def hora_do_treino(w):
     return d.strftime("%H:%M") if d else ""
 
 
+def serie_feita(s):
+    """Serie executada: tem repeticoes, tempo ou distancia. Serie vazia
+    (sem nada preenchido) nao conta como feita."""
+    return bool((s.get("reps") or 0) > 0 or (s.get("duration_seconds") or 0) > 0
+                or (s.get("distance_meters") or 0) > 0)
+
+
+def exercicios_feitos(w):
+    """So o que foi executado no treino salvo. Exercicio apagado no Hevy
+    nao vem na API; exercicio sem nenhuma serie preenchida fica de fora.
+    Pedido do Luiz, 16/09/2026: o app nao pode dar como feito o que ele
+    nao fez (ex.: Standing Calf Raise apagado do treino)."""
+    out = []
+    for ex in (w.get("exercises") or []):
+        sets = [s for s in (ex.get("sets") or []) if serie_feita(s)]
+        if not sets:
+            continue
+        txt, peso = texto_series(sets)
+        vol = sum(float(s.get("weight_kg") or 0) * int(s.get("reps") or 0) for s in sets)
+        item = {"nome": nome_exercicio(ex), "series": txt}
+        if peso:
+            item["peso"] = peso
+        if vol:
+            item["kg"] = round(vol)
+        out.append(item)
+    return out
+
+
 def volume_do_treino(w):
     """Soma peso x repeticoes de todas as series. Em kg."""
     total = 0.0
@@ -243,7 +271,9 @@ def main():
             continue
         for ex in (w.get("exercises") or []):
             nome = nome_exercicio(ex)
-            s, peso = texto_series(ex.get("sets") or [])
+            # so series executadas: peso sugerido em serie nao feita
+            # nao pode virar "carga atual"
+            s, peso = texto_series([x for x in (ex.get("sets") or []) if serie_feita(x)])
             if not peso:
                 sem_peso += 1
                 continue
@@ -298,6 +328,7 @@ def main():
         v = volume_do_treino(w)
         if v:
             item["kg"] = v
+        item["exercicios"] = exercicios_feitos(w)
         sessoes.append(item)
     sessoes.sort(key=lambda x: x["data"])
     log(f"{len(sessoes)} sessoes feitas no periodo")
