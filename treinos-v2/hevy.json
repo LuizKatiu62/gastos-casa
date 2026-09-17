@@ -425,71 +425,335 @@
    "titulo": "Apr 2 - ADAPTATION",
    "hora": "14:20",
    "min": 2867,
-   "kg": 846
+   "kg": 846,
+   "exercicios": [
+    {
+     "nome": "Lat Pulldown (Cable)",
+     "series": "3×10",
+     "peso": 14.514973101940472,
+     "kg": 370
+    },
+    {
+     "nome": "Bench Press (Dumbbell)",
+     "series": "3×12",
+     "peso": 4.535929094356398,
+     "kg": 163
+    },
+    {
+     "nome": "Bent Over Row (Barbell)",
+     "series": "3×10",
+     "peso": 2.7215574566138385,
+     "kg": 64
+    },
+    {
+     "nome": "Shoulder Press (Dumbbell)",
+     "series": "3×10",
+     "peso": 9.071858188712795,
+     "kg": 249
+    },
+    {
+     "nome": "Side Plank",
+     "series": "3×33s"
+    },
+    {
+     "nome": "Bird Dog",
+     "series": "3×10"
+    }
+   ]
   },
   {
    "data": "2026-04-20",
    "titulo": "Evening Workout☀️",
    "hora": "18:11",
    "min": 58,
-   "kg": 340
+   "kg": 340,
+   "exercicios": [
+    {
+     "nome": "Squat (Barbell)",
+     "series": "3×10",
+     "peso": 11.339822735890994,
+     "kg": 340
+    },
+    {
+     "nome": "Lunge",
+     "series": "2×10"
+    },
+    {
+     "nome": "Standing Calf Raise",
+     "series": "3×15"
+    },
+    {
+     "nome": "Plank Pushup",
+     "series": "2×45"
+    },
+    {
+     "nome": "Dead Bug",
+     "series": "2×10"
+    },
+    {
+     "nome": "Glute Bridge",
+     "series": "2×12"
+    }
+   ]
   },
   {
    "data": "2026-04-20",
    "titulo": "Morning workout ☀️",
    "hora": "08:46",
    "min": 41,
-   "kg": 113
+   "kg": 113,
+   "exercicios": [
+    {
+     "nome": "Squat (Barbell)",
+     "series": "1×10",
+     "peso": 11.339822735890994,
+     "kg": 113
+    },
+    {
+     "nome": "Lunge",
+     "series": "1×10"
+    },
+    {
+     "nome": "Standing Calf Raise",
+     "series": "1×15"
+    },
+    {
+     "nome": "Plank Pushup",
+     "series": "1×45"
+    },
+    {
+     "nome": "Dead Bug",
+     "series": "1×10"
+    },
+    {
+     "nome": "Glute Bridge",
+     "series": "1×12"
+    }
+   ]
   },
   {
    "data": "2026-04-21",
    "titulo": "Workout - 04/21/26",
    "hora": "17:20",
    "min": 27,
-   "kg": 1066
+   "kg": 1066,
+   "exercicios": [
+    {
+     "nome": "Lat Pulldown (Cable)",
+     "series": "3×10",
+     "peso": 13.607787283069193,
+     "kg": 408
+    },
+    {
+     "nome": "Bent Over Row (Barbell)",
+     "series": "3×10",
+     "peso": 11.339822735890994,
+     "kg": 318
+    },
+    {
+     "nome": "Bench Press (Dumbbell)",
+     "series": "3×10",
+     "peso": 11.339822735890994,
+     "kg": 340
+    },
+    {
+     "nome": "Side Plank",
+     "series": "4×30s"
+    },
+    {
+     "nome": "Bird Dog",
+     "series": "2×10"
+    }
+   ]
   },
   {
    "data": "2026-04-27",
    "titulo": "Knees exercise 1-2 weeks (copy) (copy)",
    "hora": "18:59",
-   "min": 35
+   "min": 35,
+   "exercicios": [
+    {
+     "nome": "Wall Sit",
+     "series": "2×30s"
+    },
+    {
+     "nome": "Straight Leg Raise",
+     "series": "2×12"
+    },
+    {
+     "nome": "Clamshell",
+     "series": "2×12"
+    },
+    {
+     "nome": "Hamstring Stretch",
+     "series": "2×12"
+    }
+   ]
   },
   {
    "data": "2026-04-28",
    "titulo": "Gym - 64km - 04/28/26",
    "hora": "19:12",
    "min": 47,
-   "kg": 1406
+   "kg": 1406,
+   "exercicios": [
+    {
+     "nome": "Lat Pulldown (Cable)",
+     "series": "3×10",
+     "peso": 13.607787283069193,
+     "kg": 408
+    },
+    {
+     "nome": "Bench Press (Dumbbell)",
+     "series": "3×12",
+     "peso": 11.339822735890994,
+     "kg": 408
+    },
+    {
+     "nome": "Bent Over Row (Barbell)",
+     "series": "3×10",
+     "peso": 11.339822735890994,
+     "kg": 340
+    },
+    {
+     "nome": "Shoulder Press (Dumbbell)",
+     "series": "3×10",
+     "peso": 9.071858188712795,
+     "kg": 249
+    }
+   ]
   },
   {
    "data": "2026-04-28",
    "titulo": "Knees exercise 1-2 weeks (copy) (copy)",
    "hora": "19:09",
-   "min": 24
+   "min": 24,
+   "exercicios": [
+    {
+     "nome": "Wall Sit",
+     "series": "3×33s"
+    },
+    {
+     "nome": "Straight Leg Raise",
+     "series": "2×12"
+    },
+    {
+     "nome": "Clamshell",
+     "series": "4×12"
+    },
+    {
+     "nome": "Hamstring Stretch",
+     "series": "2×12"
+    }
+   ]
   },
   {
    "data": "2026-09-02",
    "titulo": "FORCA - QUADRIL E CORE (BASE)",
    "hora": "11:16",
-   "min": 27
+   "min": 27,
+   "exercicios": [
+    {
+     "nome": "Single Leg Glute Bridge",
+     "series": "3×12"
+    },
+    {
+     "nome": "Step Up",
+     "series": "3×10"
+    },
+    {
+     "nome": "Lateral Band Walks",
+     "series": "3×15"
+    },
+    {
+     "nome": "Bird Dog",
+     "series": "3×10"
+    },
+    {
+     "nome": "Single Leg Standing Calf Raise",
+     "series": "3×12"
+    }
+   ]
   },
   {
    "data": "2026-09-14",
    "titulo": "Forca - Pernas e Core (base)",
    "hora": "18:08",
    "min": 48,
-   "kg": 1955
+   "kg": 1955,
+   "exercicios": [
+    {
+     "nome": "Goblet Squat",
+     "series": "3×12",
+     "peso": 9.071858188712795,
+     "kg": 327
+    },
+    {
+     "nome": "Romanian Deadlift (Dumbbell)",
+     "series": "3×12",
+     "peso": 18.14371637742559,
+     "kg": 653
+    },
+    {
+     "nome": "Walking Lunge",
+     "series": "3×10"
+    },
+    {
+     "nome": "Standing Calf Raise",
+     "series": "3×15"
+    },
+    {
+     "nome": "Seated Calf Raise",
+     "series": "3×15",
+     "peso": 22.67964547178199,
+     "kg": 975
+    },
+    {
+     "nome": "Plank",
+     "series": "3×43s"
+    },
+    {
+     "nome": "Side Plank",
+     "series": "4×31s"
+    }
+   ]
   },
   {
    "data": "2026-09-16",
    "titulo": "Forca - Quadril e Core (pico) · Fit4Less",
    "hora": "19:31",
    "min": 30,
-   "kg": 5693
+   "kg": 5693,
+   "exercicios": [
+    {
+     "nome": "Hip Thrust (Smith Machine)",
+     "series": "3×10",
+     "peso": 31.75150366049478,
+     "kg": 862
+    },
+    {
+     "nome": "Hip Abduction (Machine)",
+     "series": "2×15",
+     "peso": 52.16318458509857,
+     "kg": 1565
+    },
+    {
+     "nome": "Hip Adduction (Machine)",
+     "series": "2×15",
+     "peso": 86.18265279277155,
+     "kg": 2585
+    },
+    {
+     "nome": "Seated Calf Raise",
+     "series": "2×15",
+     "peso": 22.67964547178199,
+     "kg": 680
+    }
+   ]
   }
  ],
  "meta": {
-  "ultimaSync": "2026-09-17T00:33:36",
+  "ultimaSync": "2026-09-17T00:44:21",
   "totalRotinas": 12,
   "totalTreinos": 3,
   "semanas": 12,
