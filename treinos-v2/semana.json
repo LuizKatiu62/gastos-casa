@@ -1,8 +1,8 @@
 {
- "ate": "2026-09-23",
- "de": "2026-09-17",
+ "ate": "2026-09-24",
+ "de": "2026-09-18",
  "fcMax": 163,
- "gerado": "2026-09-18T00:25:22.638Z",
+ "gerado": "2026-09-18T10:37:32.293Z",
  "limiar": "5:21",
  "sessoes": [
   {
@@ -72,6 +72,50 @@
      ],
      "tipo": "repetir",
      "vezes": 6
+    },
+    {
+     "fim": "time",
+     "texto": "8 min de trote muito leve ate a respiracao normalizar.",
+     "tipo": "cooldown",
+     "valor": 480
+    }
+   ]
+  },
+  {
+   "data": "2026-09-24",
+   "foco": "tiros",
+   "km": 6.6,
+   "min": 44,
+   "nome": "24/09 · Rodagem + Strides · 6.6 km total",
+   "nota": "Total porta a porta 6.6 km. Alongamentos e educativos ANTES do start, relogio parado.",
+   "passos": [
+    {
+     "fim": "time",
+     "lento": 2.2422,
+     "rapido": 2.4038,
+     "texto": "12 min subindo devagar, 6:56–7:26/km. Se chegar ofegante ao fim, foi rapido demais.",
+     "tipo": "warmup",
+     "valor": 720
+    },
+    {
+     "passos": [
+      {
+       "fim": "distance",
+       "lento": 3.3003,
+       "rapido": 3.4602,
+       "texto": "600 m em 4:49–5:03/km, FC ate 148-158 bpm.",
+       "tipo": "interval",
+       "valor": 600
+      },
+      {
+       "fim": "time",
+       "texto": "3 min de trote leve. Nao pare de correr.",
+       "tipo": "recovery",
+       "valor": 150
+      }
+     ],
+     "tipo": "repetir",
+     "vezes": 4
     },
     {
      "fim": "time",
