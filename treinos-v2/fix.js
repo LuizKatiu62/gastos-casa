@@ -41,9 +41,15 @@
   19) Análise feito x planejado no fim da aba Coach: veredito do bloco,
       último treino comparado, projeção da maratona e propostas de
       mudança que só valem depois que você tocar em Aplicar
+  20) Botão PT / EN no alto da tela: o app inteiro passa para o inglês
+      e volta, sem recarregar e sem mexer em nenhum dado. Ficam em
+      português apenas os nomes escritos por outras pessoas — os
+      treinos do seu treinador, as rotinas e exercícios do Hevy, e os
+      nomes de prova e de cidade. Números, datas e medidas não são
+      reescritos.
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '07a';
+const FIX_VERSAO = '07b';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -14607,3 +14613,917 @@ PARTE('pressao arterial', function(){
     recarregar: function(){ tentativas = 0; insistir(); return 'buscando…' }
   };
 });
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   60. PT | EN — a camada de idioma
+
+   Não mexe em nada do que já funciona. Não toca em dado, em conta, em
+   plano, em Firebase, em Hevy. Só faz uma coisa: depois que a tela já
+   está pronta, troca o TEXTO VISÍVEL de português para inglês, e
+   guarda o português original dentro de cada nó. Voltar para PT é
+   devolver o que estava guardado — sem recarregar a página.
+
+   Se esta parte falhar inteira, o app continua igual ao de antes, em
+   português: é o try/catch do PARTE() que segura.
+
+   NÃO são traduzidos, de propósito:
+     · o nome dos treinos do seu treinador (Garmin/TrainingPeaks) e o
+       nome das rotinas do Hevy — são o que outra pessoa escreveu;
+     · o nome dos exercícios — já vêm em inglês, do Hevy;
+     · nome de prova, de cidade e endereço de site;
+     · números. Nenhum número é reescrito: 5:33/km continua 5:33/km e
+       16/09 continua 16/09.
+   ═══════════════════════════════════════════════════════════════════ */
+PARTE('ingles', function(){
+
+  var CHAVE = 'bq_idioma';
+
+  /* ───────── 1. dicionário ───────── */
+  /* ══════════════════════════════════════════════════════════════════════
+     PT → EN · dicionário da interface do Treinos v-2
+
+     Cada chave é o texto exato que aparece na tela, em português. A
+     comparação é feita sem diferenciar maiúsculas de minúsculas, e a
+     tradução recebe de volta a caixa do original (TEMPO → TIME).
+
+     NAO entram aqui, de proposito:
+       · nomes de treino do treinador (Garmin/TrainingPeaks) e de rotina
+         do Hevy — "Rodagem leve 35'", "Forca - Pernas e Core (base)".
+         Sao o que o treinador e o Luiz escreveram; traduzir seria mudar
+         o nome de outra pessoa.
+       · nomes de exercicio — ja estao em ingles, vem do Hevy.
+       · nomes de prova, cidade e site.
+       · numeros, datas e unidades — ver REGRAS, no motor.
+     ══════════════════════════════════════════════════════════════════ */
+  var EN_FRASES = {
+
+  /* ── navegacao, cabecalho, rodape ── */
+  'Coach':'Coach', 'Treinos':'Workouts', 'Índices':'Metrics', 'Evolução':'Trends',
+  'Provas':'Races', 'Saúde':'Health', 'Dados':'Data',
+  'Plano de treino':'Training plan', 'Histórico':'History', 'Métricas atuais':'Current metrics',
+  'Tendências':'Trends', 'Sono, energia e stress':'Sleep, energy and stress',
+  'Calendário e calculadoras':'Race calendar and calculators', 'Origem dos números':'Where the numbers come from',
+  'Dados e ajustes':'Data and settings', 'Treinos · Luiz Silva':'Workouts · Luiz Silva',
+  'Atualizado agora':'Updated just now', 'Verifique a aba Dados':'Check the Data tab',
+  'Começar':'Start', 'Fechar':'Close', 'Salvar':'Save', 'Restaurar':'Restore', 'Trocar':'Change',
+
+  /* ── modalidades e focos ── */
+  'Corrida':'Run', 'Bike':'Bike', 'Natação':'Swim', 'Força':'Strength', 'Academia':'Gym',
+  'Descanso':'Rest day', 'Caminhada':'Walk', 'Prova':'Race', 'Treino':'Workout',
+  'Rodagem fácil':'Easy run', 'Rodagem leve':'Easy run', 'Rodagem':'Easy run',
+  'Longo':'Long run', 'Longão':'Long run', 'Treino longo':'Long run',
+  'Ritmo de maratona':'Marathon pace', 'Ritmo de limiar':'Threshold pace', 'Limiar':'Threshold',
+  'VO₂ máx':'VO₂ max', 'Tiros curtos':'Short intervals', 'Ladeiras':'Hills', 'Ladeira':'Hills',
+  'Fartlek':'Fartlek', 'Intervalado':'Intervals', 'Recuperação':'Recovery', 'Soltura':'Shakeout',
+  'Progressivo':'Progression', 'Cruzado':'Cross-training', 'Combinado':'Brick',
+  'Longo na bike':'Long ride', 'Técnica':'Technique', 'Específica':'Race-specific',
+  'Sessão de qualidade':'Quality session', 'Segundo treino':'Second workout',
+  'Treino incluído':'Added workout', 'FÁC':'EASY', 'Leve':'Easy', 'leve':'easy',
+
+  /* ── estados ── */
+  'Feito':'Done', 'feito':'done', 'Feitos':'Done', 'feitos':'done',
+  'previsto':'planned', 'Previsto':'Planned', 'não registrado':'not logged',
+  'não feito':'not done', 'Não feito':'Not done', 'no alvo':'on target',
+  'fora da faixa':'off range', 'sem previsão':'unplanned', 'Pendente':'Pending',
+  'Concluir':'Complete', '✓ Concluído':'✓ Completed', 'concluída':'completed',
+  'feito em casa ✓':'done at home ✓', 'feito no Hevy ✓':'done in Hevy ✓',
+  'Feito no Hevy':'Done in Hevy', 'Feito em casa':'Done at home', 'Desfazer':'Undo',
+  'trocado':'swapped', 'manual':'manual', 'Já aconteceu':'Already held',
+  'Já aconteceram':'Already held', 'Inscrição aberta':'Registration open',
+  'Inscrição encerrada':'Registration closed', 'Esgotada':'Sold out',
+
+  /* ── tempo ── */
+  'Hoje':'Today', 'Amanhã':'Tomorrow', 'Ontem':'Yesterday',
+  'Esta semana':'This week', 'Semana':'Week', 'Semanas':'Weeks', 'semanas':'weeks',
+  'Dia':'Day', 'dias':'days', 'Dias':'Days', 'anos':'years',
+  'Mês anterior':'Previous month', 'Próximo mês':'Next month', 'Próxima prova':'Next race',
+  'dias restantes':'days left', 'Data de início':'Start date',
+  'Intervalo':'Range', 'Intervalo em dias':'Range in days', 'Período curto demais':'Range too short',
+  'Últimos 90 dias':'Last 90 days', 'Últimos 7 dias:':'Last 7 days:',
+  'Primeiros 90 dias':'First 90 days', 'Últimas 26 semanas':'Last 26 weeks',
+  'Resumo da semana':'Week summary', 'Resumo desde uma data':'Summary since a date',
+  'Faixa da semana':'Week range', 'Sessão da semana':'Session of the week',
+  'maior treino da semana':'longest workout of the week',
+
+  /* ── medidas ── */
+  'Distância':'Distance', 'Distância (km)':'Distance (km)', 'Duração':'Duration',
+  'Tempo':'Time', 'Tempo total':'Total time', 'Tempo final':'Finish time', 'Tempo alvo':'Target time',
+  'Pace':'Pace', 'Pace médio':'Average pace', 'Pace necessário':'Required pace',
+  'Pace recente':'Recent pace', 'Pace de corrida':'Running pace', 'Pace de limiar (min/km)':'Threshold pace (min/km)',
+  'Pace bloco 1':'Pace block 1', 'Pace bloco 2':'Pace block 2', 'Pace bloco 3':'Pace block 3',
+  'Troca 1 — fim do km':'Switch 1 — end of km', 'Troca 2 — fim do km':'Switch 2 — end of km',
+  'Séries':'Sets', 'Sessões':'Sessions', 'Sessão':'Session', 'Volume':'Volume',
+  'Volume semanal':'Weekly volume', 'Volume semana 1':'Volume week 1', 'Volume semana 2':'Volume week 2',
+  'Cadência':'Cadence', 'FC média':'Avg HR', 'FC máxima (bpm)':'Max HR (bpm)',
+  'FC de repouso (bpm)':'Resting HR (bpm)', ', FC máx':', max HR',
+  'VO₂ máx (ml/kg/min)':'VO₂ max (ml/kg/min)', 'Corrida 30d':'Running 30d',
+  'Peso total':'Total weight', 'Horas':'Hours', 'Aderência':'Adherence',
+  'Progressão de carga':'Load progression', 'Risco de carga':'Load risk',
+  'TSS por treino':'TSS per workout', 'Zonas de treino':'Training zones',
+  'Mecânica de corrida':'Running mechanics', 'Eficiência aeróbica':'Aerobic efficiency',
+  'eficiência':'efficiency', 'tendência':'trend', 'média':'average', 'mínimo':'minimum',
+  'Cadência × pace':'Cadence × pace', 'Esperado p/ o pace':'Expected for the pace',
+  'Seus números':'Your numbers', 'Acima da base':'Above baseline', 'Seu volume vem':'Your volume is',
+  'e pace de limiar':'and threshold pace', 'de corrida.':'of running.',
+
+  /* ── academia ── */
+  'Aquecimento:':'Warm-up:', 'Aquecimento':'Warm-up',
+  'Aderência · 4 semanas':'Adherence · 4 weeks', 'Sessões previstas':'Planned sessions',
+  'Marcar como feito em casa':'Mark as done at home', 'Abrir o Hevy':'Open Hevy',
+  'Já registrei no Hevy':'Logged it in Hevy', 'Conferindo…':'Checking…',
+  'Buscando no Hevy…':'Fetching from Hevy…', 'Na fila do GitHub…':'Queued on GitHub…',
+  'Lendo o Hevy…':'Reading Hevy…', 'Salvando…':'Saving…',
+  'trocar ⇄':'swap ⇄', 'fechar':'close', 'desfazer':'undo',
+  'Mover dia':'Move day', 'Cancelar este treino':'Cancel this workout',
+  '+ Adicionar segundo treino':'+ Add second workout', '+ Incluir um treino neste dia':'+ Add a workout to this day',
+  'Rotina Fit4Less do seu Hevy.':'Your Fit4Less routine from Hevy.',
+  'Rotina de casa do seu Hevy.':'Your home routine from Hevy.',
+  'Treino de casa: faça sem o Hevy.':'Home workout: do it without Hevy.',
+  'Adaptada para os aparelhos de casa. Faça sem o Hevy.':'Adapted to your home equipment. Do it without Hevy.',
+  'Depois: cadeira de massagem, nos horários com equipe. Levante devagar.':'Afterwards: massage chair, during staffed hours. Stand up slowly.',
+  'Só aparelhos que você não tem em casa. Esta rotina ainda não existe no Hevy: lá, comece um treino vazio e adicione estes exercícios.':'Only machines you don\'t have at home. This routine isn\'t in Hevy yet: there, start an empty workout and add these exercises.',
+  'Hoje não tem. Próxima sessão: sexta, 5:30.':'Nothing today. Next session: Friday, 5:30.',
+  'Hoje não tem. Próxima sessão: segunda, 5:30.':'Nothing today. Next session: Monday, 5:30.',
+  'Hoje não tem. Próxima sessão: quarta, 5:30.':'Nothing today. Next session: Wednesday, 5:30.',
+  'Academia às segundas, quartas e sextas, 5:30. A corrida fica no relógio, montada pelo seu treinador.':'Gym on Mondays, Wednesdays and Fridays, 5:30. Running lives on the watch, built by your coach.',
+  'Fase de carga. Máxima e Pernas nunca nas 48h antes do longão.':'Loading phase. Max and Legs never within 48h of the long run.',
+  'Última semana com carga alta. Tire o Jump Squat da Máxima a partir de agora.':'Last heavy week. Drop the Jump Squat from Max from now on.',
+  'Nada pesado. O ganho já está feito; agora é chegar inteiro.':'Nothing heavy. The gains are in; now it\'s about arriving in one piece.',
+  'Só a segunda, e leve. Depois de 14/10, nada.':'Monday only, and light. After 14/10, nothing.',
+  'Carregando os dados do Hevy…':'Loading your Hevy data…',
+  'Os exercícios deste dia chegam na próxima leitura do Hevy (Hevy Pull).':'This day\'s exercises arrive on the next Hevy read (Hevy Pull).',
+  'Sua rotina do Hevy, que já é toda de casa.':'Your Hevy routine — already all home exercises.',
+  'Peso total = carga × repetições de todas as séries registradas no Hevy.':'Total weight = load × reps across every set logged in Hevy.',
+  'Nenhum treino de academia neste intervalo.':'No gym workouts in this range.',
+  'Feito também no Hevy, fora do plano:':'Also done in Hevy, outside the plan:',
+  'Carregando os treinos do Hevy…':'Loading your Hevy workouts…',
+  'Goblet Squat está no mesmo peso desde 01/08.':'Goblet Squat has been at the same weight since 01/08.',
+
+  /* ── plano, coach ── */
+  'Fase: Construção':'Phase: Build', 'Construção':'Build', 'Base':'Base', 'Pico':'Peak',
+  'Polimento':'Taper', 'Semana da prova':'Race week', 'Plano do treinador':'Coach\'s plan',
+  'Barra cheia: feito':'Solid bar: done', 'Tracejada: previsto que falta':'Dashed: still to do',
+  'toque numa linha':'tap a row', 'para abrir o treino':'to open the workout',
+  'Planilha':'Plan', 'Calendário':'Calendar', 'Linha do tempo':'Timeline',
+  'Progresso do ciclo':'Cycle progress', 'Treinar para esta':'Train for this one',
+  'Simulador de estratégia':'Pacing simulator', 'Calculadora de pace e splits':'Pace and splits calculator',
+  'três blocos de ritmo até o tempo final':'three pace blocks to the finish time',
+  'pace necessário e o relógio em cada quilômetro':'required pace and the clock at every kilometre',
+  'Três blocos de ritmo. Defina onde troca e em que pace corre cada trecho — o app mostra o tempo final.':'Three pace blocks. Set where each one ends and the pace you\'ll run — the app shows the finish time.',
+  'Informe a distância e o tempo que quer fazer. O app devolve o pace necessário e o relógio em cada quilômetro.':'Enter the distance and the time you want. The app gives you the required pace and the clock at every kilometre.',
+  'Digite só os números — os dois-pontos entram sozinhos.':'Type digits only — the colons appear on their own.',
+  'Volume e ritmo saem do seu plano, pela fase do ciclo.':'Volume and pace come from your plan, by cycle phase.',
+  'A sessão mais próxima da exigência da prova.':'The session closest to race demands.',
+  'Distância contínua, sem parar.':'Continuous distance, no stopping.',
+  'Leve, sem carga, 30 a 40 min.':'Easy, no load, 30 to 40 min.',
+  'Blocos de 400 m firmes e constantes.':'400 m blocks, firm and steady.',
+  'Blocos firmes e constantes, sem oscilar.':'Firm, steady blocks, no surging.',
+  'Tiros de 800 m em ritmo forte. Potência aeróbica.':'800 m reps at a hard pace. Aerobic power.',
+  '100 m fortes com descanso curto.':'Hard 100 m with short recovery.',
+  '100 m quase máximos com descanso completo. Mecânica e velocidade.':'Near-maximal 100 m with full recovery. Mechanics and speed.',
+  'Ladeira em série. Força sem o impacto do intervalado.':'Hill repeats. Strength without the impact of flat intervals.',
+  'Jogo de ritmo pela sensação, sem olhar o relógio.':'Pace play by feel, without looking at the watch.',
+  'Três blocos acelerando. Termina forte, sem quebrar.':'Three blocks getting faster. Finish strong, without blowing up.',
+  'Volume confortável, dá para conversar o tempo todo.':'Comfortable volume — you can talk the whole way.',
+  'Trote bem leve. Recuperação ativa, não é treino.':'Very easy jog. Active recovery, not a workout.',
+  'Séries de 4 min forte, cadência acima de 85 rpm.':'4 min hard efforts, cadence above 85 rpm.',
+  'Educativos e braçada longa. Zero impacto.':'Drills and a long stroke. Zero impact.',
+  'Resistência e ensaio de alimentação.':'Endurance and fuelling rehearsal.',
+  'Alterna pernas e costas conforme a semana.':'Alternates legs and back depending on the week.',
+  'Recuperação — Conversa fluida o tempo todo':'Recovery — Easy conversation the whole way',
+  'Rodagem fácil — Base aeróbica, onde mora o volume':'Easy run — Aerobic base, where the volume lives',
+  'Longo — Resistência, o treino mais importante':'Long run — Endurance, the most important session',
+  'Limiar — Confortavelmente difícil, 20 a 25 min sustentáveis':'Threshold — Comfortably hard, 20 to 25 min sustainable',
+  'VO₂ máx — Só dentro de tiros de 2 a 4 min. Nunca como bloco contínuo':'VO₂ max — Only inside 2 to 4 min reps. Never as a continuous block',
+  'Confortavelmente difícil. O que mais muda o resultado.':'Comfortably hard. What changes the result the most.',
+  'o previsto não traz ritmo, então não há TSS previsto':'the plan carries no pace, so there is no planned TSS',
+  'Define as faixas de batimento de cada treino.':'Sets the heart-rate ranges for every workout.',
+  'Define o quadro verde no topo da aba':'Sets the green panel at the top of the tab',
+  '📋 Responder o questionário do corredor':'📋 Answer the runner questionnaire',
+
+  /* ── saúde ── */
+  'Pressão arterial':'Blood pressure', 'Sono':'Sleep', 'Stress':'Stress',
+  'Energia':'Energy', 'HRV':'HRV', 'Sono — fases por noite':'Sleep — stages per night',
+  '+ Nova medida':'+ New reading', 'Pronto para treinar':'Ready to train',
+  'stress médio':'average stress', 'Atenção':'Careful',
+  'Medida ao acordar, antes de levantar.':'Measured on waking, before getting up.',
+  'Energia disponível medida pelo relógio ao acordar.':'Available energy measured by the watch on waking.',
+  'Última noite registrada. Abaixo de 7 h a recuperação sofre.':'Last night logged. Below 7 h recovery suffers.',
+  'Variabilidade cardíaca noturna. Queda persistente costuma preceder fadiga.':'Overnight heart-rate variability. A lasting drop usually comes before fatigue.',
+  'Cem menos o stress médio do período. Quanto maior, melhor.':'One hundred minus the average stress for the range. Higher is better.',
+  'Sem leituras de HRV suficientes.':'Not enough HRV readings.',
+  'Sem leituras de stress no período.':'No stress readings in this range.',
+  'Sem noites suficientes no período.':'Not enough nights in this range.',
+  'Sem leituras suficientes no período.':'Not enough readings in this range.',
+  'Nenhuma medida ainda. Elas chegam do app Saúde do iPhone, pelo Atalho — o mesmo caminho dos treinos manuais.':'No readings yet. They arrive from the iPhone Health app through the Shortcut — the same path as manual workouts.',
+  'Lido do seu relógio. Serve de referência, não muda os treinos.':'Read from your watch. For reference only; it does not change your workouts.',
+  'Calculadas a partir do VO₂':'Calculated from VO₂',
+
+  /* ── KPI e evolução ── */
+  'Evolução até a prova':'Progress to race day', 'Previsão para os 42 km':'42 km projection',
+  'sua previsão':'your projection', 'A previsão melhorou':'The projection improved',
+  'Você está correndo':'You are running', 'Hoje o quadro mostra:':'Right now the panel shows:',
+  'Cada corrida':'Each run', 'Cada barra é um treino. A linha verde é a sua':'Each bar is one workout. The green line is your',
+  'mais rápido com o mesmo esforço do coração':'faster at the same cardiac effort',
+  'desde o começo do ciclo — a mancha vem encolhendo.':'since the cycle began — the gap keeps shrinking.',
+  'km nesta semana · a linha tracejada é a tendência':'km this week · the dashed line is the trend',
+  'últimos 7 dias sobre a média das últimas 4 semanas':'last 7 days over the average of the last 4 weeks',
+  'metros por minuto a cada batimento, nas rodagens leves':'metres per minute per heartbeat, on easy runs',
+  'Média das últimas 10 corridas':'Average of the last 10 runs',
+  ', não subir mais.':', not to go higher.',
+  '. É a definição de evoluir.':'. That is what progress means.',
+  '. Média semanal das últimas 4:':'. Weekly average of the last 4:',
+  '. A faixa considerada segura vai de 0,80 a 1,30.':'. The range considered safe runs from 0.80 to 1.30.',
+  ', porque aqui não há correção de altimetria.':', because there is no elevation correction here.',
+  'Em treino de ladeira o número sai abaixo do deles':'On hill workouts the number comes out below theirs',
+  'Só entram rodagens leves com cardíaco medido. É o indicador que menos engana: não depende de você ter feito um treino forte na semana.':'Only easy runs with heart rate are counted. It is the least misleading indicator: it does not depend on you having done a hard session that week.',
+  'Salto grande de carga. É a faixa que a literatura associa a mais lesão — considere reduzir esta semana.':'Big jump in load. This is the range the literature links to more injuries — consider easing off this week.',
+  '15 a 50% acima':'15 to 50% above', '50% acima ou mais':'50% above or more',
+  'até 15% acima do normal':'up to 15% above normal',
+  'Seus longões já estão na faixa que uma maratona pede. Daqui para frente o trabalho é':'Your long runs are already in the range a marathon asks for. From here the work is',
+  'Só as últimas 8 semanas entram aqui. Antes eu olhava o histórico inteiro — e a sua ultra de 65 km aparecia como se fosse preparo atual, o que não é verdade: o que conta para outubro é o que suas pernas fizeram nas últimas semanas.':'Only the last 8 weeks count here. Before, the whole history was used — and your 65 km ultra looked like current fitness, which it is not: what counts for October is what your legs did in the last few weeks.',
+  'A cada semana, seu melhor esforço das seis anteriores projetado para 42,195 km pela fórmula de Riegel. Entram corridas de 8 km ou mais em ritmo de esforço — uma rodagem leve não conta.':'Each week, your best effort from the previous six projected to 42.195 km using Riegel\'s formula. Runs of 8 km or more at effort pace count — an easy run does not.',
+  'O ritmo que você sustenta por cerca de uma hora. É o mais importante daqui: dele saem todos os outros. Hoje sua rodagem leve está saindo em 6:18–6:48/km — se isso parecer rápido demais, aumente este número.':'The pace you can hold for about an hour. It is the most important number here: every other pace comes from it. Right now your easy runs are coming out at 6:18–6:48/km — if that feels too fast, raise this number.',
+  'São eles que definem os ritmos de cada treino do plano. O app calcula sozinho a partir das suas atividades, mas você pode corrigir.':'These set the paces for every workout in the plan. The app works them out from your activities, but you can correct them.',
+  ', não uma meta — serve para ver o treino de hoje contra o seu normal. Calculado como no TrainingPeaks: uma hora no pace de limiar vale 100.':', not a target — it is there to compare today\'s workout with your normal. Calculated as in TrainingPeaks: one hour at threshold pace is worth 100.',
+  ', que soma tudo que você fez a partir do dia escolhido.':', which adds up everything you have done since the chosen day.',
+
+  /* ── provas ── */
+  'Todas':'All', 'Atlântico':'Atlantic', 'Ontário':'Ontario', 'Québec':'Québec',
+  'Estados Unidos':'United States', 'Abrir site da prova':'Open race website',
+  'Ver vagas por instituição':'See charity entries',
+  'Confirme sempre no site oficial antes de pagar.':'Always confirm on the official website before paying.',
+  'Datas e status de inscrição conferidos em 30/07/2026.':'Dates and registration status checked on 30/07/2026.',
+  'Boston · Nova York · Filadélfia':'Boston · New York · Philadelphia',
+  'Precisa de índice.':'Qualifying time required.',
+  'Boston Qualifier. Tem ultra de 50 km.':'Boston Qualifier. Has a 50 km ultra.',
+  'Boston Qualifier. 10K e 5K no sábado, resto no domingo.':'Boston Qualifier. 10K and 5K on Saturday, the rest on Sunday.',
+  'Percurso entre vinícolas. Boston Qualifier.':'Course through the vineyards. Boston Qualifier.',
+  'Percurso em declive. Muito procurado para índice de Boston.':'Downhill course. Popular for a Boston qualifier.',
+  'Maior prova de rua da província. Largada na Main Street.':'The province\'s biggest road race. Start on Main Street.',
+  'Maratona mais antiga das Marítimas. Próxima edição em maio de 2027.':'The oldest marathon in the Maritimes. Next edition in May 2027.',
+  'Próxima edição em maio de 2027.':'Next edition in May 2027.',
+  'Fim de semana de 9 a 11 de outubro.':'Weekend of 9 to 11 October.',
+  'Maior fim de semana de corrida do Canadá. Inscrição já aberta para 2027.':'Canada\'s biggest running weekend. Registration already open for 2027.',
+  'A prova mais prestigiada do Canadá. Percurso plano, World Athletics Elite Label. 5K no sábado.':'Canada\'s most prestigious race. Flat course, World Athletics Elite Label. 5K on Saturday.',
+  'Esgotada. Meia maratona é no sábado, 21 de novembro. Restam vagas por instituição beneficente.':'Sold out. The half marathon is on Saturday, 21 November. Charity entries remain.',
+  'O sorteio de vagas fechou em 25 de fevereiro de 2026. Ainda há entrada garantida por instituição beneficente.':'The entry lottery closed on 25 February 2026. Guaranteed charity entry is still available.',
+  'Precisa de índice. Inscrição de qualificados de 14 a 18 de setembro de 2026. Em 2027 há também sorteio entre quem tem índice mas ficou fora do corte.':'Qualifying time required. Registration for qualifiers from 14 to 18 September 2026. For 2027 there is also a lottery among runners with a qualifying time who missed the cut-off.',
+  'Confirme a data — a edição costuma ser no fim de agosto.':'Confirm the date — the race is usually held in late August.',
+  'Confirme a data no site — costuma mudar de ano para ano.':'Confirm the date on the website — it tends to change from year to year.',
+
+  /* ── dados e ajustes ── */
+  'Aparência':'Appearance', 'Escuro':'Dark', 'Claro':'Light', 'Auto':'Auto',
+  'Cópia de segurança':'Backup', 'Importar planilha do Garmin':'Import Garmin spreadsheet',
+  'Dias em que você treina':'Days you train', 'Seus números':'Your numbers',
+  'Escuro, claro, ou Auto para seguir o ajuste do iPhone e virar sozinho ao anoitecer.':'Dark, light, or Auto to follow the iPhone setting and switch by itself at dusk.',
+  'A partir deste dia o app soma tudo.':'From this day on the app adds everything up.',
+  'ex.: dia da cirurgia':'e.g. surgery day',
+  'O relógio envia para o Garmin Connect. O botão':'The watch sends to Garmin Connect. The button',
+  'Só precisa disto se o Sync Garmin parar de funcionar — token vencido, workflow com erro, servidor fora do ar.':'You only need this if Sync Garmin stops working — expired token, failing workflow, server down.',
+  'O CSV de atividades não traz mecânica de corrida. Esses dados vêm no arquivo .FIT de cada treino ou pela API do Garmin.':'The activity CSV carries no running mechanics. That data comes in each workout\'s .FIT file or through the Garmin API.',
+  'Só 0 corridas com cadência em 180 dias. Aumente o intervalo na barra acima.':'Only 0 runs with cadence in 180 days. Widen the range on the bar above.',
+  'Esta comparação precisa de 8 corridas com frequência cardíaca. Em 180 dias há 5. Aumente o intervalo na barra acima.':'This comparison needs 8 runs with heart rate. There are 5 in 180 days. Widen the range on the bar above.',
+  'Composto em 17/09/2026 a partir dos seus 70.1 km reais das duas semanas anteriores (116% do previsto). O próximo bloco será composto em':'Built on 17/09/2026 from your actual 70.1 km over the two previous weeks (116% of plan). The next block will be built on',
+  ', lá no topo, busca de lá e guarda no servidor do app — por isso iPhone e Mac mostram o mesmo.':', at the top, fetches from there and stores it on the app\'s server — that is why iPhone and Mac show the same thing.',
+  'guardadas. A mais recente é de ontem':'stored. The most recent is from yesterday',
+
+  /* ── mensagens do GYM e da aba Treinos ── */
+  'GYM':'GYM', 'Tudo':'All', 'ver lista ›':'see list ›',
+  'Nenhuma atividade registrada.':'No activity logged.',
+  'Nenhuma atividade desse tipo registrada.':'No activity of that type logged.',
+  'Nenhum treino neste mês.':'No workouts this month.',
+  'dias ativos':'active days', 'sem carga registrada':'no load logged',
+  'Relógio':'Watch', 'Casa':'Home', 'Hevy':'Hevy',
+  'Nada previsto nem feito nesta semana.':'Nothing planned or done this week.',
+  'Nada a comparar ainda nesta semana.':'Nothing to compare yet this week.',
+  'Não há plano registrado para esta semana — nada a comparar.':'No plan on record for this week — nothing to compare.',
+  'O plano ainda não começou':'The plan has not started yet',
+  'não é dia de treino.':'is not a training day.',
+  'Recuperação faz parte do plano — é quando o corpo assimila o estímulo.':'Recovery is part of the plan — it is when the body absorbs the work.'
+  };
+
+
+  /* ── segunda leva: o que a primeira varredura não alcançou ──
+     Painel de análise feito × planejado, guia de execução da academia,
+     questionário, KPI e os pedaços de frase que ficam soltos entre um
+     <b> e o outro.                                                     */
+  var EN_MAIS = {
+
+  /* análise feito × planejado */
+  'o plano sai comprimido. Dá para fazer, com menos margem para imprevisto.':'the plan comes out compressed. Doable, with less room for the unexpected.',
+  ', nas rodagens fáceis. Sobe quando você corre mais rápido com o mesmo esforço cardíaco — é o sinal mais honesto de base aeróbica, porque não depende de você se esforçar mais no dia do teste. A comparação é contra as três semanas anteriores.':', on easy runs. It goes up when you run faster at the same cardiac effort — the most honest sign of aerobic base, because it does not depend on you pushing harder on the day of the test. The comparison is against the three previous weeks.',
+  '. As primeiras não têm previsto porque o app ainda não guardava esse registro — mostro os quilômetros que você fez, e a barra é o volume comparado à sua maior semana. As com':'. The first ones have no plan because the app was not keeping that record yet — I show the kilometres you ran, and the bar is the volume compared with your biggest week. The ones marked',
+  '. O ideal para PEI Marathon · índice Boston são':'. The ideal for PEI Marathon · Boston qualifier is',
+  'ainda não começaram, e a semana em curso só entra na aderência quando fechar.':'have not started yet, and the week in progress only counts towards adherence once it closes.',
+  'Ainda não chegou nenhuma corrida de hoje do Garmin. Se você já treinou, a sincronia roda de hora em hora: espere o relógio subir a atividade e puxe a tela para baixo.':'No run from today has arrived from Garmin yet. If you have already trained, the sync runs every hour: wait for the watch to upload the activity and pull the screen down.',
+  'Ainda não há esforço recente forte o bastante para projetar. Rodagem fácil não serve: ela diz como você recupera, não a que ritmo você aguenta 42 km. O próximo limiar longo ou um trecho em ritmo dentro do longão já dá o número.':'There is no recent effort hard enough to project from yet. An easy run will not do: it tells you how you recover, not the pace you can hold for 42 km. The next long threshold, or a stretch at pace inside the long run, will give the number.',
+  'Cada linha compara o que você correu com o que':'Each row compares what you ran with what',
+  'Carga 7d ÷ média':'Load 7d ÷ average',
+  'correu de verdade':'actually ran',
+  'Dados de exemplo.':'Sample data.',
+  'Estes números não são seus. Toque para conectar.':'These numbers are not yours. Tap to connect.',
+  'Fora do plano':'Outside the plan',
+  'Contam para a carga, mesmo não contando para a aderência.':'They count towards load, even though they do not count towards adherence.',
+  'Mudanças propostas':'Proposed changes',
+  'na faixa':'in range',
+  'o alvo ainda é viável?':'is the target still realistic?',
+  'O número a acompanhar não é o valor de hoje, é se ele encolhe a cada bloco.':'The number to watch is not today’s value, it is whether it shrinks with every block.',
+  'O que cada número quer dizer':'What each number means',
+  'O que os números dizem':'What the numbers say',
+  'O tempo de maratona que o seu melhor esforço recente projeta, pela fórmula de Riegel. Serve para responder uma pergunta só:':'The marathon time your best recent effort projects, using Riegel’s formula. It answers one question only:',
+  'Os quilômetros que você':'The kilometres you',
+  'precisa de 3 rodagens com FC em cada período':'needs 3 easy runs with heart rate in each range',
+  'Quantos metros você percorre por minuto para':'How many metres you cover per minute for',
+  'sem alvo fixo: o que importa é a progressão':'no fixed target: what matters is the progression',
+  'Sem pace alvo para comparar.':'No target pace to compare with.',
+  'seu normal':'your normal',
+  'subindo rápido':'rising fast',
+  'Trocar treino':'Swap workout',
+  'Última corrida':'Last run',
+  'Último treino comparado':'Last workout compared',
+  'Volume em intensidade baixa. É o treino que constrói a base sem gerar fadiga.':'Low-intensity volume. The workout that builds the base without generating fatigue.',
+  '0,8 a 1,3 seguro':'0.8 to 1.3 is safe',
+  'acima de 1,45 é risco':'above 1.45 is risk',
+  'abaixo de 0,8 é destreino':'below 0.8 is detraining',
+  'faixa de maratona':'marathon range',
+  'PEI Marathon · ín…':'PEI Marathon · Bos…',
+
+  /* guia de execução da academia */
+  'Costas no banco.':'Back on the bench.',
+  'tronco um pouco à frente para pegar o glúteo médio':'torso slightly forward to hit the glute medius',
+  'Pré-aquecimento':'Pre-warm-up',
+  'Alongamentos dinâmicos':'Dynamic stretches',
+  'anilha no peito':'plate on the chest',
+  'ao sair da máquina, levante devagar':'when getting off the machine, stand up slowly',
+  'base de pernas para corrida e bike':'leg base for running and cycling',
+  'cada batimento do coração':'each heartbeat',
+  'Cada botão abre o guia direto na etapa: passo a passo de cada movimento, os erros que mais aparecem e um vídeo de demonstração por exercício.':'Each button opens the guide straight at that step: every movement step by step, the mistakes that come up most, and a demo video for each exercise.',
+  'carga alta, desça em 2 s':'heavy load, lower over 2 s',
+  'core para segurar a postura no fim da prova':'core to hold your posture at the end of the race',
+  'Costelas para baixo, glúteo ativo, pescoço neutro. Trabalha core e anti-rotação.':'Ribs down, glutes engaged, neck neutral. Works core and anti-rotation.',
+  'Desça controlando, tronco firme e joelhos alinhados. Trabalha quadríceps, glúteo e core.':'Lower under control, torso firm and knees aligned. Works quads, glutes and core.',
+  'Empurre o quadril para trás, coluna neutra. Trabalha posterior de coxa e glúteo.':'Push the hips back, spine neutral. Works hamstrings and glutes.',
+  'Suba completo e desça bem devagar. Trabalha panturrilha e tornozelo.':'Rise all the way up and lower very slowly. Works calves and ankles.',
+  'Elevação de Panturrilha':'Calf Raise',
+  'Elevação de Quadril':'Hip Raise',
+  'Elevação Lateral':'Lateral Raise',
+  'Remada Curvada':'Bent-Over Row',
+  'Agachamento':'Squat',
+  'Prancha':'Plank',
+  'Afundo':'Lunge',
+  'Levantamento Terra':'Deadlift',
+  'Rosca Direta':'Biceps Curl',
+  'Desenvolvimento':'Overhead Press',
+  'pesado; 2 min de descanso entre as séries':'heavy; 2 min rest between sets',
+  'tornozelo e impulsão, prevenção de aquiles':'ankle and push-off, achilles prevention',
+  'treino vazio':'empty workout',
+  'e adicione estes exercícios.':'and add these exercises.',
+  'Só aparelhos que você não tem em casa. Esta rotina ainda não existe no Hevy: lá, comece um':'Only machines you don’t have at home. This routine isn’t in Hevy yet: there, start an',
+  '+ Força':'+ Strength',
+  'Pernas e Core':'Legs and Core',
+  'Força — Pernas e Core':'Strength — Legs and Core',
+  '+ Força — Pernas e Core':'+ Strength — Legs and Core',
+  '✓ Feito no Hevy':'✓ Done in Hevy',
+
+  /* questionário do corredor */
+  'Quem é você':'About you',
+  'Prefiro não dizer':'Prefer not to say',
+  'Frequência cardíaca máxima, se você souber':'Maximum heart rate, if you know it',
+  'Deixe em branco se não souber — eu estimo pela idade.':'Leave it blank if you don’t know — I estimate it from your age.',
+  'Idade e peso entram no cálculo de zonas e de carga. Nada disso sai do seu aparelho e do seu Firebase.':'Age and weight go into the zone and load calculations. None of it leaves your device and your Firebase.',
+
+  /* provas e lugares */
+  'Filadélfia':'Philadelphia',
+  'Filadélfia, PA':'Philadelphia, PA',
+  'Atlântico':'Atlantic',
+  'Ontário':'Ontario'
+  };
+  for(var __k in EN_MAIS) if(Object.prototype.hasOwnProperty.call(EN_MAIS, __k)) EN_FRASES[__k] = EN_MAIS[__k];
+
+  /* ── terceira leva: pedaços que sobraram depois da segunda medição ── */
+  var EN_MAIS3 = {
+  'alvo':'target',
+  'É o':'It is the',
+  'Subir demais de uma vez é a receita clássica da lesão':'Going up too much at once is the classic recipe for injury',
+  ', e mede o quanto você acelerou em relação ao que o seu corpo já está acostumado':', and it measures how much you sped up compared with what your body is already used to',
+  'A prioridade agora é chegar inteiro em outubro, não ganhar uma semana.':'The priority now is to arrive in one piece in October, not to win a week.',
+  'Os quilômetros da última semana divididos pela sua média das últimas quatro':'The kilometres of the last week divided by your average of the previous four',
+  'Isso é esperado: faltam as semanas de ritmo específico, que é justamente onde esse tempo cai':'That is expected: the race-specific pace weeks are still to come, and that is exactly where this time drops',
+  'Isso é esperado':'That is expected',
+  'faltam as semanas de ritmo específico, que é justamente onde esse tempo cai':'the race-specific pace weeks are still to come, and that is exactly where this time drops',
+  'O número a acompanhar não é este, é se ele encolhe a cada bloco.':'The number to watch is not this one, it is whether it shrinks with every block.',
+  'Só conta sessão que ainda está no calendário: o que você cancelou sai da conta.':'Only sessions still on the calendar count: anything you cancelled drops out.',
+  'Só conta sessão que ainda está no calendário':'Only sessions still on the calendar count',
+  'o que você cancelou sai da conta.':'anything you cancelled drops out.',
+  'A linha de baixo separa o que saiu do plano do que você fez por fora':'The bottom line separates what came from the plan from what you did outside it',
+  'os dois contam para o corpo, mas só o primeiro mede a aderência.':'both count for the body, but only the first measures adherence.',
+  'Voltar direto no número cheio é como o corredor se machuca depois de uma pausa.':'Going straight back to the full number is how runners get hurt after a break.',
+  'Este longo menor recoloca o degrau e a progressão retoma na semana seguinte.':'This shorter long run puts the step back and the progression resumes the following week.',
+  'positivo é bom':'positive is good',
+  'acima de 15% quase sempre é amostra pequena, não condicionamento':'above 15% is almost always a small sample, not fitness'
+  };
+  for(var __k3 in EN_MAIS3) if(Object.prototype.hasOwnProperty.call(EN_MAIS3, __k3)) EN_FRASES[__k3] = EN_MAIS3[__k3];
+
+  /* ── quarta leva ── */
+  var EN_MAIS4 = {
+  'Como fazer cada etapa':'How to do each step',
+  'Feito x planejado':'Done vs planned',
+  'Feito × planejado':'Done vs planned',
+  'Segure a carga':'Hold the load',
+  'Todas as minhas atividades':'All my activities',
+  'Sono bom':'Good sleep',
+  'Sono curto':'Short sleep',
+  'Sono ruim':'Poor sleep',
+  'profundo':'deep',
+  'leve':'light',
+  'REM':'REM',
+  'acordado':'awake',
+  'noites':'nights',
+  'noite':'night',
+  'pico':'peak',
+  'posterior forte protege o joelho':'strong hamstrings protect the knee',
+  'Segundo treino':'Second workout',
+  'Força — Costas e Postura':'Strength — Back and Posture',
+  'Costas e Postura':'Back and Posture',
+  'Força — Máxima':'Strength — Max',
+  'Máxima':'Max',
+  'Força — Pernas':'Strength — Legs',
+  'Pernas':'Legs',
+  'Core':'Core'
+  };
+  for(var __k4 in EN_MAIS4) if(Object.prototype.hasOwnProperty.call(EN_MAIS4, __k4)) EN_FRASES[__k4] = EN_MAIS4[__k4];
+
+  /* ───────── 2. calendário ───────── */
+  var MESES = {'janeiro':'January','fevereiro':'February','março':'March','marco':'March',
+    'abril':'April','maio':'May','junho':'June','julho':'July','agosto':'August',
+    'setembro':'September','outubro':'October','novembro':'November','dezembro':'December'};
+  var MES3 = {'jan':'Jan','fev':'Feb','mar':'Mar','abr':'Apr','mai':'May','jun':'Jun',
+    'jul':'Jul','ago':'Aug','set':'Sep','out':'Oct','nov':'Nov','dez':'Dec'};
+  var DIAS = {'domingo':'Sunday','segunda-feira':'Monday','segunda':'Monday',
+    'terça-feira':'Tuesday','terça':'Tuesday','quarta-feira':'Wednesday','quarta':'Wednesday',
+    'quinta-feira':'Thursday','quinta':'Thursday','sexta-feira':'Friday','sexta':'Friday',
+    'sábado':'Saturday'};
+  var DIA3 = {'dom':'Sun','seg':'Mon','ter':'Tue','qua':'Wed','qui':'Thu','sex':'Fri',
+    'sáb':'Sat','sab':'Sat'};
+
+  var reMes  = new RegExp('\\b(' + Object.keys(MESES).join('|') + ')\\b', 'gi');
+  var reDia  = new RegExp('\\b(' + Object.keys(DIAS).join('|') + ')\\b', 'gi');
+
+  function ordinal(n){
+    n = +n; var v = n % 100;
+    var s = (v >= 11 && v <= 13) ? 'th' : (['th','st','nd','rd'][n % 10] || 'th');
+    return n + s;
+  }
+
+  /* ───────── 3. regras (o que o dicionário não pega) ───────── */
+  var REGRAS = [
+    /* datas por extenso: "25 de fevereiro de 2026" → "February 25, 2026" */
+    [/\b(\d{1,2})\s+de\s+(janeiro|fevereiro|março|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\s+de\s+(\d{4})\b/gi,
+      function(_, d, m, a){ return MESES[m.toLowerCase()] + ' ' + (+d) + ', ' + a }],
+    [/\b(\d{1,2})\s+de\s+(janeiro|fevereiro|março|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\b/gi,
+      function(_, d, m){ return MESES[m.toLowerCase()] + ' ' + (+d) }],
+    [/\b(janeiro|fevereiro|março|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)\s+de\s+(\d{4})\b/gi,
+      function(_, m, a){ return MESES[m.toLowerCase()] + ' ' + a }],
+
+    /* contagens */
+    [/\b(\d+)\s+de\s+(\d+)\s+sess(ões|oes)\s+previstas?\b/gi, '$1 of $2 planned sessions'],
+    [/\b(\d+)\s+de\s+(\d+)\s+sess(ões|oes|ão|ao)\b/gi,        '$1 of $2 sessions'],
+    [/\b(\d+)\s+de\s+(\d+)\s+feitos?\b/gi,                    '$1 of $2 done'],
+    [/\b(\d+)\s+de\s+(\d+)\s+treinos?\b/gi,                   '$1 of $2 workouts'],
+    [/\bSemana\s+(\d+)\s+de\s+(\d+)\b/gi,                     'Week $1 of $2'],
+    [/\bde\s+(\d+)\s+sess(ões|oes)\s+previstas?\b/gi,         'of $1 planned sessions'],
+    [/\b(\d+)[ºo°]\s+treino\b/gi, function(_, n){ return ordinal(n) + ' workout' }],
+    [/\b(\d+)\s+dias\s+ativos\b/gi,                           '$1 active days'],
+    [/\b(\d+)\s+dias\s+marcados\b/gi,                         '$1 days selected'],
+    [/\b(\d+(?:[.,]\d+)?)\s+sess(ões|oes)\b/gi,               '$1 sessions'],
+    [/\b(\d+)\s+sess(ão|ao)\b/gi,                             '$1 session'],
+    [/\b(\d+(?:[.,]\d+)?)\s+treinos\b/gi,                     '$1 workouts'],
+    [/\b(\d+)\s+treino\b/gi,                                  '$1 workout'],
+    [/\b(\d+(?:[.,]\d+)?)\s+corridas\b/gi,                    '$1 runs'],
+    [/\b(\d+)\s+corrida\b/gi,                                 '$1 run'],
+    [/\b(\d+(?:[.,]\d+)?)\s+atividades\b/gi,                  '$1 activities'],
+    [/\b(\d+)\s+atividade\b/gi,                               '$1 activity'],
+    [/\b(\d+(?:[.,]\d+)?)\s+semanas\b/gi,                     '$1 weeks'],
+    [/\b(\d+)\s+semana\b/gi,                                  '$1 week'],
+    [/\b(\d+(?:[.,]\d+)?)\s+dias\b/gi,                        '$1 days'],
+    [/\b(\d+)\s+dia\b/gi,                                     '$1 day'],
+    [/\b(\d+(?:[.,]\d+)?)\s+meses\b/gi,                       '$1 months'],
+    [/\b(\d+)\s+m(ê|e)s\b/gi,                                 '$1 month'],
+    [/\b(\d+(?:[.,]\d+)?)\s+noites\b/gi,                      '$1 nights'],
+    [/\b(\d+)\s+noite\b/gi,                                   '$1 night'],
+    [/\b(\d+(?:[.,]\d+)?)\s+anos\b/gi,                        '$1 years'],
+    [/\b(\d+)\s+ano\b/gi,                                     '$1 year'],
+    [/\b(\d+(?:[.,]\d+)?)\s+minutos\b/gi,                     '$1 minutes'],
+    [/\b(\d+(?:[.,]\d+)?)\s+horas\b/gi,                       '$1 hours'],
+    [/\b(\d+)\s+hora\b/gi,                                    '$1 hour'],
+    [/\bn(as|os)\s+últim(as|os)\s+/gi,                        'in the last '],
+    [/\bd(as|os)\s+últim(as|os)\s+/gi,                        'of the last '],
+    [/(^|[\s·—(])últim(os|as)\s+/gi,                           '$1last '],
+    [/\bem\s+(\d+(?:[.,]\d+)?)\s+(days|weeks|months|years|minutes|hours|sessions|workouts|runs|nights)\b/gi, 'in $1 $2'],
+    [/\batrás\b/gi,                                           'ago'],
+
+
+    /* contagens e frases com número que muda */
+    [/\bBloco\s+(\d+)\s+de\s+(\d+)\b/gi,                 'Block $1 of $2'],
+    [/\b(\d+)\s+de\s+(\d+)\s+etapas\b/gi,                '$1 of $2 steps'],
+    [/\b(\d+)\s+de\s+(\d+)\s+exerc(í|i)cios?\b/gi,        '$1 of $2 exercises'],
+    [/\b(\d+)\s+de\s+(\d+)\s+km\s+do\s+plano\b/gi,      '$1 of $2 km of the plan'],
+    [/\bfora dele\b/gi,                                     'outside it'],
+    [/\bkg levantados\b/gi,                                 'kg lifted'],
+    [/\s+de\s+preparo\b/gi,                                ' of build-up'],
+    [/\bno ciclo\b/gi,                                      'in the cycle'],
+    [/\bno alvo\b/gi,                                       'on target'],
+    [/\bdo plano\b/gi,                                      'of the plan'],
+    [/^alvo:\s*/i,                                          'target: '],
+    [/\bou mais\b/gi,                                       'or more'],
+    [/(^|\s)última em\b/gi,                                 '$1last on'],
+    [/^Previsto para\b/i,                                   'Planned for'],
+    [/^Projeção para\b/i,                                   'Projection for'],
+    [/^A projeção ainda está acima de\b/i,                   'The projection is still above'],
+    [/^Aparece no quadro:/i,                                 'Shows in the panel:'],
+    [/^Encurtar o próximo longo de\s+([\d.,]+)\s+para\s+/i,  'Shorten the next long run from $1 to '],
+    [/^a partir de\s+/i,                                     'from '],
+    [/([\d.,]+)\s+km\s+a\s+(\d+:\d+\/km)/gi,              '$1 km at $2'],
+    [/\bem\s+(\d{2}\/\d{2}(?:\/\d{4})?)\b/gi,             'on $1'],
+    [/\b(\d+(?:[.,]\d+)?)\s+a\s+(\d+(?:[.,]\d+)?)\s+km\b/gi, '$1 to $2 km'],
+    [/\bem dias que o plano não previa, somando\b/gi,        'on days the plan did not call for, adding up to'],
+    [/\bkm dos\s+([\d.,]+)\s+km que os blocos pediram nas semanas já fechadas\b/gi,
+      'km of the $1 km the blocks called for in the weeks already closed'],
+    [/\bde bicicleta ergométrica ou polichinelos, depois mobilidade de quadril e tornozelo\b/gi,
+      'on the stationary bike or jumping jacks, then hip and ankle mobility'],
+    [/\bfocando quadril e posterior de coxa\b/gi,            'focusing on hips and hamstrings'],
+    [/\bmin na escada, leve\b/gi,                            'min on the stair machine, easy'],
+    [/\bmin no remo \+\s*(\d+)\s+séries leves do\b/gi,      'min on the rower + $1 light sets of'],
+    [/\bao fim do aquecimento\b/gi,                          'at the end of the warm-up'],
+    [/^Atlântico\b/i,                                       'Atlantic'],
+    [/^Ontário\b/i,                                         'Ontario'],
+    [/^Natação\b/i,                                         'Swim'],
+    [/^o ritmo do dia\b/i,                                   'the pace for'],
+    [/\bFirme, mas você fala frases curtas\b/gi,             'Firm, but you can still speak short sentences'],
+    [/^Ver e enviar\b/i,                                     'View and send'],
+
+    /* pedaços de frase que sobram soltos entre <b> e <span> */
+    [/^Ver vídeo de\s+/i,        'Watch video: '],
+    [/\bpara a prova\b/gi,       'to race day'],
+    [/\baté a prova\b/gi,        'to race day'],
+    [/\bda prova\b/gi,          'of the race'],
+    [/\bdia da cirurgia\b/gi,    'surgery day'],
+    [/até hoje\b/gi,            'to today'],
+    [/\bem andamento\b/gi,       'in progress'],
+    [/\bno período\b/gi,         'in the range'],
+    [/\bvs sua mediana\b/gi,     'vs your median'],
+    [/\bsua mediana\b/gi,        'your median'],
+    [/\bsemanas atrás\b/gi,      'weeks ago'],
+    [/\bde corrida\b/gi,         'of running'],
+    [/\bde treino\b/gi,          'of training'],
+    [/\bno último treino\b/gi,   'on the last workout'],
+    [/\bo próximo do plano é\s/gi, 'the next one in the plan is '],
+    [/\bo próximo\b/gi,          'the next one'],
+    [/\bseu maior\b/gi,          'your longest'],
+    [/\bacima do alvo de\b/gi,   'above the target of'],
+    [/\ba mancha é a distância que falta\b/gi, 'the shaded area is the gap left'],
+    [/índice Boston\b/gi,       'Boston qualifier'],
+    [/\bPercurso plano\b/gi,     'Flat course'],
+    [/\bem ciclovia\b/gi,        'on a bike path'],
+    [/\bInscrição até\s/gi,      'Registration until '],
+    [/\bAumente o intervalo na barra acima\b/gi, 'Widen the range on the bar above'],
+    [/\bpara ver a tendência\b/gi, 'to see the trend'],
+    [/^Só\s+/i,                  'Only '],
+    [/\bem (\d+) dias\b/gi,      'in $1 days'],
+    [/\bO plano distribui os treinos só nestes\b/gi, 'The plan spreads workouts across these only'],
+    [/\bA mais recente é de ontem\b/gi, 'The most recent is from yesterday'],
+    [/\bA mais recente é de hoje\b/gi,  'The most recent is from today'],
+    [/^guardadas\b/i,            'stored'],
+    [/^desde\b/i,                'since'],
+    [/,\s*com$/,                 ', with'],
+    [/^para\s+/i,                'for '],
+    [/·\s*faltam$/,              '· in'],
+    [/\bja tem\b/gi,             'already has'],
+    [/já tem\b/gi,              'already has'],
+    [/\bTreino do treinador\b/gi,'Coach’s workout'],
+    [/\bno Hevy\b/gi,            'in Hevy'],
+
+    /* frases do painel de análise que trazem número no meio */
+    [/^O volume subiu rápido demais\b/i,   'Volume went up too fast'],
+    [/^Você não completou nenhum longo\b/i,'You did not complete a single long run'],
+    [/^Quantos treinos (?:de corrida|of running) que o plano pediu\b/i, 'How many running workouts the plan asked for'],
+    [/\btiveram uma atividade correspondente no Garmin\b/gi, 'had a matching activity in Garmin'],
+    [/^Pelo seu melhor esforço longo recente\s*\((.+?)\), a maratona sai hoje entre\s+(\S+)\s+e\s+(\S+)$/i,
+      'From your best recent long effort ($1), the marathon comes out today between $2 and $3'],
+    [/^e aos (\d+) anos o tendão avisa depois, não durante\.$/i,
+      'and at $1 the tendon warns you afterwards, not during.'],
+    [/^(\d+) a (\d+)% em (\d+) semanas é ganho real$/i, '$1 to $2% in $3 weeks is real gain'],
+    [/(^|\s)é(\s|$)/g,                    '$1is$2'],
+    [/\bdesde\s+(\d)/gi,                  'since $1'],
+    [/(\d+\s*[A-Za-zÀ-ÿ]+)\s+e\s+(\d)/g,   '$1 and $2'],
+    [/\bver lista ›/gi,          'see list ›']
+  ];
+
+  function regras(s){
+    for(var i = 0; i < REGRAS.length; i++) s = s.replace(REGRAS[i][0], REGRAS[i][1]);
+    return s;
+  }
+
+  /* ───────── 4. dicionário: busca sem ligar para maiúsculas ───────── */
+  var MAPA = null;
+  function indexar(){
+    MAPA = {};
+    for(var k in EN_FRASES) if(Object.prototype.hasOwnProperty.call(EN_FRASES, k))
+      MAPA[k.toLowerCase()] = EN_FRASES[k];
+  }
+  function caixa(orig, novo){
+    var L = orig.replace(/[^A-Za-zÀ-ÿ]/g, '');
+    if(L.length >= 2 && L === L.toUpperCase() && L !== L.toLowerCase()) return novo.toUpperCase();
+    var p = orig.match(/[A-Za-zÀ-ÿ]/), q = novo.match(/[A-Za-zÀ-ÿ]/);
+    if(!p || !q) return novo;
+    var i = novo.indexOf(q[0]);
+    if(p[0] === p[0].toLowerCase() && p[0] !== p[0].toUpperCase())
+      return novo.slice(0, i) + q[0].toLowerCase() + novo.slice(i + 1);
+    if(p[0] === p[0].toUpperCase() && p[0] !== p[0].toLowerCase())
+      return novo.slice(0, i) + q[0].toUpperCase() + novo.slice(i + 1);
+    return novo;
+  }
+  /* O ponto final some quando a frase é partida em ". " — então quem
+     procura sem ponto também acha a entrada com ponto, e ao contrário. */
+  function dicionario(k){
+    if(!MAPA) indexar();
+    var b = k.toLowerCase(), v = MAPA[b];
+    if(v != null) return caixa(k, v);
+    if(b.charAt(b.length - 1) === '.'){
+      v = MAPA[b.slice(0, -1)];
+      if(v != null) return caixa(k, v + '.');
+    }else{
+      v = MAPA[b + '.'];
+      if(v != null) return caixa(k, v.replace(/\.\s*$/, ''));
+    }
+    return null;
+  }
+
+  /* ───────── 5. traduzir uma frase ───────── */
+  var SEPS = [' · ', ' — ', ' – ', '. ', ': '];
+  function frase(k, prof){
+    prof = prof || 0;
+    var d = dicionario(k);
+    if(d != null) return d;
+    if(prof < 4){
+      for(var i = 0; i < SEPS.length; i++){
+        var s = SEPS[i];
+        if(k.indexOf(s) > 0){
+          var pedacos = k.split(s), mudou = false;
+          var saida = pedacos.map(function(p){
+            var r = frase(p, prof + 1);
+            if(r !== p) mudou = true;
+            return r;
+          });
+          if(mudou) return saida.join(s);
+        }
+      }
+    }
+    return regras(k);
+  }
+
+  /* Recebe o texto do nó, com os espaços das pontas, e devolve o
+     equivalente em inglês mantendo esses espaços.                    */
+  function traduzir(texto){
+    var meio = texto.replace(/^\s+/, '').replace(/\s+$/, '');
+    if(!meio) return texto;
+    if(!/[A-Za-zÀ-ÿ]/.test(meio)) return texto;        /* só número/símbolo */
+    var antes = texto.slice(0, texto.length - texto.replace(/^\s+/, '').length);
+    var depois = texto.slice(texto.replace(/\s+$/, '').length);
+
+    /* dia da semana abreviado, sozinho: SEG, Sáb, qua */
+    var curto = meio.replace(/\.$/, '');
+    if(curto.length <= 7 && DIA3[curto.toLowerCase()])
+      return antes + caixa(curto, DIA3[curto.toLowerCase()]) + (meio !== curto ? '.' : '') + depois;
+    if(curto.length <= 4 && MES3[curto.toLowerCase()])
+      return antes + caixa(curto, MES3[curto.toLowerCase()]) + (meio !== curto ? '.' : '') + depois;
+
+    var pref = '';
+    var mp = meio.match(/^([·—–]\s*)/);
+    if(mp){ pref = mp[1]; meio = meio.slice(mp[1].length) }
+    /* o HTML quebra frases no meio, com recuo: "…quer fazer.\n      O app
+       devolve…". Para procurar no dicionário, os espaços viram um só. */
+    meio = meio.replace(/\s+/g, ' ');
+    var novo = frase(meio, 0);
+    if(novo === meio){
+      /* última tentativa: mês e dia da semana dentro de um texto que
+         não bateu com nada — nomes de treino do treinador passam
+         inteiros por aqui e não são tocados.                          */
+      novo = meio.replace(reMes, function(m){ return caixa(m, MESES[m.toLowerCase()]) })
+                 .replace(reDia, function(m){ return caixa(m, DIAS[m.toLowerCase()]) });
+    }
+    if(novo === meio) return texto;
+    return antes + pref + novo + depois;
+  }
+
+  /* ───────── 6. passar a tela para o inglês ───────── */
+  var PULAR = {SCRIPT:1, STYLE:1, NOSCRIPT:1, TITLE:1, TEXTAREA:1, OPTION:0};
+  var ATRIBS = ['placeholder', 'aria-label', 'title'];
+  var observador = null, relogio = null, idioma = 'pt';
+
+  function nosDeTexto(raiz, visita){
+    var w = document.createTreeWalker(raiz, NodeFilter.SHOW_TEXT, {
+      acceptNode: function(n){
+        var pai = n.parentNode;
+        if(!pai || PULAR[pai.nodeName]) return NodeFilter.FILTER_REJECT;
+        if(pai === caixaBt) return NodeFilter.FILTER_REJECT;
+        return n.nodeValue && /\S/.test(n.nodeValue)
+          ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+      }
+    });
+    var n; while((n = w.nextNode())) visita(n);
+  }
+
+  function paraIngles(){
+    nosDeTexto(document.body, function(n){
+      if(n.__en != null && n.nodeValue === n.__en) return;   /* já traduzido */
+      var pt = n.nodeValue;
+      var en = traduzir(pt);
+      n.__pt = pt;
+      n.__en = en;
+      if(en !== pt) n.nodeValue = en;
+    });
+    var todos = document.body.querySelectorAll('[placeholder],[aria-label],[title]');
+    for(var i = 0; i < todos.length; i++){
+      var el = todos[i];
+      if(el === caixaBt) continue;
+      for(var j = 0; j < ATRIBS.length; j++){
+        var a = ATRIBS[j], v = el.getAttribute(a);
+        if(v == null || !/\S/.test(v)) continue;
+        el.__atPt = el.__atPt || {}; el.__atEn = el.__atEn || {};
+        if(el.__atEn[a] != null && v === el.__atEn[a]) continue;
+        var t = traduzir(v);
+        el.__atPt[a] = v; el.__atEn[a] = t;
+        if(t !== v) el.setAttribute(a, t);
+      }
+    }
+  }
+
+  function paraPortugues(){
+    nosDeTexto(document.body, function(n){
+      if(n.__pt != null && n.__en != null && n.nodeValue === n.__en && n.__pt !== n.__en)
+        n.nodeValue = n.__pt;
+    });
+    var todos = document.body.querySelectorAll('[placeholder],[aria-label],[title]');
+    for(var i = 0; i < todos.length; i++){
+      var el = todos[i];
+      if(!el.__atPt) continue;
+      for(var a in el.__atPt){
+        if(el.__atEn && el.getAttribute(a) === el.__atEn[a] && el.__atPt[a] !== el.__atEn[a])
+          el.setAttribute(a, el.__atPt[a]);
+      }
+    }
+  }
+
+  /* Nao dá para ignorar o que eu mesmo mudei: enquanto eu pinto, o app
+     pode estar desenhando um gráfico, e esse pedaço ficaria em português
+     para sempre. Então eu deixo o aviso chegar e repinto de novo — a
+     segunda passada não acha nada para mudar (o nó já traz o __en), o
+     observador não recebe aviso nenhum, e para por aí. */
+  var agendado = null;
+  function repintar(){
+    if(idioma !== 'en') return;
+    if(agendado) return;
+    agendado = setTimeout(function(){
+      agendado = null;
+      try{ paraIngles() }catch(e){ console.warn('idioma:', e) }
+    }, 80);
+  }
+
+  function ligarObservador(){
+    if(!observador && window.MutationObserver){
+      observador = new MutationObserver(repintar);
+      observador.observe(document.body, {childList: true, subtree: true, characterData: true});
+    }
+    /* rede de segurança: se algum desenho escapar do observador, a
+       varredura de 2 em 2 segundos pega. Ela é barata — nó já
+       traduzido sai na primeira comparação. */
+    if(!relogio) relogio = setInterval(function(){
+      if(idioma === 'en' && !document.hidden) repintar();
+    }, 2000);
+  }
+
+  /* ───────── 7. o botão PT | EN ───────── */
+  /* A barra de cima já estava cheia: selo da versão, título, engrenagem
+     e Sync Garmin. Dois botões lado a lado (PT | EN) empurravam o título
+     para fora. Então aqui vai UM botão, do tamanho da engrenagem, que
+     mostra o idioma para o qual ele troca: em português ele diz EN, em
+     inglês ele diz PT. */
+  var css = document.createElement('style');
+  css.textContent =
+    '#bqIdioma{width:40px;height:38px;border-radius:12px;flex:none;border:0;cursor:pointer;' +
+      'display:flex;align-items:center;justify-content:center;font-family:inherit;' +
+      'background:var(--s2,#1b1f27);color:var(--tx2,#b8c0cc);font-size:11px;font-weight:800;' +
+      'letter-spacing:.03em;line-height:1;transition:.15s;padding:0}' +
+    '#bqIdioma:hover{background:var(--s3,#252b35);color:var(--tx,#e8ecf2)}' +
+    '#bqIdioma.en{background:var(--acc,#3FD98A);color:var(--bg,#0a0d12)}' +
+    '.appbar .in{gap:9px}' +
+    '@media(max-width:360px){#bqIdioma{width:34px}.appbar .in{gap:7px}}' +
+    /* o título do topo é cortado com reticências em vez de passar por
+       baixo do botão quando a tela é estreita */
+    '.appbar .t{overflow:hidden}' +
+    '.appbar .t b,.appbar .t span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}';
+  document.head.appendChild(css);
+
+  var caixaBt = document.createElement('button');
+  caixaBt.id = 'bqIdioma';
+  caixaBt.type = 'button';
+
+  var barra = document.querySelector('header.appbar .in') || document.querySelector('.appbar .in');
+  if(barra){
+    var engrenagem = barra.querySelector('#btDados');
+    if(engrenagem) barra.insertBefore(caixaBt, engrenagem);
+    else barra.appendChild(caixaBt);
+  }else{
+    document.body.appendChild(caixaBt);
+    caixaBt.style.cssText += ';position:fixed;top:10px;right:12px;z-index:60';
+  }
+
+  function pintarBotao(){
+    caixaBt.textContent = (idioma === 'en') ? 'PT' : 'EN';
+    caixaBt.classList.toggle('en', idioma === 'en');
+    var dica = (idioma === 'en') ? 'Mudar para português' : 'Switch to English';
+    caixaBt.setAttribute('aria-label', dica);
+    caixaBt.setAttribute('title', dica);
+    caixaBt.__semTraducao = true;      /* o próprio botão nunca é traduzido */
+  }
+
+  function usar(novo, guardar){
+    if(novo !== 'en' && novo !== 'pt') novo = 'pt';
+    var antes = idioma;
+    idioma = novo;
+    pintarBotao();
+    try{ document.documentElement.setAttribute('lang', novo === 'en' ? 'en' : 'pt-BR') }catch(e){}
+    if(guardar){ try{ localStorage.setItem(CHAVE, novo) }catch(e){} }
+    try{
+      if(novo === 'en') paraIngles();
+      else if(antes === 'en') paraPortugues();
+    }catch(e){ console.warn('idioma:', e) }
+    if(novo === 'en') ligarObservador();
+    else if(relogio){ clearInterval(relogio); relogio = null }
+  }
+
+  caixaBt.addEventListener('click', function(ev){
+    ev.preventDefault(); ev.stopPropagation();
+    usar(idioma === 'en' ? 'pt' : 'en', true);
+  });
+
+  /* ───────── 8. começar ───────── */
+  /* A primeira pintura só acontece quando a tela para de mudar. Pintar
+     no meio do boot atrapalhava o app: ele ainda estava montando o
+     painel do objetivo e chegou a dar erro uma vez em seis recargas.
+     Esperar o sossego resolve, e de quebra o app nunca aparece em
+     português por um instante antes de virar inglês. */
+  function esperarSossego(pronto){
+    if(!window.MutationObserver){ setTimeout(pronto, 1500); return }
+    /* conta voltas do relógio interno em vez de ler a hora: se a hora
+       do aparelho estiver parada ou for corrigida no meio, a conta não
+       se perde. */
+    var parado = 0, voltas = 0, mexeu = false;
+    var vigia = new MutationObserver(function(){ mexeu = true });
+    vigia.observe(document.body, {childList: true, subtree: true, characterData: true});
+    var t = setInterval(function(){
+      voltas++;
+      if(mexeu){ mexeu = false; parado = 0 } else parado++;
+      if(parado >= 3 || voltas >= 60){      /* ~0,4 s quieto, ou 7 s no total */
+        clearInterval(t); vigia.disconnect(); pronto();
+      }
+    }, 120);
+  }
+
+  var guardado = 'pt';
+  try{ guardado = localStorage.getItem(CHAVE) || 'pt' }catch(e){}
+  if(guardado === 'en'){
+    idioma = 'en';                       /* o botão já nasce certo */
+    pintarBotao();
+    esperarSossego(function(){ idioma = 'pt'; usar('en', false) });
+  }else{
+    pintarBotao();
+  }
+
+  /* volta do segundo plano: a tela pode ter sido remontada */
+  document.addEventListener('visibilitychange', function(){
+    if(!document.hidden && idioma === 'en') repintar();
+  });
+
+  /* Console: window.bqIdioma. bqIdioma.faltam() lista o que ainda
+     aparece em português na tela — é assim que eu confiro.          */
+  window.bqIdioma = {
+    atual: function(){ return idioma },
+    en: function(){ usar('en', true); return 'inglês' },
+    pt: function(){ usar('pt', true); return 'português' },
+    repintar: function(){ paraIngles(); return 'ok' },
+    faltam: function(){
+      var fora = [], PT = /[çãõáéíóúâêôàÇÃÕÁÉÍÓÚÂÊÔÀ]|\b(de|da|do|dos|das|em|no|na|por|para|com|não|sem|uma|dias|semana|treino|feito|previsto|até|você|seu|sua|hoje|mais|só|que|esta|este)\b/;
+      nosDeTexto(document.body, function(n){
+        var t = (n.nodeValue || '').replace(/\s+/g, ' ').trim();
+        if(t && PT.test(t) && fora.indexOf(t) < 0) fora.push(t);
+      });
+      return fora;
+    },
+    traduzir: traduzir
+  };
+});
+
