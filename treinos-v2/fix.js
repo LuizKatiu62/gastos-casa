@@ -47,9 +47,15 @@
       treinos do seu treinador, as rotinas e exercícios do Hevy, e os
       nomes de prova e de cidade. Números, datas e medidas não são
       reescritos.
+  21) A agenda do treinador para de sumir no dia em que o treino é
+      feito. O TrainingPeaks tira do calendário do Garmin o treino que
+      acabou de ser executado; o app apagava a própria memória daquele
+      dia junto, e no dia seguinte a linha virava "feito · sem
+      previsão". Agora só esquece dia que ainda vai chegar. 17, 18 e
+      19/09 foram devolvidos.
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '07b';
+const FIX_VERSAO = '07c';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -10501,13 +10507,44 @@ PARTE('a aba coach e so da academia', function(){
                recuperacao), 2 x (5' + 4' recuperacao), desaquecimento
                5'. O modelo ja saiu da biblioteca, entao o nome e o que
                o relogio mostra, nao o do treinador.                   */
+  /* 17, 18 e 19/09 foram conferidos na conta do Garmin em 20/09/2026:
+     o calendario nao tem mais nenhum dos tres (o TrainingPeaks tirou
+     depois de feitos), mas as atividades provam o treino estruturado.
+     A de 17/09 tem 31 voltas com workout_step_index: aquecimento,
+     dois blocos soltos e 12 tiros de 50 m com 40 s de trote — e
+     exatamente "Rodagem + Strides". Os tres valores abaixo sao os que
+     o proprio app recebeu do Garmin em 17/09, antes de perde-los.    */
   var SEMENTE = {
     '2026-09-15': [{data: '2026-09-15', nome: "Treino do treinador · intervalado 2×8' + 2×5'", duracaoSeg: 3180, esporte: 'corrida'}],
-    '2026-09-16': [{data: '2026-09-16', nome: "Rodagem leve 35'", duracaoSeg: 2100, esporte: 'corrida'}]
+    '2026-09-16': [{data: '2026-09-16', nome: "Rodagem leve 35'", duracaoSeg: 2100, esporte: 'corrida'}],
+    '2026-09-17': [{data: '2026-09-17', nome: 'Rodagem + Strides', duracaoSeg: 2526, esporte: 'corrida'}],
+    '2026-09-18': [{data: '2026-09-18', nome: "Rodagem leve 35'", duracaoSeg: 2100, esporte: 'corrida'}],
+    '2026-09-19': [{data: '2026-09-19', nome: 'Rodagem Z2', duracaoSeg: 11100, distanciaM: 31231, esporte: 'corrida'}]
   };
-  Object.keys(SEMENTE).forEach(function(d){
-    if(!memoAgenda[d]) memoAgenda[d] = SEMENTE[d];
-  });
+  (function(){
+    var repor = {}, n = 0;
+    Object.keys(SEMENTE).forEach(function(d){
+      if(!memoAgenda[d]){ memoAgenda[d] = SEMENTE[d]; repor[d] = SEMENTE[d]; n++ }
+    });
+    if(!n) return;
+    try{ localStorage.setItem(MEMO, JSON.stringify(memoAgenda)) }catch(e){}
+    /* o outro aparelho tambem perdeu esses dias — devolve no Firebase */
+    setTimeout(function(){ try{ enviarAgenda(repor) }catch(e){} }, 3000);
+  })();
+
+  /* dia em que o relogio gravou alguma coisa — nunca esquecer o previsto */
+  function fezAlgoEm(d){
+    try{
+      if(typeof ST !== 'object' || !ST || !Array.isArray(ST.runs)) return false;
+      if(typeof iso !== 'function' || typeof addD !== 'function' || typeof HOJE === 'undefined') return false;
+      for(var i = 0; i < ST.runs.length; i++){
+        var r = ST.runs[i];
+        if(!r || !isFinite(r.d)) continue;
+        if(iso(addD(HOJE, -r.d)) === d) return true;
+      }
+    }catch(e){}
+    return false;
+  }
 
   function limpoItem(a){
     var o = {data: a.data};
@@ -10537,8 +10574,19 @@ PARTE('a aba coach e so da academia', function(){
     });
     var ate = l.reduce(function(m, a){ return a && a.data > m ? a.data : m }, '');
     Object.keys(memoAgenda).forEach(function(d){
-      /* futuro que o treinador tirou (dentro do trecho que o Garmin mandou) */
-      if(d >= hoje && d <= ate && !porDia[d]){ delete memoAgenda[d]; mudou[d] = null; n++ }
+      /* ── POR QUE AQUI E ">" E NAO ">=" (20/09/2026) ──
+         Esta linha existe para esquecer treino FUTURO que o treinador
+         tirou do calendario. Só que ela pegava tambem o dia de HOJE — e
+         o TrainingPeaks tira do calendario do Garmin justamente o treino
+         que acabou de ser feito, no mesmo dia. Resultado: toda vez que
+         o Luiz terminava o treino, o app apagava a propria memoria do
+         previsto daquele dia, e no dia seguinte a linha virava "feito ·
+         sem previsao". Foi o que aconteceu com 17, 18 e 19/09.
+         Agora so esqueco dia que ainda vai chegar, e mesmo assim so se
+         nao houver atividade gravada nele.                            */
+      if(d > hoje && d <= ate && !porDia[d] && !fezAlgoEm(d)){
+        delete memoAgenda[d]; mudou[d] = null; n++;
+      }
     });
     var lim = new Date(); lim.setDate(lim.getDate() - 70);
     var limIso = lim.getFullYear() + '-' + ('0' + (lim.getMonth() + 1)).slice(-2) + '-' + ('0' + lim.getDate()).slice(-2);
@@ -10556,7 +10604,11 @@ PARTE('a aba coach e so da academia', function(){
     l.forEach(function(a){ if(a && a.data) tem[a.data] = 1 });
     var out = l.slice();
     Object.keys(memoAgenda).forEach(function(d){
-      if(d < hoje && !tem[d]) out = out.concat(memoAgenda[d] || []);
+      /* "<=" e nao "<": o TrainingPeaks tira o treino do calendario no
+         mesmo dia em que ele e feito, entao HOJE tambem precisa poder
+         vir da memoria. Antes, da hora do treino ate a meia-noite o dia
+         de hoje ficava sem previsto.                                  */
+      if(d <= hoje && !tem[d]) out = out.concat(memoAgenda[d] || []);
     });
     return out;
   }
