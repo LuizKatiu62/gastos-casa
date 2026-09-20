@@ -53,6 +53,13 @@
       dia junto, e no dia seguinte a linha virava "feito · sem
       previsão". Agora só esquece dia que ainda vai chegar. 17, 18 e
       19/09 foram devolvidos.
+  22) Mudar um treino de dia passa a durar. A varredura da aba Coach
+      apagava, no carregamento seguinte, tudo que estivesse fora de
+      segunda, quarta e sexta — inclusive a academia que você mesmo
+      tinha movido. Agora o que você move fica, o dia avisa que foi
+      mudado por você, e um botão devolve ao plano quando quiser.
+      Junto: a falha rara que travava a abertura do app no meio deixa
+      de derrubar o resto da montagem.
    ══════════════════════════════════════════════════════════════════ */
 
 const FIX_VERSAO = '07c';
@@ -996,7 +1003,9 @@ function moverExtra(k){
     if(!x) return fechar();
     const feitas = ST.feitas[x.id];
     delete ST.feitas[x.id]; delete ST.cache[x.id]; delete ST.extras[k];
+    if(!x.veioDe) x.veioDe = k;   /* de onde saiu, para saber devolver */
     x.data = dest; x.id = 'x' + dest;
+    x.movido = true;          /* marca de "fui eu que pus aqui" */
     ST.extras[dest] = x;
     if(feitas) ST.feitas[x.id] = feitas;
     ST.sel = dest;
@@ -10336,6 +10345,27 @@ PARTE('a aba coach e so da academia', function(){
   /* Guarda e remove o "segundo treino do dia". Sem duracao propria ele
      virava um card de 45 min sozinho assim que a corrida saia — era
      por isso que terca e quinta apareciam com forca.                */
+  /* ── O QUE VOCE MOVEU PARA O DIA, COM A MAO (20/09/2026) ──
+     A varredura abaixo apagava tudo que estivesse fora de segunda,
+     quarta e sexta — inclusive a academia que voce mesmo tinha movido
+     para domingo. Voce mexia, e na volta do rebuild o dia estava
+     vazio de novo. Estas duas perguntas marcam o que e seu, para a
+     varredura passar ao largo. */
+  function trocaDeMao(iso){
+    try{
+      var t = (typeof ST === 'object' && ST && ST.trocas) ? ST.trocas[iso] : null;
+      if(!t || typeof t !== 'object') return false;
+      if(t.__vazio || t.__cancelado || t.cancelado) return false;
+      return !!(t.mod || t.titulo);
+    }catch(e){ return false }
+  }
+  function extraDeMao(iso){
+    try{
+      var x = (typeof ST === 'object' && ST && ST.extras) ? ST.extras[iso] : null;
+      return !!(x && x.movido);
+    }catch(e){ return false }
+  }
+
   function tirarExtra(iso){
     if(typeof ST !== 'object' || !ST || !ST.extras || !ST.extras[iso]) return;
     ST.extrasGarmin = ST.extrasGarmin || {};
@@ -10711,7 +10741,19 @@ PARTE('a aba coach e so da academia', function(){
 
       var doTreinador = doDia(iso);
       if(doTreinador.length){
+        /* se voce moveu a academia para este dia e o treinador tambem
+           marcou corrida, a corrida vira o principal e a SUA academia
+           vai para o segundo treino — nao some */
+        var forcaMao = (s && ehForca(s) && trocaDeMao(iso)) ? s : null;
         plano[iso] = sessaoDoTreinador(iso, doTreinador);
+        if(forcaMao && typeof ST === 'object' && ST){
+          ST.extras = ST.extras || {};
+          if(!ST.extras[iso]){
+            var mv = {}; for(var kk in forcaMao) mv[kk] = forcaMao[kk];
+            mv.id = 'x' + iso; mv.data = iso; mv.extra = true; mv.movido = true;
+            ST.extras[iso] = mv;
+          }
+        }
         /* ── A ACADEMIA NAO SAI DO DIA SO PORQUE ELE MARCOU CORRIDA ──
            Este era o defeito: em dia de academia com corrida do
            treinador, o tirarExtra apagava a academia — e junto foi o
@@ -10724,12 +10766,13 @@ PARTE('a aba coach e so da academia', function(){
            para o segundo treino, que e o encaixe que o app ja tem
            para isso desde a parte 13.                               */
         if(DIAS_ACADEMIA[diaSemana(iso)]) academiaDeSegundo(iso);
-        else tirarExtra(iso);
+        else if(!extraDeMao(iso)) tirarExtra(iso);
         return;
       }
       if(!DIAS_ACADEMIA[diaSemana(iso)]){
-        delete plano[iso];
-        tirarExtra(iso);
+        /* dia que nao e de academia: some, MENOS o que voce moveu */
+        if(!trocaDeMao(iso)) delete plano[iso];
+        if(!extraDeMao(iso)) tirarExtra(iso);
       }else if(!ehForca(s)){
         plano[iso] = sessaoAcademia(iso);
         tirarAcademiaDuplicada(iso);
@@ -10938,7 +10981,7 @@ PARTE('a aba coach e so da academia', function(){
          dia que o plano do app ainda nao tinha — ela sumia e voltava
          segundos depois, conforme quem rodasse por ultimo. */
       if(DIAS_ACADEMIA[diaSemana(a.data)]) academiaDeSegundo(a.data);
-      else tirarExtra(a.data);
+      else if(!extraDeMao(a.data)) tirarExtra(a.data);
     });
     /* ── A ACADEMIA DOS DIAS QUE JA PASSARAM NESTA SEMANA ──
        17/09/2026: quarta (16/09) apareceu como "feito · sem previsao",
@@ -10988,6 +11031,7 @@ PARTE('a aba coach e so da academia', function(){
          antigo, nao musculacao. */
       var x = (typeof ST === 'object' && ST && ST.extras) ? ST.extras[iso] : null;
       if(x && x.mod === 'forca') return;
+      if(extraDeMao(iso)) return;          /* segundo treino que voce moveu */
       tirarExtra(iso);
     });
     return plano;
@@ -17146,5 +17190,163 @@ PARTE('ingles', function(){
     },
     traduzir: traduzir
   };
+});
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   60. MUDANÇA DE DIA QUE DURA, E QUE DÁ PARA DESFAZER
+
+   Mover um treino já funcionava na hora, mas a varredura da aba Coach
+   apagava, no rebuild seguinte, tudo que estivesse fora de segunda,
+   quarta e sexta — inclusive o que VOCÊ tinha movido. O conserto de
+   não apagar está lá em cima, junto da varredura. Esta parte cuida do
+   outro lado: deixar claro na tela que aquele dia foi mudado por você,
+   e dar um caminho de volta de um toque só.
+   ═══════════════════════════════════════════════════════════════════ */
+PARTE('mudanca de dia que dura', function(){
+
+  function mudadoAMao(k){
+    var t = null, x = null;
+    try{ t = (ST && ST.trocas) ? ST.trocas[k] : null }catch(e){}
+    try{ x = (ST && ST.extras) ? ST.extras[k] : null }catch(e){}
+    var temTroca = !!(t && typeof t === 'object' && !t.__vazio && !t.__cancelado &&
+                      !t.cancelado && (t.mod || t.titulo));
+    var temExtra = !!(x && x.movido);
+    var esvaziado = !!(t && t.__vazio);
+    if(!temTroca && !temExtra && !esvaziado) return null;
+    return {troca: temTroca, extra: temExtra, vazio: esvaziado,
+            veioDe: (x && x.veioDe) || null};
+  }
+
+  /* devolve o dia ao que a periodização e o treinador mandam */
+  function devolver(k){
+    var m = mudadoAMao(k);
+    try{
+      if(ST && ST.trocas) delete ST.trocas[k];
+      if(ST && ST.extras && ST.extras[k] && ST.extras[k].movido){
+        var x = ST.extras[k];
+        if(ST.feitas) delete ST.feitas[x.id];
+        if(ST.cache) delete ST.cache[x.id];
+        delete ST.extras[k];
+        /* Lápide neste dia: sem ela a sincronia traz o treino de volta
+           do servidor no minuto seguinte, e o "devolver" parecia não
+           funcionar. E some a lápide do dia de ORIGEM, senão a
+           periodização não recria o treino lá.                        */
+        if(typeof window.bqApagar === 'function'){
+          try{ window.bqApagar('extras', k) }catch(e){}
+        }
+        if(m && m.veioDe && typeof window.bqDesapagar === 'function'){
+          try{ window.bqDesapagar('extras', m.veioDe) }catch(e){}
+          try{ if(ST.trocas) delete ST.trocas[m.veioDe] }catch(e){}
+        }
+      }
+    }catch(e){ console.warn('devolver:', e && e.message) }
+    try{ if(typeof rebuild === 'function') rebuild() }catch(e){}
+    try{ if(typeof renderTudo === 'function') renderTudo();
+         else if(typeof renderCoach === 'function') renderCoach() }catch(e){}
+    try{ if(typeof persistir === 'function') persistir() }catch(e){}
+  }
+
+  var css = document.createElement('style');
+  css.textContent =
+    '#bqMudado{margin:10px 0 0;padding:11px 13px;border-radius:12px;' +
+      'background:var(--warn-wash,rgba(230,170,60,.10));' +
+      'border:1px solid rgba(var(--warn-rgb,230,170,60),.28)}' +
+    '#bqMudado p{margin:0 0 9px;font-size:11.5px;line-height:1.45;color:var(--tx2,#b8c0cc)}' +
+    '#bqMudado b{color:var(--warn,#e6aa3c);font-weight:800}' +
+    '#bqMudado button{width:100%;padding:10px;border:0;border-radius:10px;cursor:pointer;' +
+      'font:800 12px/1 inherit;background:var(--s2,#1b1f27);color:var(--tx,#e8ecf2)}' +
+    '#bqMudado button:hover{background:var(--s3,#252b35)}';
+  document.head.appendChild(css);
+
+  function pintar(){
+    var el = document.getElementById('sess');
+    if(!el) return;
+    var velho = document.getElementById('bqMudado');
+    if(velho && velho.parentNode) velho.parentNode.removeChild(velho);
+    var k = (typeof ST === 'object' && ST) ? ST.sel : null;
+    if(!k) return;
+    var m = mudadoAMao(k);
+    if(!m) return;
+    var oque = m.vazio ? 'Você tirou o treino deste dia.'
+             : m.extra ? 'Você moveu um segundo treino para este dia.'
+             : 'Você mudou o treino deste dia.';
+    var caixa = document.createElement('div');
+    caixa.id = 'bqMudado';
+    caixa.innerHTML = '<p><b>Mudado por você.</b> ' + oque +
+      ' A mudança fica guardada e não some mais no próximo carregamento.</p>' +
+      '<button type="button" id="bqDevolver">Devolver ao plano do dia</button>';
+    el.appendChild(caixa);
+    var bt = document.getElementById('bqDevolver');
+    if(bt) bt.onclick = function(){ devolver(k) };
+  }
+
+  /* pinta depois de cada desenho do dia */
+  ['renderDia', 'renderCoach', 'renderTudo'].forEach(function(nome){
+    if(typeof window[nome] !== 'function') return;
+    var velho = window[nome];
+    window[nome] = function(){
+      var r = velho.apply(this, arguments);
+      try{ setTimeout(pintar, 0) }catch(e){}
+      return r;
+    };
+  });
+  setTimeout(pintar, 1200);
+
+  /* Console: bqMudanca.ver('2026-09-20') e bqMudanca.devolver('2026-09-20') */
+  window.bqMudanca = {
+    ver: function(k){ return mudadoAMao(k || (ST && ST.sel)) },
+    devolver: function(k){ devolver(k || (ST && ST.sel)); return 'devolvido ao plano' },
+    todas: function(){
+      var out = {};
+      try{
+        Object.keys((ST && ST.trocas) || {}).forEach(function(d){ var m = mudadoAMao(d); if(m) out[d] = m });
+        Object.keys((ST && ST.extras) || {}).forEach(function(d){ var m = mudadoAMao(d); if(m) out[d] = m });
+      }catch(e){}
+      return out;
+    }
+  };
+});
+
+/* ═══════════════════════════════════════════════════════════════════
+   61. A ABERTURA NÃO PARA NO MEIO
+
+   Uma vez a cada dez ou quinze aberturas, o app parava de montar na
+   metade: o painel de escolha da prova chamava avisoObjetivo() antes
+   de a lista de objetivos estar completa, dava erro, e o boot morria
+   ali — sem calendário, sem planilha, sem nada. Existe desde antes
+   desta versão. Aqui o erro deixa de derrubar o resto: a caixa de
+   aviso mostra o texto neutro e a montagem segue.
+   ═══════════════════════════════════════════════════════════════════ */
+PARTE('abertura que nao para no meio', function(){
+  if(typeof window.avisoObjetivo !== 'function') return;
+  var original = window.avisoObjetivo;
+  window.avisoObjetivo = function(){
+    try{
+      return original.apply(this, arguments);
+    }catch(erro){
+      console.warn('avisoObjetivo (seguiu assim mesmo):', erro && erro.message);
+      try{
+        var el = document.getElementById('objAviso');
+        if(el) el.innerHTML = 'Escolha um formato acima e informe a data da prova.';
+      }catch(e){}
+    }
+  };
+
+  /* O boot é assíncrono e às vezes chega ao fim ANTES de o fix.js
+     carregar — aí o erro acontece sem o remendo acima e a montagem
+     morre no meio. O sinal é o selo do rodapé do título, que só é
+     escrito na última linha do boot. Se ele não estiver lá, eu
+     termino o que faltou. */
+  setTimeout(function(){
+    try{
+      var sub = document.getElementById('abSub');
+      if(!sub || sub.textContent.indexOf('app ') >= 0) return;
+      console.warn('boot inacabado — terminando a montagem');
+      if(typeof irPara === 'function') irPara((typeof ST === 'object' && ST && ST.aba) || 'coach');
+      if(typeof renderTudo === 'function') renderTudo();
+      sub.textContent = 'Luiz Silva · app 13ago-b';
+    }catch(e){ console.warn('retomada do boot:', e && e.message) }
+  }, 2500);
 });
 
