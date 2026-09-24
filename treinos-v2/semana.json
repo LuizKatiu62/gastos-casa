@@ -1,16 +1,16 @@
 {
- "ate": "2026-09-29",
- "de": "2026-09-23",
+ "ate": "2026-09-30",
+ "de": "2026-09-24",
  "fcMax": 163,
- "gerado": "2026-09-24T00:15:43.063Z",
+ "gerado": "2026-09-24T10:22:43.695Z",
  "limiar": "5:21",
  "sessoes": [
   {
-   "data": "2026-09-23",
+   "data": "2026-09-24",
    "foco": "tiros",
    "km": 6.6,
-   "min": 79,
-   "nome": "23/09 · Rodagem leve 35' + Rodagem + Strides · 6.6 km total",
+   "min": 44,
+   "nome": "24/09 · Rodagem + Strides · 6.6 km total",
    "nota": "Total porta a porta 6.6 km. Alongamentos e educativos ANTES do start, relogio parado.",
    "passos": [
     {
@@ -80,53 +80,9 @@
      "valor": 300
     }
    ]
-  },
-  {
-   "data": "2026-09-29",
-   "foco": "vo2",
-   "km": 9.4,
-   "min": 55,
-   "nome": "29/09 · 4 blocos 2 de 7' Z3 - 2 de 7' Z4 · 9.4 km total",
-   "nota": "Total porta a porta 9.4 km. Alongamentos e educativos ANTES do start, relogio parado.",
-   "passos": [
-    {
-     "fim": "time",
-     "lento": 2.2422,
-     "rapido": 2.4038,
-     "texto": "12 min subindo devagar, 6:56–7:26/km. Se chegar ofegante ao fim, foi rapido demais.",
-     "tipo": "warmup",
-     "valor": 720
-    },
-    {
-     "passos": [
-      {
-       "fim": "distance",
-       "lento": 3.3003,
-       "rapido": 3.4602,
-       "texto": "600 m em 4:49–5:03/km, FC ate 148-158 bpm.",
-       "tipo": "interval",
-       "valor": 600
-      },
-      {
-       "fim": "time",
-       "texto": "4 min de trote leve. Nao pare de correr.",
-       "tipo": "recovery",
-       "valor": 210
-      }
-     ],
-     "tipo": "repetir",
-     "vezes": 6
-    },
-    {
-     "fim": "time",
-     "texto": "8 min de trote muito leve ate a respiracao normalizar.",
-     "tipo": "cooldown",
-     "valor": 480
-    }
-   ]
   }
  ],
- "versao": "07c",
+ "versao": "06y",
  "zonas": {
   "faci": {
    "fc": "111–124",
