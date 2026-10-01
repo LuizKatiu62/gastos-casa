@@ -40,7 +40,7 @@
    "exercicios": [
     {
      "nome": "Single Leg Glute Bridge",
-     "series": "3×12"
+     "series": "3×10"
     },
     {
      "nome": "Step Up",
@@ -417,6 +417,11 @@
    "semana": "2026-W38",
    "kg": 7648,
    "sessoes": 2
+  },
+  "2026-W40": {
+   "semana": "2026-W40",
+   "kg": 0,
+   "sessoes": 1
   }
  },
  "sessoes": [
@@ -750,12 +755,40 @@
      "kg": 680
     }
    ]
+  },
+  {
+   "data": "2026-09-30",
+   "titulo": "FORCA - QUADRIL E CORE (BASE)",
+   "hora": "19:18",
+   "min": 31,
+   "exercicios": [
+    {
+     "nome": "Single Leg Glute Bridge",
+     "series": "3×10"
+    },
+    {
+     "nome": "Step Up",
+     "series": "3×10"
+    },
+    {
+     "nome": "Lateral Band Walks",
+     "series": "3×15"
+    },
+    {
+     "nome": "Bird Dog",
+     "series": "3×10"
+    },
+    {
+     "nome": "Single Leg Standing Calf Raise",
+     "series": "3×12"
+    }
+   ]
   }
  ],
  "meta": {
-  "ultimaSync": "2026-09-30T20:52:16",
+  "ultimaSync": "2026-10-01T00:36:38",
   "totalRotinas": 12,
-  "totalTreinos": 3,
+  "totalTreinos": 4,
   "semanas": 12,
   "semanasSessoes": 26
  }
