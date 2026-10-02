@@ -426,47 +426,6 @@
  },
  "sessoes": [
   {
-   "data": "2026-04-02",
-   "titulo": "Apr 2 - ADAPTATION",
-   "hora": "14:20",
-   "min": 2867,
-   "kg": 846,
-   "exercicios": [
-    {
-     "nome": "Lat Pulldown (Cable)",
-     "series": "3×10",
-     "peso": 14.514973101940472,
-     "kg": 370
-    },
-    {
-     "nome": "Bench Press (Dumbbell)",
-     "series": "3×12",
-     "peso": 4.535929094356398,
-     "kg": 163
-    },
-    {
-     "nome": "Bent Over Row (Barbell)",
-     "series": "3×10",
-     "peso": 2.7215574566138385,
-     "kg": 64
-    },
-    {
-     "nome": "Shoulder Press (Dumbbell)",
-     "series": "3×10",
-     "peso": 9.071858188712795,
-     "kg": 249
-    },
-    {
-     "nome": "Side Plank",
-     "series": "3×33s"
-    },
-    {
-     "nome": "Bird Dog",
-     "series": "3×10"
-    }
-   ]
-  },
-  {
    "data": "2026-04-20",
    "titulo": "Evening Workout☀️",
    "hora": "18:11",
@@ -786,7 +745,7 @@
   }
  ],
  "meta": {
-  "ultimaSync": "2026-10-01T20:22:49",
+  "ultimaSync": "2026-10-02T00:53:25",
   "totalRotinas": 12,
   "totalTreinos": 4,
   "semanas": 12,
