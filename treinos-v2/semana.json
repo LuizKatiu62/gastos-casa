@@ -1,51 +1,39 @@
 {
- "ate": "2026-10-07",
- "de": "2026-10-01",
+ "ate": "2026-10-09",
+ "de": "2026-10-03",
  "fcMax": 163,
- "gerado": "2026-10-01T21:27:07.687Z",
+ "gerado": "2026-10-03T19:15:30.571Z",
  "limiar": "5:21",
  "sessoes": [
   {
-   "data": "2026-10-01",
-   "foco": "tiros",
-   "km": 6.6,
-   "min": 44,
-   "nome": "01/10 · Rodagem + Strides · 6.6 km total",
-   "nota": "Total porta a porta 6.6 km. Alongamentos e educativos ANTES do start, relogio parado.",
+   "data": "2026-10-08",
+   "foco": "facil",
+   "km": 8.2,
+   "min": 48,
+   "nome": "08/10 · 8x 300 · 8.2 km total",
+   "nota": "Total porta a porta 8.2 km. Alongamentos e educativos ANTES do start, relogio parado.",
    "passos": [
     {
      "fim": "time",
      "lento": 2.2422,
      "rapido": 2.4038,
-     "texto": "12 min subindo devagar, 6:56–7:26/km. Se chegar ofegante ao fim, foi rapido demais.",
+     "texto": "8 min subindo devagar, 6:56–7:26/km. Se chegar ofegante ao fim, foi rapido demais.",
      "tipo": "warmup",
-     "valor": 720
+     "valor": 480
     },
     {
-     "passos": [
-      {
-       "fim": "distance",
-       "lento": 3.3003,
-       "rapido": 3.4602,
-       "texto": "600 m em 4:49–5:03/km, FC ate 148-158 bpm.",
-       "tipo": "interval",
-       "valor": 600
-      },
-      {
-       "fim": "time",
-       "texto": "3 min de trote leve. Nao pare de correr.",
-       "tipo": "recovery",
-       "valor": 150
-      }
-     ],
-     "tipo": "repetir",
-     "vezes": 4
+     "fim": "distance",
+     "lento": 2.5253,
+     "rapido": 2.7322,
+     "texto": "6.4 km em 6:06–6:36/km. Voce deve conseguir falar frases inteiras.",
+     "tipo": "interval",
+     "valor": 6400
     },
     {
      "fim": "time",
-     "texto": "8 min de trote muito leve ate a respiracao normalizar.",
+     "texto": "5 min de trote muito leve ate a respiracao normalizar.",
      "tipo": "cooldown",
-     "valor": 480
+     "valor": 300
     }
    ]
   }
