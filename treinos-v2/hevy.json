@@ -349,6 +349,51 @@
      "series": "3 séries"
     }
    ]
+  },
+  "Dumbbell Arms Workout": {
+   "titulo": "Dumbbell Arms Workout",
+   "exercicios": [
+    {
+     "nome": "Warm Up",
+     "series": "1×65s",
+     "nota": "Do an upper body warm-up consisting of dynamic exercises like arm circles, elbow rotations, and wrist twists."
+    },
+    {
+     "nome": "Bicep Curl (Dumbbell)",
+     "series": "3 séries",
+     "peso": 6.8038936415345965,
+     "nota": "Do the first set with a light weight and relatively low effort to warm up the biceps and prepare them for the working sets."
+    },
+    {
+     "nome": "Preacher Curl (Dumbbell)",
+     "series": "3 séries",
+     "peso": 6.8038936415345965,
+     "nota": "If you're doing these at home, you can train one arm at a time and position the back of your upper arm against a sofa or a chair's back support."
+    },
+    {
+     "nome": "Concentration Curl",
+     "series": "3 séries",
+     "peso": 6.8038936415345965,
+     "nota": "Position the back of your upper arm, just above the elbow, against your inner thigh. Keep your arm vertical to maximize bicep activation and avoid cheating."
+    },
+    {
+     "nome": "Skullcrusher (Dumbbell)",
+     "series": "2 séries",
+     "peso": 4.762725549074217,
+     "nota": "If you're at home and don't have access to a gym bench, you can perform these lying on the floor. The range of motion will be slightly shorter, but you can still get a good tricep stretch if you lower"
+    },
+    {
+     "nome": "Single Arm Tricep Extension (Dumbbell)",
+     "series": "2 séries",
+     "peso": 4.535929094356398,
+     "nota": "Do 15 to 20 reps per side. Do each rep slowly and with good control, lowering the weight behind your head to stretch the tricep."
+    },
+    {
+     "nome": "Triceps Kickback (Dumbbell)",
+     "series": "2 séries",
+     "nota": "Do 15-20 reps per side."
+    }
+   ]
   }
  },
  "cargas": {
@@ -405,6 +450,51 @@
    "atualEm": "2026-09-16",
    "series": "2×15",
    "ganho": 0.0
+  },
+  "Bicep Curl (Dumbbell)": {
+   "nome": "Bicep Curl (Dumbbell)",
+   "primeiro": 6.8038936415345965,
+   "primeiroEm": "2026-10-05",
+   "atual": 6.8038936415345965,
+   "atualEm": "2026-10-05",
+   "series": "3×12",
+   "ganho": 0.0
+  },
+  "Preacher Curl (Dumbbell)": {
+   "nome": "Preacher Curl (Dumbbell)",
+   "primeiro": 6.8038936415345965,
+   "primeiroEm": "2026-10-05",
+   "atual": 6.8038936415345965,
+   "atualEm": "2026-10-05",
+   "series": "3×10",
+   "ganho": 0.0
+  },
+  "Concentration Curl": {
+   "nome": "Concentration Curl",
+   "primeiro": 6.8038936415345965,
+   "primeiroEm": "2026-10-05",
+   "atual": 6.8038936415345965,
+   "atualEm": "2026-10-05",
+   "series": "3×10",
+   "ganho": 0.0
+  },
+  "Skullcrusher (Dumbbell)": {
+   "nome": "Skullcrusher (Dumbbell)",
+   "primeiro": 4.762725549074217,
+   "primeiroEm": "2026-10-05",
+   "atual": 4.762725549074217,
+   "atualEm": "2026-10-05",
+   "series": "2×12",
+   "ganho": 0.0
+  },
+  "Single Arm Tricep Extension (Dumbbell)": {
+   "nome": "Single Arm Tricep Extension (Dumbbell)",
+   "primeiro": 4.535929094356398,
+   "primeiroEm": "2026-10-05",
+   "atual": 4.535929094356398,
+   "atualEm": "2026-10-05",
+   "series": "2×10",
+   "ganho": 0.0
   }
  },
  "historico": {
@@ -421,6 +511,11 @@
   "2026-W40": {
    "semana": "2026-W40",
    "kg": 0,
+   "sessoes": 1
+  },
+  "2026-W41": {
+   "semana": "2026-W41",
+   "kg": 878,
    "sessoes": 1
   }
  },
@@ -742,12 +837,55 @@
      "series": "3×12"
     }
    ]
+  },
+  {
+   "data": "2026-10-05",
+   "titulo": "Dumbbell Arms Workout",
+   "hora": "18:12",
+   "min": 38,
+   "kg": 878,
+   "exercicios": [
+    {
+     "nome": "Warm Up",
+     "series": "1×65s"
+    },
+    {
+     "nome": "Bicep Curl (Dumbbell)",
+     "series": "3×12",
+     "peso": 6.8038936415345965,
+     "kg": 231
+    },
+    {
+     "nome": "Preacher Curl (Dumbbell)",
+     "series": "3×10",
+     "peso": 6.8038936415345965,
+     "kg": 218
+    },
+    {
+     "nome": "Concentration Curl",
+     "series": "3×10",
+     "peso": 6.8038936415345965,
+     "kg": 204
+    },
+    {
+     "nome": "Skullcrusher (Dumbbell)",
+     "series": "2×12",
+     "peso": 4.762725549074217,
+     "kg": 112
+    },
+    {
+     "nome": "Single Arm Tricep Extension (Dumbbell)",
+     "series": "2×10",
+     "peso": 4.535929094356398,
+     "kg": 113
+    }
+   ]
   }
  ],
  "meta": {
-  "ultimaSync": "2026-10-05T18:34:44",
-  "totalRotinas": 12,
-  "totalTreinos": 4,
+  "ultimaSync": "2026-10-06T00:52:18",
+  "totalRotinas": 13,
+  "totalTreinos": 5,
   "semanas": 12,
   "semanasSessoes": 26
  }
