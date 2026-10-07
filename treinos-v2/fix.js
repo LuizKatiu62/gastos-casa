@@ -60,9 +60,13 @@
       mudado por você, e um botão devolve ao plano quando quiser.
       Junto: a falha rara que travava a abertura do app no meio deixa
       de derrubar o resto da montagem.
+  23) Relatório de pressão para o médico: botão no fim do cartão de
+      pressão da aba Saúde gera um PDF em inglês, 3 páginas tamanho
+      carta, com todas as medidas — resumo, classificação, gráficos,
+      tabelas por mês/horário/posição e o registro dia a dia.
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '07c';
+const FIX_VERSAO = '07d';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -14260,7 +14264,10 @@ PARTE('pressao arterial', function(){
     '#bqPA .pa-mes em{font:700 13px/1 inherit;font-style:normal;color:var(--tx3);',
       'transition:transform .18s;display:inline-block}',
     '#bqPA .pa-mes.on em{transform:rotate(90deg)}',
-    '#bqPA .pa-corpo{padding:2px 0 8px 2px}'
+    '#bqPA .pa-corpo{padding:2px 0 8px 2px}',
+    '#bqPA .pa-rel{width:100%;margin-top:8px;padding:12px;border:1px solid var(--line);',
+      'border-radius:13px;background:var(--s2);color:var(--tx);font:700 13px/1 inherit;cursor:pointer}',
+    '#bqPA .pa-rel:disabled{opacity:.6}'
   ].join('');
   document.head.appendChild(css);
 
@@ -14524,7 +14531,8 @@ PARTE('pressao arterial', function(){
            : '') +
          '</p>';
 
-    h += '<button class="pa-add" type="button" data-nova="1">+ Nova medida</button>';
+    h += '<button class="pa-add" type="button" data-nova="1">+ Nova medida</button>' +
+         '<button class="pa-rel" type="button" data-rel="1">Relat\u00f3rio para o m\u00e9dico \u00b7 PDF</button>';
     cartao.innerHTML = h;
     ligar();
   }
@@ -14532,6 +14540,10 @@ PARTE('pressao arterial', function(){
   function ligar(){
     var b = cartao.querySelector('[data-nova]');
     if(b) b.onclick = formulario;
+    var rl = cartao.querySelector('[data-rel]');
+    if(rl) rl.onclick = function(){
+      if(typeof window.bqRelatorioPA === 'function') window.bqRelatorioPA(lista(), rl);
+    };
     Array.prototype.forEach.call(cartao.querySelectorAll('[data-apagar]'), function(x){
       x.onclick = function(){ apagar(x.getAttribute('data-apagar')) };
     });
@@ -14704,10 +14716,509 @@ PARTE('pressao arterial', function(){
   window.bqPressao = {
     dados: null,
     nova: formulario,
+    lista: lista,
     salvar: salvar,
     apagar: apagar,
     recarregar: function(){ tentativas = 0; insistir(); return 'buscando…' }
   };
+});
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   RELATÓRIO DE PRESSÃO PARA O MÉDICO (PDF, em inglês)
+
+   Botão "Relatório para o médico · PDF" no fim do cartão de pressão.
+   Gera, com TODAS as medidas do app, o mesmo relatório montado à mão
+   em 07/10/2026 para levar ao médico: 3 páginas em tamanho carta
+   (padrão do Canadá), em inglês —
+     1) números principais, classificação de cada medida e o gráfico
+        de todas as leituras com a média do dia;
+     2) resumo por mês, por horário e por posição, gráfico do pulso e
+        a lista das medidas em 135/85 ou acima (limite usado para
+        pressão medida em casa);
+     3) registro dia a dia, com cada medida, e as notas.
+
+   O PDF é desenhado direto (jsPDF), não é foto da tela: o texto sai
+   nítido e pesquisável. A biblioteca só é baixada no primeiro toque
+   do botão, da cdnjs — o app não fica mais pesado para abrir.
+
+   Depois de gerar, abre a folha com "Enviar ou salvar" (a folha de
+   compartilhar do iPhone: Mail, WhatsApp, Arquivos) e "Abrir PDF".
+   Dois toques de propósito: o iPhone só deixa compartilhar logo depois
+   de um toque, e baixar a biblioteca pode passar desse prazo.
+
+   Mesma classificação do cartão (faixa()), com os nomes em inglês.
+   O relatório só apresenta os números; quem interpreta é o médico.
+   ══════════════════════════════════════════════════════════════════════ */
+PARTE('relatorio de pressao para o medico', function(){
+
+  var JSPDF_URL = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+  var carregando = null;
+
+  function carregarJsPDF(){
+    if(window.jspdf && window.jspdf.jsPDF) return Promise.resolve(window.jspdf);
+    if(carregando) return carregando;
+    carregando = new Promise(function(ok, falha){
+      var sc = document.createElement('script');
+      sc.src = JSPDF_URL; sc.async = true; sc.crossOrigin = 'anonymous';
+      var prazo = setTimeout(function(){ falha(new Error('a biblioteca do PDF demorou demais')) }, 20000);
+      sc.onload = function(){ clearTimeout(prazo);
+        window.jspdf && window.jspdf.jsPDF ? ok(window.jspdf) : falha(new Error('biblioteca do PDF incompleta')) };
+      sc.onerror = function(){ clearTimeout(prazo); falha(new Error('sem internet para baixar a biblioteca do PDF')) };
+      document.head.appendChild(sc);
+    });
+    carregando.catch(function(){ carregando = null });
+    return carregando;
+  }
+
+  /* Gerador do relatório de pressão (inglês, carta, 3 páginas).
+     Entrada: J = window.jspdf ; ms = [{em,sis,dia,pul,pos}] ; op = {nome, hoje} */
+  function bqGerarRelatorioPA(J, ms, op){
+    op = op || {};
+    var nome = op.nome || 'Luiz Silva';
+    var hoje = op.hoje || new Date();
+    var doc = new J.jsPDF({unit:'pt', format:'letter'});
+    var PW = 612, PH = 792, CM = 28.3465;
+    var ML = 1.6*CM, MR = 1.6*CM, MT = 1.4*CM, MB = 1.6*CM;
+    var CW = PW - ML - MR;
+    var NAVY=[31,45,69], GREY=[91,100,117], LIGHT=[243,245,249], LINE=[217,221,229], WHITE=[255,255,255], BLACK=[20,20,20];
+    var CATS = ['Optimal','Normal','High-normal','Hypertensive','Low diastolic'];
+    var CATCOL = {'Optimal':[58,168,107],'Normal':[140,198,63],'High-normal':[233,168,58],
+                  'Hypertensive':[217,83,79],'Low diastolic':[74,144,217]};
+    var CRIT = {'Optimal':'<120 and <80','Normal':'120–129 and/or 80–84',
+                'High-normal':'130–139 and/or 85–89','Hypertensive':'≥140 and/or ≥90',
+                'Low diastolic':'diastolic <60'};
+    var MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var MONL = ['January','February','March','April','May','June','July','August',
+                'September','October','November','December'];
+    var WD = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    var BLUE=[47,111,219], TEAL=[31,158,142], RED=[217,83,79], ORANGE=[233,168,58], PURPLE=[138,99,201];
+
+    /* ── dados ── */
+    function cat(s,d){
+      if(s<90 || d<60) return 'Low diastolic';
+      if(s<120 && d<80) return 'Optimal';
+      if(s<130 && d<85) return 'Normal';
+      if(s<140 && d<90) return 'High-normal';
+      return 'Hypertensive';
+    }
+    function pos(p){
+      p = String(p||'').toLowerCase();
+      if(p==='sentado') return 'Seated';
+      if(p==='deitado') return 'Supine';
+      if(p==='em pé' || p==='em pe' || p==='de pé') return 'Standing';
+      return p ? p.charAt(0).toUpperCase()+p.slice(1) : 'Not recorded';
+    }
+    var R = ms.map(function(m){
+      var em = String(m.em).replace(' ','T');
+      return {d: em.slice(0,10), h: em.slice(11,16) || '--:--', s:+m.sis, di:+m.dia,
+              p:+m.pul||0, pos: pos(m.pos)};
+    }).filter(function(r){ return r.s>0 && r.di>0 && /^\d{4}-\d\d-\d\d$/.test(r.d) })
+      .sort(function(a,b){ var x=a.d+a.h, y=b.d+b.h; return x<y?-1:x>y?1:0 });
+    var n = R.length;
+    if(!n) throw new Error('sem medidas');
+
+    function dt(iso){ var p=iso.split('-'); return new Date(+p[0], +p[1]-1, +p[2]) }
+    function fd(iso, ano){ var p=iso.split('-'); return MON[+p[1]-1]+' '+(+p[2])+(ano===false?'':', '+p[0]) }
+    function iso(d){ var z=function(x){return String(x).padStart(2,'0')}; return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate()) }
+    function mean(a){ var t=0; a.forEach(function(x){t+=x}); return t/a.length }
+    function sd(a){ if(a.length<2) return null; var m=mean(a), t=0; a.forEach(function(x){t+=(x-m)*(x-m)}); return Math.sqrt(t/(a.length-1)) }
+    function r0(x){ return Math.round(x) }
+    function S(rs){ return rs.map(function(r){return r.s}) }
+    function D(rs){ return rs.map(function(r){return r.di}) }
+    function P(rs){ return rs.map(function(r){return r.p}).filter(function(x){return x>0}) }
+    function mx(a){ return Math.max.apply(null,a) } function mn(a){ return Math.min.apply(null,a) }
+    function stats(rs){
+      var s=S(rs), d=D(rs), p=P(rs), a=sd(s), b=sd(d);
+      return [String(rs.length), r0(mean(s))+'/'+r0(mean(d)),
+              (a===null ? '–' : '±'+r0(a)+'/±'+r0(b)),
+              mn(s)+'–'+mx(s), mn(d)+'–'+mx(d), p.length ? String(r0(mean(p))) : '–'];
+    }
+    var dias = [], porDia = {};
+    R.forEach(function(r){ if(!porDia[r.d]){ porDia[r.d]=[]; dias.push(r.d) } porDia[r.d].push(r) });
+    function periodo(h){ var x=+h.slice(0,2);
+      return (x>=5&&x<12)?'Morning (05–12h)':(x>=12&&x<18)?'Afternoon (12–18h)':(x>=18)?'Evening (18–24h)':'Night (00–05h)' }
+
+    /* ── desenho básico ── */
+    function cor(c){ doc.setTextColor(c[0],c[1],c[2]) }
+    function fill(c){ doc.setFillColor(c[0],c[1],c[2]) }
+    function draw(c){ doc.setDrawColor(c[0],c[1],c[2]) }
+    function fonte(b, sz){ doc.setFont('helvetica', b?'bold':'normal'); doc.setFontSize(sz) }
+    function alpha(a){ doc.setGState(new J.GState({opacity:a, 'stroke-opacity':a})) }
+    /* texto que pode conter ≥ (Helvetica não tem; vem da fonte Symbol) */
+    function largura(t, b, sz){
+      var w=0, partes=String(t).split('≥');
+      partes.forEach(function(p,i){
+        fonte(b,sz); w+=doc.getTextWidth(p);
+        if(i<partes.length-1){ doc.setFont('symbol','normal'); doc.setFontSize(sz); w+=doc.getTextWidth('³') }
+      });
+      fonte(b,sz); return w;
+    }
+    function txt(t, x, y, b, sz, c){
+      cor(c||BLACK);
+      var partes=String(t).split('≥');
+      partes.forEach(function(p,i){
+        fonte(b,sz); doc.text(p, x, y); x+=doc.getTextWidth(p);
+        if(i<partes.length-1){ doc.setFont('symbol','normal'); doc.setFontSize(sz);
+          doc.text('³', x, y); x+=doc.getTextWidth('³') }
+      });
+      fonte(b,sz); return x;
+    }
+    /* sequência de pedaços {t,b,c} numa linha */
+    function rico(seg, x, y, sz){
+      seg.forEach(function(s){ x = txt(s.t, x, y, !!s.b, sz, s.c||BLACK) });
+      return x;
+    }
+    function ricoLarg(seg, sz){ var w=0; seg.forEach(function(s){ w+=largura(s.t,!!s.b,sz) }); return w }
+    /* quebra uma sequência rica em linhas que caibam em w */
+    function quebrarRico(seg, w, sz){
+      var linhas=[[]], larg=0;
+      var palavras=[];
+      seg.forEach(function(s){ String(s.t).split(/(\s+)/).forEach(function(p){ if(p!=='') palavras.push({t:p,b:s.b,c:s.c}) }) });
+      palavras.forEach(function(p){
+        var pw=largura(p.t,!!p.b,sz);
+        if(larg+pw>w && /\S/.test(p.t) && linhas[linhas.length-1].length){ linhas.push([]); larg=0 }
+        if(!linhas[linhas.length-1].length && !/\S/.test(p.t)) return;
+        linhas[linhas.length-1].push(p); larg+=pw;
+      });
+      return linhas;
+    }
+    function paragrafo(seg, x, y, w, sz, lead){
+      var ls = quebrarRico(seg, w, sz);
+      ls.forEach(function(l,i){ rico(l, x, y + i*lead, sz) });
+      return y + ls.length*lead;
+    }
+
+    var y = MT;
+    var fimPag = PH - MB;
+    function novaPag(){ doc.addPage(); y = MT }
+    function h2(t){
+      y += 12;
+      txt(t, ML, y+10, true, 12, NAVY);
+      y += 10 + 7;
+    }
+
+    /* tabela: cols=[{w,al}], linhas = arrays de células
+       célula: string | {t,b,c} | {lin:[[seg...],...]} */
+    function tabela(cols, linhas, op){
+      op = op||{};
+      var sz=8.3, pad=3.5, tw=0; cols.forEach(function(c){tw+=c.w});
+      var x0 = ML + (CW-tw)/2;
+      function alturaLinha(lin){
+        var h = sz*1.2;
+        lin.forEach(function(c){ if(c && c.lin) h=Math.max(h, c.lin.length*(op.lead||10)) });
+        return h + 2*pad;
+      }
+      function desenhaLinha(lin, i, cab){
+        var h = alturaLinha(lin);
+        if(cab){ fill(NAVY); doc.rect(x0, y, tw, h, 'F') }
+        else if(op.zebra!==false && i%2===0){ fill(LIGHT); doc.rect(x0, y, tw, h, 'F') }
+        if(op.fundo && !cab && op.fundo(i)){ fill(op.fundo(i)); doc.rect(x0, y, tw, h, 'F') }
+        var x = x0;
+        lin.forEach(function(c, j){
+          var col = cols[j], al = col.al || 'left';
+          var meio = op.topo && !cab ? false : true;
+          if(c && c.lin){
+            c.lin.forEach(function(l,k){ rico(l, x+4, y+pad+(op.csz||7.8)+k*(op.lead||10)-1.5, op.csz||7.8) });
+          }else{
+            var o = (typeof c==='object' && c) ? c : {t: String(c==null?'':c)};
+            var b = cab || o.b || (op.negrito && op.negrito(i,j));
+            var cc = cab ? WHITE : (o.c || BLACK);
+            var w = largura(o.t, b, sz);
+            var tx = al==='center' ? x+(col.w-w)/2 : al==='right' ? x+col.w-4-w : x+4;
+            var ty = meio ? y + h/2 + sz*0.35 : y + pad + sz - 1;
+            txt(o.t, tx, ty, b, sz, cc);
+          }
+          x += col.w;
+        });
+        draw(LINE); doc.setLineWidth(.3); doc.line(x0, y+h, x0+tw, y+h);
+        y += h;
+      }
+      desenhaLinha(linhas[0], 0, true);
+      for(var i=1;i<linhas.length;i++){
+        if(y + alturaLinha(linhas[i]) > fimPag){ novaPag(); desenhaLinha(linhas[0], 0, true) }
+        desenhaLinha(linhas[i], i, false);
+      }
+    }
+
+    /* ── gráfico de linha/dispersão ── */
+    function grafico(x0, y0, w, h, cfg){
+      var pl=34, pr=8, pt=8, pb=20;
+      var ax=x0+pl, ay=y0+pt, aw=w-pl-pr, ah=h-pt-pb;
+      var d0 = dt(dias[0]).getTime(), d1 = dt(dias[dias.length-1]).getTime(), DAY=864e5;
+      var span = Math.max(1,(d1-d0)/DAY), padd = Math.max(1, span*0.045);
+      var xa = d0 - padd*DAY, xb = d1 + padd*DAY;
+      function X(iso){ return ax + (dt(iso).getTime()-xa)/(xb-xa)*aw }
+      function Y(v){ return ay + (cfg.ymax-v)/(cfg.ymax-cfg.ymin)*ah }
+      /* grade */
+      doc.setLineWidth(.5); draw([238,238,238]);
+      cfg.ticks.forEach(function(v){ doc.line(ax, Y(v), ax+aw, Y(v)) });
+      if(cfg.antes) cfg.antes(X,Y,ax,aw);
+      /* eixos */
+      draw([60,60,60]); doc.setLineWidth(.6);
+      doc.line(ax, ay, ax, ay+ah); doc.line(ax, ay+ah, ax+aw, ay+ah);
+      fonte(false,7); cor([40,40,40]);
+      cfg.ticks.forEach(function(v){
+        doc.line(ax-3, Y(v), ax, Y(v));
+        var t=String(v); doc.text(t, ax-5-doc.getTextWidth(t), Y(v)+2.4);
+      });
+      var passo = Math.max(1, Math.ceil(span/10));
+      for(var t=d0+DAY; t<=d1+0.5*DAY; t+=passo*DAY){
+        var di = iso(new Date(t)), xx = X(di);
+        doc.line(xx, ay+ah, xx, ay+ah+3);
+        var lb = fd(di,false).replace(/ (\d)$/,' 0$1');
+        doc.text(lb, xx-doc.getTextWidth(lb)/2, ay+ah+11);
+      }
+      fonte(false,8); doc.text(cfg.ylab, x0+6, ay+ah/2+doc.getTextWidth(cfg.ylab)/2, {angle:90});
+      cfg.series(X,Y,ax,aw);
+    }
+
+    /* ════════ PÁGINA 1 ════════ */
+    txt('Home Blood Pressure Report', ML, y+16, true, 19, NAVY);
+    y += 26;
+    var nd = dias.length;
+    rico([{t:'Patient: ',b:1,c:GREY},{t:nome+'    ',c:GREY},{t:'Period: ',b:1,c:GREY},
+          {t:fd(dias[0])+' – '+fd(dias[nd-1])+'    ',c:GREY},{t:'Prepared: ',b:1,c:GREY},{t:fd(iso(hoje)),c:GREY}], ML, y+9, 9.5);
+    y += 13;
+    rico([{t:'Device: ',b:1,c:GREY},{t:'Omron home monitor (readings synced via Apple Health)    ',c:GREY},
+          {t:'Readings: ',b:1,c:GREY},{t:n+' on '+nd+(nd===1?' day':' days'),c:GREY}], ML, y+9, 9.5);
+    y += 13 + 10;
+
+    var sAll=S(R), dAll=D(R), pAll=P(R);
+    var alto = R.slice().sort(function(a,b){ return (b.s-a.s)||(b.di-a.di) })[0];
+    var baixo = R.slice().sort(function(a,b){ return (a.s-b.s)||(a.di-b.di) })[0];
+    var acima = R.filter(function(r){ return r.s>=135 || r.di>=85 });
+    var sdS=sd(sAll), sdD=sd(dAll);
+    var kpi = [
+      ['Mean BP', r0(mean(sAll))+'/'+r0(mean(dAll)), sdS===null?'single reading':'SD ±'+r0(sdS)+'/±'+r0(sdD)+' mmHg'],
+      ['Mean pulse', pAll.length? r0(mean(pAll))+' bpm':'–', pAll.length? 'range '+mn(pAll)+'–'+mx(pAll):''],
+      ['Highest reading', alto.s+'/'+alto.di, fd(alto.d,false)+' · '+alto.h],
+      ['Lowest reading', baixo.s+'/'+baixo.di, fd(baixo.d,false)+' · '+baixo.h],
+      ['Readings ≥135/85', acima.length+' of '+n, r0(acima.length*100/n)+'% of readings']
+    ];
+    var kw = 3.62*CM, kx = ML + (CW-5*kw)/2, kh = 62;
+    fill(LIGHT); doc.rect(kx, y, 5*kw, kh, 'F');
+    kpi.forEach(function(k,i){
+      var x = kx + i*kw + 5;
+      txt(k[0], x, y+12, false, 7.5, GREY);
+      txt(k[1], x, y+35, true, 14, NAVY);
+      txt(k[2], x, y+53, false, 7, GREY);
+      if(i<4){ draw(WHITE); doc.setLineWidth(1.2); doc.line(kx+(i+1)*kw, y, kx+(i+1)*kw, y+kh) }
+    });
+    y += kh;
+
+    /* classificação */
+    h2('Classification of individual readings');
+    var cont = {}; CATS.forEach(function(c){ cont[c]=0 });
+    R.forEach(function(r){ cont[cat(r.s,r.di)]++ });
+    var usados = CATS.filter(function(c){ return cont[c] });
+    var total = 17.9*CM, ws = usados.map(function(c){ return Math.max(total*cont[c]/n, 1.2*CM) });
+    var soma = ws.reduce(function(a,b){return a+b},0); ws = ws.map(function(w){ return w*total/soma });
+    var bx = ML + (CW-total)/2, bh = 0.55*CM;
+    usados.forEach(function(c,i){
+      fill(CATCOL[c]); doc.rect(bx, y, ws[i], bh, 'F');
+      var t = r0(cont[c]*100/n)+'%'; var tw = largura(t,true,8);
+      txt(t, bx+(ws[i]-tw)/2, y+bh/2+2.8, true, 8, WHITE);
+      bx += ws[i];
+    });
+    y += bh + 4;
+    var linCat = [['Category','Criteria (mmHg)','Readings','Share']];
+    CATS.forEach(function(c){ linCat.push([{t:c,b:1,c:CATCOL[c]}, CRIT[c], String(cont[c]), r0(cont[c]*100/n)+'%']) });
+    tabela([{w:4.6*CM},{w:7.3*CM},{w:3*CM,al:'center'},{w:3*CM,al:'center'}], linCat);
+    y += 2;
+    y = paragrafo([{t:'Categories follow the ESC/ESH office classification used by the tracking app. For home readings, the commonly used threshold for elevated BP is a mean ≥135/85 mmHg.',c:GREY}],
+                  ML, y+8, CW, 7.8, 10);
+
+    h2('Blood pressure over time');
+    var ymax = Math.max(145, Math.ceil((mx(sAll)+6)/10)*10), ymin = Math.min(50, Math.floor((mn(dAll)-6)/10)*10);
+    var ticksBP = []; for(var v2=60; v2<=ymax; v2+=20) if(v2>=ymin) ticksBP.push(v2);
+    grafico(ML+(CW-18*CM)/2, y, 18*CM, 7.8*CM, {
+      ymin: ymin, ymax: ymax, ticks: ticksBP, ylab:'mmHg',
+      antes: function(X,Y,ax,aw){
+        alpha(.10); fill(ORANGE); doc.rect(ax, Y(140), aw, Y(130)-Y(140), 'F'); alpha(1);
+        draw(RED); doc.setLineWidth(.8); doc.setLineDashPattern([3,2],0);
+        doc.line(ax, Y(135), ax+aw, Y(135)); doc.line(ax, Y(85), ax+aw, Y(85));
+        doc.setLineDashPattern([],0);
+        var t='Home HBP threshold 135/85'; fonte(false,6);
+        txt(t, ax+aw-4-doc.getTextWidth(t), Y(135)-2.5, false, 6, RED);
+      },
+      series: function(X,Y,ax,aw){
+        draw([200,206,216]); doc.setLineWidth(.8);
+        R.forEach(function(r){ doc.line(X(r.d), Y(r.di), X(r.d), Y(r.s)) });
+        alpha(.45);
+        fill(BLUE); R.forEach(function(r){ doc.circle(X(r.d), Y(r.s), 2, 'F') });
+        fill(TEAL); R.forEach(function(r){ doc.circle(X(r.d), Y(r.di), 2, 'F') });
+        alpha(1);
+        [[BLUE,'s'],[TEAL,'di']].forEach(function(sr){
+          draw(sr[0]); doc.setLineWidth(1.5); doc.setLineJoin('round'); doc.setLineCap('round');
+          var pts = dias.map(function(d){ return [X(d), Y(mean(porDia[d].map(function(r){return r[sr[1]]})))] });
+          for(var i=1;i<pts.length;i++) doc.line(pts[i-1][0],pts[i-1][1],pts[i][0],pts[i][1]);
+          if(pts.length===1){ fill(sr[0]); doc.circle(pts[0][0],pts[0][1],1.5,'F') }
+        });
+        doc.setLineCap('butt');
+        var ly = Y((ymax+ymin)/2 - 5), lx = ax+6;
+        fill(WHITE); doc.rect(lx-3, ly-6, 20+largura('Systolic (daily mean)',false,7)+14+20+largura('Diastolic (daily mean)',false,7)+6, 12, 'F');
+        [[BLUE,'Systolic (daily mean)'],[TEAL,'Diastolic (daily mean)']].forEach(function(l){
+          draw(l[0]); doc.setLineWidth(1.5); doc.line(lx, ly, lx+16, ly);
+          lx = txt(l[1], lx+20, ly+2.4, false, 7, [40,40,40]) + 14;
+        });
+      }
+    });
+    y += 7.8*CM + 4;
+    paragrafo([{t:'Dots = individual readings; grey bars connect systolic and diastolic of the same reading; lines = daily mean.',c:GREY}], ML, y+8, CW, 7.8, 10);
+
+    /* ════════ PÁGINA 2 ════════ */
+    novaPag();
+    var CAB = ['','Readings','Mean','SD','Systolic range','Diastolic range','Pulse (bpm)'];
+    var COLS = [{w:4.4*CM},{w:1.9*CM,al:'center'},{w:2.1*CM,al:'center'},{w:2.2*CM,al:'center'},
+                {w:2.6*CM,al:'center'},{w:2.6*CM,al:'center'},{w:2.1*CM,al:'center'}];
+    y -= 12;
+    h2('Summary by month');
+    var meses=[], porMes={};
+    R.forEach(function(r){ var k=r.d.slice(0,7); if(!porMes[k]){ porMes[k]=[]; meses.push(k) } porMes[k].push(r) });
+    var mesHoje = iso(hoje).slice(0,7);
+    var lm=[CAB];
+    meses.forEach(function(k){
+      var p=k.split('-'); lm.push([MONL[+p[1]-1]+' '+p[0]+(k===mesHoje?' (to date)':'')].concat(stats(porMes[k])));
+    });
+    lm.push(['All readings'].concat(stats(R)));
+    var ultimaM = lm.length-1;
+    tabela(COLS, lm, {negrito:function(i){ return i===ultimaM }});
+
+    h2('Summary by time of day');
+    var lt=[CAB];
+    ['Morning (05–12h)','Afternoon (12–18h)','Evening (18–24h)','Night (00–05h)'].forEach(function(p){
+      var rs=R.filter(function(r){ return periodo(r.h)===p }); if(rs.length) lt.push([p].concat(stats(rs)));
+    });
+    tabela(COLS, lt);
+
+    h2('Summary by body position');
+    var lp=[CAB], ordemPos=['Seated','Supine','Standing'];
+    R.forEach(function(r){ if(ordemPos.indexOf(r.pos)<0 && r.pos!=='Not recorded') ordemPos.push(r.pos) });
+    ordemPos.push('Not recorded');
+    ordemPos.forEach(function(p){
+      var rs=R.filter(function(r){ return r.pos===p }); if(rs.length) lp.push([p].concat(stats(rs)));
+    });
+    tabela(COLS, lp);
+
+    h2('Heart rate at time of measurement');
+    var RP = R.filter(function(r){ return r.p>0 });
+    if(RP.length){
+      var pmax=Math.max(70, Math.ceil((mx(pAll)+3)/10)*10), pmin=Math.min(40, Math.floor((mn(pAll)-3)/10)*10);
+      var tp=[]; for(var q=pmin;q<=pmax;q+=10) tp.push(q);
+      grafico(ML+(CW-18*CM)/2, y, 18*CM, 3.65*CM, {
+        ymin:pmin, ymax:pmax, ticks:tp, ylab:'bpm',
+        series:function(X,Y){
+          fill(PURPLE); RP.forEach(function(r){ doc.circle(X(r.d), Y(r.p), 1.5, 'F') });
+          draw(PURPLE); doc.setLineWidth(1.2);
+          var dp = dias.filter(function(d){ return P(porDia[d]).length });
+          for(var i=1;i<dp.length;i++)
+            doc.line(X(dp[i-1]), Y(mean(P(porDia[dp[i-1]]))), X(dp[i]), Y(mean(P(porDia[dp[i]]))));
+        }
+      });
+      y += 3.65*CM;
+    }else{
+      y = paragrafo([{t:'No pulse recorded.',c:GREY}], ML, y+9, CW, 9, 12);
+    }
+
+    h2('Readings at or above 135/85 mmHg');
+    if(acima.length){
+      var la=[['Date','Time','BP (mmHg)','Pulse','Position']];
+      acima.forEach(function(r){ la.push([fd(r.d), r.h, {t:r.s+'/'+r.di,b:1}, r.p? r.p+' bpm':'–', r.pos]) });
+      tabela([{w:4.6*CM},{w:3*CM},{w:3.5*CM},{w:3.3*CM},{w:3.5*CM}], la);
+    }else{
+      y = paragrafo([{t:'None in this period.',c:GREY}], ML, y+9, CW, 9, 12);
+    }
+
+    /* ════════ PÁGINA 3 ════════ */
+    novaPag();
+    y -= 12;
+    h2('Daily log');
+    var ld=[['Date','Day','n','Daily mean','Pulse','Individual readings (time · BP · pulse · position · category)']];
+    dias.forEach(function(d){
+      var rs=porDia[d], pp=P(rs);
+      ld.push([fd(d), WD[dt(d).getDay()], String(rs.length),
+        {t: r0(mean(S(rs)))+'/'+r0(mean(D(rs))), b:1}, pp.length? String(r0(mean(pp))):'–',
+        {lin: rs.map(function(r){ var c=cat(r.s,r.di);
+          return [{t:r.h+' · '},{t:r.s+'/'+r.di,b:1},{t:' · '+(r.p? r.p+' bpm':'– bpm')+' · '+r.pos+' · '},{t:c,c:CATCOL[c]}] })}]);
+    });
+    tabela([{w:2.8*CM},{w:1*CM,al:'center'},{w:0.8*CM,al:'center'},{w:2*CM,al:'center'},{w:1.3*CM,al:'center'},{w:10*CM}],
+           ld, {topo:true});
+
+    var notas = [
+      'Readings were taken at home by the patient with an automated Omron upper-arm monitor and synced through Apple Health.',
+      'Body position was recorded for most readings (seated unless noted); readings marked “Not recorded” have no position information.',
+      'Daily means are simple averages of all readings taken that day. This report presents data only; clinical interpretation is left to the physician.'
+    ];
+    var hNotas = 12+17 + notas.length*26;
+    if(y + hNotas > fimPag) novaPag();
+    h2('Notes');
+    notas.forEach(function(t){ y = paragrafo([{t:'• '+t.replace(/[“”]/g,'"')}], ML, y+9, CW, 9, 12.5) - 9 + 2 });
+
+    /* rodapé */
+    var np = doc.getNumberOfPages();
+    var rod = 'Home Blood Pressure Report · '+nome+' · '+fd(dias[0],false)+' – '+fd(dias[nd-1]);
+    for(var i=1;i<=np;i++){
+      doc.setPage(i);
+      txt(rod, ML, PH-1*CM, false, 7, GREY);
+      var pg='Page '+i; fonte(false,7); txt(pg, PW-MR-doc.getTextWidth(pg), PH-1*CM, false, 7, GREY);
+    }
+    doc.setProperties({title:'Home Blood Pressure Report', author:nome, subject:'Home blood pressure readings'});
+    return doc;
+  }
+
+  var urlAnterior = null;
+
+  function nomeArquivo(){
+    var d = new Date(), z = function(x){ return String(x).padStart(2,'0') };
+    return 'Home_Blood_Pressure_Report_Luiz_Silva_' + d.getFullYear() + '-' + z(d.getMonth()+1) + '-' + z(d.getDate()) + '.pdf';
+  }
+
+  window.bqRelatorioPA = async function(ms, botao){
+    if(!ms || !ms.length) return;
+    var txt0 = botao ? botao.textContent : '';
+    if(botao){ botao.disabled = true; botao.textContent = 'Gerando o relatório…' }
+    try{
+      var J = await carregarJsPDF();
+      var doc = bqGerarRelatorioPA(J, ms, {nome:'Luiz Silva', hoje:new Date()});
+      var paginas = doc.getNumberOfPages();
+      var blob = doc.output('blob');
+      var nome = nomeArquivo();
+      var arq = null;
+      try{ arq = new File([blob], nome, {type:'application/pdf'}) }catch(e){}
+      if(urlAnterior) try{ URL.revokeObjectURL(urlAnterior) }catch(e){}
+      var url = urlAnterior = URL.createObjectURL(blob);
+      var podeEnviar = !!(arq && navigator.canShare && navigator.canShare({files:[arq]}));
+      window.bqRelatorioPA.ultimo = {nome:nome, paginas:paginas, bytes:blob.size, medidas:ms.length};
+
+      if(typeof abrir !== 'function'){ window.open(url, '_blank'); return }
+      abrir('<h3>Relatório pronto</h3>' +
+        '<p class="sd">' + ms.length + (ms.length === 1 ? ' medida' : ' medidas') + ' · ' +
+          paginas + (paginas === 1 ? ' página' : ' páginas') +
+          ' · em inglês, para o médico.</p>' +
+        (podeEnviar ? '<button class="pa-salvar" type="button" id="paRelEnv">Enviar ou salvar</button>' : '') +
+        '<a class="pa-salvar" id="paRelAbr" href="' + url + '" download="' + nome + '" target="_blank" rel="noopener" ' +
+          'style="display:block;text-align:center;text-decoration:none;box-sizing:border-box;' +
+          (podeEnviar ? 'background:var(--s2);color:var(--tx);border:1px solid var(--line)' : '') + '">Abrir PDF</a>' +
+        '<p class="pa-erro" id="paRelErro"></p>');
+      var env = document.getElementById('paRelEnv');
+      if(env) env.onclick = function(){
+        navigator.share({files:[arq], title:'Home Blood Pressure Report'}).catch(function(e){
+          if(e && e.name === 'AbortError') return;          /* fechou a folha */
+          var er = document.getElementById('paRelErro');
+          if(er){ er.textContent = 'Não consegui abrir o compartilhar. Use Abrir PDF.'; er.style.display = 'block' }
+        });
+      };
+    }catch(e){
+      if(typeof abrir === 'function')
+        abrir('<h3>Relatório</h3><p class="sd">Não consegui gerar o PDF: ' +
+              ((e && e.message) || 'erro') + '.</p>');
+      console.warn('relatorio pressao:', e);
+    }finally{
+      if(botao){ botao.disabled = false; botao.textContent = txt0 }
+    }
+  };
+  window.bqRelatorioPA.gerar = function(J, ms, op){ return bqGerarRelatorioPA(J, ms, op) };
 });
 
 
@@ -16488,6 +16999,8 @@ PARTE('ingles', function(){
   'Aguardando 2 min…':'Waiting 2 min…','[CANCELADO]':'[CANCELLED]',
   '🏠 Casa':'🏠 Home','Manhã':'Morning','Histórico':'History',
   'Sistólica':'Systolic','Diastólica':'Diastolic','Pressão arterial':'Blood pressure',
+  'Relatório para o médico · PDF':'Doctor report · PDF','Gerando o relatório…':'Building the report…',
+  'Relatório pronto':'Report ready','Enviar ou salvar':'Send or save','Abrir PDF':'Open PDF',
   'Classificação':'Classification','Intervalado VO₂':'VO₂ intervals',
   '✓ Copiado — abra o MOTRA':'✓ Copied — open MOTRA',
   'Garmin Connect › Atividades › Exportar CSV':'Garmin Connect › Activities › Export CSV',
