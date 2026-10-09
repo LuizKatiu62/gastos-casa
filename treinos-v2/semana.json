@@ -1,46 +1,15 @@
 {
- "ate": "2026-10-14",
- "de": "2026-10-08",
+ "ate": "2026-10-15",
+ "de": "2026-10-09",
  "fcMax": 163,
- "gerado": "2026-10-08T11:23:12.430Z",
+ "gerado": "2026-10-09T17:53:43.154Z",
  "limiar": "5:21",
  "sessoes": [
-  {
-   "data": "2026-10-08",
-   "foco": "facil",
-   "km": 8.2,
-   "min": 48,
-   "nome": "08/10 · 8x 300 · 8.2 km total",
-   "nota": "Total porta a porta 8.2 km. Alongamentos e educativos ANTES do start, relogio parado.",
-   "passos": [
-    {
-     "fim": "time",
-     "lento": 2.2422,
-     "rapido": 2.4038,
-     "texto": "8 min subindo devagar, 6:56–7:26/km. Se chegar ofegante ao fim, foi rapido demais.",
-     "tipo": "warmup",
-     "valor": 480
-    },
-    {
-     "fim": "distance",
-     "lento": 2.5253,
-     "rapido": 2.7322,
-     "texto": "6.4 km em 6:06–6:36/km. Voce deve conseguir falar frases inteiras.",
-     "tipo": "interval",
-     "valor": 6400
-    },
-    {
-     "fim": "time",
-     "texto": "5 min de trote muito leve ate a respiracao normalizar.",
-     "tipo": "cooldown",
-     "valor": 300
-    }
-   ]
-  },
   {
    "data": "2026-10-10",
    "foco": "limiar",
    "km": 15.9,
+   "min": 90,
    "nome": "10/10 · Rodagem Z2 + ritmo em Z3 · 15.9 km total",
    "nota": "Total porta a porta 15.9 km. Alongamentos e educativos ANTES do start, relogio parado.",
    "passos": [
@@ -73,6 +42,82 @@
      "texto": "8 min de trote muito leve ate a respiracao normalizar.",
      "tipo": "cooldown",
      "valor": 480
+    }
+   ]
+  },
+  {
+   "data": "2026-10-13",
+   "foco": "vo2",
+   "km": 6.9,
+   "min": 41,
+   "nome": "13/10 · 5 blocos 1 de 5' Z3 - 4 de 3' Z4 · 6.9 km total",
+   "nota": "Total porta a porta 6.9 km. Alongamentos e educativos ANTES do start, relogio parado.",
+   "passos": [
+    {
+     "fim": "time",
+     "lento": 2.2422,
+     "rapido": 2.4038,
+     "texto": "12 min subindo devagar, 6:56–7:26/km. Se chegar ofegante ao fim, foi rapido demais.",
+     "tipo": "warmup",
+     "valor": 720
+    },
+    {
+     "passos": [
+      {
+       "fim": "distance",
+       "lento": 3.3003,
+       "rapido": 3.4602,
+       "texto": "600 m em 4:49–5:03/km, FC ate 148-158 bpm.",
+       "tipo": "interval",
+       "valor": 600
+      },
+      {
+       "fim": "time",
+       "texto": "3 min de trote leve. Nao pare de correr.",
+       "tipo": "recovery",
+       "valor": 150
+      }
+     ],
+     "tipo": "repetir",
+     "vezes": 4
+    },
+    {
+     "fim": "time",
+     "texto": "8 min de trote muito leve ate a respiracao normalizar.",
+     "tipo": "cooldown",
+     "valor": 480
+    }
+   ]
+  },
+  {
+   "data": "2026-10-15",
+   "foco": "facil",
+   "km": 7.1,
+   "min": 42,
+   "nome": "15/10 · 5x 400 · 7.1 km total",
+   "nota": "Total porta a porta 7.1 km. Alongamentos e educativos ANTES do start, relogio parado.",
+   "passos": [
+    {
+     "fim": "time",
+     "lento": 2.2422,
+     "rapido": 2.4038,
+     "texto": "8 min subindo devagar, 6:56–7:26/km. Se chegar ofegante ao fim, foi rapido demais.",
+     "tipo": "warmup",
+     "valor": 480
+    },
+    {
+     "fim": "distance",
+     "lento": 2.5253,
+     "rapido": 2.7322,
+     "texto": "5.3 km em 6:06–6:36/km. Voce deve conseguir falar frases inteiras.",
+     "tipo": "interval",
+     "valor": 5300
+    },
+    {
+     "fim": "time",
+     "texto": "5 min de trote muito leve ate a respiracao normalizar.",
+     "tipo": "cooldown",
+     "valor": 300
     }
    ]
   }
