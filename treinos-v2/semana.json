@@ -1,50 +1,10 @@
 {
- "ate": "2026-10-16",
- "de": "2026-10-10",
+ "ate": "2026-10-17",
+ "de": "2026-10-11",
  "fcMax": 163,
- "gerado": "2026-10-10T18:05:23.118Z",
+ "gerado": "2026-10-11T13:53:42.844Z",
  "limiar": "5:19",
  "sessoes": [
-  {
-   "data": "2026-10-10",
-   "foco": "limiar",
-   "km": 15.9,
-   "min": 90,
-   "nome": "10/10 · Rodagem Z2 + ritmo em Z3 · 15.9 km total",
-   "nota": "Total porta a porta 15.9 km. Alongamentos e educativos ANTES do start, relogio parado.",
-   "passos": [
-    {
-     "fim": "time",
-     "lento": 2.2523,
-     "rapido": 2.4155,
-     "texto": "12 min subindo devagar, 6:54–7:24/km. Se chegar ofegante ao fim, foi rapido demais.",
-     "tipo": "warmup",
-     "valor": 720
-    },
-    {
-     "fim": "distance",
-     "lento": 2.5381,
-     "rapido": 2.7473,
-     "texto": "Rodagem de entrada, 7.1 km em 6:04–6:34/km. Segure aqui: o trabalho vem a seguir.",
-     "tipo": "interval",
-     "valor": 7100
-    },
-    {
-     "fim": "distance",
-     "lento": 3.0211,
-     "rapido": 3.2154,
-     "texto": "6.0 km em 5:11–5:31/km, FC 140-148 bpm.",
-     "tipo": "interval",
-     "valor": 6000
-    },
-    {
-     "fim": "time",
-     "texto": "8 min de trote muito leve ate a respiracao normalizar.",
-     "tipo": "cooldown",
-     "valor": 480
-    }
-   ]
-  },
   {
    "data": "2026-10-13",
    "foco": "vo2",
