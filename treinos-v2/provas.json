@@ -6,7 +6,7 @@
     "Blue Nose 2027: https://raceroster.com/events/2027/112559/medavie-blue-nose-marathon",
     "Fredericton 2027: https://frederictonmarathon.com"
   ],
-  "remover": [],
+  "remover": ["pei26"],
   "provas": [
     {"id":"renee-ago26","nome":"August Run for Renee 5k","cidade":"Quispamsis, NB","regiao":"atlantic",
      "data":"2026-08-16","dists":[5],"estado":"aberta",

@@ -66,7 +66,7 @@
       tabelas por mês/horário/posição e o registro dia a dia.
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '07e';
+const FIX_VERSAO = '07f';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -9408,7 +9408,7 @@ PARTE('um plano só', function(){
 
   function dataProva(){
     try{ if(ST.objetivo && ST.objetivo.data) return ST.objetivo.data }catch(e){}
-    return '2026-10-18';
+    return iso(HOJE);                 /* sem prova escolhida: o ciclo termina hoje */
   }
 
   function semanas(){
@@ -11167,6 +11167,9 @@ PARTE('painel da academia', function(){
     }catch(e){ return k }
   }
   function faseDe(k){
+    /* sem prova escolhida, a academia segue na fase de carga em vez de
+       entrar no polimento de uma prova que nao existe mais */
+    try{ if(!(ST.objetivo && ST.objetivo.data)) return FASES[0] }catch(e){}
     var k2 = deslocar(k);
     for(var i = 0; i < FASES.length; i++) if(k2 <= FASES[i].ate) return FASES[i];
     return null;                       // depois da prova
@@ -17956,4 +17959,90 @@ PARTE('trocar de prova sem perder o passado', function(){
     }catch(e){}
     return r;
   };
+});
+
+
+/* ═════════════════════════════════════════════════════════════════
+   63. A PEI SAI DE VEZ, E TROCAR DE PROVA LEVA A DATA JUNTO
+
+   Pedido de 13/10/2026, depois do 07e: "troquei, mas nao sai do
+   calendario". Reproduzi com o codigo real:
+
+   a) Ao tocar num formato novo (Maratona, Meia...) em Trocar, a data
+      vinha do campo de data, que ainda mostrava 18/10. A PEI estava
+      marcada como "data escolhida por voce", entao o app mantinha
+      18/10. Resultado: trocava o nome e a prova ficava no mesmo
+      domingo. Agora, mudando o formato, a data da prova antiga nao
+      vai junto: o app usa a data padrao do formato (ou a que voce
+      digitar depois no campo de data).
+
+   b) O cartao "PEI Marathon · indice Boston" continuava no catalogo
+      de objetivos e a PEI 2026 na aba Provas. Os dois saem.
+
+   c) Se o objetivo gravado ainda for a PEI, ou tiver ficado preso em
+      18/10 por causa do item (a), ele e descartado ao abrir o app, e
+      o painel de escolha aparece aberto para voce escolher a prova.
+   ═════════════════════════════════════════════════════════════════ */
+PARTE('a PEI sai de vez', function(){
+  if(typeof ST !== 'object' || typeof OBJETIVOS !== 'object') throw new Error('sem ST/OBJETIVOS');
+  var DATA_PEI = '2026-10-18';
+
+  function tirarDoCatalogo(){
+    try{
+      var it = OBJETIVOS.corrida && OBJETIVOS.corrida.itens;
+      if(!it) return;
+      for(var i = it.length - 1; i >= 0; i--) if(it[i] && it[i].id === 'bq42') it.splice(i, 1);
+    }catch(e){}
+    try{
+      if(typeof PROVAS_CAT !== 'undefined' && PROVAS_CAT && PROVAS_CAT.length)
+        for(var j = PROVAS_CAT.length - 1; j >= 0; j--)
+          if(PROVAS_CAT[j] && PROVAS_CAT[j].id === 'pei26') PROVAS_CAT.splice(j, 1);
+    }catch(e){}
+  }
+
+  function ehPEI(o){
+    if(!o) return false;
+    if(o.id === 'bq42' || o.prova === 'pei26') return true;
+    if(/\bPEI\b/i.test(o.nome || '')) return true;
+    /* troca que ficou presa na data da PEI (defeito a): formato
+       generico, sem prova do catalogo, ainda em 18/10 */
+    if(o.data === DATA_PEI && !o.prova) return true;
+    return false;
+  }
+
+  function limpar(){
+    tirarDoCatalogo();
+    if(!ehPEI(ST.objetivo)) return false;
+    console.log('objetivo da PEI descartado:', JSON.stringify(ST.objetivo));
+    ST.objetivo = null;
+    try{ if(ST.cache) ST.cache = {} }catch(e){}
+    try{ rebuild() }catch(e){}
+    try{ selecionarProximo() }catch(e){}
+    try{ renderTudo() }catch(e){ try{ renderCoach() }catch(e2){} }
+    try{ var p = document.getElementById('objPainel'); if(p) p.classList.add('on') }catch(e){}
+    try{ persistir() }catch(e){}
+    return true;
+  }
+
+  /* trocar de formato nao herda a data da prova anterior */
+  var aplicar = window.aplicarObjetivo;
+  if(typeof aplicar === 'function') window.aplicarObjetivo = function(fam, id, data, manual){
+    var o = ST.objetivo;
+    var mudou = !o || o.fam !== fam || o.id !== id;
+    if(mudou && !manual && o && data === o.data){
+      data = '';                        /* o app usa a data padrao do formato */
+      try{ o.dataManual = false }catch(e){}
+    }
+    if(data === DATA_PEI && !manual) data = '';
+    return aplicar.call(this, fam, id, data, manual);
+  };
+
+  tirarDoCatalogo();
+  /* o boot e assincrono e traz o objetivo do Firebase depois; confiro
+     depois que ele chega, e de novo mais tarde, como as outras partes */
+  setTimeout(limpar, 3500);
+  setTimeout(limpar, 7000);
+  setTimeout(limpar, 12000);
+
+  window.bqPEI = { limpar: limpar, ehPEI: function(){ return ehPEI(ST.objetivo) } };
 });
