@@ -66,7 +66,7 @@
       tabelas por mês/horário/posição e o registro dia a dia.
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '07d';
+const FIX_VERSAO = '07e';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -1193,6 +1193,7 @@ PARTE('plano boston', function(){
 
   function aplicar(){
     if(!ligado()) return;
+    if(ST.objetivo && ST.objetivo.id && ST.objetivo.id !== 'bq42') return;
     ST.objetivo = {fam:'corrida', id:'bq42', data:'2026-10-18',
                    nome:'PEI Marathon · índice Boston', dataManual:true};
     try{ rebuild() }catch(e){ return }
@@ -6367,7 +6368,12 @@ PARTE('blocos de 14 dias', function(){
   if(typeof window.gerarPlano !== 'function') throw new Error('app sem gerarPlano');
   if(typeof PERFIL !== 'object') throw new Error('app sem PERFIL');
 
-  var PROVA = '2026-10-18';
+  /* a data vinha cravada em 18/10 (PEI). Agora segue o objetivo ativo. */
+  function PROVA(){
+    try{ if(ST.objetivo && ST.objetivo.data) return ST.objetivo.data }catch(e){}
+    return iso(addD(HOJE, 112));
+  }
+  function dataBR(k){ var d = dt(k); return d.getDate() + '/' + String(d.getMonth()+1).padStart(2,'0') }
   var DIAS  = 14;
   var LONGO_MAX = 32;
 
@@ -6498,7 +6504,7 @@ PARTE('blocos de 14 dias', function(){
 
   function gerarBloco(ini){
     var L = leitura(iso(addD(dt(ini), -DIAS)), iso(addD(dt(ini), -1)));
-    var semanas = Math.max(0, diff(ini, PROVA) / 7);
+    var semanas = Math.max(0, diff(ini, PROVA()) / 7);
     var F = fase(semanas);
     var V = volumeAlvo(L, F);
     var dias = (PERFIL.dias || [2,3,4,6,7]).slice().sort();
@@ -6522,7 +6528,7 @@ PARTE('blocos de 14 dias', function(){
       dias.forEach(function(d){
         for(var i = 0; i < 7; i++){
           var c = addD(dt(ini), w*7 + i);
-          if(dow(c) === d && iso(c) >= iso(HOJE) && iso(c) <= PROVA){ disponiveis++; break }
+          if(dow(c) === d && iso(c) >= iso(HOJE) && iso(c) <= PROVA()){ disponiveis++; break }
         }
       });
       if(disponiveis < dias.length && disponiveis > 0)
@@ -6556,8 +6562,8 @@ PARTE('blocos de 14 dias', function(){
           var cand = addD(dt(ini), w*7 + i);
           if(dow(cand) === d){ data = iso(cand); break }
         }
-        if(!data || data > PROVA) return;
-        if(data === PROVA) return;
+        if(!data || data > PROVA()) return;
+        if(data === PROVA()) return;
 
         if(d === 6){                       /* sábado: longão */
           sess[data] = sessao(data, 'corrida', semRest <= 2 ? 'soltura' : 'longo', longo, {
@@ -6577,7 +6583,7 @@ PARTE('blocos de 14 dias', function(){
           var txt = {
             vo2:    '5 a 6 tiros de 1000 m em ' + pc(PACES.vo2()) + '/km, com 3 min de trote entre eles.',
             limiar: 'Bloco contínuo de 20 a 25 min em ' + pc(PACES.limiar()) + '/km. Confortavelmente difícil.',
-            mp:     km.toFixed(0) + ' km em ritmo de prova, ' + pc(PACES.mp()) + '/km. É o ritmo que você quer sentir no dia 18.',
+            mp:     km.toFixed(0) + ' km em ritmo de prova, ' + pc(PACES.mp()) + '/km. É o ritmo que você quer sentir no dia ' + dataBR(PROVA()) + '.',
             soltura:'Rodagem leve com 4 acelerações de 20 s no fim.'
           }[q];
           sess[data] = sessao(data, 'corrida', q, km, {
@@ -6712,7 +6718,7 @@ PARTE('blocos de 14 dias', function(){
     var prev = gerarBloco(iso(HOJE)).resumo;
     return '<div class="blk"><div class="cab">Hora de compor</div>' +
       '<h3>Suas próximas 2 semanas</h3>' +
-      '<p class="per">Fase: ' + prev.fase + ' · ' + prev.semanas.toFixed(1) + ' semanas até 18/10</p>' +
+      '<p class="per">Fase: ' + prev.fase + ' · ' + prev.semanas.toFixed(1) + ' semanas até ' + dataBR(PROVA()) + '</p>' +
       '<div class="ln"><span class="k">Você correu na quinzena</span><span class="v">' + prev.leitura.km + ' km</span></div>' +
       '<div class="ln"><span class="k">Média semanal real</span><span class="v">' + prev.leitura.semanal + ' km</span></div>' +
       '<div class="ln"><span class="k">Maior longo recente</span><span class="v">' + prev.leitura.longo + ' km</span></div>' +
@@ -7087,7 +7093,7 @@ PARTE('ritmos que existem', function(){
       long:{n:'Longo',             s:'LON', p:[L+35, L+65],  fc:fc('long'),
             d:'Resistência, o treino mais importante'},
       mp  :{n:'Ritmo de maratona', s:'MP',  p:mp,            fc:fc('mp'),
-            d:'O ritmo do dia 18 de outubro. Firme, mas você fala frases curtas'},
+            d:'O ritmo do dia da prova. Firme, mas você fala frases curtas'},
       lim :{n:'Limiar',            s:'LIM', p:[L-8, L+12],   fc:fc('lim'),
             d:'Confortavelmente difícil, 20 a 25 min sustentáveis'},
       vo2 :{n:'VO₂ máx',           s:'VO₂',p:vo,             fc:fc('vo2'),
@@ -7218,7 +7224,7 @@ PARTE('ritmos que existem', function(){
     mp:     { frac: 0.70, txt: function(km, z){
       return Math.round(km * 0.7) + ' km em ritmo de maratona, ' + pcs(z.mp.p[0]) + '–' +
              pcs(z.mp.p[1]) + '/km, FC ' + z.mp.fc[0] + '–' + z.mp.fc[1] + ' bpm. ' +
-             'É o ritmo que você quer sentir no dia 18. O restante em ' +
+             'É o ritmo que você quer sentir no dia da prova. O restante em ' +
              pcs(z.faci.p[0]) + '–' + pcs(z.faci.p[1]) + '/km.' } }
   };
 
@@ -9543,7 +9549,7 @@ PARTE('um plano só', function(){
                                       : cor(p);
 
       return '<div class="lin' + (w.atual ? ' hoje' : '') + '">'
-        + '<b>' + (w.prova ? 'PEI' : 'S' + w.n) + '</b>'
+        + '<b>' + (w.prova ? 'Prova' : 'S' + w.n) + '</b>'
         + '<span class="bar"><i style="width:' + larg + '%;background:' + fundo + '"></i></span>'
         + '<span class="km">' + (orfa ? w.real.toFixed(0) + ' km'
              : w.real.toFixed(0) + '/' + (temPlano ? w.plan.toFixed(0) + ' km' : '— km')) + '</span>'
@@ -9843,9 +9849,11 @@ PARTE('um alvo só: PEI', function(){
 
   /* no arranque, e de novo depois que a nuvem responde — o boot do app
      e assincrono e sobrescreve ST.objetivo com o que veio do Firebase */
-  fixar(false);
-  setTimeout(function(){ try{ fixar(false) }catch(e){} }, 3000);
-  setTimeout(function(){ try{ fixar(false) }catch(e){} }, 9500);
+  /* 13/10/2026: a PEI saiu dos planos. A correcao automatica que
+     devolvia o objetivo para a PEI a cada arranque foi desligada —
+     o objetivo agora e o que voce escolher em Trocar (aba Coach) ou
+     em "Treinar para esta" (aba Provas). bqAlvo.fixar() no console
+     ainda existe, se um dia quiser voltar. */
 });
 
 
@@ -11149,8 +11157,18 @@ PARTE('painel da academia', function(){
      nota:'Só a segunda, e leve. Depois de 14/10, nada.'}
   ];
 
-  function faseDe(iso){
-    for(var i = 0; i < FASES.length; i++) if(iso <= FASES[i].ate) return FASES[i];
+  /* as fases foram montadas para 18/10; se o objetivo mudar de data,
+     elas andam junto, mantendo a mesma distancia ate a prova */
+  function deslocar(k){
+    try{
+      var alvo = ST.objetivo && ST.objetivo.data;
+      if(!alvo) return k;
+      return iso(addD(dt(k), diff(alvo, PROVA)));
+    }catch(e){ return k }
+  }
+  function faseDe(k){
+    var k2 = deslocar(k);
+    for(var i = 0; i < FASES.length; i++) if(k2 <= FASES[i].ate) return FASES[i];
     return null;                       // depois da prova
   }
 
@@ -17863,3 +17881,79 @@ PARTE('abertura que nao para no meio', function(){
   }, 2500);
 });
 
+
+/* ═══════════════════════════════════════════════════════════════════
+   62. TROCAR DE PROVA SEM PERDER O PASSADO
+
+   Pedido de 13/10/2026: a PEI saiu dos planos e o app nao deixava
+   trocar — a parte 45 recolocava a PEI a cada arranque (desligada
+   agora) e o gerador de blocos tinha 18/10 cravado (agora segue o
+   objetivo ativo).
+
+   Aqui fica a segunda metade: o app, ao trocar de objetivo, zerava
+   etapas marcadas, trocas e treinos extras de TODOS os dias, inclusive
+   os que ja passaram. O que ja aconteceu continua sendo historia sua;
+   so o futuro e refeito para o novo alvo.
+   ═══════════════════════════════════════════════════════════════════ */
+PARTE('trocar de prova sem perder o passado', function(){
+  if(typeof ST !== 'object') throw new Error('sem ST');
+  var RE = /^(\d{4}-\d{2}-\d{2})/;
+
+  function passado(obj){
+    var hoje = iso(HOJE), out = {};
+    Object.keys(obj || {}).forEach(function(k){
+      var m = RE.exec(k);
+      if(m && m[1] < hoje) out[k] = obj[k];
+    });
+    return out;
+  }
+
+  function embrulhar(nome){
+    var original = window[nome];
+    if(typeof original !== 'function') return;
+    window[nome] = function(){
+      var f = passado(ST.feitas), t = passado(ST.trocas), x = passado(ST.extras);
+      var r = original.apply(this, arguments);
+      try{
+        var volta = false;
+        [['feitas', f], ['trocas', t], ['extras', x]].forEach(function(p){
+          ST[p[0]] = ST[p[0]] || {};
+          Object.keys(p[1]).forEach(function(k){
+            if(!(k in ST[p[0]])){ ST[p[0]][k] = p[1][k]; volta = true }
+          });
+        });
+        if(volta){
+          try{ rebuild() }catch(e){}
+          try{ renderTudo() }catch(e){}
+          try{ persistir() }catch(e){}
+        }
+      }catch(e){ console.warn('passado preservado com falha:', e && e.message) }
+      return r;
+    };
+  }
+  embrulhar('aplicarObjetivo');
+
+  /* "Treinar para esta" da aba Provas zera ST.feitas dentro do
+     clique da distancia; o embrulho vai nesse clique */
+  var tp = window.treinarPara;
+  if(typeof tp === 'function') window.treinarPara = function(){
+    var r = tp.apply(this, arguments);
+    try{
+      var sheet = document.getElementById('sheetIn');
+      if(sheet) sheet.querySelectorAll('[data-km]').forEach(function(b){
+        var clique = b.onclick;
+        b.onclick = function(){
+          var f2 = passado(ST.feitas);
+          var r2 = clique && clique.apply(this, arguments);
+          try{
+            ST.feitas = ST.feitas || {};
+            Object.keys(f2).forEach(function(k){ if(!(k in ST.feitas)) ST.feitas[k] = f2[k] });
+            try{ rebuild(); renderTudo(); persistir() }catch(e){}
+          }catch(e){}
+          return r2;
+        };
+      });
+    }catch(e){}
+    return r;
+  };
+});
