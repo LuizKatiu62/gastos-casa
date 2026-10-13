@@ -66,7 +66,7 @@
       tabelas por mês/horário/posição e o registro dia a dia.
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '07f';
+const FIX_VERSAO = '07g';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -18035,6 +18035,43 @@ PARTE('a PEI sai de vez', function(){
     }
     if(data === DATA_PEI && !manual) data = '';
     return aplicar.call(this, fam, id, data, manual);
+  };
+
+  /* 13/10 15:54 — no aparelho dele a PEI continuou depois do 07f.
+     Os relogios de 3,5/7/12 s podem passar antes de o Firebase
+     responder (ou outro aparelho com versao velha regrava a PEI). Por
+     isso a limpeza agora vai em TODA reconstrucao do plano, e tambem
+     na leitura do Firebase: nao depende mais de hora. */
+  function peneirarPlano(){
+    var P = ST.plano; if(!P) return;
+    Object.keys(P).forEach(function(k){
+      var s = P[k];
+      if(!s || !s.prova) return;
+      if(/\bPEI\b|Charlottetown|indice Boston|índice Boston/i.test(s.titulo || '') ||
+         (k === DATA_PEI && !(ST.objetivo && ST.objetivo.data === DATA_PEI && !ehPEI(ST.objetivo))))
+        delete P[k];
+    });
+  }
+  var limpando = false;
+  var rb = window.rebuild;
+  if(typeof rb === 'function') window.rebuild = function(){
+    if(!limpando && ehPEI(ST.objetivo)){
+      limpando = true;
+      try{ ST.objetivo = null; setTimeout(function(){
+        try{ var p = document.getElementById('objPainel'); if(p) p.classList.add('on') }catch(e){}
+        try{ persistir() }catch(e){}
+      }, 0) }finally{ limpando = false }
+    }
+    var r = rb.apply(this, arguments);
+    try{ peneirarPlano() }catch(e){ console.warn('peneirar PEI:', e && e.message) }
+    return r;
+  };
+  var lc = window.lerCoach;
+  if(typeof lc === 'function') window.lerCoach = async function(){
+    var c = await lc.apply(this, arguments);
+    try{ if(c && ehPEI(c.objetivo)){ delete c.objetivo; ST.objetivo = null;
+      setTimeout(function(){ try{ rebuild(); selecionarProximo(); renderTudo(); persistir() }catch(e){} }, 300) } }catch(e){}
+    return c;
   };
 
   tirarDoCatalogo();
