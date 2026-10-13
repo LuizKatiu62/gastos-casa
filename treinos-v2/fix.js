@@ -66,7 +66,7 @@
       tabelas por mês/horário/posição e o registro dia a dia.
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '07g';
+const FIX_VERSAO = '07h';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -18042,15 +18042,52 @@ PARTE('a PEI sai de vez', function(){
      responder (ou outro aparelho com versao velha regrava a PEI). Por
      isso a limpeza agora vai em TODA reconstrucao do plano, e tambem
      na leitura do Firebase: nao depende mais de hora. */
+  /* 13/10 16:01 — depois do 07g ainda aparecia "Estrategia prova 42km"
+     no domingo. Esse NAO vem do app: e o treino que o treinador deixou
+     no calendario do Garmin para 18/10, marcado como prova. A regra
+     agora e uma so: PROVA E SO A QUE VOCE ESCOLHEU. Qualquer outra
+     coisa marcada como prova — do app ou do Garmin — sai do plano.   */
+  /* nome sozinho nao basta: "ritmo de prova" e treino. Precisa ser
+     marcado como prova pelo Garmin, citar a PEI, ou ter cara de prova
+     (palavra prova/race E duracao de 2h30+, 30 km+ ou distancia de prova) */
+  var RX_PEI = /\bPEI\b|Charlottetown|ndice Boston/i;
+  var RX_PROVA = /\bprova\b|\brace\b/i;
+  function caraDeProva(nome, min, km){
+    nome = nome || '';
+    if(RX_PEI.test(nome)) return true;
+    if(!RX_PROVA.test(nome)) return false;
+    return (min >= 150) || (km >= 30) || /42|21[,.]1|estrat/i.test(nome);
+  }
+  function provaEscolhida(k){
+    var o = ST.objetivo;
+    return !!(o && o.data === k && !ehPEI(o));
+  }
+  function ehProvaGarmin(a){
+    return !!(a && (a.prova || caraDeProva(a.nome, (+a.duracaoSeg || 0) / 60, (+a.distanciaM || 0) / 1000)));
+  }
+  function peneirarAgenda(){
+    try{
+      if(typeof RAW !== 'object' || !RAW || !Array.isArray(RAW.agendados)) return;
+      RAW.agendados = RAW.agendados.filter(function(a){
+        return !(ehProvaGarmin(a) && !provaEscolhida(a.data));
+      });
+    }catch(e){}
+  }
   function peneirarPlano(){
     var P = ST.plano; if(!P) return;
     Object.keys(P).forEach(function(k){
       var s = P[k];
-      if(!s || !s.prova) return;
-      if(/\bPEI\b|Charlottetown|indice Boston|índice Boston/i.test(s.titulo || '') ||
-         (k === DATA_PEI && !(ST.objetivo && ST.objetivo.data === DATA_PEI && !ehPEI(ST.objetivo))))
-        delete P[k];
+      if(!s) return;
+      var prova = s.prova ||
+                  caraDeProva(s.titulo, +s.min || 0, +s.km || 0);
+      if(prova && !provaEscolhida(k)) delete P[k];
     });
+    try{
+      Object.keys(ST.extras || {}).forEach(function(k){
+        var x = ST.extras[k];
+        if(x && (x.prova || x.foco === 'prova') && !provaEscolhida(k)) delete ST.extras[k];
+      });
+    }catch(e){}
   }
   var limpando = false;
   var rb = window.rebuild;
@@ -18062,6 +18099,7 @@ PARTE('a PEI sai de vez', function(){
         try{ persistir() }catch(e){}
       }, 0) }finally{ limpando = false }
     }
+    peneirarAgenda();
     var r = rb.apply(this, arguments);
     try{ peneirarPlano() }catch(e){ console.warn('peneirar PEI:', e && e.message) }
     return r;
