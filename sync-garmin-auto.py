@@ -1086,6 +1086,24 @@ def main():
             else:
                 log("ERRO ao salvar a evolucao publica")
 
+        # prova da contagem do runwithgratitude.ca — o app de treinos grava
+        # treinos_coach_v2/luiz/provaPublica quando o objetivo muda; aqui so
+        # repasso para blog/prova, caso a gravacao direta do app tenha falhado
+        try:
+            pp = firebase_get("treinos_coach_v2/luiz/provaPublica", token)
+            if isinstance(pp, dict):
+                atual = firebase_get("blog/prova", token)
+                novo = None if pp.get("nenhuma") else pp
+                if (atual or None) != novo:
+                    if novo is None:
+                        req = urlreq.Request(f"{FIREBASE_DB}/blog/prova.json?auth={token}", method="DELETE")
+                        urlreq.urlopen(req, timeout=20)
+                        log("Prova publica: nenhuma (contagem do site em branco)")
+                    elif firebase_put("blog/prova", novo, token):
+                        log(f"Prova publica: {novo.get('nome')} em {novo.get('data')}")
+        except Exception as e:
+            log(f"Prova publica falhou: {e}")
+
         # A semana que o app montou: publica o arquivo e sobe no Garmin.
         # Le o pacote uma vez so e passa para os dois.
         try:

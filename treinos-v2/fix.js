@@ -66,7 +66,7 @@
       tabelas por mês/horário/posição e o registro dia a dia.
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '07h';
+const FIX_VERSAO = '07i';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -18120,4 +18120,73 @@ PARTE('a PEI sai de vez', function(){
   setTimeout(limpar, 12000);
 
   window.bqPEI = { limpar: limpar, ehPEI: function(){ return ehPEI(ST.objetivo) } };
+});
+
+/* ═══════════ A PROVA ESCOLHIDA APARECE NO RUNWITHGRATITUDE.CA ═══════════
+   15/10 — o site runwithgratitude.ca tinha a PEI Marathon escrita no
+   código, e a PEI não vai mais acontecer. Agora a contagem do site lê
+   blog/prova no Firebase, e é ESTE app que grava esse nó: toda vez que
+   o objetivo é salvo, e também ao abrir o app.
+
+   O que vai para o site é só o público: nome da prova, cidade, data e
+   distância. Nada de treino, saúde ou plano.
+
+   Cópia em treinos_coach_v2/luiz/provaPublica: o robô do Garmin
+   (sync-garmin-auto.py, 3 vezes por dia) republica dali. Se um dia a
+   gravação direta em blog/ falhar, o site se acerta na rodada seguinte.
+   ═════════════════════════════════════════════════════════════════ */
+PARTE('prova no site runwithgratitude', function(){
+  if(typeof ST !== 'object') throw new Error('sem ST');
+  var CHAVE = 'rwg.provaPublicada';
+  var g = function(k){ try{ return localStorage.getItem(k) }catch(e){ return null } };
+  var s_ = function(k,v){ try{ localStorage.setItem(k,v) }catch(e){} };
+
+  function montar(){
+    var o = ST.objetivo;
+    if(!o || !o.data) return null;
+    try{ if(window.bqPEI && window.bqPEI.ehPEI()) return null }catch(e){}
+    var nome = o.nome || '', cidade = '', url = '';
+    var at = null; try{ at = objetivoAtivo() }catch(e){}
+    if(o.prova && typeof PROVAS_CAT !== 'undefined' && PROVAS_CAT){
+      var p = PROVAS_CAT.find(function(x){ return x.id === o.prova });
+      if(p){ nome = p.nome; cidade = p.cidade || ''; url = p.url || '' }
+    } else if(nome.indexOf(' · ') >= 0){
+      nome = nome.split(' · ').slice(1).join(' · ');     // "Maratona · X" -> "X"
+    }
+    if(!nome) return null;
+    return {nome: nome, cidade: cidade, data: o.data, url: url,
+            dist: o.distProva || (at && at.dist) || null,
+            formato: (at && at.n) || ''};
+  }
+
+  var rodando = false;
+  async function publicar(){
+    if(rodando) return; rodando = true;
+    try{
+      var pub = montar();
+      var assin = JSON.stringify(pub);
+      if(g(CHAVE) === assin) return;                 // nada mudou
+      var t = await window.fbToken(); if(!t) return;
+      var corpo = pub ? Object.assign({}, pub, {em: new Date().toISOString()}) : null;
+      var r = await fetch(FB_DB + '/blog/prova.json?auth=' + t,
+        corpo ? {method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(corpo)}
+              : {method:'DELETE'});
+      await fetch(FB_DB + '/' + FB_COACH + '/provaPublica.json?auth=' + t,
+        {method:'PUT', headers:{'Content-Type':'application/json'},
+         body: JSON.stringify(corpo || {nenhuma: true, em: new Date().toISOString()})}).catch(function(){});
+      if(r.ok){ s_(CHAVE, assin); console.log('site: prova publicada', assin) }
+      else console.warn('site: blog/prova recusou', r.status);
+    }catch(e){ console.warn('site: prova', e.message) }
+    finally{ rodando = false }
+  }
+
+  var salvar = window.salvarCoach;
+  if(typeof salvar === 'function') window.salvarCoach = function(){
+    var ret = salvar.apply(this, arguments);
+    setTimeout(publicar, 400);
+    return ret;
+  };
+  /* ao abrir: depois do boot e da limpeza da PEI (7 s e 12 s) */
+  setTimeout(publicar, 14000);
+  window.provaSite = { publicar: function(){ try{ localStorage.removeItem(CHAVE) }catch(e){} return publicar() }, montar: montar };
 });
