@@ -2,7 +2,7 @@
  "ate": "2026-10-21",
  "de": "2026-10-15",
  "fcMax": 163,
- "gerado": "2026-10-15T12:09:06.021Z",
+ "gerado": "2026-10-15T22:21:53.368Z",
  "limiar": "5:19",
  "sessoes": [
   {
@@ -28,6 +28,38 @@
      "texto": "5.3 km em 6:04–6:34/km. Voce deve conseguir falar frases inteiras.",
      "tipo": "interval",
      "valor": 5300
+    },
+    {
+     "fim": "time",
+     "texto": "5 min de trote muito leve ate a respiracao normalizar.",
+     "tipo": "cooldown",
+     "valor": 300
+    }
+   ]
+  },
+  {
+   "data": "2026-10-17",
+   "foco": "facil",
+   "km": 16.9,
+   "min": 100,
+   "nome": "17/10 · Rodagem Z2 · 16.9 km total",
+   "nota": "Total porta a porta 16.9 km. Alongamentos e educativos ANTES do start, relogio parado.",
+   "passos": [
+    {
+     "fim": "time",
+     "lento": 2.2523,
+     "rapido": 2.4155,
+     "texto": "8 min subindo devagar, 6:54–7:24/km. Se chegar ofegante ao fim, foi rapido demais.",
+     "tipo": "warmup",
+     "valor": 480
+    },
+    {
+     "fim": "distance",
+     "lento": 2.5381,
+     "rapido": 2.7473,
+     "texto": "15.1 km em 6:04–6:34/km. Voce deve conseguir falar frases inteiras.",
+     "tipo": "interval",
+     "valor": 15100
     },
     {
      "fim": "time",
