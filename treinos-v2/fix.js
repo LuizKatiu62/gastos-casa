@@ -66,7 +66,7 @@
       tabelas por mês/horário/posição e o registro dia a dia.
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '07k';
+const FIX_VERSAO = '07l';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -12343,10 +12343,25 @@ PARTE('painel da academia', function(){
         + '.</div>'
       : '';
 
-    return '<div class="bqa-t">Progressão de carga</div>'
-         + '<div class="bqa-u" style="font-size:13px">' + linhas + '</div>' + aviso;
+    /* FECHADA POR PADRAO (16/10/2026): e consulta, nao o que fazer hoje.
+       Na faixa fica so o resumo; tocar abre a lista. */
+    var subiram = itens.filter(function(x){ return (x.ganho || 0) > 0 }).length;
+    return '<details class="bqProg"><summary style="cursor:pointer;list-style:none">'
+         + '<div class="bqa-t" style="display:flex;justify-content:space-between;align-items:center;gap:8px">'
+         + '<span>Progressão de carga · <span style="text-transform:none;opacity:.75">'
+         + (subiram ? subiram + (subiram === 1 ? ' exercício subiu' : ' exercícios subiram') : 'nenhuma subida')
+         + (parados.length ? ' · ' + parados.length + ' parado' + (parados.length === 1 ? '' : 's') : '')
+         + '</span></span><span class="bqProgCh" style="opacity:.5">▼</span></div></summary>'
+         + '<div class="bqa-u" style="font-size:13px">' + linhas + '</div>' + aviso + '</details>';
   }
 
+  (function(){
+    if(document.getElementById('bqProgCss')) return;
+    var st = document.createElement('style'); st.id = 'bqProgCss';
+    st.textContent = '.bqProg>summary::-webkit-details-marker,.bqAcadHoje>summary::-webkit-details-marker{display:none}'
+      + '.bqProg[open] .bqProgCh{display:inline-block;transform:rotate(180deg)}';
+    document.head.appendChild(st);
+  })();
   function pintar(){
     var el = caixa();
     if(!el) return;
