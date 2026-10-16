@@ -330,13 +330,15 @@ function linha(pts, o={}){
 }
 /* várias linhas no MESMO eixo e mesma unidade; series=[{n,c,v:[...]}] */
 function linhas(labs, series, o={}){
-  const W=largura(o.w||720),H=o.h||200,ml=44,mr=12,mt=16,mb=30, iw=W-ml-mr, ih=H-mt-mb;
+  const W=largura(o.w||720),H=o.h||200,ml=44,mr=12,mt=o.unidade?26:16,mb=30, iw=W-ml-mr, ih=H-mt-mb;
   const vs=series.flatMap(x=>x.v).filter(isFinite); if(vs.length<2) return '<div class="vazio">Dados insuficientes.</div>';
   let lo=o.min!=null?o.min:Math.min(...vs), hi=Math.max(...vs, o.minHi||0); const pad=(hi-lo)*.1||1; if(o.min==null) lo-=pad; hi+=pad;
+  let nt=3; if(o.min===0){ const st=niceMax((hi-lo)/4); hi=Math.ceil(hi/st)*st; nt=Math.round(hi/st) }
   const n=labs.length, X=i=>ml+(n===1?iw/2:iw*i/(n-1)), Y=v=>mt+ih-ih*(v-lo)/(hi-lo);
   let g=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.aria||'')}">`;
   (o.faixa||[]).forEach(f=>{ const y1=Y(Math.min(hi,f.b)), y0=Y(Math.max(lo,f.a)); if(y0>y1) g+=`<rect x="${ml}" y="${y1}" width="${iw}" height="${y0-y1}" fill="${f.c}" opacity=".13"/><text x="${W-mr-4}" y="${y1+12}" text-anchor="end">${esc(f.n)}</text>` });
-  for(let i=0;i<=3;i++){ const v=lo+(hi-lo)*i/3, y=Y(v); g+=`<line x1="${ml}" x2="${W-mr}" y1="${y}" y2="${y}" stroke="var(--grid)"/><text x="${ml-6}" y="${y+3.5}" text-anchor="end">${o.fmt?o.fmt(v):nf0(v)}</text>` }
+  for(let i=0;i<=nt;i++){ const v=lo+(hi-lo)*i/nt, y=Y(v); g+=`<line x1="${ml}" x2="${W-mr}" y1="${y}" y2="${y}" stroke="var(--grid)"/><text x="${ml-6}" y="${y+3.5}" text-anchor="end">${o.fmt?o.fmt(v):nf0(v)}</text>` }
+  if(o.unidade) g+=`<text x="${ml-6}" y="10" text-anchor="end">${esc(o.unidade)}</text>`;
   series.forEach(sr=>{ let d='',ab=false; sr.v.forEach((v,i)=>{ if(!isFinite(v)){ab=false;return} d+=(ab?'L':'M')+X(i).toFixed(1)+','+Y(v).toFixed(1); ab=true });
     g+=`<path d="${d}" fill="none" stroke="${sr.c}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"${sr.tr?' stroke-dasharray="5 4"':''}/>`;
     const iu=sr.v.map(isFinite).lastIndexOf(true); if(iu>=0) g+=`<circle cx="${X(iu)}" cy="${Y(sr.v[iu])}" r="3.6" fill="${sr.c}" stroke="var(--s1)" stroke-width="2"/>` });
@@ -472,13 +474,13 @@ function render(){
   const somaJanela=(fimIso,dias)=>{ let t=0; for(let i=0;i<dias;i++){ t+=cargaDia[iso(addD(dt(fimIso),-i))]||0 } return t };
   const pontosC=SEM.map(sm=>{ let f=iso(addD(dt(sm),6)); if(f>ate) f=ate; const ag=somaJanela(f,7), cr=somaJanela(f,28)/4; return {s:sm,f,ag,cr,r: cr>0? ag/cr : NaN} });
   const ultC=pontosC[pontosC.length-1];
-  h+=`<section class="card"><div class="ch"><h2>Carga de treino: aguda × crônica</h2><span class="note">carga dos últimos 7 dias × média semanal das últimas 4 semanas</span></div>
+  h+=`<section class="card"><div class="ch"><h2>Carga de treino: aguda × crônica</h2><span class="note">pontos de carga · últimos 7 dias × média semanal das últimas 4 semanas</span></div>
     <div class="legend"><span><i style="background:var(--c2)"></i>Aguda (7 dias)</span><span><i style="background:var(--c1)"></i>Crônica (média de 4 semanas)</span></div>
-    ${linhas(pontosC.map(p=>labS(p.s)), [{n:'Aguda',c:'var(--c2)',v:pontosC.map(p=>p.ag)},{n:'Crônica',c:'var(--c1)',v:pontosC.map(p=>p.cr)}], {w:1000,h:230,min:0,aria:'Carga aguda e crônica',tipLab:i=>'Semana de '+fDataA(pontosC[i].s)})}
+    ${linhas(pontosC.map(p=>labS(p.s)), [{n:'Aguda',c:'var(--c2)',v:pontosC.map(p=>p.ag)},{n:'Crônica',c:'var(--c1)',v:pontosC.map(p=>p.cr)}], {w:1000,h:230,min:0,unidade:'pontos',aria:'Carga aguda e crônica',tipLab:i=>'Semana de '+fDataA(pontosC[i].s)})}
     <div class="ch" style="margin-top:10px"><h2 style="font-size:15px">Relação aguda ÷ crônica</h2><span class="note">0,8 a 1,3 é a faixa segura · acima de 1,5 o risco de lesão sobe</span></div>
     ${linhas(pontosC.map(p=>labS(p.s)), [{n:'Relação',c:'var(--tx2)',v:pontosC.map(p=>p.r)}], {w:1000,h:170,min:0,minHi:1.7,fmt:v=>v.toFixed(1).replace('.',','),aria:'Relação aguda crônica',
       faixa:[{a:0.8,b:1.3,c:'var(--good)',n:'faixa segura'},{a:1.5,b:9,c:'var(--bad)',n:'risco'}], tipLab:i=>'Semana de '+fDataA(pontosC[i].s)})}
-    <p class="note" style="margin:6px 0 0">A carga de cada corrida combina duração e intensidade pela FC média (TRIMP de Banister, FC máx ${nf0(FCM)} e repouso ${nf0(FCR)} bpm). Corrida sem FC entra como esforço moderado.</p></section>`;
+    <p class="note" style="margin:6px 0 0">Pontos de carga: cada minuto correndo vale mais quanto mais alta a FC. Exemplo: uma rodagem de 1 h com FC média 140 dá cerca de 135 pontos. O que importa é comparar as duas linhas, não o número em si. A carga de cada corrida combina duração e intensidade pela FC média (TRIMP de Banister, FC máx ${nf0(FCM)} e repouso ${nf0(FCR)} bpm). Corrida sem FC entra como esforço moderado.</p></section>`;
 
   /* ===== zonas de FC (aproximado: cada corrida inteira na zona da FC média) ===== */
   const ZN=[{n:'Z1 recuperação',a:0,b:.70,c:'var(--z1)'},{n:'Z2 aeróbico',a:.70,b:.80,c:'var(--z2)'},{n:'Z3 tempo',a:.80,b:.87,c:'var(--z3)'},{n:'Z4 limiar',a:.87,b:.93,c:'var(--z4)'},{n:'Z5 VO₂',a:.93,b:9,c:'var(--z5)'}];
