@@ -97,7 +97,7 @@ tr.tot td{font-weight:700;border-top:1.5px solid var(--tx)}
     --h0:#ECEAE4;--acc:#2a78d6;--c1:#2a78d6;--c2:#eb6834;--c3:#1baf7a;--c4:#eda100;--c5:#e87ba4;--c6:#008300;--c7:#6250d6;--c8:#e34948;--good:#1f7a3a;--bad:#c23a2b}
   body{font-size:11.5px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .wrap{max-width:none;padding:0}
-  .noprint,.ctrl,.dica,.voltar{display:none!important}
+  .noprint,.ctrl,.dica,.voltar,.tip{display:none!important}
   /* Impressão SEM grid e SEM flex: Safari e Chrome cortam itens de grid/flex
      no meio da página e ignoram "não quebrar". Aqui tudo vira bloco comum
      (ou inline-block, que nunca é partido), e cada gráfico é indivisível. */
@@ -438,8 +438,11 @@ function render(){
   const SEM=[]; for(let s=segunda(dt(de)); iso(s)<=ate; s=addD(s,7)) SEM.push(iso(s));
   const semDe=r=>iso(segunda(dt(r.data)));
   const porSem=SEM.map(s=>{ const l=L.filter(r=>semDe(r)===s); return {s, l, R:resumo(l)} });
-  const labS=s=>fData(s);
-  const tipSem=x=>`<b>Semana de ${fDataA(x.s)}</b><div class="r"><span>Distância</span><b>${nf1(x.R.km)} km</b></div><div class="r"><span>Corridas</span><b>${x.R.n}</b></div><div class="r"><span>Tempo</span><b>${fDur(x.R.dur)}</b></div><div class="r"><span>Pace médio</span><b>${fPace(x.R.pace)}</b></div><div class="r"><span>Maior</span><b>${nf1(x.R.maior)} km</b></div>`;
+  /* a 1ª semana pode começar antes do período (semana vai de segunda a domingo):
+     o rótulo mostra a data de início que você escolheu, não a segunda-feira anterior */
+  const ini=s=> s<de? de : s;
+  const labS=s=>fData(ini(s));
+  const tipSem=x=>`<b>Semana de ${fDataA(ini(x.s))}</b><div class="r"><span>Distância</span><b>${nf1(x.R.km)} km</b></div><div class="r"><span>Corridas</span><b>${x.R.n}</b></div><div class="r"><span>Tempo</span><b>${fDur(x.R.dur)}</b></div><div class="r"><span>Pace médio</span><b>${fPace(x.R.pace)}</b></div><div class="r"><span>Maior</span><b>${nf1(x.R.maior)} km</b></div>`;
   h+=`<div class="grid">
   <section class="card"><div class="ch"><h2>Destaques</h2><span class="note">o que os números dizem</span></div><ul class="dest" id="dest"></ul></section>
   <section class="card"><div class="ch"><h2>Calendário de corridas</h2><span class="note">um quadrado por dia</span></div>
@@ -453,7 +456,7 @@ function render(){
 
   /* tipos de treino por semana */
   const usados=TIPOS.filter(t=>L.some(r=>r.tipo===t.k));
-  const tipTS=x=>`<b>Semana de ${fDataA(x.s)}</b>`+usados.map(t=>{const l=x.l.filter(r=>r.tipo===t.k); return l.length?`<div class="r"><span><span class="sw" style="background:${t.c}"></span>${t.n}</span><b>${l.length}× · ${nf1(l.reduce((s,r)=>s+r.km,0))} km</b></div>`:''}).join('')+`<div class="r" style="border-top:1px solid currentColor;margin-top:3px;padding-top:3px"><span>Total</span><b>${nf1(x.R.km)} km</b></div>`;
+  const tipTS=x=>`<b>Semana de ${fDataA(ini(x.s))}</b>`+usados.map(t=>{const l=x.l.filter(r=>r.tipo===t.k); return l.length?`<div class="r"><span><span class="sw" style="background:${t.c}"></span>${t.n}</span><b>${l.length}× · ${nf1(l.reduce((s,r)=>s+r.km,0))} km</b></div>`:''}).join('')+`<div class="r" style="border-top:1px solid currentColor;margin-top:3px;padding-top:3px"><span>Total</span><b>${nf1(x.R.km)} km</b></div>`;
   const durF=L.filter(r=>TIPO[r.tipo].forte).reduce((s,r)=>s+r.dur,0);
   const linhasT=usados.map(t=>{ const l=L.filter(r=>r.tipo===t.k), x=resumo(l); return {t,x} });
   h+=`<section class="card longa quebra"><div class="ch"><h2>Tipos de treino por semana</h2><span class="note">km de cada tipo</span></div>
@@ -492,10 +495,10 @@ function render(){
   const ultC=pontosC[pontosC.length-1];
   h+=`<section class="card"><div class="ch"><h2>Carga de treino: aguda × crônica</h2><span class="note">pontos de carga · últimos 7 dias × média semanal das últimas 4 semanas</span></div>
     <div class="legend"><span><i style="background:var(--c2)"></i>Aguda (7 dias)</span><span><i style="background:var(--c1)"></i>Crônica (média de 4 semanas)</span></div>
-    ${linhas(pontosC.map(p=>labS(p.s)), [{n:'Aguda',c:'var(--c2)',v:pontosC.map(p=>p.ag)},{n:'Crônica',c:'var(--c1)',v:pontosC.map(p=>p.cr)}], {w:1000,h:230,min:0,unidade:'pontos',aria:'Carga aguda e crônica',tipLab:i=>'Semana de '+fDataA(pontosC[i].s)})}
+    ${linhas(pontosC.map(p=>labS(p.s)), [{n:'Aguda',c:'var(--c2)',v:pontosC.map(p=>p.ag)},{n:'Crônica',c:'var(--c1)',v:pontosC.map(p=>p.cr)}], {w:1000,h:230,min:0,unidade:'pontos',aria:'Carga aguda e crônica',tipLab:i=>'Semana de '+fDataA(ini(pontosC[i].s))})}
     <div class="ch" style="margin-top:10px"><h2 style="font-size:15px">Relação aguda ÷ crônica</h2><span class="note">0,8 a 1,3 é a faixa segura · acima de 1,5 o risco de lesão sobe</span></div>
     ${linhas(pontosC.map(p=>labS(p.s)), [{n:'Relação',c:'var(--tx2)',v:pontosC.map(p=>p.r)}], {w:1000,h:170,min:0,minHi:1.7,fmt:v=>v.toFixed(1).replace('.',','),aria:'Relação aguda crônica',
-      faixa:[{a:0.8,b:1.3,c:'var(--good)',n:'faixa segura'},{a:1.5,b:9,c:'var(--bad)',n:'risco'}], tipLab:i=>'Semana de '+fDataA(pontosC[i].s)})}
+      faixa:[{a:0.8,b:1.3,c:'var(--good)',n:'faixa segura'},{a:1.5,b:9,c:'var(--bad)',n:'risco'}], tipLab:i=>'Semana de '+fDataA(ini(pontosC[i].s))})}
     <p class="note" style="margin:6px 0 0">Pontos de carga: cada minuto correndo vale mais quanto mais alta a FC. Exemplo: uma rodagem de 1 h com FC média 140 dá cerca de 135 pontos. O que importa é comparar as duas linhas, não o número em si. A carga de cada corrida combina duração e intensidade pela FC média (TRIMP de Banister, FC máx ${nf0(FCM)} e repouso ${nf0(FCR)} bpm). Corrida sem FC entra como esforço moderado.</p></section>`;
 
   /* ===== zonas de FC (aproximado: cada corrida inteira na zona da FC média) ===== */
@@ -505,7 +508,7 @@ function render(){
   h+=`<section class="card longa"><div class="ch"><h2>Tempo por zona de FC</h2><span class="note">minutos por semana · FC máx ${nf0(FCM)} bpm</span></div>
     <div class="legend">${ZN.map(z=>`<span><i style="background:${z.c}"></i>${z.n} (${!z.a?'até '+Math.round(z.b*FCM):z.b<9?Math.round(z.a*FCM)+'–'+Math.round(z.b*FCM):Math.round(z.a*FCM)+'+'} bpm)</span>`).join('')}</div>
     ${barras(porSem.map(x=>{ const v={}; ZN.forEach((z,i)=>v['z'+i]=x.l.filter(r=>zonaDe(r)===i).reduce((a,r)=>a+r.dur/60,0));
-      return {lab:labS(x.s), v, tip:`<b>Semana de ${fDataA(x.s)}</b>`+ZN.map((z,i)=>v['z'+i]?`<div class="r"><span><span class="sw" style="background:${z.c}"></span>${z.n}</span><b>${nf0(v['z'+i])} min</b></div>`:'').join('')} }),
+      return {lab:labS(x.s), v, tip:`<b>Semana de ${fDataA(ini(x.s))}</b>`+ZN.map((z,i)=>v['z'+i]?`<div class="r"><span><span class="sw" style="background:${z.c}"></span>${z.n}</span><b>${nf0(v['z'+i])} min</b></div>`:'').join('')} }),
       ZN.map((z,i)=>({k:'z'+i,c:z.c})), {unidade:'min', w:1000, h:230, aria:'Minutos por zona de FC'})}
     <div class="tw" style="margin-top:8px"><table><thead><tr><th>Zona</th><th>Corridas</th><th>Tempo</th><th>% do tempo</th><th>Pace médio</th></tr></thead><tbody>
     ${ZN.map((z,i)=>{ const l=comFC.filter(r=>zonaDe(r)===i), x=resumo(l); return `<tr><td><span class="sw" style="background:${z.c}"></span>${z.n}</td><td>${x.n}</td><td>${fDur(x.dur)}</td><td>${minTot?pct(x.dur/60/minTot):'–'}</td><td>${fPace(x.pace)}</td></tr>` }).join('')}
@@ -524,7 +527,7 @@ function render(){
     h+=`<section class="card longa"><div class="ch"><h2>Planejado × realizado</h2><span class="note">treinos de corrida agendados no Garmin</span></div>
       <p style="margin:0 0 8px">Você cumpriu <b>${totF} de ${totP}</b> treinos planejados (<b>${pct(totF/totP)}</b>).</p>
       <div class="tw"><table><thead><tr><th>Semana</th><th>Planejados</th><th>Feitos</th><th>Adesão</th><th>km planejados</th><th>km corridos</th></tr></thead><tbody>
-      ${semP.map(x=>`<tr><td>${fDataA(x.sm)}</td><td>${x.p.length}</td><td>${x.f.length}</td><td class="${x.f.length===x.p.length?'up':x.f.length/x.p.length<.6?'down':''}">${pct(x.f.length/x.p.length)}</td><td>${x.kmP?nf1(x.kmP):'–'}</td><td>${nf1(x.kmR)}</td></tr>`).join('')}
+      ${semP.map(x=>`<tr><td>${fDataA(ini(x.sm))}</td><td>${x.p.length}</td><td>${x.f.length}</td><td class="${x.f.length===x.p.length?'up':x.f.length/x.p.length<.6?'down':''}">${pct(x.f.length/x.p.length)}</td><td>${x.kmP?nf1(x.kmP):'–'}</td><td>${nf1(x.kmR)}</td></tr>`).join('')}
       </tbody></table></div>
       ${falt.length?`<p class="note" style="margin:8px 0 0"><b>Não feitos:</b> ${falt.slice(-8).map(a=>fData(a.data)+' — '+esc(a.nome)).join(' · ')}</p>`:''}
       <p class="note" style="margin:6px 0 0">O histórico do plano começou a ser guardado em 16/10/2026; semanas anteriores não têm plano registrado.</p></section>`;
@@ -538,7 +541,7 @@ function render(){
     const g=(o,f)=>media(dias.map(k=>o[k]? +o[k][f] : NaN).map(v=>v>0?v:NaN));
     return {x, carga:x.l.reduce((t,r)=>t+trimp(r),0), sono:g(S.sono,'duracao'), score:g(S.sono,'score'), hrv:g(S.hrv,'ontem'), bb:g(S.bb,'max'), stress:g(S.stress,'avg')} });
   if(rec.some(r=>isFinite(r.sono)||isFinite(r.hrv))){
-    const labR=rec.map(r=>labS(r.x.s)), tl=i=>'Semana de '+fDataA(rec[i].x.s);
+    const labR=rec.map(r=>labS(r.x.s)), tl=i=>'Semana de '+fDataA(ini(rec[i].x.s));
     h+=`<section class="card longa"><div class="ch"><h2>Recuperação × treino</h2><span class="note">médias da semana · gráficos separados, cada um na sua unidade</span></div>
       <div class="grid" style="gap:10px">
       <div class="c6"><div class="note">Carga da semana</div>${barras(rec.map((r,i)=>({lab:labR[i], v:{c:r.carga}, tip:`<b>${tl(i)}</b><div class="r"><span>Carga</span><b>${nf0(r.carga)}</b></div>`})), [{k:'c',c:'var(--c2)'}], {w:470,h:170,aria:'Carga semanal'})}</div>
@@ -547,7 +550,7 @@ function render(){
       <div class="c6"><div class="note">Body Battery máximo</div>${linhas(labR,[{n:'Body Battery',c:'var(--c1)',v:rec.map(r=>r.bb)}],{w:470,h:170,tipLab:tl,aria:'Body Battery'})}</div>
       </div>
       <div class="tw" style="margin-top:8px"><table><thead><tr><th>Semana</th><th>km</th><th>Carga</th><th>Sono</th><th>Nota do sono</th><th>HRV</th><th>Body Battery</th><th>Stress</th></tr></thead><tbody>
-      ${rec.map(r=>`<tr><td>${fDataA(r.x.s)}</td><td>${nf1(r.x.R.km)}</td><td>${nf0(r.carga)}</td><td>${isFinite(r.sono)?nf1(r.sono)+' h':'–'}</td><td>${isFinite(r.score)?nf0(r.score):'–'}</td><td>${isFinite(r.hrv)?nf0(r.hrv):'–'}</td><td>${isFinite(r.bb)?nf0(r.bb):'–'}</td><td>${isFinite(r.stress)?nf0(r.stress):'–'}</td></tr>`).join('')}
+      ${rec.map(r=>`<tr><td>${fDataA(ini(r.x.s))}</td><td>${nf1(r.x.R.km)}</td><td>${nf0(r.carga)}</td><td>${isFinite(r.sono)?nf1(r.sono)+' h':'–'}</td><td>${isFinite(r.score)?nf0(r.score):'–'}</td><td>${isFinite(r.hrv)?nf0(r.hrv):'–'}</td><td>${isFinite(r.bb)?nf0(r.bb):'–'}</td><td>${isFinite(r.stress)?nf0(r.stress):'–'}</td></tr>`).join('')}
       </tbody></table></div>
       <p class="note" style="margin:6px 0 0">Semana de carga alta com HRV caindo e sono curto é sinal de pouca recuperação. O Garmin manda os dados de saúde dos últimos 180 dias.</p></section>`;
   }
@@ -569,7 +572,7 @@ function render(){
 
   /* ===== subida acumulada ===== */
   h+=`<section class="card c6"><div class="ch"><h2>Subida acumulada por semana</h2><span class="note">metros</span></div>
-    ${barras(porSem.map(x=>{ const e=x.l.reduce((t,r)=>t+(isFinite(r.elev)?r.elev:0),0); return {lab:labS(x.s), v:{e}, tip:`<b>Semana de ${fDataA(x.s)}</b><div class="r"><span>Subida</span><b>${nf0(e)} m</b></div><div class="r"><span>km</span><b>${nf1(x.R.km)}</b></div>`} }), [{k:'e',c:'var(--c7)'}], {valores:true, fmt:nf0, unidade:'m', w:470, h:230, aria:'Subida por semana'})}</section>`;
+    ${barras(porSem.map(x=>{ const e=x.l.reduce((t,r)=>t+(isFinite(r.elev)?r.elev:0),0); return {lab:labS(x.s), v:{e}, tip:`<b>Semana de ${fDataA(ini(x.s))}</b><div class="r"><span>Subida</span><b>${nf0(e)} m</b></div><div class="r"><span>km</span><b>${nf1(x.R.km)}</b></div>`} }), [{k:'e',c:'var(--c7)'}], {valores:true, fmt:nf0, unidade:'m', w:470, h:230, aria:'Subida por semana'})}</section>`;
 
   /* ===== melhores marcas ===== */
   const MARC=[5,10,15,21.1,30,42.2];
