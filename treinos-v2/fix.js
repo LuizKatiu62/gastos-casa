@@ -66,7 +66,7 @@
       tabelas por mês/horário/posição e o registro dia a dia.
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '07i';
+const FIX_VERSAO = '07j';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -18189,4 +18189,32 @@ PARTE('prova no site runwithgratitude', function(){
   /* ao abrir: depois do boot e da limpeza da PEI (7 s e 12 s) */
   setTimeout(publicar, 14000);
   window.provaSite = { publicar: function(){ try{ localStorage.removeItem(CHAVE) }catch(e){} return publicar() }, montar: montar };
+});
+
+/* ═══════════ RELATÓRIOS PARA PDF ═══════════
+   16/10 — página nova relatorios.html: volume por semana e por mês,
+   pace, tipos de treino por semana, faixas de distância/pace/tempo,
+   eficiência nas corridas leves e lista de corridas, com botão para
+   salvar em PDF. O atalho fica no alto das abas Evolução e Treinos. */
+PARTE('atalho para os relatorios', function(){
+  if(document.getElementById('btRelatorios')) return;
+  var st = document.createElement('style');
+  st.textContent = '.bt-rel{display:flex;align-items:center;gap:10px;margin:4px 0 12px;padding:12px 14px;'
+    + 'border-radius:14px;background:var(--s1);border:1px solid var(--line);color:var(--tx);text-decoration:none;'
+    + 'font-weight:700;font-size:14px}.bt-rel:active{transform:scale(.99)}'
+    + '.bt-rel svg{width:20px;height:20px;stroke:var(--acc);fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;flex:none}'
+    + '.bt-rel span{display:block;font-size:11.5px;font-weight:500;color:var(--tx3);margin-top:1px}'
+    + '.bt-rel i{margin-left:auto;font-style:normal;color:var(--tx3)}';
+  document.head.appendChild(st);
+  var html = '<svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/><path d="M9 17v-3M12 17v-6M15 17v-4"/></svg>'
+    + '<div>Relatórios para PDF<span>Semana a semana, mês a mês, tipos de treino, pace</span></div><i>›</i>';
+  ['v-evolucao','v-treinos'].forEach(function(id, n){
+    var v = document.getElementById(id); if(!v) return;
+    var a = document.createElement('a');
+    a.className = 'bt-rel'; a.href = './relatorios.html'; a.innerHTML = html;
+    if(n === 0) a.id = 'btRelatorios';
+    var hero = v.querySelector('.hero');
+    if(hero && hero.parentNode) hero.parentNode.insertBefore(a, hero.nextSibling);
+    else v.insertBefore(a, v.firstChild);
+  });
 });
