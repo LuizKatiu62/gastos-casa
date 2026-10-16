@@ -66,7 +66,7 @@
       tabelas por mês/horário/posição e o registro dia a dia.
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '07j';
+const FIX_VERSAO = '07k';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -12069,9 +12069,24 @@ PARTE('painel da academia', function(){
                 + (dia === 1 ? 'segunda' : dia === 3 ? 'quarta' : 'sexta') + '.</div>';
 
     var como = comoFoiFeito(iso);
-    return '<div class="bqa-t">Hoje · 5:30 · ' + esc(r.titulo)
-         + (como ? ' <span style="color:#3FD98A">✓ feito' + (como === 'casa' ? ' em casa' : '') + '</span>' : '') + '</div>'
-         + blocoDoDia(iso, r);
+    /* UMA VEZ SO, E FECHADA (16/10/2026). O treino do dia, logo abaixo
+       no Coach, ja traz a academia de hoje dentro da faixa fechada — e
+       ao abrir mostra este mesmo bloco. Repetir aqui aberto era o
+       "aparece duas vezes". Se o plano de hoje tem a academia, ela fica
+       so la. Se por algum motivo nao tem, aparece aqui, mas fechada. */
+    if(academiaNoPlano(iso)) return '';
+    return '<details class="bqAcadHoje"><summary style="cursor:pointer;list-style:none">'
+         + '<div class="bqa-t">Hoje · 5:30 · ' + esc(r.titulo)
+         + (como ? ' <span style="color:#3FD98A">✓ feito' + (como === 'casa' ? ' em casa' : '') + '</span>' : '')
+         + ' <span style="opacity:.5">▼</span></div></summary>'
+         + blocoDoDia(iso, r) + '</details>';
+  }
+  function academiaNoPlano(iso){
+    try{
+      var s = (typeof sessaoDe === 'function') ? sessaoDe(iso) : null;
+      var x = (typeof extraDe === 'function') ? extraDe(iso) : null;
+      return [s, x].some(function(t){ return t && (t.origem === 'academia' || t.mod === 'forca') });
+    }catch(e){ return false }
   }
 
   /* para o cartao do calendario (parte "a aba coach e so da academia") */
