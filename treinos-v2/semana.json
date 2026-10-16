@@ -1,42 +1,10 @@
 {
- "ate": "2026-10-21",
- "de": "2026-10-15",
+ "ate": "2026-10-22",
+ "de": "2026-10-16",
  "fcMax": 163,
- "gerado": "2026-10-16T00:55:00.052Z",
+ "gerado": "2026-10-16T14:29:24.784Z",
  "limiar": "5:19",
  "sessoes": [
-  {
-   "data": "2026-10-15",
-   "foco": "facil",
-   "km": 7.1,
-   "min": 42,
-   "nome": "15/10 · 5x 400 · 7.1 km total",
-   "nota": "Total porta a porta 7.1 km. Alongamentos e educativos ANTES do start, relogio parado.",
-   "passos": [
-    {
-     "fim": "time",
-     "lento": 2.2523,
-     "rapido": 2.4155,
-     "texto": "8 min subindo devagar, 6:54–7:24/km. Se chegar ofegante ao fim, foi rapido demais.",
-     "tipo": "warmup",
-     "valor": 480
-    },
-    {
-     "fim": "distance",
-     "lento": 2.5381,
-     "rapido": 2.7473,
-     "texto": "5.3 km em 6:04–6:34/km. Voce deve conseguir falar frases inteiras.",
-     "tipo": "interval",
-     "valor": 5300
-    },
-    {
-     "fim": "time",
-     "texto": "5 min de trote muito leve ate a respiracao normalizar.",
-     "tipo": "cooldown",
-     "valor": 300
-    }
-   ]
-  },
   {
    "data": "2026-10-17",
    "foco": "facil",
@@ -112,9 +80,41 @@
      "valor": 480
     }
    ]
+  },
+  {
+   "data": "2026-10-22",
+   "foco": "facil",
+   "km": 9,
+   "min": 52,
+   "nome": "22/10 · 8x 400 · 9.0 km total",
+   "nota": "Total porta a porta 9.0 km. Alongamentos e educativos ANTES do start, relogio parado.",
+   "passos": [
+    {
+     "fim": "time",
+     "lento": 2.2523,
+     "rapido": 2.4155,
+     "texto": "8 min subindo devagar, 6:54–7:24/km. Se chegar ofegante ao fim, foi rapido demais.",
+     "tipo": "warmup",
+     "valor": 480
+    },
+    {
+     "fim": "distance",
+     "lento": 2.5381,
+     "rapido": 2.7473,
+     "texto": "7.2 km em 6:04–6:34/km. Voce deve conseguir falar frases inteiras.",
+     "tipo": "interval",
+     "valor": 7200
+    },
+    {
+     "fim": "time",
+     "texto": "5 min de trote muito leve ate a respiracao normalizar.",
+     "tipo": "cooldown",
+     "valor": 300
+    }
+   ]
   }
  ],
- "versao": "07i",
+ "versao": "07j",
  "zonas": {
   "faci": {
    "fc": "111–124",
