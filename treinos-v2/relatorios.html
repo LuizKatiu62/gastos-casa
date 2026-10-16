@@ -20,7 +20,8 @@
   --tx:#14161A; --tx2:#4F535B; --tx3:#7A7E86;
   --acc:#2a78d6; --acc-wash:#e6effb;
   --c1:#2a78d6; --c2:#eb6834; --c3:#1baf7a; --c4:#eda100; --c5:#e87ba4; --c6:#008300; --c7:#6250d6; --c8:#e34948;
-  --good:#1f7a3a; --bad:#c23a2b;
+  --good:#1f7a3a; --bad:#c23a2b; --h0:#ECEAE4;
+  --z1:#86b6ef; --z2:#5598e7; --z3:#2a78d6; --z4:#1c5cab; --z5:#184f95;
   --mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
@@ -29,7 +30,7 @@
   --tx:#EEF1F5; --tx2:#AEB6C2; --tx3:#8A93A1;
   --acc:#3987e5; --acc-wash:#1b2a3f;
   --c1:#3987e5; --c2:#d95926; --c3:#199e70; --c4:#c98500; --c5:#d55181; --c6:#008300; --c7:#9085e9; --c8:#e66767;
-  --good:#4cc06e; --bad:#ef6a5b;
+  --good:#4cc06e; --bad:#ef6a5b; --h0:#232933;
 }}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--tx);font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,system-ui,sans-serif;font-size:14.5px;line-height:1.45;-webkit-font-smoothing:antialiased}
@@ -93,7 +94,7 @@ tr.tot td{font-weight:700;border-top:1.5px solid var(--tx)}
 @media print{
   :root,:root:not([data-theme="light"]){color-scheme:light;
     --bg:#fff;--s1:#fff;--s2:#f4f3ef;--line:#d9d6ce;--grid:#e8e6e0;--tx:#111;--tx2:#444;--tx3:#6b6e74;
-    --acc:#2a78d6;--c1:#2a78d6;--c2:#eb6834;--c3:#1baf7a;--c4:#eda100;--c5:#e87ba4;--c6:#008300;--c7:#6250d6;--c8:#e34948;--good:#1f7a3a;--bad:#c23a2b}
+    --h0:#ECEAE4;--acc:#2a78d6;--c1:#2a78d6;--c2:#eb6834;--c3:#1baf7a;--c4:#eda100;--c5:#e87ba4;--c6:#008300;--c7:#6250d6;--c8:#e34948;--good:#1f7a3a;--bad:#c23a2b}
   body{font-size:11.5px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .wrap{max-width:none;padding:0}
   .noprint,.ctrl,.dica,.voltar{display:none!important}
@@ -104,6 +105,7 @@ tr.tot td{font-weight:700;border-top:1.5px solid var(--tx)}
   .kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
   .quebra{break-before:auto;page-break-before:auto}
   .lista{break-before:page;page-break-before:always}
+  .titulo-sec{break-after:avoid;page-break-after:avoid;break-before:page;page-break-before:always}
   .dest{grid-template-columns:repeat(2,minmax(0,1fr))!important;font-size:11px}
   .kpi .v{font-size:20px}
   h1{font-size:24px}
@@ -177,7 +179,8 @@ function corridas(raw){
     if(vistos.has(k)) return; vistos.add(k);
     const num=v=>{const x=parseFloat(v);return isFinite(x)&&x>0?x:NaN};
     out.push({data, km, dur, pace, fc:num(a.fcMed), fcMax:num(a.fcMax), elev:num(a.elevGain),
-      anaer:num(a.efAnaerobico), aer:num(a.efAerobico), nome:String(a.notas||'').trim(), lugar:String(a.tipo||'')});
+      anaer:num(a.efAnaerobico), aer:num(a.efAerobico), nome:String(a.notas||'').trim(), lugar:String(a.tipo||''),
+      cad:num(a.cadencia), gct:num(a.contatoSolo), osc:num(a.oscilacao), vr:num(a.razaoVertical), passo:num(a.passada), vo2:num(a.vo2max)});
   });
   return out.sort((a,b)=>a.data<b.data?-1:1);
 }
@@ -192,16 +195,27 @@ async function token(){
     const j=await r.json(); return j.idToken||null }catch(e){ return null }
 }
 async function carregar(){
-  let fonte=null, d=null;
+  let fonte=null, d=null, hist=null, perfil=null;
   try{
     const t=await token();
     if(t){ const c=new AbortController(); const to=setTimeout(()=>c.abort(),12000);
       const r=await fetch(FB_DB+'/treinos/luiz.json?auth='+t,{signal:c.signal}); clearTimeout(to);
-      if(r.ok){ d=await r.json(); if(d&&Array.isArray(d.atividades)) fonte={tipo:'online',em:d.ultimaSync||d.atualizado||new Date().toISOString()} } }
+      if(r.ok){ d=await r.json(); if(d&&Array.isArray(d.atividades)) fonte={tipo:'online',em:(d.meta&&d.meta.ultimaSync)||new Date().toISOString()} }
+      try{ const rh=await fetch(FB_DB+'/treinos_coach_v2/luiz/agendaHist.json?auth='+t); if(rh.ok) hist=await rh.json() }catch(e){}
+      try{ const rp=await fetch(FB_DB+'/treinos_coach_v2/luiz/perfil.json?auth='+t); if(rp.ok) perfil=await rp.json() }catch(e){} }
   }catch(e){}
   if(!fonte){ try{ const s=JSON.parse(ls.g(SNAP_KEY)||'null'); if(s&&s.d&&Array.isArray(s.d.atividades)){ d=s.d; fonte={tipo:'copia',em:s.em} } }catch(e){} }
-  let limiar=NaN; try{ const r=await fetch('./semana.json',{cache:'no-store'}); if(r.ok){ const s=await r.json(); limiar=paceSeg(s.limiar) } }catch(e){}
-  return {fonte, runs: d? corridas(d.atividades):[], limiar};
+  let limiar=NaN, fcMax=NaN; try{ const r=await fetch('./semana.json',{cache:'no-store'}); if(r.ok){ const s=await r.json(); limiar=paceSeg(s.limiar); fcMax=+s.fcMax } }catch(e){}
+  if(!(fcMax>120)) fcMax=(perfil&&+perfil.fcMax)||163;
+  const fcRep=(perfil&&+perfil.fcRep)||58;
+  /* plano: o que o sync manda agora (7 dias para trás) + o histórico que ele vai acumulando */
+  const agenda={};
+  const add=a=>{ if(!a||!a.data) return; const esp=String(a.esporte||'').toLowerCase(); if(esp && !/corr|run/.test(esp)) return;
+    const k=a.data+'|'+(a.workoutId||a.nome); agenda[k]=Object.assign({},agenda[k]||{},a) };
+  if(hist && typeof hist==='object') Object.values(hist).forEach(add);
+  if(d && Array.isArray(d.agendados)) d.agendados.forEach(add);
+  return {fonte, runs: d? corridas(d.atividades):[], limiar, fcMax, fcRep, agenda:Object.values(agenda),
+          saude:{sono:(d&&d.sono)||{}, hrv:(d&&d.hrv)||{}, bb:(d&&d.bodyBattery)||{}, stress:(d&&d.stress)||{}}};
 }
 
 /* ---------------- tipo de treino ---------------- */
@@ -282,7 +296,7 @@ function barras(rows, series, o={}){
       else g+=`<rect x="${x}" y="${y-h}" width="${w}" height="${Math.max(0,h-2)}" fill="${s.c}"/>`;
       y-=h; });
     if(o.valores && tot[i]>0 && (i===n-1 || tot[i]===Math.max(...tot))) g+=`<text class="lbl" x="${x+w/2}" y="${y-4}" text-anchor="middle">${o.fmt?o.fmt(tot[i]):nf1(tot[i])}</text>`;
-    if((i%passo===0&&n-1-i>=passo/2)||i===n-1) g+=`<text x="${x+w/2}" y="${H-mb+15}" text-anchor="middle">${esc(r.lab)}</text>`;
+    if((i%passo===0&&n-1-i>=passo)||i===n-1) g+=`<text x="${x+w/2}" y="${H-mb+15}" text-anchor="middle">${esc(r.lab)}</text>`;
     g+=`<rect class="hit" data-t="${TIPS.length}" x="${ml+i*bw}" y="${mt}" width="${bw}" height="${ih}" fill="transparent"/>`;
     TIPS.push(r.tip);
   });
@@ -305,7 +319,7 @@ function linha(pts, o={}){
   const passo=Math.ceil(n/Math.max(2,Math.min(o.maxLab||12, Math.floor(iw/62))));
   pts.forEach((p,i)=>{
     if(isFinite(p.v)) g+=`<circle cx="${X(i)}" cy="${Y(p.v)}" r="3.6" fill="${o.c||'var(--c1)'}" stroke="var(--s1)" stroke-width="2"/>`;
-    if((i%passo===0&&n-1-i>=passo/2)||i===n-1) g+=`<text x="${X(i)}" y="${H-mb+16}" text-anchor="middle">${esc(p.lab)}</text>`;
+    if((i%passo===0&&n-1-i>=passo)||i===n-1) g+=`<text x="${X(i)}" y="${H-mb+16}" text-anchor="middle">${esc(p.lab)}</text>`;
     const x0 = i===0? ml : (X(i-1)+X(i))/2, x1 = i===n-1? W-mr : (X(i)+X(i+1))/2;
     g+=`<rect class="hit" data-t="${TIPS.length}" x="${x0}" y="${mt}" width="${Math.max(1,x1-x0)}" height="${ih}" fill="transparent"/>`; TIPS.push(p.tip);
   });
@@ -313,6 +327,41 @@ function linha(pts, o={}){
   if(ult) g+=`<text class="lbl" x="${X(iu)}" y="${Y(ult.v)-9}" text-anchor="end">${o.fmt?o.fmt(ult.v):nf1(ult.v)}</text>`;
   if(o.nota) g+=`<text x="${ml}" y="${mt-5}">${esc(o.nota)}</text>`;
   return g+'</svg>';
+}
+/* várias linhas no MESMO eixo e mesma unidade; series=[{n,c,v:[...]}] */
+function linhas(labs, series, o={}){
+  const W=largura(o.w||720),H=o.h||200,ml=44,mr=12,mt=16,mb=30, iw=W-ml-mr, ih=H-mt-mb;
+  const vs=series.flatMap(x=>x.v).filter(isFinite); if(vs.length<2) return '<div class="vazio">Dados insuficientes.</div>';
+  let lo=o.min!=null?o.min:Math.min(...vs), hi=Math.max(...vs, o.minHi||0); const pad=(hi-lo)*.1||1; if(o.min==null) lo-=pad; hi+=pad;
+  const n=labs.length, X=i=>ml+(n===1?iw/2:iw*i/(n-1)), Y=v=>mt+ih-ih*(v-lo)/(hi-lo);
+  let g=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.aria||'')}">`;
+  (o.faixa||[]).forEach(f=>{ const y1=Y(Math.min(hi,f.b)), y0=Y(Math.max(lo,f.a)); if(y0>y1) g+=`<rect x="${ml}" y="${y1}" width="${iw}" height="${y0-y1}" fill="${f.c}" opacity=".13"/><text x="${W-mr-4}" y="${y1+12}" text-anchor="end">${esc(f.n)}</text>` });
+  for(let i=0;i<=3;i++){ const v=lo+(hi-lo)*i/3, y=Y(v); g+=`<line x1="${ml}" x2="${W-mr}" y1="${y}" y2="${y}" stroke="var(--grid)"/><text x="${ml-6}" y="${y+3.5}" text-anchor="end">${o.fmt?o.fmt(v):nf0(v)}</text>` }
+  series.forEach(sr=>{ let d='',ab=false; sr.v.forEach((v,i)=>{ if(!isFinite(v)){ab=false;return} d+=(ab?'L':'M')+X(i).toFixed(1)+','+Y(v).toFixed(1); ab=true });
+    g+=`<path d="${d}" fill="none" stroke="${sr.c}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"${sr.tr?' stroke-dasharray="5 4"':''}/>`;
+    const iu=sr.v.map(isFinite).lastIndexOf(true); if(iu>=0) g+=`<circle cx="${X(iu)}" cy="${Y(sr.v[iu])}" r="3.6" fill="${sr.c}" stroke="var(--s1)" stroke-width="2"/>` });
+  const passo=Math.ceil(n/Math.max(2,Math.min(o.maxLab||12, Math.floor(iw/62))));
+  labs.forEach((l,i)=>{ if((i%passo===0&&n-1-i>=passo)||i===n-1) g+=`<text x="${X(i)}" y="${H-mb+16}" text-anchor="middle">${esc(l)}</text>`;
+    const x0=i===0?ml:(X(i-1)+X(i))/2, x1=i===n-1?W-mr:(X(i)+X(i+1))/2;
+    g+=`<rect class="hit" data-t="${TIPS.length}" x="${x0}" y="${mt}" width="${Math.max(1,x1-x0)}" height="${ih}" fill="transparent"/>`;
+    TIPS.push(`<b>${esc(o.tipLab?o.tipLab(i):l)}</b>`+series.map(sr=>`<div class="r"><span><span class="sw" style="background:${sr.c}"></span>${sr.n}</span><b>${isFinite(sr.v[i])?(o.fmt?o.fmt(sr.v[i]):nf0(sr.v[i])):'–'}</b></div>`).join('')) });
+  return g+'</svg>';
+}
+/* calendário: uma coluna por semana, uma linha por dia (seg a dom); cor = km do dia */
+const RAMPA=['var(--h0)','#cde2fb','#9ec5f4','#5598e7','#256abf','#104281'];
+function calendario(de, ate, kmDia){
+  const ini=segunda(dt(de)), fim=dt(ate); const cols=Math.ceil((fim-ini)/864e5/7)+1;
+  const cel=13, gap=3, ml=26, mt=16, W=ml+cols*(cel+gap), H=mt+7*(cel+gap)+4;
+  const cor=k=> !k?RAMPA[0]: k<5?RAMPA[1]: k<8?RAMPA[2]: k<12?RAMPA[3]: k<18?RAMPA[4]:RAMPA[5];
+  let g=`<svg viewBox="0 0 ${W} ${H}" style="max-width:${W*1.6}px" role="img" aria-label="Calendário de corridas">`;
+  ['seg','','qua','','sex','','dom'].forEach((t,i)=>{ if(t) g+=`<text x="0" y="${mt+i*(cel+gap)+10}">${t}</text>` });
+  let mesAnt=-1;
+  for(let c=0;c<cols;c++){ const s=addD(ini,c*7);
+    if(s.getMonth()!==mesAnt){ mesAnt=s.getMonth(); if(c===0 && addD(s,7).getMonth()!==mesAnt) {} else g+=`<text x="${ml+c*(cel+gap)}" y="10">${MES[mesAnt]}</text>` }
+    for(let r=0;r<7;r++){ const d=addD(s,r), k=iso(d); if(k<de||k>ate) continue; const km=kmDia[k]||0;
+      g+=`<rect class="hit" data-t="${TIPS.length}" x="${ml+c*(cel+gap)}" y="${mt+r*(cel+gap)}" width="${cel}" height="${cel}" rx="3" fill="${cor(km)}"/>`;
+      TIPS.push(`<b>${fDataA(k)}</b><div class="r"><span>Corrida</span><b>${km?nf1(km)+' km':'—'}</b></div>`) } }
+  return g+'</svg><div class="legend" style="margin-top:6px"><span>menos</span>'+RAMPA.map(c=>`<span><i style="background:${c};margin:0"></i></span>`).join('')+'<span>mais</span><span style="margin-left:10px">0 · até 5 · 8 · 12 · 18 km · 18+</span></div>';
 }
 /* barras horizontais simples */
 function hbarras(rows, o={}){
@@ -375,6 +424,8 @@ function render(){
   const tipSem=x=>`<b>Semana de ${fDataA(x.s)}</b><div class="r"><span>Distância</span><b>${nf1(x.R.km)} km</b></div><div class="r"><span>Corridas</span><b>${x.R.n}</b></div><div class="r"><span>Tempo</span><b>${fDur(x.R.dur)}</b></div><div class="r"><span>Pace médio</span><b>${fPace(x.R.pace)}</b></div><div class="r"><span>Maior</span><b>${nf1(x.R.maior)} km</b></div>`;
   h+=`<div class="grid">
   <section class="card"><div class="ch"><h2>Destaques</h2><span class="note">o que os números dizem</span></div><ul class="dest" id="dest"></ul></section>
+  <section class="card"><div class="ch"><h2>Calendário de corridas</h2><span class="note">um quadrado por dia</span></div>
+   <div class="tw">${calendario(iso(addD(dt(ate),-7*52))>de? iso(addD(segunda(dt(ate)),-7*52)) : de, ate, (()=>{ const k={}; L.forEach(r=>k[r.data]=(k[r.data]||0)+r.km); return k })())}</div></section>
   <section class="card"><div class="ch"><h2>Volume por semana</h2><span class="note">km · semanas começam na segunda</span></div>
    ${barras(porSem.map(x=>({lab:labS(x.s), v:{km:x.R.km}, tip:tipSem(x)})), [{k:'km',c:'var(--c1)'}], {valores:true, unidade:'km', w:1000, h:250, aria:'Quilômetros por semana'})}</section>
   <section class="card c6"><div class="ch"><h2>Pace médio por semana</h2><span class="note">↑ mais rápido</span></div>
@@ -413,6 +464,104 @@ function render(){
       return `<tr><td>${MESL[+x.m.slice(5)-1]} ${x.m.slice(0,4)}${x.m===iso(HOJE).slice(0,7)?' <span class="pill">em curso</span>':(x.m+'-01'<de?' <span class="pill">parcial</span>':'')}</td><td>${x.R.n}</td><td>${nf1(x.R.km)}</td><td class="${isFinite(d)?(d>=0?'up':'down'):''}">${isFinite(d)?(d>=0?'▲ ':'▼ ')+pct(Math.abs(d)):'–'}</td><td>${fDur(x.R.dur)}</td><td>${fPace(x.R.pace)}</td><td>${fPace(x.paceLeve)}</td><td>${isFinite(x.R.fc)?nf0(x.R.fc):'–'}</td><td>${x.R.n?nf1(x.R.maior):'–'}</td><td>${x.R.dur?pct(df/x.R.dur):'–'}</td></tr>` }).join('')}
     </tbody></table></div></section>`;
 
+
+  /* ===== carga de treino (TRIMP de Banister pela FC média) ===== */
+  const FCM=DADOS.fcMax, FCR=DADOS.fcRep;
+  const trimp=r=>{ const min=r.dur/60; let hrr=isFinite(r.fc)? (r.fc-FCR)/(FCM-FCR) : 0.65; hrr=Math.max(0.3,Math.min(1,hrr)); return min*hrr*0.64*Math.exp(1.92*hrr) };
+  const cargaDia={}; todas.forEach(r=>{ cargaDia[r.data]=(cargaDia[r.data]||0)+trimp(r) });
+  const somaJanela=(fimIso,dias)=>{ let t=0; for(let i=0;i<dias;i++){ t+=cargaDia[iso(addD(dt(fimIso),-i))]||0 } return t };
+  const pontosC=SEM.map(sm=>{ let f=iso(addD(dt(sm),6)); if(f>ate) f=ate; const ag=somaJanela(f,7), cr=somaJanela(f,28)/4; return {s:sm,f,ag,cr,r: cr>0? ag/cr : NaN} });
+  const ultC=pontosC[pontosC.length-1];
+  h+=`<section class="card"><div class="ch"><h2>Carga de treino: aguda × crônica</h2><span class="note">carga dos últimos 7 dias × média semanal das últimas 4 semanas</span></div>
+    <div class="legend"><span><i style="background:var(--c2)"></i>Aguda (7 dias)</span><span><i style="background:var(--c1)"></i>Crônica (média de 4 semanas)</span></div>
+    ${linhas(pontosC.map(p=>labS(p.s)), [{n:'Aguda',c:'var(--c2)',v:pontosC.map(p=>p.ag)},{n:'Crônica',c:'var(--c1)',v:pontosC.map(p=>p.cr)}], {w:1000,h:230,min:0,aria:'Carga aguda e crônica',tipLab:i=>'Semana de '+fDataA(pontosC[i].s)})}
+    <div class="ch" style="margin-top:10px"><h2 style="font-size:15px">Relação aguda ÷ crônica</h2><span class="note">0,8 a 1,3 é a faixa segura · acima de 1,5 o risco de lesão sobe</span></div>
+    ${linhas(pontosC.map(p=>labS(p.s)), [{n:'Relação',c:'var(--tx2)',v:pontosC.map(p=>p.r)}], {w:1000,h:170,min:0,minHi:1.7,fmt:v=>v.toFixed(1).replace('.',','),aria:'Relação aguda crônica',
+      faixa:[{a:0.8,b:1.3,c:'var(--good)',n:'faixa segura'},{a:1.5,b:9,c:'var(--bad)',n:'risco'}], tipLab:i=>'Semana de '+fDataA(pontosC[i].s)})}
+    <p class="note" style="margin:6px 0 0">A carga de cada corrida combina duração e intensidade pela FC média (TRIMP de Banister, FC máx ${nf0(FCM)} e repouso ${nf0(FCR)} bpm). Corrida sem FC entra como esforço moderado.</p></section>`;
+
+  /* ===== zonas de FC (aproximado: cada corrida inteira na zona da FC média) ===== */
+  const ZN=[{n:'Z1 recuperação',a:0,b:.70,c:'var(--z1)'},{n:'Z2 aeróbico',a:.70,b:.80,c:'var(--z2)'},{n:'Z3 tempo',a:.80,b:.87,c:'var(--z3)'},{n:'Z4 limiar',a:.87,b:.93,c:'var(--z4)'},{n:'Z5 VO₂',a:.93,b:9,c:'var(--z5)'}];
+  const zonaDe=r=> isFinite(r.fc)? ZN.findIndex(z=>r.fc/FCM>=z.a && r.fc/FCM<z.b) : -1;
+  const comFC=L.filter(r=>isFinite(r.fc)); const minTot=comFC.reduce((a,r)=>a+r.dur/60,0);
+  h+=`<section class="card"><div class="ch"><h2>Tempo por zona de FC</h2><span class="note">minutos por semana · FC máx ${nf0(FCM)} bpm</span></div>
+    <div class="legend">${ZN.map(z=>`<span><i style="background:${z.c}"></i>${z.n} (${!z.a?'até '+Math.round(z.b*FCM):z.b<9?Math.round(z.a*FCM)+'–'+Math.round(z.b*FCM):Math.round(z.a*FCM)+'+'} bpm)</span>`).join('')}</div>
+    ${barras(porSem.map(x=>{ const v={}; ZN.forEach((z,i)=>v['z'+i]=x.l.filter(r=>zonaDe(r)===i).reduce((a,r)=>a+r.dur/60,0));
+      return {lab:labS(x.s), v, tip:`<b>Semana de ${fDataA(x.s)}</b>`+ZN.map((z,i)=>v['z'+i]?`<div class="r"><span><span class="sw" style="background:${z.c}"></span>${z.n}</span><b>${nf0(v['z'+i])} min</b></div>`:'').join('')} }),
+      ZN.map((z,i)=>({k:'z'+i,c:z.c})), {unidade:'min', w:1000, h:230, aria:'Minutos por zona de FC'})}
+    <div class="tw" style="margin-top:8px"><table><thead><tr><th>Zona</th><th>Corridas</th><th>Tempo</th><th>% do tempo</th><th>Pace médio</th></tr></thead><tbody>
+    ${ZN.map((z,i)=>{ const l=comFC.filter(r=>zonaDe(r)===i), x=resumo(l); return `<tr><td><span class="sw" style="background:${z.c}"></span>${z.n}</td><td>${x.n}</td><td>${fDur(x.dur)}</td><td>${minTot?pct(x.dur/60/minTot):'–'}</td><td>${fPace(x.pace)}</td></tr>` }).join('')}
+    </tbody></table></div>
+    <p class="note" style="margin:6px 0 0">Aproximado: o app recebe só a FC média de cada corrida, então a corrida inteira conta na zona da sua média. Num intervalado, os tiros ficam acima e as pausas abaixo do que aparece aqui.${L.length-comFC.length? ' '+(L.length-comFC.length)+' corrida(s) sem FC ficaram de fora.':''}</p></section>`;
+
+  /* ===== planejado × realizado ===== */
+  const hojeIso=iso(HOJE);
+  const plan=(DADOS.agenda||[]).filter(a=>a.data>=de && a.data<=ate && a.data<=hojeIso && !a.descanso);
+  const corridoDia={}; L.forEach(r=>corridoDia[r.data]=(corridoDia[r.data]||0)+r.km);
+  if(plan.length){
+    const feito=a=> !!a.feito || !!corridoDia[a.data];
+    const semP=SEM.map(sm=>{ const fimS=iso(addD(dt(sm),6)); const p=plan.filter(a=>a.data>=sm&&a.data<=fimS); return {sm,p,f:p.filter(feito),
+      kmP:p.reduce((t,a)=>t+(+a.distanciaM||0)/1000,0), kmR:L.filter(r=>r.data>=sm&&r.data<=fimS).reduce((t,r)=>t+r.km,0)} }).filter(x=>x.p.length);
+    const totP=plan.length, totF=plan.filter(feito).length; const falt=plan.filter(a=>!feito(a));
+    h+=`<section class="card"><div class="ch"><h2>Planejado × realizado</h2><span class="note">treinos de corrida agendados no Garmin</span></div>
+      <p style="margin:0 0 8px">Você cumpriu <b>${totF} de ${totP}</b> treinos planejados (<b>${pct(totF/totP)}</b>).</p>
+      <div class="tw"><table><thead><tr><th>Semana</th><th>Planejados</th><th>Feitos</th><th>Adesão</th><th>km planejados</th><th>km corridos</th></tr></thead><tbody>
+      ${semP.map(x=>`<tr><td>${fDataA(x.sm)}</td><td>${x.p.length}</td><td>${x.f.length}</td><td class="${x.f.length===x.p.length?'up':x.f.length/x.p.length<.6?'down':''}">${pct(x.f.length/x.p.length)}</td><td>${x.kmP?nf1(x.kmP):'–'}</td><td>${nf1(x.kmR)}</td></tr>`).join('')}
+      </tbody></table></div>
+      ${falt.length?`<p class="note" style="margin:8px 0 0"><b>Não feitos:</b> ${falt.slice(-8).map(a=>fData(a.data)+' — '+esc(a.nome)).join(' · ')}</p>`:''}
+      <p class="note" style="margin:6px 0 0">O histórico do plano começou a ser guardado em 16/10/2026; semanas anteriores não têm plano registrado.</p></section>`;
+  } else {
+    h+=`<section class="card"><div class="ch"><h2>Planejado × realizado</h2></div><p class="note" style="margin:0">Ainda sem treinos planejados registrados neste período. O histórico do plano começou a ser guardado em 16/10/2026 e aparece aqui à medida que as semanas passam.</p></section>`;
+  }
+
+  /* ===== recuperação × treino ===== */
+  const S=DADOS.saude; const media=a=>{ const v=a.filter(isFinite); return v.length? v.reduce((x,y)=>x+y,0)/v.length : NaN };
+  const rec=porSem.map(x=>{ const dias=[...Array(7)].map((_,i)=>iso(addD(dt(x.s),i))).filter(k=>k>=de&&k<=ate);
+    const g=(o,f)=>media(dias.map(k=>o[k]? +o[k][f] : NaN).map(v=>v>0?v:NaN));
+    return {x, carga:x.l.reduce((t,r)=>t+trimp(r),0), sono:g(S.sono,'duracao'), score:g(S.sono,'score'), hrv:g(S.hrv,'ontem'), bb:g(S.bb,'max'), stress:g(S.stress,'avg')} });
+  if(rec.some(r=>isFinite(r.sono)||isFinite(r.hrv))){
+    const labR=rec.map(r=>labS(r.x.s)), tl=i=>'Semana de '+fDataA(rec[i].x.s);
+    h+=`<section class="card"><div class="ch"><h2>Recuperação × treino</h2><span class="note">médias da semana · gráficos separados, cada um na sua unidade</span></div>
+      <div class="grid" style="gap:10px">
+      <div class="c6"><div class="note">Carga da semana</div>${barras(rec.map((r,i)=>({lab:labR[i], v:{c:r.carga}, tip:`<b>${tl(i)}</b><div class="r"><span>Carga</span><b>${nf0(r.carga)}</b></div>`})), [{k:'c',c:'var(--c2)'}], {w:470,h:170,aria:'Carga semanal'})}</div>
+      <div class="c6"><div class="note">Sono (horas por noite)</div>${linhas(labR,[{n:'Sono',c:'var(--c7)',v:rec.map(r=>r.sono)}],{w:470,h:170,fmt:v=>v.toFixed(1).replace('.',','),tipLab:tl,aria:'Sono'})}</div>
+      <div class="c6"><div class="note">VFC / HRV noturna (ms)</div>${linhas(labR,[{n:'HRV',c:'var(--c3)',v:rec.map(r=>r.hrv)}],{w:470,h:170,tipLab:tl,aria:'HRV'})}</div>
+      <div class="c6"><div class="note">Body Battery máximo</div>${linhas(labR,[{n:'Body Battery',c:'var(--c1)',v:rec.map(r=>r.bb)}],{w:470,h:170,tipLab:tl,aria:'Body Battery'})}</div>
+      </div>
+      <div class="tw" style="margin-top:8px"><table><thead><tr><th>Semana</th><th>km</th><th>Carga</th><th>Sono</th><th>Nota do sono</th><th>HRV</th><th>Body Battery</th><th>Stress</th></tr></thead><tbody>
+      ${rec.map(r=>`<tr><td>${fDataA(r.x.s)}</td><td>${nf1(r.x.R.km)}</td><td>${nf0(r.carga)}</td><td>${isFinite(r.sono)?nf1(r.sono)+' h':'–'}</td><td>${isFinite(r.score)?nf0(r.score):'–'}</td><td>${isFinite(r.hrv)?nf0(r.hrv):'–'}</td><td>${isFinite(r.bb)?nf0(r.bb):'–'}</td><td>${isFinite(r.stress)?nf0(r.stress):'–'}</td></tr>`).join('')}
+      </tbody></table></div>
+      <p class="note" style="margin:6px 0 0">Semana de carga alta com HRV caindo e sono curto é sinal de pouca recuperação. O Garmin manda os dados de saúde dos últimos 180 dias.</p></section>`;
+  }
+
+  /* ===== VO2máx e dinâmica de corrida ===== */
+  const dinM=porMes.map(x=>{ const m=f=>media(x.l.map(r=>r[f])); return {x, vo2:m('vo2'), cad:m('cad'), gct:m('gct'), osc:m('osc'), vr:m('vr'), passo:m('passo')} });
+  if(dinM.some(d=>isFinite(d.cad)||isFinite(d.vo2))){
+    const labD=dinM.map(d=>labM(d.x.m)), tlD=i=>MESL[+dinM[i].x.m.slice(5)-1]+' de '+dinM[i].x.m.slice(0,4);
+    h+=`<section class="card"><div class="ch"><h2>VO₂máx e dinâmica de corrida</h2><span class="note">médias do mês</span></div>
+      <div class="grid" style="gap:10px">
+      <div class="c6"><div class="note">VO₂máx estimado pelo Garmin · ↑ melhor</div>${linhas(labD,[{n:'VO₂máx',c:'var(--c3)',v:dinM.map(d=>d.vo2)}],{w:470,h:170,fmt:v=>v.toFixed(1).replace('.',','),tipLab:tlD,aria:'VO2max'})}</div>
+      <div class="c6"><div class="note">Cadência (passos/min) · ↑ costuma ser melhor</div>${linhas(labD,[{n:'Cadência',c:'var(--c1)',v:dinM.map(d=>d.cad)}],{w:470,h:170,tipLab:tlD,aria:'Cadência'})}</div>
+      </div>
+      <div class="tw" style="margin-top:8px"><table><thead><tr><th>Mês</th><th>VO₂máx</th><th>Cadência</th><th>Contato com o solo</th><th>Oscilação vertical</th><th>Razão vertical</th><th>Passada</th></tr></thead><tbody>
+      ${dinM.map(d=>`<tr><td>${MESL[+d.x.m.slice(5)-1]} ${d.x.m.slice(0,4)}</td><td>${isFinite(d.vo2)?d.vo2.toFixed(1).replace('.',','):'–'}</td><td>${isFinite(d.cad)?nf0(d.cad)+' ppm':'–'}</td><td>${isFinite(d.gct)?nf0(d.gct)+' ms':'–'}</td><td>${isFinite(d.osc)?nf1(d.osc)+' cm':'–'}</td><td>${isFinite(d.vr)?nf1(d.vr)+'%':'–'}</td><td>${isFinite(d.passo)?d.passo.toFixed(2).replace('.',',')+' m':'–'}</td></tr>`).join('')}
+      </tbody></table></div>
+      <p class="note" style="margin:6px 0 0">Menos tempo de contato com o solo e menor razão vertical indicam uma passada mais econômica. Os dados de dinâmica só existem nas corridas feitas com a cinta HRM ou relógio compatível.</p></section>`;
+  }
+
+  /* ===== subida acumulada ===== */
+  h+=`<section class="card c6"><div class="ch"><h2>Subida acumulada por semana</h2><span class="note">metros</span></div>
+    ${barras(porSem.map(x=>{ const e=x.l.reduce((t,r)=>t+(isFinite(r.elev)?r.elev:0),0); return {lab:labS(x.s), v:{e}, tip:`<b>Semana de ${fDataA(x.s)}</b><div class="r"><span>Subida</span><b>${nf0(e)} m</b></div><div class="r"><span>km</span><b>${nf1(x.R.km)}</b></div>`} }), [{k:'e',c:'var(--c7)'}], {valores:true, fmt:nf0, unidade:'m', w:470, h:230, aria:'Subida por semana'})}</section>`;
+
+  /* ===== melhores marcas ===== */
+  const MARC=[5,10,15,21.1,30,42.2];
+  const melhor=(lista,d)=>lista.filter(r=>r.km>=d-0.05).reduce((m,r)=>!m||r.pace<m.pace?r:m,null);
+  h+=`<section class="card c6"><div class="ch"><h2>Melhores marcas</h2><span class="note">melhor ritmo médio em corridas de X km ou mais</span></div>
+    <div class="tw"><table><thead><tr><th>Distância</th><th>No período</th><th>Melhor de todas</th></tr></thead><tbody>
+    ${MARC.map(d=>{ const p=melhor(L,d), t=melhor(todas,d); if(!t) return '';
+      return `<tr><td>${String(d).replace('.',',')} km+</td><td><b>${p?fPace(p.pace)+'/km':'–'}</b>${p?'<br><span class="note">'+fData(p.data)+' · '+nf1(p.km)+' km</span>':''}</td><td><b>${fPace(t.pace)}/km</b>${p&&p===t?' <span class="pill">recorde</span>':''}<br><span class="note">${fDataA(t.data)} · ${nf1(t.km)} km</span></td></tr>` }).join('')}
+    </tbody></table></div><p class="note" style="margin:6px 0 0">Usa a corrida inteira; um trecho mais rápido dentro de uma corrida longa não aparece aqui.</p></section>`;
+
   /* faixas */
   const faixa=(F,val)=>F.map(f=>{ const l=L.filter(r=>val(r)>=f.a && val(r)<f.b), x=resumo(l);
     return {f,l,x} });
@@ -421,7 +570,7 @@ function render(){
      ${hbarras(fx.map(({f,x})=>({lab:f.n, v:x.n, sub:x.n?'· '+nf1(x.km)+' km':'', tip:`<b>${f.n}</b><div class="r"><span>Corridas</span><b>${x.n}</b></div><div class="r"><span>km</span><b>${nf1(x.km)}</b></div><div class="r"><span>Pace médio</span><b>${fPace(x.pace)}</b></div><div class="r"><span>FC média</span><b>${isFinite(x.fc)?nf0(x.fc):'–'}</b></div>`})))}
      </div><div class="tw"><table><thead><tr><th>Faixa</th><th>Corridas</th><th>km</th><th>% do volume</th><th>Pace médio</th><th>FC média</th></tr></thead><tbody>
      ${fx.map(({f,x})=>`<tr><td>${f.n}</td><td>${x.n}</td><td>${nf1(x.km)}</td><td>${pct(x.km/R.km)}</td><td>${fPace(x.pace)}</td><td>${isFinite(x.fc)?nf0(x.fc):'–'}</td></tr>`).join('')}</tbody></table></div></div></section>` };
-  h+=`<div class="card quebra" style="padding:0;border:0;background:transparent"><div class="ch" style="margin:0"><h2 style="font-size:19px">Treinos por distância, pace e tempo</h2></div></div>`;
+  h+=`<div class="card quebra titulo-sec" style="padding:0;border:0;background:transparent"><div class="ch" style="margin:0"><h2 style="font-size:19px">Treinos por distância, pace e tempo</h2></div></div>`;
   h+=blocoFaixa('Por distância','corridas', F_DIST, r=>r.km);
   h+=blocoFaixa('Por pace','min/km', F_PACE, r=>r.pace);
   h+=blocoFaixa('Por tempo','duração', F_DUR, r=>r.dur);
@@ -448,6 +597,8 @@ function render(){
   const comEfi=porMes.filter(x=>isFinite(x.efi));
   if(comEfi.length>=2){ const a=comEfi[0], b=comEfi[comEfi.length-1], d=(b.efi-a.efi)/a.efi;
     D.push(`Nas corridas leves, o pace foi de <b>${fPace(a.paceLeve)}</b> (${MESL[+a.m.slice(5)-1]}) para <b>${fPace(b.paceLeve)}</b> (${MESL[+b.m.slice(5)-1]}). A eficiência ${d>=0?'<b>melhorou '+pct(d)+'</b>':'<b>caiu '+pct(-d)+'</b>'}: ${d>=0?'mais rápido para o mesmo batimento':'mais batimento para o mesmo ritmo — cansaço, calor ou pouco descanso'}.`) }
+  const ultR=(()=>{ const f=ate, ag=somaJanela(f,7), cr=somaJanela(f,28)/4; return cr>0? ag/cr : NaN })();
+  if(isFinite(ultR)) D.push(`Carga: relação aguda ÷ crônica em <b>${ultR.toFixed(2).replace('.',',')}</b> — ${ultR>1.5?'<b>acima de 1,5</b>, risco de lesão maior; segure o volume esta semana':ultR>1.3?'um pouco acima da faixa segura (0,8 a 1,3)':ultR<0.8?'abaixo de 0,8, você está destreinando um pouco':'dentro da faixa segura (0,8 a 1,3)'}.`);
   const consist=porSem.filter(x=>x.R.n>=3).length;
   D.push(`Constância: <b>${consist} de ${porSem.length}</b> semanas com 3 corridas ou mais.`);
   const longos=L.filter(r=>r.tipo==='longo');

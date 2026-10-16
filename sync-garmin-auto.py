@@ -1086,6 +1086,30 @@ def main():
             else:
                 log("ERRO ao salvar a evolucao publica")
 
+        # historico do plano: o Garmin so devolve 7 dias para tras, entao cada
+        # rodada guarda os agendados em treinos_coach_v2/luiz/agendaHist
+        # (PATCH: acrescenta e atualiza, nunca apaga). E o que alimenta o
+        # "Planejado x realizado" dos relatorios do app.
+        try:
+            hist = {}
+            for a in agendados or []:
+                if not a.get("data"):
+                    continue
+                chave = (a["data"] + "_" + str(a.get("workoutId") or a.get("nome") or "")).strip()
+                for ch in ".#$[]/ ":
+                    chave = chave.replace(ch, "-")
+                hist[chave[:120]] = {k: a[k] for k in ("data", "nome", "esporte", "feito", "workoutId",
+                                                      "distanciaM", "duracaoSeg", "descanso", "prova")
+                                     if k in a}
+            if hist:
+                url = f"{FIREBASE_DB}/treinos_coach_v2/luiz/agendaHist.json?auth={token}"
+                req = urlreq.Request(url, data=json.dumps(hist, ensure_ascii=False).encode(), method="PATCH",
+                                     headers={"Content-Type": "application/json"})
+                urlreq.urlopen(req, timeout=20)
+                log(f"Historico do plano: {len(hist)} treinos agendados guardados")
+        except Exception as e:
+            log(f"Historico do plano falhou: {e}")
+
         # prova da contagem do runwithgratitude.ca — o app de treinos grava
         # treinos_coach_v2/luiz/provaPublica quando o objetivo muda; aqui so
         # repasso para blog/prova, caso a gravacao direta do app tenha falhado
