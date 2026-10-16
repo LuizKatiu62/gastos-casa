@@ -102,7 +102,11 @@ tr.tot td{font-weight:700;border-top:1.5px solid var(--tx)}
   .grid{gap:8px}.card{padding:10px 12px}
   .c6{grid-column:span 6}.c4{grid-column:span 4}.c8{grid-column:span 8}
   .kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
-  .quebra{break-before:page;page-break-before:always}
+  .quebra{break-before:auto;page-break-before:auto}
+  .lista{break-before:page;page-break-before:always}
+  .dest{grid-template-columns:repeat(2,minmax(0,1fr))!important;font-size:11px}
+  .kpi .v{font-size:20px}
+  h1{font-size:24px}
   thead{display:table-header-group}
   .tw{overflow:visible}
   .duo{grid-template-columns:1fr;gap:8px}
@@ -250,7 +254,13 @@ function showTip(e,h){ tip.innerHTML=h; tip.hidden=false; const w=tip.offsetWidt
   tip.style.left=x+'px'; tip.style.top=y+'px' }
 function hideTip(){ tip.hidden=true }
 const TIPS=[]; // [elemento, html]
-function largura(def){ const c=document.getElementById('conteudo'); const cw=(c&&c.clientWidth)||def; return Math.round(Math.min(def, Math.max(330, cw-34))) }
+/* No PDF a página tem largura fixa (A4/Carta ≈ 720 px úteis), qualquer que seja
+   a tela onde o botão foi tocado. Sem isso, um gráfico desenhado na largura
+   do iPhone saía esticado no papel, com letras e barras enormes. */
+let PRINT=false;
+function largura(def){
+  if(PRINT) return def>=700? 740 : 360;
+  const c=document.getElementById('conteudo'); const cw=(c&&c.clientWidth)||def; return Math.round(Math.min(def, Math.max(330, cw-34))) }
 function niceMax(v){ if(v<=0) return 1; const p=Math.pow(10,Math.floor(Math.log10(v))); const f=v/p; return (f<=1?1:f<=2?2:f<=2.5?2.5:f<=5?5:10)*p }
 
 /* barras verticais; series = [{k, c}] empilhadas; rows = [{lab, v:{k:num}, tip}] */
@@ -455,7 +465,11 @@ per.innerHTML=PERIODOS.map(([k,n])=>`<button type="button" data-p="${k}">${n}</b
 try{ const p=ls.g('rel.per'); if(p&&PERIODOS.some(x=>x[0]===p)) PER=p }catch(e){}
 per.onclick=e=>{ const b=e.target.closest('button'); if(!b) return; PER=b.dataset.p; ls.s('rel.per',PER); if(DADOS) render() };
 ['dDe','dAte'].forEach(id=>document.getElementById(id).addEventListener('change',()=>{ PER='custom'; if(DADOS) render() }));
-document.getElementById('btPdf').onclick=()=>{ hideTip(); window.print() };
+function paraPDF(sim){ if(PRINT===sim) return; PRINT=sim; document.documentElement.classList.toggle('pdf',sim); if(DADOS) render() }
+document.getElementById('btPdf').onclick=()=>{ hideTip(); paraPDF(true); setTimeout(()=>{ window.print(); setTimeout(()=>paraPDF(false),800) },120) };
+window.addEventListener('beforeprint',()=>paraPDF(true));
+window.addEventListener('afterprint',()=>paraPDF(false));
+try{ const mq=matchMedia('print'); const f=e=>paraPDF(e.matches); mq.addEventListener? mq.addEventListener('change',f) : mq.addListener(f) }catch(e){}
 window.addEventListener('scroll',hideTip,{passive:true});
 
 carregar().then(d=>{
