@@ -293,6 +293,19 @@ function largura(def){
   const c=document.getElementById('conteudo'); const cw=(c&&c.clientWidth)||def; return Math.round(Math.min(def, Math.max(330, cw-34))) }
 function niceMax(v){ if(v<=0) return 1; const p=Math.pow(10,Math.floor(Math.log10(v))); const f=v/p; return (f<=1?1:f<=2?2:f<=2.5?2.5:f<=5?5:10)*p }
 
+/* Rótulos de valor sem sobreposição: cands=[{x,y,t,fs,cls,pri}] em ordem de prioridade.
+   Um rótulo só entra se não encostar em outro já colocado — melhor faltar um
+   número do que dois ilegíveis um em cima do outro. */
+function rotulos(cands, W, ocup=[], xmin=0){
+  let g='';
+  cands.forEach(c=>{ const fs=c.fs||10, tw=String(c.t).length*fs*.6+2;
+    let x=Math.max(xmin+tw/2+1, Math.min(W-tw/2-1, c.x));
+    const b={x0:x-tw/2-1,x1:x+tw/2+1,y0:c.y-fs,y1:c.y+2};
+    if(ocup.some(o=>b.x0<o.x1&&b.x1>o.x0&&b.y0<o.y1&&b.y1>o.y0)) return;
+    ocup.push(b);
+    g+=`<text class="${c.cls||'lbl'}" x="${x.toFixed(1)}" y="${c.y.toFixed(1)}" text-anchor="middle" style="font-size:${fs}px">${esc(String(c.t))}</text>` });
+  return g }
+const CLARAS=['var(--c4)','var(--c5)','var(--z1)'];
 /* barras verticais; series = [{k, c}] empilhadas; rows = [{lab, v:{k:num}, tip}] */
 function barras(rows, series, o={}){
   const W=largura(o.w||720),H=o.h||220,ml=38,mr=8,mt=22,mb=34, iw=W-ml-mr, ih=H-mt-mb;
@@ -303,6 +316,7 @@ function barras(rows, series, o={}){
   for(let i=0;i<=div;i++){ const y=mt+ih-ih*i/div, v=mx*i/div;
     g+=`<line x1="${ml}" x2="${W-mr}" y1="${y}" y2="${y}" stroke="var(--grid)"/><text x="${ml-6}" y="${y+3.5}" text-anchor="end">${nf0(v)}</text>` }
   const passo=Math.ceil(n/Math.max(2,Math.min(o.maxLab||14, Math.floor(iw/62))));
+  const fmt=o.fmt||(o.unidade==='km'?nf1:nf0), topos=[], dentro=[];
   rows.forEach((r,i)=>{
     const x=ml+i*bw+gap/2, w=Math.max(1,bw-gap); let y=mt+ih;
     series.forEach((s,j)=>{ const v=r.v[s.k]||0; if(!v) return; const h=ih*v/mx;
@@ -310,13 +324,22 @@ function barras(rows, series, o={}){
       const rr=Math.min(4,w/2,h);
       if(topo) g+=`<path d="M${x},${y} v${-(h-rr)} a${rr},${rr} 0 0 1 ${rr},${-rr} h${w-2*rr} a${rr},${rr} 0 0 1 ${rr},${rr} v${h-rr} z" fill="${s.c}"/>`;
       else g+=`<rect x="${x}" y="${y-h}" width="${w}" height="${Math.max(0,h-2)}" fill="${s.c}"/>`;
+      /* empilhadas: valor de cada pedaço dentro dele, quando cabe */
+      if(series.length>1 && n<=26){ let t=fmt(v), fs=9; if(t.length*fs*.6+3>w){ t=nf0(v); fs=8.5 }
+        if(h>=fs+4 && t.length*fs*.6+3<=w) dentro.push(`<text x="${x+w/2}" y="${y-h/2+fs*.36}" text-anchor="middle" style="font-size:${fs}px;font-weight:600;fill:${CLARAS.includes(s.c)?'#1d1d1b':'#fff'}">${t}</text>`) }
       y-=h; });
-    if(o.valores && tot[i]>0 && (i===n-1 || tot[i]===Math.max(...tot))) g+=`<text class="lbl" x="${x+w/2}" y="${y-4}" text-anchor="middle">${o.fmt?o.fmt(tot[i]):nf1(tot[i])}</text>`;
+    if(o.valores!==false && tot[i]>0) topos.push({i, x:x+w/2, y:y-4, t:fmt(tot[i])});
     if((i%passo===0&&n-1-i>=passo)||i===n-1) g+=`<text x="${x+w/2}" y="${H-mb+15}" text-anchor="middle">${esc(r.lab)}</text>`;
     g+=`<rect class="hit" data-t="${TIPS.length}" x="${ml+i*bw}" y="${mt}" width="${bw}" height="${ih}" fill="transparent"/>`;
     TIPS.push(r.tip);
   });
   if(o.unidade) g+=`<text x="${ml-6}" y="10" text-anchor="end">${esc(o.unidade)}</text>`;
+  /* total no topo de cada barra; se não couberem todos, ficam o último, o maior e o resto alternado */
+  const larg=Math.max(...topos.map(c=>c.t.length));
+  const fs= larg*10.5*.6+2<=bw ? 10.5 : 9;
+  const im=tot.indexOf(Math.max(...tot));
+  const ord=[...topos].sort((a,b)=>(b.i===n-1)-(a.i===n-1) || (b.i===im)-(a.i===im) || a.i-b.i);
+  g+=dentro.join('')+rotulos(ord.map(c=>({...c, fs})), W, [{x0:0,x1:ml,y0:0,y1:14}]);
   return g+'</svg>';
 }
 /* linha única; pts=[{lab, v, tip}]; inv = valores menores no alto (pace) */
@@ -339,11 +362,17 @@ function linha(pts, o={}){
     const x0 = i===0? ml : (X(i-1)+X(i))/2, x1 = i===n-1? W-mr : (X(i)+X(i+1))/2;
     g+=`<rect class="hit" data-t="${TIPS.length}" x="${x0}" y="${mt}" width="${Math.max(1,x1-x0)}" height="${ih}" fill="transparent"/>`; TIPS.push(p.tip);
   });
-  const ult=[...pts].reverse().find(p=>isFinite(p.v)); const iu=pts.lastIndexOf(ult);
-  if(ult) g+=`<text class="lbl" x="${X(iu)}" y="${Y(ult.v)-9}" text-anchor="end">${o.fmt?o.fmt(ult.v):nf1(ult.v)}</text>`;
+  g+=rotulosLinha(pts.map(p=>p.v), X, Y, o.fmt||nf1, W, mt, o.inv);
   if(o.nota) g+=`<text x="${ml}" y="${mt-5}">${esc(o.nota)}</text>`;
   return g+'</svg>';
 }
+/* valores sobre os pontos: último, maior e menor primeiro; depois os demais, sem sobrepor */
+function rotulosLinha(vs, X, Y, fmt, W, mt, inv, ocup=[], so, ml=44){
+  const ok=vs.map((v,i)=>i).filter(i=>isFinite(vs[i])); if(!ok.length) return '';
+  const ult=ok[ok.length-1], ma=ok.reduce((a,i)=>vs[i]>vs[a]?i:a,ok[0]), mi=ok.reduce((a,i)=>vs[i]<vs[a]?i:a,ok[0]);
+  let ord=[ult,ma,mi,...(ok.length<=16?ok:[])]; ord=ord.filter((i,k)=>ord.indexOf(i)===k); if(so) ord=ord.filter(i=>so.includes(i));
+  return rotulos(ord.map(i=>{ const y=Y(vs[i]); const baixo = (inv? vs[i]===vs[ma] : vs[i]===vs[mi]) && i!==ult && ok.length>2;
+    return {x:X(i), y: baixo? y+15 : Math.max(mt+2, y-8), t:fmt(vs[i]), fs: i===ult?10.5:9.5} }), W, ocup, ml-4) }
 /* várias linhas no MESMO eixo e mesma unidade; series=[{n,c,v:[...]}] */
 function linhas(labs, series, o={}){
   const W=largura(o.w||720),H=o.h||200,ml=44,mr=12,mt=o.unidade?26:16,mb=30, iw=W-ml-mr, ih=H-mt-mb;
@@ -358,6 +387,11 @@ function linhas(labs, series, o={}){
   series.forEach(sr=>{ let d='',ab=false; sr.v.forEach((v,i)=>{ if(!isFinite(v)){ab=false;return} d+=(ab?'L':'M')+X(i).toFixed(1)+','+Y(v).toFixed(1); ab=true });
     g+=`<path d="${d}" fill="none" stroke="${sr.c}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"${sr.tr?' stroke-dasharray="5 4"':''}/>`;
     const iu=sr.v.map(isFinite).lastIndexOf(true); if(iu>=0) g+=`<circle cx="${X(iu)}" cy="${Y(sr.v[iu])}" r="3.6" fill="${sr.c}" stroke="var(--s1)" stroke-width="2"/>` });
+  { const oc=[]; const f=o.fmt||nf0;
+    series.forEach(sr=>{ const ok=sr.v.map((v,i)=>i).filter(i=>isFinite(sr.v[i]));
+      if(series.length===1 && n<=60) ok.forEach(i=>g+=`<circle cx="${X(i)}" cy="${Y(sr.v[i])}" r="2.4" fill="${sr.c}"/>`);
+      const ult=ok[ok.length-1], ma=ok.reduce((a,i)=>sr.v[i]>sr.v[a]?i:a,ok[0]);
+      g+=rotulosLinha(sr.v, X, Y, f, W, mt, false, oc, series.length>1?[ult,ma]:null) }) }
   const passo=Math.ceil(n/Math.max(2,Math.min(o.maxLab||12, Math.floor(iw/62))));
   labs.forEach((l,i)=>{ if((i%passo===0&&n-1-i>=passo)||i===n-1) g+=`<text x="${X(i)}" y="${H-mb+16}" text-anchor="middle">${esc(l)}</text>`;
     const x0=i===0?ml:(X(i-1)+X(i))/2, x1=i===n-1?W-mr:(X(i)+X(i+1))/2;
