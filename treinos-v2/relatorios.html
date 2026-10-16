@@ -98,20 +98,36 @@ tr.tot td{font-weight:700;border-top:1.5px solid var(--tx)}
   body{font-size:11.5px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .wrap{max-width:none;padding:0}
   .noprint,.ctrl,.dica,.voltar{display:none!important}
-  .card,.kpis{break-inside:avoid;page-break-inside:avoid}
-  .card.lista{break-inside:auto;page-break-inside:auto}
-  .grid{gap:8px}.card{padding:10px 12px}
-  .c6{grid-column:span 6}.c4{grid-column:span 4}.c8{grid-column:span 8}
-  .kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
+  /* Impressão SEM grid e SEM flex: Safari e Chrome cortam itens de grid/flex
+     no meio da página e ignoram "não quebrar". Aqui tudo vira bloco comum
+     (ou inline-block, que nunca é partido), e cada gráfico é indivisível. */
+  .grid,.kpis,.duo,.dest,.ch,.legend{display:block!important}
+  .grid{gap:0}
+  .card{display:block;margin:0 0 8px;padding:10px 12px;break-inside:avoid;page-break-inside:avoid}
+  .grid{font-size:0}.grid>*{font-size:11.5px}
+  .card.c6,.grid>.c6{display:inline-block;width:49.4%;vertical-align:top;margin-left:0}
+  .card.c6+.card.c6{margin-left:1.2%}
+  .card.c6+.card.c6+.card.c6{margin-left:0}
+  .grid>div.c6:nth-child(2n){margin-left:1.2%}
+  .card.c4{display:inline-block;width:32.6%;vertical-align:top}
+  .card.c8{display:block}
+  .card.longa{break-inside:auto;page-break-inside:auto}
+  .kpis{border:1px solid var(--line);border-radius:10px;background:var(--s1);break-inside:avoid;page-break-inside:avoid;font-size:0}
+  .kpi{display:inline-block;width:25%;vertical-align:top;font-size:11.5px;border:0;padding:8px 10px}
+  .ch{overflow:hidden;margin-bottom:6px}.ch h2{float:left}.ch .note{float:right;margin-top:3px}
+  .ch,.legend,h2{break-after:avoid;page-break-after:avoid}
+  .legend span{display:inline-block;margin-right:12px}
+  svg,.fig,.duo>div:first-child{break-inside:avoid;page-break-inside:avoid}
+  tr,li{break-inside:avoid;page-break-inside:avoid}
+  .dest{columns:2;column-gap:24px;font-size:11px}
   .quebra{break-before:auto;page-break-before:auto}
-  .lista{break-before:page;page-break-before:always}
-  .titulo-sec{break-after:avoid;page-break-after:avoid;break-before:page;page-break-before:always}
-  .dest{grid-template-columns:repeat(2,minmax(0,1fr))!important;font-size:11px}
+  .lista,.titulo-sec{break-before:page;page-break-before:always}
+  .titulo-sec{break-after:avoid;page-break-after:avoid}
   .kpi .v{font-size:20px}
   h1{font-size:24px}
   thead{display:table-header-group}
   .tw{overflow:visible}
-  .duo{grid-template-columns:1fr;gap:8px}
+  .duo>div{margin-bottom:6px}
 }
 </style>
 </head>
@@ -440,7 +456,7 @@ function render(){
   const tipTS=x=>`<b>Semana de ${fDataA(x.s)}</b>`+usados.map(t=>{const l=x.l.filter(r=>r.tipo===t.k); return l.length?`<div class="r"><span><span class="sw" style="background:${t.c}"></span>${t.n}</span><b>${l.length}× · ${nf1(l.reduce((s,r)=>s+r.km,0))} km</b></div>`:''}).join('')+`<div class="r" style="border-top:1px solid currentColor;margin-top:3px;padding-top:3px"><span>Total</span><b>${nf1(x.R.km)} km</b></div>`;
   const durF=L.filter(r=>TIPO[r.tipo].forte).reduce((s,r)=>s+r.dur,0);
   const linhasT=usados.map(t=>{ const l=L.filter(r=>r.tipo===t.k), x=resumo(l); return {t,x} });
-  h+=`<section class="card quebra"><div class="ch"><h2>Tipos de treino por semana</h2><span class="note">km de cada tipo</span></div>
+  h+=`<section class="card longa quebra"><div class="ch"><h2>Tipos de treino por semana</h2><span class="note">km de cada tipo</span></div>
    <div class="legend">${usados.map(t=>`<span><i style="background:${t.c}"></i>${t.n}</span>`).join('')}</div>
    ${barras(porSem.map(x=>{ const v={}; usados.forEach(t=>v[t.k]=x.l.filter(r=>r.tipo===t.k).reduce((s,r)=>s+r.km,0)); return {lab:labS(x.s), v, tip:tipTS(x)} }), usados.map(t=>({k:t.k,c:t.c})), {unidade:'km', w:1000, h:260, aria:'Tipos de treino por semana'})}
    <div class="tw" style="margin-top:10px"><table><thead><tr><th>Tipo</th><th>Treinos</th><th>Por semana</th><th>km</th><th>% do volume</th><th>Pace médio</th><th>FC média</th></tr></thead><tbody>
@@ -460,7 +476,7 @@ function render(){
    <section class="card c6"><div class="ch"><h2>Eficiência nas corridas leves</h2><span class="note">metros por batimento · ↑ melhor</span></div>
     ${linha(porMes.map(x=>({lab:labM(x.m), v:x.efi, tip:`<b>${MESL[+x.m.slice(5)-1]} de ${x.m.slice(0,4)}</b><div class="r"><span>Pace nas leves</span><b>${fPace(x.paceLeve)}</b></div><div class="r"><span>FC nas leves</span><b>${isFinite(x.fcLeve)?nf0(x.fcLeve):'–'}</b></div><div class="r"><span>m por batimento</span><b>${isFinite(x.efi)?x.efi.toFixed(2).replace('.',','):'–'}</b></div>`})), {c:'var(--c3)', fmt:v=>v.toFixed(2).replace('.',','), padMin:.05, w:470, h:220, maxLab:8, aria:'Eficiência mensal'})}
     <p class="note" style="margin:6px 0 0">Rodagens e longões: quantos metros você corre por batimento. Subindo, você corre mais rápido com o mesmo esforço.</p></section>
-   <section class="card"><div class="ch"><h2>Comparativo mês a mês</h2></div><div class="tw"><table><thead><tr><th>Mês</th><th>Corridas</th><th>km</th><th>vs mês anterior</th><th>Tempo</th><th>Pace médio</th><th>Pace nas leves</th><th>FC média</th><th>Maior</th><th>% forte</th></tr></thead><tbody>
+   <section class="card longa"><div class="ch"><h2>Comparativo mês a mês</h2></div><div class="tw"><table><thead><tr><th>Mês</th><th>Corridas</th><th>km</th><th>vs mês anterior</th><th>Tempo</th><th>Pace médio</th><th>Pace nas leves</th><th>FC média</th><th>Maior</th><th>% forte</th></tr></thead><tbody>
     ${porMes.map((x,i)=>{ const p=i? porMes[i-1].R.km : resumo(todas.filter(r=>r.data.slice(0,7)===iso(new Date(+x.m.slice(0,4),+x.m.slice(5)-2,1)).slice(0,7))).km;
       const d=p? (x.R.km-p)/p : NaN; const df=x.l.filter(r=>TIPO[r.tipo].forte).reduce((s,r)=>s+r.dur,0);
       return `<tr><td>${MESL[+x.m.slice(5)-1]} ${x.m.slice(0,4)}${x.m===iso(HOJE).slice(0,7)?' <span class="pill">em curso</span>':(x.m+'-01'<de?' <span class="pill">parcial</span>':'')}</td><td>${x.R.n}</td><td>${nf1(x.R.km)}</td><td class="${isFinite(d)?(d>=0?'up':'down'):''}">${isFinite(d)?(d>=0?'▲ ':'▼ ')+pct(Math.abs(d)):'–'}</td><td>${fDur(x.R.dur)}</td><td>${fPace(x.R.pace)}</td><td>${fPace(x.paceLeve)}</td><td>${isFinite(x.R.fc)?nf0(x.R.fc):'–'}</td><td>${x.R.n?nf1(x.R.maior):'–'}</td><td>${x.R.dur?pct(df/x.R.dur):'–'}</td></tr>` }).join('')}
@@ -486,7 +502,7 @@ function render(){
   const ZN=[{n:'Z1 recuperação',a:0,b:.70,c:'var(--z1)'},{n:'Z2 aeróbico',a:.70,b:.80,c:'var(--z2)'},{n:'Z3 tempo',a:.80,b:.87,c:'var(--z3)'},{n:'Z4 limiar',a:.87,b:.93,c:'var(--z4)'},{n:'Z5 VO₂',a:.93,b:9,c:'var(--z5)'}];
   const zonaDe=r=> isFinite(r.fc)? ZN.findIndex(z=>r.fc/FCM>=z.a && r.fc/FCM<z.b) : -1;
   const comFC=L.filter(r=>isFinite(r.fc)); const minTot=comFC.reduce((a,r)=>a+r.dur/60,0);
-  h+=`<section class="card"><div class="ch"><h2>Tempo por zona de FC</h2><span class="note">minutos por semana · FC máx ${nf0(FCM)} bpm</span></div>
+  h+=`<section class="card longa"><div class="ch"><h2>Tempo por zona de FC</h2><span class="note">minutos por semana · FC máx ${nf0(FCM)} bpm</span></div>
     <div class="legend">${ZN.map(z=>`<span><i style="background:${z.c}"></i>${z.n} (${!z.a?'até '+Math.round(z.b*FCM):z.b<9?Math.round(z.a*FCM)+'–'+Math.round(z.b*FCM):Math.round(z.a*FCM)+'+'} bpm)</span>`).join('')}</div>
     ${barras(porSem.map(x=>{ const v={}; ZN.forEach((z,i)=>v['z'+i]=x.l.filter(r=>zonaDe(r)===i).reduce((a,r)=>a+r.dur/60,0));
       return {lab:labS(x.s), v, tip:`<b>Semana de ${fDataA(x.s)}</b>`+ZN.map((z,i)=>v['z'+i]?`<div class="r"><span><span class="sw" style="background:${z.c}"></span>${z.n}</span><b>${nf0(v['z'+i])} min</b></div>`:'').join('')} }),
@@ -505,7 +521,7 @@ function render(){
     const semP=SEM.map(sm=>{ const fimS=iso(addD(dt(sm),6)); const p=plan.filter(a=>a.data>=sm&&a.data<=fimS); return {sm,p,f:p.filter(feito),
       kmP:p.reduce((t,a)=>t+(+a.distanciaM||0)/1000,0), kmR:L.filter(r=>r.data>=sm&&r.data<=fimS).reduce((t,r)=>t+r.km,0)} }).filter(x=>x.p.length);
     const totP=plan.length, totF=plan.filter(feito).length; const falt=plan.filter(a=>!feito(a));
-    h+=`<section class="card"><div class="ch"><h2>Planejado × realizado</h2><span class="note">treinos de corrida agendados no Garmin</span></div>
+    h+=`<section class="card longa"><div class="ch"><h2>Planejado × realizado</h2><span class="note">treinos de corrida agendados no Garmin</span></div>
       <p style="margin:0 0 8px">Você cumpriu <b>${totF} de ${totP}</b> treinos planejados (<b>${pct(totF/totP)}</b>).</p>
       <div class="tw"><table><thead><tr><th>Semana</th><th>Planejados</th><th>Feitos</th><th>Adesão</th><th>km planejados</th><th>km corridos</th></tr></thead><tbody>
       ${semP.map(x=>`<tr><td>${fDataA(x.sm)}</td><td>${x.p.length}</td><td>${x.f.length}</td><td class="${x.f.length===x.p.length?'up':x.f.length/x.p.length<.6?'down':''}">${pct(x.f.length/x.p.length)}</td><td>${x.kmP?nf1(x.kmP):'–'}</td><td>${nf1(x.kmR)}</td></tr>`).join('')}
@@ -523,7 +539,7 @@ function render(){
     return {x, carga:x.l.reduce((t,r)=>t+trimp(r),0), sono:g(S.sono,'duracao'), score:g(S.sono,'score'), hrv:g(S.hrv,'ontem'), bb:g(S.bb,'max'), stress:g(S.stress,'avg')} });
   if(rec.some(r=>isFinite(r.sono)||isFinite(r.hrv))){
     const labR=rec.map(r=>labS(r.x.s)), tl=i=>'Semana de '+fDataA(rec[i].x.s);
-    h+=`<section class="card"><div class="ch"><h2>Recuperação × treino</h2><span class="note">médias da semana · gráficos separados, cada um na sua unidade</span></div>
+    h+=`<section class="card longa"><div class="ch"><h2>Recuperação × treino</h2><span class="note">médias da semana · gráficos separados, cada um na sua unidade</span></div>
       <div class="grid" style="gap:10px">
       <div class="c6"><div class="note">Carga da semana</div>${barras(rec.map((r,i)=>({lab:labR[i], v:{c:r.carga}, tip:`<b>${tl(i)}</b><div class="r"><span>Carga</span><b>${nf0(r.carga)}</b></div>`})), [{k:'c',c:'var(--c2)'}], {w:470,h:170,aria:'Carga semanal'})}</div>
       <div class="c6"><div class="note">Sono (horas por noite)</div>${linhas(labR,[{n:'Sono',c:'var(--c7)',v:rec.map(r=>r.sono)}],{w:470,h:170,fmt:v=>v.toFixed(1).replace('.',','),tipLab:tl,aria:'Sono'})}</div>
@@ -540,7 +556,7 @@ function render(){
   const dinM=porMes.map(x=>{ const m=f=>media(x.l.map(r=>r[f])); return {x, vo2:m('vo2'), cad:m('cad'), gct:m('gct'), osc:m('osc'), vr:m('vr'), passo:m('passo')} });
   if(dinM.some(d=>isFinite(d.cad)||isFinite(d.vo2))){
     const labD=dinM.map(d=>labM(d.x.m)), tlD=i=>MESL[+dinM[i].x.m.slice(5)-1]+' de '+dinM[i].x.m.slice(0,4);
-    h+=`<section class="card"><div class="ch"><h2>VO₂máx e dinâmica de corrida</h2><span class="note">médias do mês</span></div>
+    h+=`<section class="card longa"><div class="ch"><h2>VO₂máx e dinâmica de corrida</h2><span class="note">médias do mês</span></div>
       <div class="grid" style="gap:10px">
       <div class="c6"><div class="note">VO₂máx estimado pelo Garmin · ↑ melhor</div>${linhas(labD,[{n:'VO₂máx',c:'var(--c3)',v:dinM.map(d=>d.vo2)}],{w:470,h:170,fmt:v=>v.toFixed(1).replace('.',','),tipLab:tlD,aria:'VO2max'})}</div>
       <div class="c6"><div class="note">Cadência (passos/min) · ↑ costuma ser melhor</div>${linhas(labD,[{n:'Cadência',c:'var(--c1)',v:dinM.map(d=>d.cad)}],{w:470,h:170,tipLab:tlD,aria:'Cadência'})}</div>
@@ -578,7 +594,7 @@ function render(){
   h+=blocoFaixa('Por tempo','duração', F_DUR, r=>r.dur);
 
   /* lista */
-  h+=`<section class="card lista quebra"><div class="ch"><h2>Todas as corridas do período</h2><span class="note">${L.length} corridas · mais recente primeiro</span></div>
+  h+=`<section class="card longa lista quebra"><div class="ch"><h2>Todas as corridas do período</h2><span class="note">${L.length} corridas · mais recente primeiro</span></div>
    <div class="tw"><table><thead><tr><th>Data</th><th class="t">Treino</th><th class="t">Tipo</th><th>km</th><th>Tempo</th><th>Pace</th><th>FC</th><th>Subida</th></tr></thead><tbody>
    ${[...L].reverse().map(r=>`<tr><td>${fDataA(r.data)}</td><td class="t">${esc(r.nome||'—')}${r.lugar==='esteira'?' <span class="pill">esteira</span>':r.lugar==='trilha'?' <span class="pill">trilha</span>':''}</td><td class="t"><span class="sw" style="background:${TIPO[r.tipo].c}"></span>${TIPO[r.tipo].n}</td><td>${nf1(r.km)}</td><td>${fDurL(r.dur)}</td><td>${fPace(r.pace)}</td><td>${isFinite(r.fc)?nf0(r.fc):'–'}</td><td>${isFinite(r.elev)?nf0(r.elev)+' m':'–'}</td></tr>`).join('')}
    </tbody></table></div></section></div>`;
