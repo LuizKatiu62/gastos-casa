@@ -2,8 +2,8 @@
  "ate": "2026-10-23",
  "de": "2026-10-17",
  "fcMax": 163,
- "gerado": "2026-10-17T18:21:00.113Z",
- "limiar": "5:19",
+ "gerado": "2026-10-18T00:22:01.902Z",
+ "limiar": "5:15",
  "sessoes": [
   {
    "data": "2026-10-17",
@@ -15,17 +15,17 @@
    "passos": [
     {
      "fim": "time",
-     "lento": 2.2523,
-     "rapido": 2.4155,
-     "texto": "8 min subindo devagar, 6:54–7:24/km. Se chegar ofegante ao fim, foi rapido demais.",
+     "lento": 2.2727,
+     "rapido": 2.439,
+     "texto": "8 min subindo devagar, 6:50–7:20/km. Se chegar ofegante ao fim, foi rapido demais.",
      "tipo": "warmup",
      "valor": 480
     },
     {
      "fim": "distance",
-     "lento": 2.5381,
-     "rapido": 2.7473,
-     "texto": "15.1 km em 6:04–6:34/km. Voce deve conseguir falar frases inteiras.",
+     "lento": 2.5641,
+     "rapido": 2.7778,
+     "texto": "15.1 km em 6:00–6:30/km. Voce deve conseguir falar frases inteiras.",
      "tipo": "interval",
      "valor": 15100
     },
@@ -47,9 +47,9 @@
    "passos": [
     {
      "fim": "time",
-     "lento": 2.2523,
-     "rapido": 2.4155,
-     "texto": "12 min subindo devagar, 6:54–7:24/km. Se chegar ofegante ao fim, foi rapido demais.",
+     "lento": 2.2727,
+     "rapido": 2.439,
+     "texto": "12 min subindo devagar, 6:50–7:20/km. Se chegar ofegante ao fim, foi rapido demais.",
      "tipo": "warmup",
      "valor": 720
     },
@@ -57,9 +57,9 @@
      "passos": [
       {
        "fim": "distance",
-       "lento": 3.3003,
-       "rapido": 3.4602,
-       "texto": "600 m em 4:49–5:03/km, FC ate 148-158 bpm.",
+       "lento": 3.4247,
+       "rapido": 3.5971,
+       "texto": "600 m em 4:38–4:52/km, FC ate 148-158 bpm.",
        "tipo": "interval",
        "valor": 600
       },
@@ -91,17 +91,17 @@
    "passos": [
     {
      "fim": "time",
-     "lento": 2.2523,
-     "rapido": 2.4155,
-     "texto": "8 min subindo devagar, 6:54–7:24/km. Se chegar ofegante ao fim, foi rapido demais.",
+     "lento": 2.2727,
+     "rapido": 2.439,
+     "texto": "8 min subindo devagar, 6:50–7:20/km. Se chegar ofegante ao fim, foi rapido demais.",
      "tipo": "warmup",
      "valor": 480
     },
     {
      "fim": "distance",
-     "lento": 2.5381,
-     "rapido": 2.7473,
-     "texto": "7.2 km em 6:04–6:34/km. Voce deve conseguir falar frases inteiras.",
+     "lento": 2.5641,
+     "rapido": 2.7778,
+     "texto": "7.2 km em 6:00–6:30/km. Voce deve conseguir falar frases inteiras.",
      "tipo": "interval",
      "valor": 7200
     },
@@ -119,32 +119,32 @@
   "faci": {
    "fc": "111–124",
    "n": "Rodagem fácil",
-   "pace": "6:04–6:34"
+   "pace": "6:00–6:30"
   },
   "lim": {
    "fc": "140–148",
    "n": "Limiar",
-   "pace": "5:11–5:31"
+   "pace": "5:07–5:27"
   },
   "long": {
    "fc": "114–130",
    "n": "Longo",
-   "pace": "5:54–6:24"
+   "pace": "5:50–6:20"
   },
   "mp": {
    "fc": "130–140",
    "n": "Ritmo de maratona",
-   "pace": "5:38–5:50"
+   "pace": "5:26–5:38"
   },
   "rec": {
    "fc": "98–111",
    "n": "Recuperação",
-   "pace": "6:54–7:24"
+   "pace": "6:50–7:20"
   },
   "vo2": {
    "fc": "148–158",
    "n": "VO₂ máx",
-   "pace": "4:49–5:03"
+   "pace": "4:38–4:52"
   }
  }
 }
