@@ -64,9 +64,12 @@
       pressão da aba Saúde gera um PDF em inglês, 3 páginas tamanho
       carta, com todas as medidas — resumo, classificação, gráficos,
       tabelas por mês/horário/posição e o registro dia a dia.
+  24) Energia no longão, na aba Índices: pace x FC x stamina km a km,
+      desacoplamento, quebra de ritmo, sinais de alerta e o que
+      melhorar, sempre com a maratona como régua (parte 64)
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '07l';
+const FIX_VERSAO = '07m';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -18247,4 +18250,474 @@ PARTE('atalho para os relatorios', function(){
     if(hero && hero.parentNode) hero.parentNode.insertBefore(a, hero.nextSibling);
     else v.insertBefore(a, v.firstChild);
   });
+});
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   64. ENERGIA NO LONGAO · PACE x FC x STAMINA, COM A MARATONA DE REGUA
+
+   Pedido de 19/10/2026: "uma analise da minha stamina x batimento x
+   pace, de como foi a minha energia no longao, sempre me dando
+   referencia para uma maratona. Como esta, sinais de alerta e o que
+   deve melhorar."
+
+   Card novo na aba Indices, logo abaixo dos cartoes do topo. Le de
+   RAW.atividades os longoes (corrida de 14 km ou mais) e, quando o sync
+   ja trouxe o detalhe km a km (campo "parciais", ver
+   anexar_parciais no sync-garmin-auto.py), mostra:
+
+   · tres faixas empilhadas com o mesmo eixo de km: pace, FC e stamina.
+     Uma escala por faixa — nada de grafico com dois eixos;
+   · desacoplamento aerobico (Pa:HR, Friel): eficiencia = velocidade
+     / FC na 1a metade contra a 2a, sem o 1o km. Ate 5% a base
+     aerobica segura aquela distancia; 5–10% atencao; acima, alerta;
+   · deriva da FC, queda de pace no ultimo quinto, km em que o ritmo
+     quebrou, queda de cadencia (forma se desfazendo);
+   · stamina: de quanto o potencial caiu e, nesse consumo, ate onde o
+     tanque iria — comparado com os 42,195 km;
+   · como voce chegou: sono da noite anterior, HRV e Body Battery;
+   · a regua da maratona: ritmo e FC de maratona do app (bqRitmo), o
+     longao comparado a eles, o maior longao das ultimas 8 semanas
+     contra os 30–32 km que um ciclo de maratona pede;
+   · sinais de alerta e o que melhorar, saidos dos numeros acima;
+   · os ultimos longoes lado a lado, para ver a tendencia.
+
+   Sem o detalhe km a km (antes da proxima sincronia, ou relogio que
+   nao grava a serie), o card mostra o que da para tirar das medias e
+   avisa que o resto chega com o sync.
+
+   NO CONSOLE:  bqLongao.analisar()  — o objeto da analise do ultimo
+   ═══════════════════════════════════════════════════════════════════ */
+PARTE('energia no longão', function(){
+  var LONGAO_KM = 14;
+  var MARATONA  = 42.195;
+
+  function pc(s){ s = Math.round(s); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0') }
+  function hms(s){ s = Math.round(s); var h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60);
+    return h + 'h' + String(m).padStart(2, '0') }
+  function media(a){ return a.length ? a.reduce(function(x, y){ return x + y }, 0) / a.length : NaN }
+  function segDe(txt){
+    var p = String(txt || '').split(':').map(Number);
+    if(p.some(isNaN) || !p.length) return NaN;
+    return p.length === 3 ? p[0] * 3600 + p[1] * 60 + p[2] : p.length === 2 ? p[0] * 60 + p[1] : p[0];
+  }
+  function dataBR(d){ var p = String(d).split('-'); return p[2] + '/' + p[1] }
+  function esc(t){ return String(t || '').replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c] }) }
+
+  function fcMax(){ var f = +((typeof PERFIL === 'object' && PERFIL) ? PERFIL.fcMax : 0); return f > 120 ? f : 163 }
+
+  /* regua da maratona: ritmo e FC de maratona do proprio app */
+  function regua(){
+    var F = fcMax(), z = null;
+    try{ z = window.bqRitmo && bqRitmo.zonas && bqRitmo.zonas() }catch(e){}
+    var mp = z && z.mp && z.mp.p ? z.mp.p : null;
+    if(!mp){
+      var L = (typeof PERFIL === 'object' && +PERFIL.paceLimiar) || 340;
+      mp = [L + 16, L + 28];
+    }
+    var lon = z && z.long && z.long.p ? z.long.p : [mp[0] + 30, mp[1] + 60];
+    var mpMeio = (mp[0] + mp[1]) / 2;
+    return { F: F, mp: mp, mpMeio: mpMeio, fcMP: [Math.round(F * .80), Math.round(F * .86)],
+             fcLon: [Math.round(F * .70), Math.round(F * .80)], longo: lon,
+             tempo42: mpMeio * MARATONA };
+  }
+
+  function longoes(){
+    var R = (typeof RAW === 'object' && RAW && Array.isArray(RAW.atividades)) ? RAW.atividades : [];
+    return R.filter(function(a){ return a && a.esporte === 'corrida' && (+a.distancia || 0) >= LONGAO_KM })
+            .sort(function(x, y){ return x.data < y.data ? 1 : x.data > y.data ? -1 : 0 });
+  }
+
+  function diasAte(d){
+    if(!d) return NaN;
+    var h = new Date(); h.setHours(0, 0, 0, 0);
+    return Math.round((new Date(d + 'T00:00:00') - h) / 864e5);
+  }
+
+  /* ═══════ a analise ═══════ */
+  function analisar(a){
+    if(!a) return null;
+    var Rg = regua(), F = Rg.F;
+    var km = +a.distancia, dur = segDe(a.duracao), pace = segDe(a.pace);
+    if(!isFinite(pace) && isFinite(dur) && km) pace = dur / km;
+    var X = { a: a, km: km, dur: dur, pace: pace, fc: +a.fcMed || NaN, fcPico: +a.fcMax || NaN,
+              R: Rg, alertas: [], bons: [], melhorar: [] };
+    X.pctFC = X.fc / F;
+
+    var P = Array.isArray(a.parciais) ? a.parciais.filter(function(p){ return p && +p.p > 150 && +p.p < 900 }) : [];
+    X.P = P;
+    if(P.length >= 6){
+      /* sem o 1o km: aquecimento e GPS assentando distorcem os dois lados */
+      var corpo = P.slice(1), meio = Math.floor(corpo.length / 2);
+      var A = corpo.slice(0, meio), B = corpo.slice(meio);
+      function ef(L){ var l = L.filter(function(p){ return p.fc > 60 });
+        return l.length ? media(l.map(function(p){ return (1000 / p.p) / p.fc })) : NaN }
+      function pm(L){ return media(L.map(function(p){ return +p.p })) }
+      function fm(L){ return media(L.filter(function(p){ return p.fc > 60 }).map(function(p){ return +p.fc })) }
+      X.ef1 = ef(A); X.ef2 = ef(B);
+      X.desac = (X.ef1 - X.ef2) / X.ef1 * 100;
+      X.pace1 = pm(A); X.pace2 = pm(B);
+      X.fc1 = fm(A); X.fc2 = fm(B);
+      X.sobe1 = A.reduce(function(s, p){ return s + (+p.sobe || 0) }, 0);
+      X.sobe2 = B.reduce(function(s, p){ return s + (+p.sobe || 0) }, 0);
+
+      /* queda no ultimo quinto contra a primeira metade */
+      var q = Math.max(2, Math.round(corpo.length / 5));
+      X.paceFim = pm(corpo.slice(-q)); X.queda = X.paceFim - X.pace1;
+
+      /* km da quebra: dois km seguidos 20 s acima do ritmo da 1a metade */
+      for(var i = 1; i < corpo.length - 1; i++){
+        if(corpo[i].p - X.pace1 >= 20 && corpo[i + 1].p - X.pace1 >= 20){ X.quebraKm = corpo[i].km; break }
+      }
+
+      var cad = corpo.filter(function(p){ return p.cad > 100 });
+      if(cad.length >= 6){
+        X.cad1 = media(cad.slice(0, Math.floor(cad.length / 2)).map(function(p){ return p.cad }));
+        X.cadFim = media(cad.slice(-Math.max(2, Math.round(cad.length / 4))).map(function(p){ return p.cad }));
+      }
+    }
+
+    /* stamina: da serie se houver, senao do resumo */
+    var sp = P.filter(function(p){ return isFinite(p.sp) });
+    var ini = sp.length ? Math.max(+a.staminaIni || 0, sp[0].sp) : +a.staminaIni;
+    var fim = sp.length ? sp[sp.length - 1].sp : +a.staminaFim;
+    var sa = P.filter(function(p){ return isFinite(p.sa) }).map(function(p){ return p.sa });
+    X.stIni = ini > 0 ? ini : NaN;
+    X.stFim = fim >= 0 && ini > 0 ? fim : NaN;
+    X.stMin = sa.length ? Math.min.apply(null, sa) : (+a.staminaMin || NaN);
+    if(isFinite(X.stIni) && isFinite(X.stFim) && X.stIni - X.stFim > 3){
+      X.stPorKm = (X.stIni - X.stFim) / km;
+      X.tanqueKm = km + X.stFim / X.stPorKm;   /* nesse consumo, ate onde iria */
+    }
+
+    /* como voce chegou */
+    try{
+      var so = RAW.sono && RAW.sono[a.data], hv = RAW.hrv && RAW.hrv[a.data], bb = RAW.bodyBattery && RAW.bodyBattery[a.data];
+      X.sono = so || null; X.hrv = hv || null; X.bb = bb || null;
+    }catch(e){}
+
+    /* contexto de ciclo */
+    var todos = longoes(), lim8 = new Date(Date.now() - 56 * 864e5).toISOString().slice(0, 10);
+    X.maior8 = todos.filter(function(x){ return x.data >= lim8 }).reduce(function(m, x){ return Math.max(m, +x.distancia) }, 0);
+    X.n28 = todos.filter(function(x){ return x.data >= lim8 && +x.distancia >= 28 }).length;
+    var o = (typeof ST === 'object' && ST) ? ST.objetivo : null;
+    X.prova = o && o.data ? { nome: o.nome || 'Maratona', data: o.data, dias: diasAte(o.data) } : null;
+
+    julgar(X);
+    return X;
+  }
+
+  /* ═══════ sinais de alerta, o que esta bom e o que melhorar ═══════ */
+  function julgar(X){
+    var R = X.R, F = R.F, al = X.alertas, bo = X.bons, me = X.melhorar;
+
+    /* intensidade */
+    if(isFinite(X.pctFC)){
+      if(X.fc > R.fcMP[0] - 2 && X.pace > R.mp[1] + 15)
+        al.push(['bad', 'FC de maratona em ritmo de longão',
+          'Média de ' + Math.round(X.fc) + ' bpm (' + Math.round(X.pctFC * 100) + '% da máx.) já é a faixa de prova (' + R.fcMP[0] + '–' + R.fcMP[1] + '), mas o ritmo foi ' + pc(X.pace) + '/km, bem mais lento que o de maratona. O motor ainda gasta caro para esse ritmo — ou foi calor, sono ruim, ou o longão saiu forte demais.']);
+      else if(X.pctFC > .82)
+        al.push(['warn', 'Longão no limite de cima',
+          'FC média ' + Math.round(X.pctFC * 100) + '% da máxima. Longão rende mais entre ' + R.fcLon[0] + ' e ' + R.fcLon[1] + ' bpm: acima disso ele vira treino de prova e cobra dois a três dias de recuperação.']);
+      else if(X.pctFC >= .68)
+        bo.push('FC média de ' + Math.round(X.fc) + ' bpm, dentro da faixa de longão (' + R.fcLon[0] + '–' + R.fcLon[1] + ').');
+    }
+
+    /* desacoplamento */
+    if(isFinite(X.desac)){
+      var prog = X.pace2 < X.pace1 - 10, morro = (X.sobe2 - X.sobe1) > 40;
+      var nota = prog ? ' A 2ª metade foi ' + Math.round(X.pace1 - X.pace2) + ' s/km mais rápida — parte disso é ritmo, não fadiga.' : '';
+      nota += morro ? ' E teve ' + Math.round(X.sobe2 - X.sobe1) + ' m a mais de subida na 2ª metade.' : '';
+      if(X.desac <= 5)
+        bo.push('Desacoplamento de ' + X.desac.toFixed(1) + '%: a base aeróbica segurou os ' + X.km.toFixed(0) + ' km. É o sinal mais importante de prontidão para distâncias longas.');
+      else if(X.desac <= 10){
+        al.push(['warn', 'Coração subindo no fim', 'Desacoplamento de ' + X.desac.toFixed(1) + '% (FC ' + Math.round(X.fc1) + ' → ' + Math.round(X.fc2) + ' bpm). Entre 5 e 10% a base ainda não sustenta esta distância com folga.' + nota]);
+        if(!prog) me.push(['Base aeróbica', 'Faça os próximos longões 10–15 s/km mais lentos, segurando a FC abaixo de ' + R.fcLon[1] + ' bpm até o fim. A meta é trazer o desacoplamento para menos de 5% — aí a distância sobe.']);
+      }else{
+        al.push(['bad', 'Desacoplamento alto', X.desac.toFixed(1) + '% (FC ' + Math.round(X.fc1) + ' → ' + Math.round(X.fc2) + ' bpm). Para 42 km esse é o sinal de que a 2ª metade da prova seria sofrida.' + nota]);
+        if(!prog) me.push(['Base aeróbica', 'Mais volume fácil na semana e longão em ritmo de conversa. Não aumente a distância do longão enquanto o desacoplamento estiver acima de 10%; repita esta distância até ele cair.']);
+      }
+    }
+
+    /* quebra de ritmo */
+    if(isFinite(X.queda)){
+      if(X.queda >= 20)
+        al.push(['bad', 'O ritmo quebrou' + (X.quebraKm ? ' no km ' + Math.round(X.quebraKm) : ''),
+          'Último trecho em ' + pc(X.paceFim) + '/km contra ' + pc(X.pace1) + ' na 1ª metade (+' + Math.round(X.queda) + ' s/km). Na maratona, essa é a famosa parede — e ela costuma ter dois donos: falta de combustível e falta de longões.']);
+      else if(X.queda >= 10)
+        al.push(['warn', 'Ritmo caindo no fim', '+' + Math.round(X.queda) + ' s/km no último trecho em relação à 1ª metade.']);
+      else if(X.queda <= 3)
+        bo.push('Ritmo firme até o fim (último trecho ' + (X.queda <= 0 ? Math.abs(Math.round(X.queda)) + ' s/km mais rápido' : 'só ' + Math.round(X.queda) + ' s/km mais lento') + ' que a 1ª metade).');
+    }
+
+    /* stamina */
+    if(isFinite(X.tanqueKm)){
+      if(X.tanqueKm >= MARATONA * 1.15)
+        bo.push('Stamina: terminou com ' + Math.round(X.stFim) + '% de potencial. Nesse consumo o tanque iria até uns ' + Math.round(X.tanqueKm) + ' km — sobra para a maratona, neste ritmo.');
+      else if(X.tanqueKm >= MARATONA)
+        al.push(['warn', 'Tanque justo para 42 km', 'Potencial caiu ' + Math.round(X.stIni - X.stFim) + ' pontos (' + X.stPorKm.toFixed(1) + '/km). Nesse consumo ele zeraria perto do km ' + Math.round(X.tanqueKm) + ' — e isso no ritmo de longão; no de prova o gasto por km é maior.']);
+      else
+        al.push(['bad', 'Tanque não fecha 42 km', 'Potencial terminou em ' + Math.round(X.stFim) + '%. Nesse consumo zeraria por volta do km ' + X.tanqueKm.toFixed(1).replace('.', ',') + ', antes da linha de chegada.']);
+      if(X.stMin < 25)
+        al.push(['warn', 'Stamina disponível no vermelho', 'O tanque do momento chegou a ' + Math.round(X.stMin) + '%. Abaixo de 25% o relógio indica que você está perto do limite — num longão isso não deveria acontecer.']);
+    }
+
+    /* forma */
+    if(isFinite(X.cad1) && isFinite(X.cadFim) && X.cad1 - X.cadFim >= 4){
+      al.push(['warn', 'Passada se desfazendo', 'Cadência caiu de ' + Math.round(X.cad1) + ' para ' + Math.round(X.cadFim) + ' ppm no fim. É fadiga muscular, não só cardíaca.']);
+      me.push(['Força e forma', 'Mantenha a academia 2x/semana com foco em panturrilha, glúteo e posterior (unilaterais). Nos últimos 3 km do longão, pense em passo curto e rápido.']);
+    }
+
+    /* combustivel */
+    if((X.queda >= 15 || X.tanqueKm < MARATONA * 1.05) && X.km >= 18)
+      me.push(['Combustível', 'Treine a nutrição de prova no longão: 60–90 g de carboidrato por hora a partir dos 40–45 min (um gel a cada 25–30 min) e água a cada 20 min. O intestino aprende — e isso é o que adia a parede.']);
+
+    /* chegada */
+    var ch = [];
+    if(X.sono && X.sono.score && X.sono.score < 60) ch.push('sono ' + X.sono.score + ' na noite anterior');
+    if(X.sono && X.sono.duracao && X.sono.duracao < 6) ch.push('só ' + X.sono.duracao.toFixed(1) + ' h dormidas');
+    if(X.hrv && /LOW|UNBAL|POOR/i.test(X.hrv.status || '')) ch.push('HRV ' + String(X.hrv.status).toLowerCase());
+    if(X.bb && X.bb.max && X.bb.max < 50) ch.push('Body Battery máxima de ' + X.bb.max);
+    if(ch.length){
+      al.push(['warn', 'Chegou cansado', 'Você largou com ' + ch.join(', ') + '. Parte do que aparece acima é o corpo que chegou, não o treino.']);
+      me.push(['Recuperação', 'Na véspera do longão: 8 h de cama, jantar com carboidrato e nada intenso no dia anterior.']);
+    }
+
+    /* regua da maratona: distancia */
+    var dias = X.prova ? X.prova.dias : NaN;
+    if(X.maior8 < 28){
+      var txt = 'Seu maior longão nas últimas 8 semanas foi de ' + Math.round(X.maior8) + ' km. Um ciclo de maratona pede pelo menos 2 a 3 longões de 28–32 km, o último 3 semanas antes da prova.';
+      if(isFinite(dias) && dias > 0 && dias < 35) al.push(['bad', 'Pouca distância para a data', txt + ' Faltam ' + dias + ' dias.']);
+      else me.push(['Distância', txt + ' Suba 2–3 km por semana, com uma semana mais leve a cada 3.']);
+    }else bo.push(X.n28 + ' longão' + (X.n28 > 1 ? 'ões' : '') + ' de 28 km ou mais nas últimas 8 semanas.');
+
+    /* regua da maratona: ritmo do longao contra o de prova */
+    if(isFinite(X.pace)){
+      var dif = X.pace - R.mpMeio;
+      if(dif < 20 && X.km >= 20)
+        al.push(['warn', 'Longão perto do ritmo de prova', 'Correu a ' + pc(X.pace) + '/km, só ' + Math.max(0, Math.round(dif)) + ' s/km mais lento que o de maratona (' + pc(R.mp[0]) + '–' + pc(R.mp[1]) + '). Longão inteiro assim cansa mais do que constrói. Deixe o ritmo de prova para um bloco no fim.']);
+    }
+    if(!al.some(function(x){ return x[0] === 'bad' }) && isFinite(X.desac) && X.desac <= 5 && X.km >= 20)
+      me.push(['Próximo passo', 'A base está segura. Coloque ritmo de prova dentro do longão: os últimos 6–8 km a ' + pc(R.mp[0]) + '–' + pc(R.mp[1]) + '/km, com a nutrição de prova. É o ensaio mais fiel da maratona.']);
+  }
+
+  /* ═══════ grafico: tres faixas, um eixo de km ═══════ */
+  function grafico(X){
+    var P = X.P, R = X.R;
+    if(P.length < 4) return '';
+    var W = 340, ML = 34, MR = 8, IW = W - ML - MR, H = 62, GAP = 26, TOP = 16;
+    var xs = function(k){ return ML + (k / X.P[P.length - 1].km) * IW };
+    var faixas = [], y0 = TOP;
+
+    function faixa(nome, cor, vals, opts){
+      var v = vals.filter(isFinite); if(v.length < 3) return;
+      var lo = Math.min.apply(null, v.concat(opts.ref || [])), hi = Math.max.apply(null, v.concat(opts.ref || []));
+      var pad = (hi - lo) * .12 || 5; lo -= pad; hi += pad;
+      if(opts.fixo){ lo = opts.fixo[0]; hi = opts.fixo[1] }
+      var inv = !!opts.inv, top = y0;
+      var ys = function(x){ var t = (x - lo) / (hi - lo); return top + (inv ? t : 1 - t) * H };
+      var s = '';
+      if(opts.ref){
+        var a = ys(opts.ref[0]), b = ys(opts.ref[1]);
+        s += '<rect x="' + ML + '" y="' + Math.min(a, b).toFixed(1) + '" width="' + IW + '" height="' + Math.abs(b - a).toFixed(1)
+           + '" fill="var(--tx)" opacity=".07"/>'
+           + '<text x="' + (W - MR) + '" y="' + (Math.min(a, b) - 2).toFixed(1) + '" text-anchor="end" font-size="8.5" fill="var(--tx3)">' + opts.refNome + '</text>';
+      }
+      s += '<line x1="' + ML + '" x2="' + (W - MR) + '" y1="' + (top + H) + '" y2="' + (top + H) + '" stroke="var(--line)"/>';
+      s += '<text x="' + (ML - 4) + '" y="' + (top + 9) + '" text-anchor="end" font-size="9" fill="var(--tx3)">' + opts.fmt(inv ? lo : hi) + '</text>'
+         + '<text x="' + (ML - 4) + '" y="' + (top + H) + '" text-anchor="end" font-size="9" fill="var(--tx3)">' + opts.fmt(inv ? hi : lo) + '</text>'
+         + '<text x="' + ML + '" y="' + (top - 6) + '" font-size="9.5" font-weight="700" fill="var(--tx2)">' + nome + '</text>';
+      var d = '';
+      vals.forEach(function(v2, i){ if(!isFinite(v2)) return; d += (d ? 'L' : 'M') + xs(P[i].km).toFixed(1) + ',' + ys(v2).toFixed(1) });
+      s += '<path d="' + d + '" fill="none" stroke="' + cor + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+      if(opts.extra){
+        var d2 = '';
+        opts.extra.forEach(function(v2, i){ if(!isFinite(v2)) return; d2 += (d2 ? 'L' : 'M') + xs(P[i].km).toFixed(1) + ',' + ys(v2).toFixed(1) });
+        if(d2) s += '<path d="' + d2 + '" fill="none" stroke="' + cor + '" stroke-width="1.5" stroke-dasharray="3 3" opacity=".75"/>';
+      }
+      faixas.push({ s: s, ys: ys, vals: vals, cor: cor });
+      y0 += H + GAP;
+    }
+
+    faixa('Pace /km', 'var(--acc)', P.map(function(p){ return +p.p }),
+          { inv: true, ref: [R.mp[0], R.mp[1]], refNome: 'ritmo de maratona', fmt: pc });
+    faixa('FC bpm', 'var(--bad)', P.map(function(p){ return p.fc > 60 ? +p.fc : NaN }),
+          { ref: R.fcMP, refNome: 'FC de maratona', fmt: function(v){ return Math.round(v) } });
+    var temSt = P.some(function(p){ return isFinite(p.sp) });
+    if(temSt)
+      faixa('Stamina %', 'var(--swim)', P.map(function(p){ return isFinite(p.sp) ? +p.sp : NaN }),
+            { fmt: function(v){ return Math.round(v) }, fixo: [0, 100], extra: P.map(function(p){ return isFinite(p.sa) ? +p.sa : NaN }) });
+
+    var Htot = y0 + 4, kmMax = P[P.length - 1].km, marcas = '';
+    var passo = kmMax > 30 ? 10 : 5;
+    for(var k = passo; k < kmMax; k += passo)
+      marcas += '<text x="' + xs(k).toFixed(1) + '" y="' + (Htot + 6) + '" text-anchor="middle" font-size="9" fill="var(--tx3)">' + k + ' km</text>';
+    if(X.quebraKm) marcas += '<line x1="' + xs(X.quebraKm).toFixed(1) + '" x2="' + xs(X.quebraKm).toFixed(1) + '" y1="' + TOP + '" y2="' + Htot
+                           + '" stroke="var(--bad)" stroke-dasharray="2 3" opacity=".7"/>';
+
+    var svg = '<svg class="bqlg-svg" viewBox="0 0 ' + W + ' ' + (Htot + 10) + '" width="100%" role="img" aria-label="Pace, FC e stamina por quilômetro">'
+            + faixas.map(function(f){ return f.s }).join('') + marcas
+            + '<line class="bqlg-cur" x1="0" x2="0" y1="' + TOP + '" y2="' + Htot + '" stroke="var(--tx2)" stroke-width="1" opacity="0"/>'
+            + '<rect class="bqlg-hit" x="' + ML + '" y="0" width="' + IW + '" height="' + Htot + '" fill="transparent"/></svg>';
+    return '<div class="bqlg-graf">' + svg + '<div class="bqlg-tip" hidden></div></div>'
+         + (temSt ? '<div class="bqlg-leg"><span><i style="background:var(--swim)"></i>stamina potencial</span><span><i class="tr" style="border-color:var(--swim)"></i>disponível</span></div>' : '');
+  }
+
+  function ligarHover(box, X){
+    var g = box.querySelector('.bqlg-graf'); if(!g) return;
+    var svg = g.querySelector('svg'), cur = g.querySelector('.bqlg-cur'), tip = g.querySelector('.bqlg-tip');
+    var P = X.P, ML = 34, IW = 340 - 34 - 8, kmMax = P[P.length - 1].km;
+    function mover(ev){
+      var r = svg.getBoundingClientRect(), t = ev.touches ? ev.touches[0] : ev;
+      var x = (t.clientX - r.left) / r.width * 340;
+      var km = Math.max(0, Math.min(kmMax, (x - ML) / IW * kmMax));
+      var i = 0; P.forEach(function(p, j){ if(Math.abs(p.km - km) < Math.abs(P[i].km - km)) i = j });
+      var p = P[i], cx = ML + p.km / kmMax * IW;
+      cur.setAttribute('x1', cx); cur.setAttribute('x2', cx); cur.setAttribute('opacity', '.6');
+      tip.hidden = false;
+      tip.innerHTML = '<b>km ' + Math.ceil(p.km - .01) + '</b> · ' + pc(p.p) + '/km'
+        + (p.fc ? ' · ' + p.fc + ' bpm' : '') + (isFinite(p.sp) ? ' · stamina ' + p.sp + '%' : '')
+        + (isFinite(p.sa) ? ' (disp. ' + p.sa + '%)' : '') + (p.sobe ? ' · ↑' + p.sobe + ' m' : '') + (p.cad ? ' · ' + p.cad + ' ppm' : '');
+      var lx = cx / 340 * r.width; tip.style.left = Math.max(0, Math.min(r.width - tip.offsetWidth, lx - tip.offsetWidth / 2)) + 'px';
+    }
+    function sair(){ cur.setAttribute('opacity', '0'); tip.hidden = true }
+    svg.addEventListener('mousemove', mover); svg.addEventListener('mouseleave', sair);
+    svg.addEventListener('touchstart', mover, {passive: true}); svg.addEventListener('touchmove', mover, {passive: true});
+    svg.addEventListener('touchend', function(){ setTimeout(sair, 1800) });
+  }
+
+  /* ═══════ o card ═══════ */
+  var CSS = '#bqLongao .bqlg-chips{display:flex;gap:6px;overflow-x:auto;margin:10px -2px 4px;padding:2px}'
+    + '#bqLongao .bqlg-chips button{flex:none;font-size:12px;font-weight:600;padding:6px 10px;border-radius:999px;background:var(--s2);color:var(--tx2)}'
+    + '#bqLongao .bqlg-chips button.on{background:var(--acc);color:#0A0D12}'
+    + '#bqLongao .bqlg-kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}'
+    + '#bqLongao .bqlg-kpi div{background:var(--s2);border-radius:12px;padding:9px 10px}'
+    + '#bqLongao .bqlg-kpi i{display:block;font-style:normal;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3)}'
+    + '#bqLongao .bqlg-kpi b{display:block;font-size:18px;margin-top:3px;font-family:"JetBrains Mono",monospace;letter-spacing:-.02em}'
+    + '#bqLongao .bqlg-kpi u{display:block;text-decoration:none;font-size:11px;color:var(--tx2);margin-top:2px}'
+    + '#bqLongao .bqlg-graf{position:relative;margin:6px 0 2px}'
+    + '#bqLongao .bqlg-tip{position:absolute;top:-6px;background:var(--s3);color:var(--tx);font-size:11.5px;padding:5px 8px;border-radius:8px;white-space:nowrap;pointer-events:none;box-shadow:0 4px 14px rgba(0,0,0,.3)}'
+    + '#bqLongao .bqlg-leg{display:flex;gap:14px;font-size:11px;color:var(--tx2);margin:2px 0 8px}'
+    + '#bqLongao .bqlg-leg i{display:inline-block;width:14px;height:2px;vertical-align:middle;margin-right:5px}'
+    + '#bqLongao .bqlg-leg i.tr{height:0;border-top:2px dashed}'
+    + '#bqLongao h3{font-size:11px;letter-spacing:.11em;text-transform:uppercase;color:var(--tx3);margin:16px 0 8px}'
+    + '#bqLongao .bqlg-al{border-radius:12px;padding:10px 12px;margin-bottom:7px;font-size:13px;line-height:1.45}'
+    + '#bqLongao .bqlg-al b{display:block;margin-bottom:2px}'
+    + '#bqLongao .bqlg-al.bad{background:var(--bad-wash)} #bqLongao .bqlg-al.bad b{color:var(--bad)}'
+    + '#bqLongao .bqlg-al.warn{background:var(--warn-wash)} #bqLongao .bqlg-al.warn b{color:var(--warn)}'
+    + '#bqLongao .bqlg-ok{font-size:13px;line-height:1.45;margin:0 0 6px;padding-left:20px;position:relative}'
+    + '#bqLongao .bqlg-ok:before{content:"✓";position:absolute;left:2px;color:var(--ok);font-weight:800}'
+    + '#bqLongao .bqlg-me{font-size:13px;line-height:1.45;margin:0 0 9px}'
+    + '#bqLongao .bqlg-me b{color:var(--acc)}'
+    + '#bqLongao .bqlg-reg{background:var(--s2);border-radius:12px;padding:10px 12px;font-size:12.5px;line-height:1.55;color:var(--tx2)}'
+    + '#bqLongao .bqlg-reg b{color:var(--tx)}'
+    + '#bqLongao table{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums}'
+    + '#bqLongao th{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--tx3);text-align:right;font-weight:600;padding:4px 3px}'
+    + '#bqLongao td{text-align:right;padding:6px 3px;border-top:1px solid var(--line)}'
+    + '#bqLongao th:first-child,#bqLongao td:first-child{text-align:left}'
+    + '#bqLongao .nota{font-size:12px;color:var(--tx3);line-height:1.5;margin-top:10px}';
+
+  var escolhido = null;
+
+  function corDesac(d){ return !isFinite(d) ? 'var(--tx2)' : d <= 5 ? 'var(--ok)' : d <= 10 ? 'var(--warn)' : 'var(--bad)' }
+
+  function montar(){
+    var ancora = document.getElementById('iCards');
+    if(!ancora || !ancora.parentNode) return;
+    var L = longoes();
+    var box = document.getElementById('bqLongao');
+    if(!box){
+      if(!document.getElementById('bqLongaoCss')){
+        var st = document.createElement('style'); st.id = 'bqLongaoCss'; st.textContent = CSS; document.head.appendChild(st);
+      }
+      box = document.createElement('section'); box.className = 'card'; box.id = 'bqLongao';
+      ancora.parentNode.insertBefore(box, ancora.nextSibling);
+    }
+    if(!L.length){
+      box.innerHTML = '<div class="head"><div><h2>Energia no longão</h2><p class="sub">Nenhuma corrida de ' + LONGAO_KM
+        + ' km ou mais ainda. Assim que o Garmin sincronizar um longão, a análise aparece aqui.</p></div></div>';
+      return;
+    }
+    var a = L.find(function(x){ return x.garminId === escolhido || x.id === escolhido }) || L[0];
+    var X = analisar(a), R = X.R;
+
+    var chips = '<div class="bqlg-chips">' + L.slice(0, 8).map(function(x){
+      var id = x.garminId || x.id;
+      return '<button data-lg="' + esc(id) + '"' + (x === a ? ' class="on"' : '') + '>' + dataBR(x.data) + ' · ' + (+x.distancia).toFixed(1) + ' km</button>';
+    }).join('') + '</div>';
+
+    var h = '<div class="head"><div><h2>Energia no longão</h2><p class="sub">Pace, FC e stamina km a km, sempre com a maratona como régua.</p></div></div>' + chips;
+
+    h += '<div class="bqlg-kpi">'
+      + '<div><i>Distância</i><b>' + X.km.toFixed(1) + '</b><u>' + Math.round(X.km / MARATONA * 100) + '% da maratona</u></div>'
+      + '<div><i>Pace</i><b>' + (isFinite(X.pace) ? pc(X.pace) : '—') + '</b><u>' + (isFinite(X.pace) ? '+' + Math.round(X.pace - R.mpMeio) + ' s do de prova' : '') + '</u></div>'
+      + '<div><i>FC média</i><b>' + (X.fc ? Math.round(X.fc) : '—') + '</b><u>' + (X.fc ? Math.round(X.pctFC * 100) + '% da máx.' : '') + '</u></div>'
+      + '<div><i>Desacoplam.</i><b style="color:' + corDesac(X.desac) + '">' + (isFinite(X.desac) ? X.desac.toFixed(1) + '%' : '—') + '</b><u>meta &lt; 5%</u></div>'
+      + '<div><i>Stamina</i><b>' + (isFinite(X.stFim) ? Math.round(X.stIni) + '→' + Math.round(X.stFim) : '—') + '</b><u>' + (isFinite(X.tanqueKm) ? 'tanque ≈ ' + (X.tanqueKm < 50 ? X.tanqueKm.toFixed(1).replace('.', ',') : Math.round(X.tanqueKm)) + ' km' : 'potencial %') + '</u></div>'
+      + '<div><i>Fim x início</i><b style="color:' + (!isFinite(X.queda) ? 'var(--tx2)' : X.queda >= 20 ? 'var(--bad)' : X.queda >= 10 ? 'var(--warn)' : 'var(--ok)') + '">'
+        + (isFinite(X.queda) ? (X.queda >= 0 ? '+' : '−') + Math.abs(Math.round(X.queda)) + 's' : '—') + '</b><u>pace no último quinto</u></div>'
+      + '</div>';
+
+    h += X.P.length >= 4 ? grafico(X)
+       : '<div class="nota">O detalhe km a km deste longão ainda não chegou. Ele vem na próxima sincronia do Garmin (07h, 13h e 20h), e aí aparecem o gráfico, o desacoplamento e a quebra de ritmo.</div>';
+
+    if(X.alertas.length){
+      h += '<h3>Sinais de alerta</h3>' + X.alertas.map(function(x){
+        return '<div class="bqlg-al ' + x[0] + '"><b>' + (x[0] === 'bad' ? '● ' : '▲ ') + x[1] + '</b>' + x[2] + '</div>' }).join('');
+    }
+    if(X.bons.length) h += '<h3>Como está</h3>' + X.bons.map(function(t){ return '<p class="bqlg-ok">' + t + '</p>' }).join('');
+    if(X.melhorar.length) h += '<h3>O que melhorar</h3>' + X.melhorar.map(function(x){ return '<p class="bqlg-me"><b>' + x[0] + '.</b> ' + x[1] + '</p>' }).join('');
+
+    /* a regua */
+    var chegada = [];
+    if(X.sono && X.sono.score) chegada.push('sono ' + X.sono.score + (X.sono.duracao ? ' (' + X.sono.duracao.toFixed(1) + ' h)' : ''));
+    if(X.hrv && X.hrv.status) chegada.push('HRV ' + String(X.hrv.status).toLowerCase());
+    if(X.bb && X.bb.max) chegada.push('Body Battery ' + X.bb.max);
+    h += '<h3>Régua da maratona</h3><div class="bqlg-reg">'
+      + 'Ritmo de maratona hoje: <b>' + pc(R.mp[0]) + '–' + pc(R.mp[1]) + '/km</b> → cerca de <b>' + hms(R.tempo42) + '</b> nos 42,195 km<br>'
+      + 'FC de maratona: <b>' + R.fcMP[0] + '–' + R.fcMP[1] + ' bpm</b> · FC de longão: <b>' + R.fcLon[0] + '–' + R.fcLon[1] + ' bpm</b><br>'
+      + 'Longão ideal: <b>' + pc(R.mpMeio + 30) + '–' + pc(R.mpMeio + 75) + '/km</b>, 30–75 s mais lento que o de prova<br>'
+      + 'Maior longão em 8 semanas: <b>' + Math.round(X.maior8) + ' km</b> (pede 28–32 km)'
+      + (X.prova ? '<br>Prova: <b>' + esc(X.prova.nome) + '</b>' + (isFinite(X.prova.dias) && X.prova.dias >= 0 ? ' · faltam <b>' + X.prova.dias + ' dias</b>' : '') : '')
+      + (chegada.length ? '<br>Como você chegou: ' + chegada.join(' · ') : '')
+      + '</div>';
+
+    /* tendencia */
+    var hist = L.slice(0, 6).map(analisar);
+    if(hist.length > 1){
+      h += '<h3>Últimos longões</h3><table><tr><th>Dia</th><th>km</th><th>Pace</th><th>FC</th><th>Desac.</th><th>Stamina</th></tr>'
+        + hist.map(function(Y){
+          return '<tr><td>' + dataBR(Y.a.data) + '</td><td>' + Y.km.toFixed(1) + '</td><td>' + (isFinite(Y.pace) ? pc(Y.pace) : '—') + '</td><td>'
+            + (Y.fc ? Math.round(Y.fc) : '—') + '</td><td style="color:' + corDesac(Y.desac) + '">' + (isFinite(Y.desac) ? Y.desac.toFixed(1) + '%' : '—')
+            + '</td><td>' + (isFinite(Y.stFim) ? Math.round(Y.stFim) + '%' : '—') + '</td></tr>' }).join('') + '</table>';
+    }
+
+    h += '<div class="nota">Desacoplamento = quanto a eficiência (velocidade ÷ FC) cai da 1ª para a 2ª metade, sem o 1º km. '
+      + 'Stamina é a estimativa do relógio; o "tanque" projeta o consumo deste longão até zerar e vale como tendência, não como promessa. '
+      + 'FC calculada sobre a máxima de ' + R.F + ' bpm configurada no app.'
+      + (function(){
+          var obs = 0, lim = new Date(Date.now() - 365 * 864e5).toISOString().slice(0, 10);
+          ((RAW && RAW.atividades) || []).forEach(function(x){
+            if(x && x.esporte === 'corrida' && x.data >= lim && +x.fcMax <= 215) obs = Math.max(obs, +x.fcMax || 0) });
+          return obs > R.F + 3 ? ' <b style="color:var(--warn)">O relógio já registrou ' + obs + ' bpm numa corrida do último ano.</b> Se foi real, a sua máxima é mais alta e todas as faixas de FC acima saem baixas — atualize a FC máxima no perfil.' : '';
+        })()
+      + '</div>';
+
+    box.innerHTML = h;
+    box.querySelectorAll('[data-lg]').forEach(function(b){
+      b.onclick = function(){ escolhido = b.getAttribute('data-lg'); montar() };
+    });
+    ligarHover(box, X);
+  }
+
+  var ri = window.renderIndices;
+  if(typeof ri === 'function') window.renderIndices = function(){
+    var r = ri.apply(this, arguments);
+    try{ montar() }catch(e){ console.warn('longão:', e) }
+    return r;
+  };
+  setTimeout(function(){ try{ montar() }catch(e){} }, 3500);
+  setTimeout(function(){ try{ montar() }catch(e){} }, 9000);
+
+  window.bqLongao = { montar: montar, analisar: function(){ return analisar(longoes()[0]) }, longoes: longoes };
 });

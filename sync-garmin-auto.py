@@ -147,6 +147,13 @@ def garmin_to_treino(act):
         # que e como o relogio mostra. Menor e melhor.
         "ssl":          round(float(act.get("avgStepSpeedLoss", 0) or 0) * 100, 1),
         "sslPct":       round(float(act.get("avgStepSpeedLossPercent", 0) or 0), 2),
+        # Stamina (Forerunner 255/265/955/965 em diante). "Potencial" e
+        # quanto de energia sobra para o resto da corrida; "disponivel" e
+        # o tanque do momento. Zero quando o relogio nao mede.
+        "staminaIni":   int(act.get("beginPotentialStamina", 0) or 0),
+        "staminaFim":   int(act.get("endPotentialStamina", 0) or 0),
+        "staminaMin":   int(act.get("minAvailableStamina", 0) or 0),
+        "bbDif":        int(act.get("differenceBodyBattery", 0) or 0),
         "notas":        act.get("activityName", ""),
         "garminId":     str(act.get("activityId", "")),
     }
@@ -740,6 +747,162 @@ def safe_get(api, fn, *args, delay=0.4):
         return None
 
 
+# ── Longao quilometro a quilometro ────────────────────────────────────
+# O resumo da atividade so traz medias. Para ver a energia ao longo do
+# longao (pace x FC x stamina) e preciso da serie da atividade. Ela vem
+# do get_activity_details; os nomes das metricas mudam de relogio para
+# relogio, por isso procuro pelo nome e nao por posicao fixa.
+LONGAO_KM   = 14      # a partir daqui a corrida conta como longao
+LONGAO_DIAS = 120     # janela de longoes que recebem o detalhe
+
+
+def _idx(desc, *nomes, contem=None):
+    for n in nomes:
+        if n in desc:
+            return desc[n]
+    if contem:
+        for k, i in desc.items():
+            kl = k.lower()
+            if all(c in kl for c in contem):
+                return i
+    return None
+
+
+def parciais_por_km(det):
+    """Serie do Garmin -> lista por km: pace (s/km, so tempo em
+    movimento), FC media, stamina disponivel e potencial no fim do km,
+    subida e cadencia. Devolve [] se a serie nao tiver distancia."""
+    if not det:
+        return []
+    desc = {d.get("key"): d.get("metricsIndex")
+            for d in (det.get("metricDescriptors") or []) if d.get("key")}
+    linhas = [m.get("metrics") or [] for m in (det.get("activityDetailMetrics") or [])]
+    iD  = _idx(desc, "sumDistance")
+    iT  = _idx(desc, "sumMovingDuration", "sumDuration", "sumElapsedDuration")
+    iHR = _idx(desc, "directHeartRate")
+    iEl = _idx(desc, "directElevation")
+    iCd = _idx(desc, "directDoubleCadence")
+    iCs = _idx(desc, "directRunCadence")
+    iSA = _idx(desc, "directAvailableStamina", contem=("stamina", "avail"))
+    iSP = _idx(desc, "directPotentialStamina", contem=("stamina", "potential"))
+    if iD is None or iT is None or not linhas:
+        return []
+
+    def v(row, i):
+        if i is None or i >= len(row):
+            return None
+        x = row[i]
+        return x if isinstance(x, (int, float)) else None
+
+    kms = {}
+    ult_el = None
+    for row in linhas:
+        d, t = v(row, iD), v(row, iT)
+        if d is None or t is None:
+            continue
+        k = int(d // 1000)
+        b = kms.setdefault(k, {"d0": d, "t0": t, "d1": d, "t1": t, "hr": [],
+                               "cad": [], "sa": None, "sp": None, "sobe": 0.0})
+        b["d1"], b["t1"] = d, t
+        hr = v(row, iHR)
+        if hr and hr > 40:
+            b["hr"].append(hr)
+        cad = v(row, iCd)
+        if not cad:
+            cs = v(row, iCs)
+            cad = cs * 2 if cs and cs < 130 else cs
+        if cad and cad > 100:
+            b["cad"].append(cad)
+        sa, sp = v(row, iSA), v(row, iSP)
+        if sa is not None:
+            b["sa"] = sa
+        if sp is not None:
+            b["sp"] = sp
+        el = v(row, iEl)
+        if el is not None:
+            # 1 m de folga: o ruido do barometro somado amostra a amostra
+            # inventaria dezenas de metros de subida num percurso plano
+            if ult_el is None or el < ult_el - 1:
+                ult_el = el
+            elif el > ult_el + 1:
+                b["sobe"] += el - ult_el
+                ult_el = el
+
+    # o inicio de cada km e o fim do anterior, senao some o trecho entre
+    # a ultima amostra de um km e a primeira do seguinte
+    ordem = sorted(kms)
+    for a, b in zip(ordem, ordem[1:]):
+        kms[b]["d0"], kms[b]["t0"] = kms[a]["d1"], kms[a]["t1"]
+
+    out = []
+    for k in ordem:
+        b = kms[k]
+        dist, dur = b["d1"] - b["d0"], b["t1"] - b["t0"]
+        if dist < 300 or dur <= 0:
+            continue
+        lin = {"km": round(b["d1"] / 1000, 2),
+               "p":  int(round(dur / (dist / 1000)))}
+        if b["hr"]:
+            lin["fc"] = int(round(sum(b["hr"]) / len(b["hr"])))
+        if b["cad"]:
+            lin["cad"] = int(round(sum(b["cad"]) / len(b["cad"])))
+        if b["sa"] is not None:
+            lin["sa"] = int(round(b["sa"]))
+        if b["sp"] is not None:
+            lin["sp"] = int(round(b["sp"]))
+        if b["sobe"] >= 1:
+            lin["sobe"] = int(round(b["sobe"]))
+        out.append(lin)
+    return out
+
+
+def parciais_das_voltas(sp):
+    """Plano B: as voltas do relogio (auto-lap de 1 km, na maioria).
+    Sem stamina, mas com pace e FC por trecho."""
+    out, acum = [], 0.0
+    for l in (sp or {}).get("lapDTOs") or []:
+        dist = l.get("distance") or 0
+        dur  = l.get("movingDuration") or l.get("duration") or 0
+        if dist < 300 or dur <= 0:
+            acum += dist
+            continue
+        acum += dist
+        lin = {"km": round(acum / 1000, 2), "p": int(round(dur / (dist / 1000)))}
+        if l.get("averageHR"):
+            lin["fc"] = int(l["averageHR"])
+        cad = l.get("averageRunCadence")
+        if cad:
+            lin["cad"] = int(round(cad))
+        if l.get("elevationGain"):
+            lin["sobe"] = int(round(l["elevationGain"]))
+        out.append(lin)
+    return out
+
+
+def anexar_parciais(api, treinos, hoje):
+    limite = (hoje - timedelta(days=LONGAO_DIAS)).strftime("%Y-%m-%d")
+    longoes = [t for t in treinos if t["esporte"] == "corrida"
+               and t["distancia"] >= LONGAO_KM and t["data"] >= limite and t.get("garminId")]
+    if not longoes:
+        return
+    log(f"Detalhe km a km de {len(longoes)} longoes...")
+    serie = voltas = com_stamina = 0
+    for t in longoes:
+        det = safe_get(api, api.get_activity_details, t["garminId"], 2000, 4000, delay=0.5)
+        P = parciais_por_km(det)
+        if P:
+            serie += 1
+        else:
+            P = parciais_das_voltas(safe_get(api, api.get_activity_splits, t["garminId"], delay=0.4))
+            if P:
+                voltas += 1
+        if P:
+            t["parciais"] = P
+            if any("sp" in x or "sa" in x for x in P):
+                com_stamina += 1
+    log(f"Longoes: {serie} pela serie, {voltas} pelas voltas, {com_stamina} com stamina")
+
+
 def env_int(name, default, min_v=1, max_v=365):
     raw = (os.environ.get(name, "") or "").strip()
     if not raw:
@@ -966,6 +1129,12 @@ def main():
             t["sslPct"] = round(sum(x["stepSpeedLossPercent"] * x["distance"] for x in trechos) / dist, 2)
             achou += 1
         log(f"Step Speed Loss encontrado em {achou} de {len(faltando)}")
+    try:
+        anexar_parciais(api, treinos, hoje)
+    except Exception as e:
+        # o detalhe e extra: se falhar, o resto do sync segue igual
+        log(f"AVISO: detalhe dos longoes falhou: {e}")
+
     ignorados = len(raw) - len(treinos)
     log(f"{len(treinos)} treinos para sincronizar | {ignorados} ignorados")
 
