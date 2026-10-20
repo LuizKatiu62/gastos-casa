@@ -1,0 +1,32 @@
+name: Resumo semanal dos gastos (WhatsApp)
+
+# Toda segunda de manha: le o app Gastos da Casa no Firebase, calcula
+# onde o dinheiro mais vazou na semana que acabou e manda as acoes pelo
+# WhatsApp para o Luiz (CallMeBot). So le; nao grava nada no Firebase.
+# O log nao mostra valores (repositorio publico).
+
+on:
+  schedule:
+    - cron: '50 11 * * 1'     # segunda, 8h50 em Saint John no horario de verao, 7h50 no de inverno
+  workflow_dispatch:
+
+jobs:
+  resumo:
+    runs-on: ubuntu-latest
+    if: github.repository == 'LuizKatiu62/gastos-casa'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Calcular e enviar
+        run: node resumo-gastos-whatsapp.js
+        env:
+          FIREBASE_EMAIL:    ${{ secrets.FIREBASE_EMAIL }}
+          FIREBASE_PASSWORD: ${{ secrets.FIREBASE_PASSWORD }}
+          CALLMEBOT_APIKEY:  ${{ secrets.CALLMEBOT_APIKEY }}
+          WHATSAPP_PHONE:    ${{ secrets.WHATSAPP_PHONE }}
