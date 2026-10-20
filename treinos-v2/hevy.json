@@ -214,7 +214,7 @@
     },
     {
      "nome": "Walking Lunge",
-     "series": "3×10",
+     "series": "3×14",
      "nota": "Corrida e exercicio de uma perna so. 10 cada perna."
     },
     {
@@ -225,7 +225,7 @@
     {
      "nome": "Seated Calf Raise",
      "series": "3×15",
-     "peso": 22.67964547178199,
+     "peso": 27.215574566138386,
      "nota": "O sentado pega o soleo, onde o aquiles do veterano rompe."
     },
     {
@@ -402,7 +402,7 @@
    "primeiro": 9.071858188712795,
    "primeiroEm": "2026-09-14",
    "atual": 9.071858188712795,
-   "atualEm": "2026-09-14",
+   "atualEm": "2026-10-19",
    "series": "3×12",
    "ganho": 0.0
   },
@@ -411,7 +411,7 @@
    "primeiro": 18.14371637742559,
    "primeiroEm": "2026-09-14",
    "atual": 18.14371637742559,
-   "atualEm": "2026-09-14",
+   "atualEm": "2026-10-19",
    "series": "3×12",
    "ganho": 0.0
   },
@@ -419,10 +419,10 @@
    "nome": "Seated Calf Raise",
    "primeiro": 22.67964547178199,
    "primeiroEm": "2026-09-14",
-   "atual": 22.67964547178199,
-   "atualEm": "2026-09-16",
-   "series": "2×15",
-   "ganho": 0.0
+   "atual": 27.215574566138386,
+   "atualEm": "2026-10-19",
+   "series": "3×15",
+   "ganho": 4.5
   },
   "Hip Thrust (Smith Machine)": {
    "nome": "Hip Thrust (Smith Machine)",
@@ -517,79 +517,14 @@
    "semana": "2026-W41",
    "kg": 878,
    "sessoes": 1
+  },
+  "2026-W43": {
+   "semana": "2026-W43",
+   "kg": 1873,
+   "sessoes": 1
   }
  },
  "sessoes": [
-  {
-   "data": "2026-04-20",
-   "titulo": "Evening Workout☀️",
-   "hora": "18:11",
-   "min": 58,
-   "kg": 340,
-   "exercicios": [
-    {
-     "nome": "Squat (Barbell)",
-     "series": "3×10",
-     "peso": 11.339822735890994,
-     "kg": 340
-    },
-    {
-     "nome": "Lunge",
-     "series": "2×10"
-    },
-    {
-     "nome": "Standing Calf Raise",
-     "series": "3×15"
-    },
-    {
-     "nome": "Plank Pushup",
-     "series": "2×45"
-    },
-    {
-     "nome": "Dead Bug",
-     "series": "2×10"
-    },
-    {
-     "nome": "Glute Bridge",
-     "series": "2×12"
-    }
-   ]
-  },
-  {
-   "data": "2026-04-20",
-   "titulo": "Morning workout ☀️",
-   "hora": "08:46",
-   "min": 41,
-   "kg": 113,
-   "exercicios": [
-    {
-     "nome": "Squat (Barbell)",
-     "series": "1×10",
-     "peso": 11.339822735890994,
-     "kg": 113
-    },
-    {
-     "nome": "Lunge",
-     "series": "1×10"
-    },
-    {
-     "nome": "Standing Calf Raise",
-     "series": "1×15"
-    },
-    {
-     "nome": "Plank Pushup",
-     "series": "1×45"
-    },
-    {
-     "nome": "Dead Bug",
-     "series": "1×10"
-    },
-    {
-     "nome": "Glute Bridge",
-     "series": "1×12"
-    }
-   ]
-  },
   {
    "data": "2026-04-21",
    "titulo": "Workout - 04/21/26",
@@ -880,12 +815,55 @@
      "kg": 113
     }
    ]
+  },
+  {
+   "data": "2026-10-19",
+   "titulo": "Forca - Pernas e Core (base)",
+   "hora": "17:18",
+   "min": 52,
+   "kg": 1873,
+   "exercicios": [
+    {
+     "nome": "Goblet Squat",
+     "series": "3×12",
+     "peso": 9.071858188712795,
+     "kg": 327
+    },
+    {
+     "nome": "Romanian Deadlift (Dumbbell)",
+     "series": "3×12",
+     "peso": 18.14371637742559,
+     "kg": 435
+    },
+    {
+     "nome": "Walking Lunge",
+     "series": "3×14"
+    },
+    {
+     "nome": "Standing Calf Raise",
+     "series": "3×15"
+    },
+    {
+     "nome": "Seated Calf Raise",
+     "series": "3×15",
+     "peso": 27.215574566138386,
+     "kg": 1111
+    },
+    {
+     "nome": "Plank",
+     "series": "3×43s"
+    },
+    {
+     "nome": "Side Plank",
+     "series": "4×31s"
+    }
+   ]
   }
  ],
  "meta": {
-  "ultimaSync": "2026-10-19T21:07:19",
+  "ultimaSync": "2026-10-20T00:24:41",
   "totalRotinas": 13,
-  "totalTreinos": 5,
+  "totalTreinos": 6,
   "semanas": 12,
   "semanasSessoes": 26
  }
