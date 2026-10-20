@@ -91,24 +91,24 @@ function mensagem(r){
 
 async function enviar(msg){
   const key = (process.env.CALLMEBOT_APIKEY||'').trim(), fone = (process.env.WHATSAPP_PHONE||'+14379718925').trim();
-  if(!key){ console.log('AVISO: falta o secret CALLMEBOT_APIKEY. Nada foi enviado.'); process.exitCode = 1; return }
+  if(!key){ console.log('::warning::Falta o secret CALLMEBOT_APIKEY: resumo calculado, mas nada foi enviado.'); return }
   const url = 'https://api.callmebot.com/whatsapp.php?phone='+encodeURIComponent(fone)+'&text='+encodeURIComponent(msg)+'&apikey='+encodeURIComponent(key);
   const r = await fetch(url); const corpo = await r.text();
   /* o CallMeBot responde 200 mesmo com erro; o texto diz se saiu */
   const plano = corpo.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
   if(!r.ok || !/queued|sent|success/i.test(plano))
     throw new Error('CallMeBot recusou (HTTP '+r.status+'): '+plano.replace(key,'***').slice(0,160));
-  console.log('Mensagem enviada ao WhatsApp.');
+  console.log('::notice::Mensagem enviada ao WhatsApp.');
 }
 
 (async()=>{
   try{
-    const d = await dados(); console.log('Dados lidos ('+(d.lancamentos||[]).length+' lançamentos).');
+    const d = await dados(); console.log('::notice::Firebase lido: '+(d.lancamentos||[]).length+' lançamentos.');
     const S = await analisador();
     const r = S.analisar(d, hojeHalifax());
     if(!r || !r.n){ console.log('Semana sem lançamentos; nada a enviar.'); return }
     const msg = mensagem(r);
     if(DRY){ console.log('--- DRY_RUN: mensagem que seria enviada ---\n'+msg); return }
     await enviar(msg);
-  }catch(e){ console.log('ERRO: '+(e && e.message || e)); process.exitCode = 1 }
+  }catch(e){ console.log('::error::'+(e && e.message || e)); process.exitCode = 1 }
 })();
