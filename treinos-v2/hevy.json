@@ -526,41 +526,6 @@
  },
  "sessoes": [
   {
-   "data": "2026-04-21",
-   "titulo": "Workout - 04/21/26",
-   "hora": "17:20",
-   "min": 27,
-   "kg": 1066,
-   "exercicios": [
-    {
-     "nome": "Lat Pulldown (Cable)",
-     "series": "3×10",
-     "peso": 13.607787283069193,
-     "kg": 408
-    },
-    {
-     "nome": "Bent Over Row (Barbell)",
-     "series": "3×10",
-     "peso": 11.339822735890994,
-     "kg": 318
-    },
-    {
-     "nome": "Bench Press (Dumbbell)",
-     "series": "3×10",
-     "peso": 11.339822735890994,
-     "kg": 340
-    },
-    {
-     "nome": "Side Plank",
-     "series": "4×30s"
-    },
-    {
-     "nome": "Bird Dog",
-     "series": "2×10"
-    }
-   ]
-  },
-  {
    "data": "2026-04-27",
    "titulo": "Knees exercise 1-2 weeks (copy) (copy)",
    "hora": "18:59",
@@ -861,7 +826,7 @@
   }
  ],
  "meta": {
-  "ultimaSync": "2026-10-20T23:56:22",
+  "ultimaSync": "2026-10-21T04:56:53",
   "totalRotinas": 13,
   "totalTreinos": 6,
   "semanas": 12,
