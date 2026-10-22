@@ -1949,6 +1949,20 @@ function puxarSnapshot(){
 /* ---- estado do Coach compartilhado entre aparelhos ---- */
 async function salvarCoach(){
   const t = await fbToken(); if(!t) return;
+  /* 22/10 (fix 07n): se a leitura do Firebase falhou ao abrir, o app
+     estava com o estado vazio na memoria. Gravar assim apagava a prova
+     escolhida. Agora ele tenta ler de novo; se nao conseguir, nao grava. */
+  if(window.COACH_OK !== true){
+    const c = await lerCoach();
+    if(window.COACH_OK !== true){ console.warn('salvarCoach: Firebase nao lido, nada gravado'); return }
+    if(c){
+      if(!ST.objetivo && c.objetivo) ST.objetivo = c.objetivo;
+      if((!ST.feitas || !Object.keys(ST.feitas).length) && c.feitas) ST.feitas = c.feitas;
+      if((!ST.extras || !Object.keys(ST.extras).length) && c.extras) ST.extras = c.extras;
+      if((!ST.trocas || !Object.keys(ST.trocas).length) && c.trocas) ST.trocas = c.trocas;
+    }
+  }
+  guardarObjetivoLocal();
   const corpo = {objetivo:ST.objetivo, feitas:ST.feitas, filtro:ST.filtro, extras:ST.extras, trocas:ST.trocas,
     dias:PERFIL.dias, marcoData:PERFIL.marcoData, marcoNome:PERFIL.marcoNome, periodo:ST.periodo,
     em:new Date().toISOString()};
@@ -1964,15 +1978,18 @@ async function salvarCoach(){
   }catch(e){ console.warn('salvarCoach:',e.message) }
 }
 async function lerCoach(){
-  const t = await fbToken(); if(!t) return null;
+  const t = await fbToken(); if(!t){ window.COACH_OK = false; return null }
   // Com timeout: sem ele, se o Firebase nao respondesse, o boot() ficava
   // parado para sempre e o app abria vazio, sem dados e sem botoes.
   const ctrl = new AbortController();
   const relogio = setTimeout(()=>ctrl.abort(), 8000);
   try{
     const r = await fetch(`${FB_DB}/${FB_COACH}.json?auth=${t}`, {signal:ctrl.signal});
-    return r.ok ? await r.json() : null;
-  }catch(e){ return null }
+    if(!r.ok){ window.COACH_OK = false; return null }
+    const c = await r.json();
+    window.COACH_OK = true;
+    return c;
+  }catch(e){ window.COACH_OK = false; return null }
   finally{ clearTimeout(relogio) }
 }
 
@@ -3840,6 +3857,37 @@ function renderDados(){
   });
 }
 
+/* ═══════════ OBJETIVO PERDIDO (fix 07n, 22/10/2026) ═══════════
+   O app caia num objetivo padrao "25 km em 2 de agosto" sempre que o
+   objetivo nao chegava do Firebase. Foi isso que apareceu no lugar da
+   Fredericton Marathon. Agora:
+   · o ultimo objetivo bom fica guardado tambem neste aparelho;
+   · se o Firebase nao trouxer objetivo (ou trouxer o padrao antigo de
+     25 km/02-08), o app volta para esse ultimo objetivo bom;
+   · sem nenhum, volta para a Fredericton Marathon 2027 (42,2 km), a
+     prova que voce escolheu;
+   · e nunca mais inventa uma prova padrao.                            */
+const OBJ_LOCAL = 'bq.ultimoObjetivo';
+const OBJ_FREDERICTON = {fam:'corrida', id:'42k', data:'2027-05-09',
+  nome:'Maratona · Fredericton Marathon', dataManual:true, prova:'fred27', distProva:42.2};
+function objetivoValido(o){
+  return !!(o && o.fam && o.id && /^\d{4}-\d{2}-\d{2}$/.test(o.data||'')
+    && !(o.id==='25k' && o.data==='2026-08-02'));
+}
+function guardarObjetivoLocal(){
+  const o = ST.objetivo;
+  if(objetivoValido(o) && o.data >= iso(HOJE)) cofre.gravar(OBJ_LOCAL, JSON.stringify(o));
+}
+function recuperarObjetivo(){
+  if(objetivoValido(ST.objetivo)){ guardarObjetivoLocal(); return }
+  let o = null;
+  try{ o = JSON.parse(cofre.ler(OBJ_LOCAL) || 'null') }catch(e){}
+  if(!objetivoValido(o) || o.data < iso(HOJE)) o = {...OBJ_FREDERICTON};
+  console.log('objetivo recuperado:', JSON.stringify(o), 'antes:', JSON.stringify(ST.objetivo));
+  ST.objetivo = o;
+  if(window.COACH_OK === true) setTimeout(()=>{ try{ persistir() }catch(e){} }, 1500);
+}
+
 /* ═══════════ 10. BOOT ═══════════ */
 let _salvando=null;
 function persistir(){                       // agrupa gravações seguidas
@@ -3924,7 +3972,7 @@ function irPara(v){
   }
   await restaurar();
   Z=zonas();
-  if(!ST.objetivo) ST.objetivo={fam:'corrida', id:'25k', data:'2026-08-02', nome:'25 km', dataManual:true};
+  recuperarObjetivo();
   rebuild(); selecionarProximo();
   ST.mes=new Date(dt(ST.sel).getFullYear(),dt(ST.sel).getMonth(),1);
 

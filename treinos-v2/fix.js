@@ -69,7 +69,7 @@
       melhorar, sempre com a maratona como régua (parte 64)
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '07m';
+const FIX_VERSAO = '07n';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -18194,9 +18194,12 @@ PARTE('prova no site runwithgratitude', function(){
 
   var rodando = false;
   async function publicar(){
-    if(rodando) return; rodando = true;
+    if(rodando) return;
+    if(window.COACH_OK !== true) return;           /* 07n: sem ler o Firebase, nao publica */
+    rodando = true;
     try{
       var pub = montar();
+      if(pub && pub.data < iso(HOJE)) pub = null;    /* prova que ja passou nao vai para o site */
       var assin = JSON.stringify(pub);
       if(g(CHAVE) === assin) return;                 // nada mudou
       var t = await window.fbToken(); if(!t) return;
