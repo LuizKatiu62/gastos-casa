@@ -69,7 +69,7 @@
       melhorar, sempre com a maratona como régua (parte 64)
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '07n';
+const FIX_VERSAO = '07o';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){

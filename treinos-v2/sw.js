@@ -18,7 +18,7 @@
    Ao publicar uma versão nova, mude VERSAO abaixo.
    ══════════════════════════════════════════════════════════════ */
 
-const VERSAO = 'treinos-v2-2026-10-22-07n';
+const VERSAO = 'treinos-v2-2026-10-24-07o';
 const ESSENCIAIS = ['./', './index.html', './manifest.json', './fix.js'];
 
 self.addEventListener('install', e=>{

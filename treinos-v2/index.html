@@ -3888,6 +3888,61 @@ function recuperarObjetivo(){
   if(window.COACH_OK === true) setTimeout(()=>{ try{ persistir() }catch(e){} }, 1500);
 }
 
+/* ═══════════ O OBJETIVO GANHA UM GUARDA (fix 07o, 24/10/2026) ═══════════
+   Depois do 07n a Fredericton sumiu de novo. O 07n so consertava o
+   ARRANQUE; havia outros caminhos que zeravam o objetivo DEPOIS dele:
+   · o "espelho local" (parte 26 do fix.js), 2,6 s depois de abrir,
+     copiava para a tela um objetivo vazio guardado num momento ruim;
+   · a limpeza da PEI (parte 63) zerava o objetivo sempre que lia a PEI
+     no Firebase, mesmo com a Fredericton escolhida aqui;
+   · e quem zerava ainda gravava o vazio no Firebase, apagando a prova la.
+   Em vez de remendar caminho por caminho, o objetivo agora so aceita
+   prova de verdade. Vazio, PEI, o padrao 25 km de 02/08 ou formato que
+   nao existe no catalogo sao recusados, e o app mantem a prova atual
+   (ou a ultima boa deste aparelho, ou a Fredericton 2027).
+   Trocar de prova pela tela continua livre: prova valida sempre entra.
+   No console: bqObjetivo.ver() mostra o atual e as ultimas recusas.     */
+const OBJ_RECUSAS = 'bq.objetivoRecusado';
+function objetivoBom(o){
+  if(!objetivoValido(o)) return false;
+  if(o.id==='bq42' || o.prova==='pei26' || /\bPEI\b/i.test(o.nome||'')) return false;
+  if(o.data==='2026-10-18' && !o.prova) return false;
+  const F = OBJETIVOS[o.fam];
+  return !!(F && F.itens.some(x=>x.id===o.id));
+}
+function ultimoObjetivoBom(){
+  let o = null;
+  try{ o = JSON.parse(cofre.ler(OBJ_LOCAL) || 'null') }catch(e){}
+  return (objetivoBom(o) && o.data >= iso(HOJE)) ? o : {...OBJ_FREDERICTON};
+}
+(function guardaDoObjetivo(){
+  let atual = objetivoBom(ST.objetivo) ? ST.objetivo : ultimoObjetivoBom();
+  Object.defineProperty(ST, 'objetivo', {
+    enumerable:true, configurable:false,
+    get(){ return atual },
+    set(v){
+      if(objetivoBom(v)){
+        atual = v;
+        if(v.data >= iso(HOJE)) cofre.gravar(OBJ_LOCAL, JSON.stringify(v));
+        return;
+      }
+      const fica = objetivoBom(atual) ? atual : ultimoObjetivoBom();
+      let onde = '';
+      try{ onde = (new Error().stack || '').split('\n').slice(1,4).join(' | ') }catch(e){}
+      console.warn('objetivo recusado:', JSON.stringify(v), '→ mantido:', fica.nome);
+      try{
+        const l = JSON.parse(cofre.ler(OBJ_RECUSAS) || '[]');
+        l.unshift({em:new Date().toISOString(), veio:v === undefined ? 'undefined' : v, onde});
+        cofre.gravar(OBJ_RECUSAS, JSON.stringify(l.slice(0,10)));
+      }catch(e){}
+      atual = fica;
+    }
+  });
+  window.bqObjetivo = {
+    ver(){ return {atual, recusas: JSON.parse(cofre.ler(OBJ_RECUSAS) || '[]')} }
+  };
+})();
+
 /* ═══════════ 10. BOOT ═══════════ */
 let _salvando=null;
 function persistir(){                       // agrupa gravações seguidas
