@@ -2,8 +2,8 @@
  "ate": "2026-10-31",
  "de": "2026-10-25",
  "fcMax": 163,
- "gerado": "2026-10-25T18:23:26.641Z",
- "limiar": "5:15",
+ "gerado": "2026-10-25T21:02:33.042Z",
+ "limiar": "5:09",
  "sessoes": [
   {
    "data": "2026-10-25",
@@ -15,17 +15,17 @@
    "passos": [
     {
      "fim": "time",
-     "lento": 2.2727,
-     "rapido": 2.439,
-     "texto": "10 min subindo devagar, 6:50–7:20/km. Se chegar ofegante ao fim, foi rapido demais.",
+     "lento": 2.3041,
+     "rapido": 2.4752,
+     "texto": "10 min subindo devagar, 6:44–7:14/km. Se chegar ofegante ao fim, foi rapido demais.",
      "tipo": "warmup",
      "valor": 600
     },
     {
      "fim": "distance",
-     "lento": 2.6316,
-     "rapido": 2.8571,
-     "texto": "16.3 km em 5:50–6:20/km. Voce deve conseguir falar frases inteiras.",
+     "lento": 2.6738,
+     "rapido": 2.907,
+     "texto": "16.3 km em 5:44–6:14/km. Voce deve conseguir falar frases inteiras.",
      "tipo": "interval",
      "valor": 16300
     },
@@ -47,9 +47,9 @@
    "passos": [
     {
      "fim": "time",
-     "lento": 2.2727,
-     "rapido": 2.439,
-     "texto": "12 min subindo devagar, 6:50–7:20/km. Se chegar ofegante ao fim, foi rapido demais.",
+     "lento": 2.3041,
+     "rapido": 2.4752,
+     "texto": "12 min subindo devagar, 6:44–7:14/km. Se chegar ofegante ao fim, foi rapido demais.",
      "tipo": "warmup",
      "valor": 720
     },
@@ -57,9 +57,9 @@
      "passos": [
       {
        "fim": "distance",
-       "lento": 3.4247,
-       "rapido": 3.5971,
-       "texto": "600 m em 4:38–4:52/km, FC ate 148-158 bpm.",
+       "lento": 3.4722,
+       "rapido": 3.6496,
+       "texto": "600 m em 4:34–4:48/km, FC ate 148-158 bpm.",
        "tipo": "interval",
        "valor": 600
       },
@@ -91,19 +91,19 @@
    "passos": [
     {
      "fim": "time",
-     "lento": 2.2727,
-     "rapido": 2.439,
-     "texto": "8 min subindo devagar, 6:50–7:20/km. Se chegar ofegante ao fim, foi rapido demais.",
+     "lento": 2.3041,
+     "rapido": 2.4752,
+     "texto": "8 min subindo devagar, 6:44–7:14/km. Se chegar ofegante ao fim, foi rapido demais.",
      "tipo": "warmup",
      "valor": 480
     },
     {
      "fim": "distance",
-     "lento": 2.5641,
-     "rapido": 2.7778,
-     "texto": "5.2 km em 6:00–6:30/km. Voce deve conseguir falar frases inteiras.",
+     "lento": 2.6042,
+     "rapido": 2.8249,
+     "texto": "5.1 km em 5:54–6:24/km. Voce deve conseguir falar frases inteiras.",
      "tipo": "interval",
-     "valor": 5200
+     "valor": 5100
     },
     {
      "fim": "time",
@@ -123,19 +123,19 @@
    "passos": [
     {
      "fim": "time",
-     "lento": 2.2727,
-     "rapido": 2.439,
-     "texto": "8 min subindo devagar, 6:50–7:20/km. Se chegar ofegante ao fim, foi rapido demais.",
+     "lento": 2.3041,
+     "rapido": 2.4752,
+     "texto": "8 min subindo devagar, 6:44–7:14/km. Se chegar ofegante ao fim, foi rapido demais.",
      "tipo": "warmup",
      "valor": 480
     },
     {
      "fim": "distance",
-     "lento": 2.5641,
-     "rapido": 2.7778,
-     "texto": "7.1 km em 6:00–6:30/km. Voce deve conseguir falar frases inteiras.",
+     "lento": 2.6042,
+     "rapido": 2.8249,
+     "texto": "7.0 km em 5:54–6:24/km. Voce deve conseguir falar frases inteiras.",
      "tipo": "interval",
-     "valor": 7100
+     "valor": 7000
     },
     {
      "fim": "time",
@@ -155,17 +155,17 @@
    "passos": [
     {
      "fim": "time",
-     "lento": 2.2727,
-     "rapido": 2.439,
-     "texto": "10 min subindo devagar, 6:50–7:20/km. Se chegar ofegante ao fim, foi rapido demais.",
+     "lento": 2.3041,
+     "rapido": 2.4752,
+     "texto": "10 min subindo devagar, 6:44–7:14/km. Se chegar ofegante ao fim, foi rapido demais.",
      "tipo": "warmup",
      "valor": 600
     },
     {
      "fim": "distance",
-     "lento": 2.6316,
-     "rapido": 2.8571,
-     "texto": "18.0 km em 5:50–6:20/km. Voce deve conseguir falar frases inteiras.",
+     "lento": 2.6738,
+     "rapido": 2.907,
+     "texto": "18.0 km em 5:44–6:14/km. Voce deve conseguir falar frases inteiras.",
      "tipo": "interval",
      "valor": 18000
     },
@@ -183,32 +183,32 @@
   "faci": {
    "fc": "111–124",
    "n": "Rodagem fácil",
-   "pace": "6:00–6:30"
+   "pace": "5:54–6:24"
   },
   "lim": {
    "fc": "140–148",
    "n": "Limiar",
-   "pace": "5:07–5:27"
+   "pace": "5:01–5:21"
   },
   "long": {
    "fc": "114–130",
    "n": "Longo",
-   "pace": "5:50–6:20"
+   "pace": "5:44–6:14"
   },
   "mp": {
    "fc": "130–140",
    "n": "Ritmo de maratona",
-   "pace": "5:26–5:38"
+   "pace": "5:21–5:33"
   },
   "rec": {
    "fc": "98–111",
    "n": "Recuperação",
-   "pace": "6:50–7:20"
+   "pace": "6:44–7:14"
   },
   "vo2": {
    "fc": "148–158",
    "n": "VO₂ máx",
-   "pace": "4:38–4:52"
+   "pace": "4:34–4:48"
   }
  }
 }
