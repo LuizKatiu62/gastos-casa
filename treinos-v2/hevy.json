@@ -526,30 +526,6 @@
  },
  "sessoes": [
   {
-   "data": "2026-04-27",
-   "titulo": "Knees exercise 1-2 weeks (copy) (copy)",
-   "hora": "18:59",
-   "min": 35,
-   "exercicios": [
-    {
-     "nome": "Wall Sit",
-     "series": "2×30s"
-    },
-    {
-     "nome": "Straight Leg Raise",
-     "series": "2×12"
-    },
-    {
-     "nome": "Clamshell",
-     "series": "2×12"
-    },
-    {
-     "nome": "Hamstring Stretch",
-     "series": "2×12"
-    }
-   ]
-  },
-  {
    "data": "2026-04-28",
    "titulo": "Gym - 64km - 04/28/26",
    "hora": "19:12",
@@ -826,7 +802,7 @@
   }
  ],
  "meta": {
-  "ultimaSync": "2026-10-26T23:27:48",
+  "ultimaSync": "2026-10-27T01:03:44",
   "totalRotinas": 13,
   "totalTreinos": 6,
   "semanas": 12,
