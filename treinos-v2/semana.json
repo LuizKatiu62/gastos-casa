@@ -1,54 +1,10 @@
 {
- "ate": "2026-11-02",
- "de": "2026-10-27",
+ "ate": "2026-11-03",
+ "de": "2026-10-28",
  "fcMax": 163,
- "gerado": "2026-10-27T22:22:02.523Z",
+ "gerado": "2026-10-28T09:35:27.048Z",
  "limiar": "5:09",
  "sessoes": [
-  {
-   "data": "2026-10-27",
-   "foco": "vo2",
-   "km": 7.3,
-   "min": 43,
-   "nome": "27/10 · 5 blocos 1 de 5' Z3 - 4 de 3'30'' Z4 · 7.3 km total",
-   "nota": "Total porta a porta 7.3 km. Alongamentos e educativos ANTES do start, relogio parado.",
-   "passos": [
-    {
-     "fim": "time",
-     "lento": 2.3041,
-     "rapido": 2.4752,
-     "texto": "12 min subindo devagar, 6:44–7:14/km. Se chegar ofegante ao fim, foi rapido demais.",
-     "tipo": "warmup",
-     "valor": 720
-    },
-    {
-     "passos": [
-      {
-       "fim": "distance",
-       "lento": 3.4722,
-       "rapido": 3.6496,
-       "texto": "600 m em 4:34–4:48/km, FC ate 148-158 bpm.",
-       "tipo": "interval",
-       "valor": 600
-      },
-      {
-       "fim": "time",
-       "texto": "2 min de trote leve. Nao pare de correr.",
-       "tipo": "recovery",
-       "valor": 120
-      }
-     ],
-     "tipo": "repetir",
-     "vezes": 5
-    },
-    {
-     "fim": "time",
-     "texto": "8 min de trote muito leve ate a respiracao normalizar.",
-     "tipo": "cooldown",
-     "valor": 480
-    }
-   ]
-  },
   {
    "data": "2026-10-28",
    "foco": "facil",
@@ -83,7 +39,7 @@
   },
   {
    "data": "2026-10-29",
-   "foco": "facil",
+   "foco": "tiros",
    "km": 8.9,
    "min": 50,
    "nome": "29/10 · 6x 600 · 8.9 km total",
@@ -93,23 +49,35 @@
      "fim": "time",
      "lento": 2.3041,
      "rapido": 2.4752,
-     "texto": "8 min subindo devagar, 6:44–7:14/km. Se chegar ofegante ao fim, foi rapido demais.",
+     "texto": "12 min subindo devagar, 6:44–7:14/km. Se chegar ofegante ao fim, foi rapido demais.",
      "tipo": "warmup",
-     "valor": 480
+     "valor": 720
     },
     {
-     "fim": "distance",
-     "lento": 2.6042,
-     "rapido": 2.8249,
-     "texto": "7.0 km em 5:54–6:24/km. Voce deve conseguir falar frases inteiras.",
-     "tipo": "interval",
-     "valor": 7000
+     "passos": [
+      {
+       "fim": "distance",
+       "lento": 3.4722,
+       "rapido": 3.6496,
+       "texto": "600 m em 4:34–4:48/km, FC ate 148-158 bpm.",
+       "tipo": "interval",
+       "valor": 600
+      },
+      {
+       "fim": "time",
+       "texto": "3 min de trote leve. Nao pare de correr.",
+       "tipo": "recovery",
+       "valor": 180
+      }
+     ],
+     "tipo": "repetir",
+     "vezes": 6
     },
     {
      "fim": "time",
-     "texto": "5 min de trote muito leve ate a respiracao normalizar.",
+     "texto": "8 min de trote muito leve ate a respiracao normalizar.",
      "tipo": "cooldown",
-     "valor": 300
+     "valor": 480
     }
    ]
   },
@@ -146,7 +114,7 @@
    ]
   }
  ],
- "versao": "07o",
+ "versao": "07q",
  "zonas": {
   "faci": {
    "fc": "111–124",
