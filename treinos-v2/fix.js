@@ -67,9 +67,14 @@
   24) Energia no longão, na aba Índices: pace x FC x stamina km a km,
       desacoplamento, quebra de ritmo, sinais de alerta e o que
       melhorar, sempre com a maratona como régua (parte 64)
+  25) A academia segue a prova e o treinador (27/10/2026): as fases
+      contam as semanas até a prova escolhida (hoje a Fredericton
+      Marathon, 09/05/2027); os 3 dias da semana saem da agenda do
+      treinador, longe do longão; parte superior toda semana; YMCA de
+      Saint John no lugar da Fit4Less
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '07o';
+const FIX_VERSAO = '07p';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -7772,7 +7777,7 @@ PARTE('planilha de treinos', function(){
       + '<th class="d">Dia</th><th class="t">Treino</th><th>min</th><th class="ok"></th>'
       + '</tr></thead><tbody>' + corpo + '</tbody></table></div>'
       + '<div class="pleg">' + leg + '</div>'
-      + '<p class="plnota">Academia às segundas, quartas e sextas, 5:30. '
+      + '<p class="plnota">Academia 3 vezes por semana, 5:30, nos dias que combinam com o plano do treinador. '
       + 'A corrida fica no relógio, montada pelo seu treinador.</p>';
   }
 
@@ -10316,6 +10321,275 @@ PARTE('botão hevy', function(){
 
 
 
+/* ───────────── 49b. A ACADEMIA SEGUE A PROVA E O TREINADOR ─────────────
+   Pedido do Luiz, 27/10/2026: "quando eu mudar o plano de corrida, que
+   mude tambem o plano de fortalecimento e da parte superior".
+
+   Antes, duas coisas eram fixas no codigo:
+     · os dias: segunda, quarta e sexta, sempre
+     · as fases: datas cravadas para a PEI (18/10/2026), so arrastadas
+       quando a prova mudava
+
+   Agora as duas se recalculam sozinhas:
+
+   1. A FASE vem da prova escolhida no app (ST.objetivo). Trocou a
+      prova, as fases andam junto, contadas em semanas ate ela:
+        mais de 16 semanas  Base         pernas · quadril e core · superior
+        16 a 7 semanas      Forca        maxima · quadril e core · superior
+        6 a 4 semanas       Pico         maxima · quadril (pico) · superior
+        3 a 2 semanas       Reducao      manutencao · quadril (pico) · superior leve
+        semana da prova     so manutencao ate 5 dias antes e superior leve
+                            ate 4 dias antes
+        depois da prova     1a semana: so superior leve; 2a e 3a: volta leve
+        sem prova           Base
+
+   2. OS DIAS vem da agenda do treinador (o que o Garmin traz do
+      TrainingPeaks, 5 semanas a frente). A cada semana o app procura:
+        · PERNAS (a sessao pesada): longe do longao — nunca na vespera,
+          na antevespera nem no dia seguinte — e de preferencia em dia
+          sem corrida, nao na vespera de treino de qualidade
+        · QUADRIL E CORE: em dia leve, nunca na vespera do longao
+        · SUPERIOR: nao cansa as pernas, entao fica bem na vespera do
+          longao ou em dia livre
+      Semana que o treinador ainda nao montou usa o padrao: longao no
+      sabado, qualidade terca e quinta — que da segunda, quarta e sexta.
+
+   A academia que VOCE mover de dia continua sendo sua (ST.trocas e
+   ST.extras com "movido"); isto aqui so decide o que o app propoe.  */
+PARTE('a academia segue a prova e o treinador', function(){
+
+  function z(n){ return ('0' + n).slice(-2) }
+  function isoDe(d){ return d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate()) }
+  function dataDe(k){ var q = String(k).split('-'); return new Date(+q[0], +q[1] - 1, +q[2]) }
+  function soma(k, n){ var d = dataDe(k); d.setDate(d.getDate() + n); return isoDe(d) }
+  function dias(a, b){ return Math.round((dataDe(b) - dataDe(a)) / 864e5) }   // b - a
+  function dow(k){ var n = dataDe(k).getDay(); return n === 0 ? 7 : n }       // 1=seg 7=dom
+  function segundaDe(k){ return soma(k, 1 - dow(k)) }
+  function hoje(){ return isoDe(new Date()) }
+
+  /* ── 1. FASE ── */
+  var TIPOS = ['pernas', 'quadril', 'superior'];
+
+  function prova(){
+    try{
+      var o = (typeof ST === 'object' && ST) ? ST.objetivo : null;
+      if(o && /^\d{4}-\d{2}-\d{2}$/.test(o.data || '')) return o;
+    }catch(e){}
+    return null;
+  }
+  function nomeProva(o){
+    var n = String((o && o.nome) || '');
+    return n.indexOf(' · ') >= 0 ? n.split(' · ').slice(1).join(' · ') : n;
+  }
+
+  var BASE = {nome:'Base', pernas:'pernas e core (base)', quadril:'quadril e core (base)', superior:'superior',
+              nota:'Construir força: cargas que desafiam, as últimas 2 repetições difíceis. Parte superior toda semana para não perder massa muscular.'};
+
+  function fase(k){
+    var o = prova();
+    if(!o) return BASE;
+    var d = dias(k, o.data);                 // dias ate a prova
+    if(d < 0){
+      if(d >= -7)  return {nome:'Recuperação da prova', pernas:null, quadril:null, superior:'superior (leve)',
+                           nota:'Pernas descansam a primeira semana depois da prova. Só a parte superior, leve.'};
+      if(d >= -21) return {nome:'Volta depois da prova', pernas:'manutencao', quadril:'quadril e core (pico)', superior:'superior',
+                           nota:'Volta gradual: cargas moderadas, longe da falha.'};
+      return BASE;
+    }
+    if(d > 112) return BASE;
+    if(d > 42)  return {nome:'Força', pernas:'maxima (pico)', quadril:'quadril e core (base)', superior:'superior',
+                        nota:'Força máxima nas pernas: poucas repetições, carga alta. Máxima nunca nas 48h antes do longão.'};
+    if(d > 21)  return {nome:'Pico', pernas:'maxima (pico)', quadril:'quadril e core (pico)', superior:'superior',
+                        nota:'Últimas semanas pesadas. Sem saltos a partir de 4 semanas da prova.'};
+    if(d > 7)   return {nome:'Redução', pernas:'manutencao', quadril:'quadril e core (pico)', superior:'superior (leve)',
+                        nota:'Nada pesado. O ganho já está feito; agora é chegar inteiro.'};
+    return {nome:'Semana da prova', pernas: d >= 5 ? 'manutencao' : null, quadril:null,
+            superior: d >= 4 ? 'superior (leve)' : null,
+            nota:'Só uma sessão de pernas, leve, no começo da semana. Depois disso, nada que canse.'};
+  }
+
+  /* saltos (Jump Squat) so ate 4 semanas da prova */
+  function podeSaltar(k){
+    var o = prova();
+    if(!o) return true;
+    var d = dias(k, o.data);
+    return d < 0 ? d < -21 : d > 28;
+  }
+
+  /* ── 2. A SEMANA DO TREINADOR ── */
+  function agenda(){
+    try{
+      if(typeof window.bqAgendaDoGarmin === 'function'){
+        var l = window.bqAgendaDoGarmin();
+        if(Array.isArray(l)) return l;
+      }
+    }catch(e){}
+    try{ if(typeof RAW === 'object' && RAW && Array.isArray(RAW.agendados)) return RAW.agendados }catch(e){}
+    return [];
+  }
+
+  var QUALIDADE = /z3|z4|z5|vo2|intervalad|blocos?\b|tiros?\b|\d+\s*x\s*\d+|limiar|tempo run|threshold|fartlek|ladeira|subida|hill|stride|ritmo de prova|race pace|progressiv/;
+  var LONGO = /long[aã]o|longo|long run/;
+
+  function tipoDoTreino(a){
+    var t = String(a.nome || '').toLowerCase();
+    var km = (+a.distanciaM || 0) / 1000;
+    if(a.prova || /prova|race\b/.test(t)) return 'prova';
+    if(LONGO.test(t) || km >= 16) return 'longo';
+    if(QUALIDADE.test(t) && !/z2|leve|regenera|soltura/.test(t.replace(/\d+\s*x\s*\d+/, ''))) return 'qualidade';
+    return 'facil';
+  }
+  var PESO = {facil:1, qualidade:2, longo:3, prova:4};
+
+  /* o que cada data tem: 'longo', 'qualidade', 'facil', 'prova' ou nada */
+  function mapa(){
+    var m = {};
+    agenda().forEach(function(a){
+      if(!a || !a.data || a.descanso) return;
+      if(a.esporte && a.esporte !== 'corrida' && a.esporte !== 'outro') {
+        if(!m[a.data]) m[a.data] = 'facil';             // bike/natacao: conta como dia leve
+        return;
+      }
+      var t = tipoDoTreino(a);
+      if(!m[a.data] || PESO[t] > PESO[m[a.data]]) m[a.data] = t;
+    });
+    return m;
+  }
+
+  /* semana sem nada do treinador: o padrao dele hoje */
+  var PADRAO = {2:'qualidade', 3:'facil', 4:'qualidade', 6:'longo'};
+
+  function semanaTem(m, seg){
+    for(var i = 0; i < 7; i++) if(m[soma(seg, i)]) return true;
+    return false;
+  }
+  function tipoDia(m, k){
+    var seg = segundaDe(k);
+    if(semanaTem(m, seg)) return m[k] || '';
+    return PADRAO[dow(k)] || '';
+  }
+
+  /* custo de pôr cada sessao em cada dia; Infinity = proibido */
+  function custo(tipo, k, m){
+    var t = tipoDia(m, k), ontem = tipoDia(m, soma(k, -1));
+    var am = tipoDia(m, soma(k, 1)), depois = tipoDia(m, soma(k, 2));
+    var o = prova();
+    var ateProva = o ? dias(k, o.data) : 999;
+    if(t === 'prova' || ateProva === 0) return Infinity;
+    if(!fase(k)[tipo]) return Infinity;              // a fase nao preve isto neste dia
+    var longoEm = function(n){ return tipoDia(m, soma(k, n)) === 'longo' || tipoDia(m, soma(k, n)) === 'prova' };
+    var c = {'': 0, facil: 1, qualidade: 4, longo: 6}[t];
+    if(tipo === 'pernas'){
+      if(t === 'longo' || longoEm(1) || longoEm(2) || ontem === 'longo' || ontem === 'prova') return Infinity;
+      if(am === 'qualidade') c += 2;
+      if(depois === 'qualidade') c += 0.5;
+    }else if(tipo === 'quadril'){
+      if(t === 'longo' || longoEm(1)) return Infinity;
+      c = {'': 0, facil: 0.5, qualidade: 3, longo: 6}[t];
+      if(am === 'qualidade') c += 1;
+      if(ontem === 'longo' || ontem === 'prova') c += 2;
+    }else{
+      c = {'': 0, facil: 0.5, qualidade: 1.5, longo: 3}[t];
+      if(longoEm(1)) c -= 0.5;                       // vespera do longao: o lugar dele
+      if(ontem === 'prova') c += 2;
+    }
+    return c;
+  }
+
+  /* Escolhe os 3 dias da semana. Testa todas as combinacoes (7x6x5) e
+     fica com a de menor custo. Desempate: o padrao seg/qua/sex, para o
+     plano nao ficar pulando de dia sem motivo. */
+  var MEMO = {};
+  function semana(seg){
+    var m = mapa();
+    var assin = [];
+    for(var i = -3; i < 10; i++){ var k = soma(seg, i); assin.push(tipoDia(m, k)) }
+    var o = prova();
+    var chave = seg + '|' + assin.join(',') + '|' + (o ? o.data : '');
+    if(MEMO[chave]) return MEMO[chave];
+
+    /* so entra na conta o que a fase preve nesta semana */
+    var f0 = fase(seg), f6 = fase(soma(seg, 6));
+    var precisa = TIPOS.filter(function(t){ return !!(f0[t] || f6[t]) });
+    var dd = [0,1,2,3,4,5,6].map(function(i){ return soma(seg, i) });
+    var C = {};
+    precisa.forEach(function(t){ C[t] = dd.map(function(k){ return custo(t, k, m) }) });
+    /* tipo sem nenhum dia possivel nesta semana fica de fora, em vez
+       de derrubar os outros dois */
+    precisa = precisa.filter(function(t){ return C[t].some(function(x){ return isFinite(x) }) });
+    var PREF = {pernas: 0, quadril: 2, superior: 4};
+    var melhor = null, mc = Infinity;
+    (function tenta(i, usados, s){
+      if(i === precisa.length){
+        if(usados.pernas != null && usados.quadril != null && Math.abs(usados.pernas - usados.quadril) === 1) s += 1.5;
+        if(s < mc){ mc = s; melhor = JSON.parse(JSON.stringify(usados)) }
+        return;
+      }
+      var t = precisa[i];
+      for(var d = 0; d < 7; d++){
+        var ocupado = false;
+        for(var u in usados) if(usados[u] === d) ocupado = true;
+        if(ocupado || !isFinite(C[t][d])) continue;
+        usados[t] = d;
+        tenta(i + 1, usados, s + C[t][d] + (d !== PREF[t] ? 0.1 : 0));
+        delete usados[t];
+      }
+    })(0, {}, 0);
+    var out = {};
+    if(melhor) Object.keys(melhor).forEach(function(t){ out[dd[melhor[t]]] = t });
+    MEMO[chave] = out;
+    return out;
+  }
+
+  /* a sessao de um dia: {tipo, chave, fase} ou null */
+  function sessao(k){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(String(k))) return null;
+    var tipo = semana(segundaDe(k))[k];
+    if(!tipo) return null;
+    var f = fase(k);
+    var ch = f[tipo];
+    if(!ch) return null;
+    return {tipo: tipo, chave: ch, fase: f.nome};
+  }
+
+  function proxima(desde){
+    for(var i = 0; i < 21; i++){
+      var k = soma(desde, i);
+      var s = sessao(k);
+      if(s) return {data: k, sessao: s};
+    }
+    return null;
+  }
+
+  window.bqPlanoForca = {
+    fase: fase,
+    sessao: sessao,
+    semana: function(k){ return semana(segundaDe(k || hoje())) },
+    proxima: proxima,
+    podeSaltar: podeSaltar,
+    prova: prova,
+    nomeProva: nomeProva,
+    diasAteProva: function(k){ var o = prova(); return o ? dias(k || hoje(), o.data) : null },
+    tipoDoTreino: tipoDoTreino,
+    limpar: function(){ MEMO = {} },
+    /* console: como ficam as proximas semanas */
+    relatorio: function(n){
+      var seg = segundaDe(hoje()), out = [], m = mapa();
+      var NOME = ['', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb', 'dom'];
+      for(var w = 0; w < (n || 6); w++){
+        var s0 = soma(seg, 7 * w);
+        for(var i = 0; i < 7; i++){
+          var k = soma(s0, i), s = sessao(k);
+          out.push({data: k, dia: NOME[dow(k)], corrida: tipoDia(m, k) || '—',
+                    academia: s ? s.chave : '', fase: fase(k).nome});
+        }
+      }
+      if(typeof console.table === 'function') console.table(out);
+      return out;
+    }
+  };
+});
+
 /* ───────────── 50. A ABA COACH E SO DA ACADEMIA ─────────────
    Decisao do Luiz, 25/08/2026. A corrida sai do app: quem monta e o
    treinador humano, no TrainingPeaks, e ela chega ao relogio por ali.
@@ -10349,7 +10623,17 @@ PARTE('a aba coach e so da academia', function(){
     return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
   }
 
-  var DIAS_ACADEMIA = {1:1, 3:1, 5:1};      // 1=seg 3=qua 5=sex
+  var DIAS_ACADEMIA = {1:1, 3:1, 5:1};      // so para a limpeza unica abaixo
+
+  /* 27/10/2026: o dia de academia nao e mais fixo. Quem decide e a
+     parte 'a academia segue a prova e o treinador', olhando a agenda
+     do treinador e a prova escolhida. */
+  function temAcademia(k){
+    try{
+      if(window.bqPlanoForca) return !!window.bqPlanoForca.sessao(k);
+    }catch(e){}
+    return !!DIAS_ACADEMIA[diaSemana(k)];
+  }
 
   function diaSemana(iso){
     var q = String(iso).split('-');
@@ -10679,6 +10963,7 @@ PARTE('a aba coach e so da academia', function(){
     }, 2500);
   })();
   window.bqAgendaVista = function(){ return memoAgenda };
+  window.bqAgendaDoGarmin = agendaDoGarmin;   // a academia escolhe os dias por ela
 
   function doDia(iso){
     return agendaDoGarmin().filter(function(a){
@@ -10714,7 +10999,7 @@ PARTE('a aba coach e so da academia', function(){
   function focoDoNome(nome, km){
     var t = String(nome || '').toLowerCase();
     if(/prova|race/.test(t))                   return 'prova';
-    if(/stride|tiro|sprint/.test(t))           return 'tiros';
+    if(/stride|tiro|sprint|\d+\s*x\s*\d+/.test(t)) return 'tiros';   // "6x 600" sao tiros
     if(/ladeira|subida|hill/.test(t))          return 'ladeira';
     if(/long[aã]o|longo/.test(t))              return 'longo';
     if(/z4|vo2|intervalad|blocos/.test(t))     return 'vo2';
@@ -10780,11 +11065,11 @@ PARTE('a aba coach e so da academia', function(){
            corrida dele fica como treino principal e a academia vai
            para o segundo treino, que e o encaixe que o app ja tem
            para isso desde a parte 13.                               */
-        if(DIAS_ACADEMIA[diaSemana(iso)]) academiaDeSegundo(iso);
+        if(temAcademia(iso)) academiaDeSegundo(iso);
         else if(!extraDeMao(iso)) tirarExtra(iso);
         return;
       }
-      if(!DIAS_ACADEMIA[diaSemana(iso)]){
+      if(!temAcademia(iso)){
         /* dia que nao e de academia: some, MENOS o que voce moveu */
         if(!trocaDeMao(iso)) delete plano[iso];
         if(!extraDeMao(iso)) tirarExtra(iso);
@@ -10995,7 +11280,7 @@ PARTE('a aba coach e so da academia', function(){
          treino. Aqui o tirarExtra ia sozinho e apagava a academia do
          dia que o plano do app ainda nao tinha — ela sumia e voltava
          segundos depois, conforme quem rodasse por ultimo. */
-      if(DIAS_ACADEMIA[diaSemana(a.data)]) academiaDeSegundo(a.data);
+      if(temAcademia(a.data)) academiaDeSegundo(a.data);
       else if(!extraDeMao(a.data)) tirarExtra(a.data);
     });
     /* ── A ACADEMIA DOS DIAS QUE JA PASSARAM NESTA SEMANA ──
@@ -11008,13 +11293,18 @@ PARTE('a aba coach e so da academia', function(){
        periodizacao preve ganha a sessao, se ainda nao tiver academia
        (principal ou segundo treino). Dia que voce esvaziou ou cancelou
        (ST.trocas) fica como voce deixou.                              */
+    /* 27/10/2026: o mesmo vale para as semanas seguintes. Com os dias
+       fixos, o plano do app ja trazia segunda, quarta e sexta; agora o
+       dia pode ser qualquer um que a agenda do treinador deixar livre —
+       um sabado de superior antes de um longao de domingo, por exemplo —
+       e ele precisa nascer aqui. Vai ate 6 semanas a frente. */
     (function(){
       var q = deste.split('-');
       var d0 = new Date(+q[0], +q[1] - 1, +q[2]);
-      for(var i = 0; i < 7; i++){
+      for(var i = 0; i < 42; i++){
         var d = new Date(d0.getTime()); d.setDate(d0.getDate() + i);
         var k = d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
-        if(!DIAS_ACADEMIA[diaSemana(k)]) continue;
+        if(!temAcademia(k)) continue;
         if(plano[k] && (ehForca(plano[k]) || plano[k].prova)) continue;
         var ex = (typeof ST === 'object' && ST && ST.extras) ? ST.extras[k] : null;
         if(ex && ex.mod === 'forca') continue;
@@ -11108,7 +11398,6 @@ PARTE('painel da academia', function(){
     throw new Error('sem FB_DB/FB_COACH');
 
   var HEVY = null;
-  var DIAS_ACADEMIA = {1:1, 3:1, 5:1};
 
   function esc(s){
     return String(s == null ? '' : s)
@@ -11119,6 +11408,7 @@ PARTE('painel da academia', function(){
     return (Math.round(v * 10) / 10).toString().replace('.', ',') + ' kg';
   }
   function diaSemana(d){ var n = d.getDay(); return n === 0 ? 7 : n }
+  var TITULO_TIPO = {pernas:'pernas', quadril:'quadril e core', superior:'parte superior'};
 
   function caixa(){
     var el = document.getElementById('bqAcad');
@@ -11144,38 +11434,17 @@ PARTE('painel da academia', function(){
 
      Se voce mover a academia de dia — porque o longao mudou — a fase
      acompanha a data, nao o dia da semana.                           */
-  var PROVA = '2026-10-18';
-  var FASES = [
-    {ate:'2026-09-20', nome:'Construção',
-     rotinas:['pernas e core (base)', 'quadril e core (base)', 'maxima (pico)'],
-     nota:'Fase de carga. Máxima e Pernas nunca nas 48h antes do longão.'},
-    {ate:'2026-09-27', nome:'Última semana pesada',
-     rotinas:['pernas e core (base)', 'quadril e core (base)', 'maxima (pico)'],
-     nota:'Última semana com carga alta. Tire o Jump Squat da Máxima a partir de agora.'},
-    {ate:'2026-10-11', nome:'Redução',
-     rotinas:['manutencao', 'quadril e core (pico)', 'manutencao'],
-     nota:'Nada pesado. O ganho já está feito; agora é chegar inteiro.'},
-    {ate:'2026-10-18', nome:'Semana da prova',
-     rotinas:['manutencao', null, null],
-     nota:'Só a segunda, e leve. Depois de 14/10, nada.'}
-  ];
-
-  /* as fases foram montadas para 18/10; se o objetivo mudar de data,
-     elas andam junto, mantendo a mesma distancia ate a prova */
-  function deslocar(k){
-    try{
-      var alvo = ST.objetivo && ST.objetivo.data;
-      if(!alvo) return k;
-      return iso(addD(dt(k), diff(alvo, PROVA)));
-    }catch(e){ return k }
-  }
+  /* 27/10/2026: as fases e os dias sairam daqui. Quem decide agora e
+     a parte 'a academia segue a prova e o treinador' (bqPlanoForca),
+     que conta as semanas ate a prova escolhida e le a agenda dele. */
+  function plano(){ return window.bqPlanoForca || null }
   function faseDe(k){
-    /* sem prova escolhida, a academia segue na fase de carga em vez de
-       entrar no polimento de uma prova que nao existe mais */
-    try{ if(!(ST.objetivo && ST.objetivo.data)) return FASES[0] }catch(e){}
-    var k2 = deslocar(k);
-    for(var i = 0; i < FASES.length; i++) if(k2 <= FASES[i].ate) return FASES[i];
-    return null;                       // depois da prova
+    var p = plano();
+    return p ? p.fase(k) : {nome:'Base', nota:''};
+  }
+  function podeSaltar(k){
+    var p = plano();
+    return p ? p.podeSaltar(k) : true;
   }
 
   function semAcento(t){
@@ -11183,6 +11452,7 @@ PARTE('painel da academia', function(){
   }
   function ehDeCasa(nome){ return /\bcasa\b/.test(semAcento(nome)) }
   function ehDaFit4less(nome){ return /fit\s*4\s*less/.test(semAcento(nome)) }
+  function ehDaYmca(nome){ return /\bymca\b/.test(semAcento(nome)) }
 
   /* tipo:
        'base'     — a rotina de sempre do Hevy (sem "Casa" nem "Fit4Less")
@@ -11195,10 +11465,12 @@ PARTE('painel da academia', function(){
     var alvo = semAcento(chave);
     var achou = Object.keys(HEVY.rotinas).filter(function(n){
       if(semAcento(n).indexOf(alvo) < 0) return false;
-      var c = ehDeCasa(n), f = ehDaFit4less(n);
+      /* rotinas antigas da Fit4Less ficam de fora de tudo */
+      var c = ehDeCasa(n), f = ehDaFit4less(n), y = ehDaYmca(n);
+      if(f) return false;
       if(tipo === 'casa') return c;
-      if(tipo === 'fit4less') return f;
-      return !c && !f;
+      if(tipo === 'ymca') return y;
+      return !c && !y;
     })[0];
     return achou ? HEVY.rotinas[achou] : null;
   }
@@ -11226,10 +11498,9 @@ PARTE('painel da academia', function(){
      Fit4Less (fit4less.ca): halteres de 5 a 75 lb, maquinas de forca,
      Smith, racks, remo, escada; cadeira de massagem nos horarios com
      equipe.                                                          */
-  var LOCAL_PADRAO = 'fit4less';
+  var LOCAL_PADRAO = 'ymca';
   var KG_MAX_CASA = 22.7;                 // halter mais pesado: 50 lb
   var CHAVE_LOCAL = 'bq_local_';
-  var FIM_PLIOMETRIA = '2026-09-20';      // regra da periodizacao acima
 
   /* A escolha fica guardada por data. Sem escolha: dia marcado como
      feito em casa abre em Casa; os outros, na Fit4Less.
@@ -11239,14 +11510,15 @@ PARTE('painel da academia', function(){
   function localDe(iso){
     try{
       var v = localStorage.getItem(CHAVE_LOCAL + iso);
-      if(v === 'casa' || v === 'fit4less') return v;
+      if(v === 'casa') return v;
+      if(v === 'ymca' || v === 'fit4less') return 'ymca';     // escolha antiga da Fit4Less vale para a YMCA
     }catch(e){}
     try{ if(typeof CASA_FEITA === 'object' && CASA_FEITA && CASA_FEITA[iso]) return 'casa' }catch(e){}
     return LOCAL_PADRAO;
   }
 
   function guardarLocal(iso, local){
-    try{ localStorage.setItem(CHAVE_LOCAL + iso, local === 'casa' ? 'casa' : 'fit4less') }catch(e){}
+    try{ localStorage.setItem(CHAVE_LOCAL + iso, local === 'casa' ? 'casa' : 'ymca') }catch(e){}
   }
 
   try{
@@ -11261,86 +11533,138 @@ PARTE('painel da academia', function(){
     velhas.forEach(function(kk){ localStorage.removeItem(kk) });
   }catch(e){}
 
-  /* ══ PROGRAMA DA FIT4LESS ══
-     Um por rotina da periodizacao, com o MESMO objetivo da rotina de
-     casa correspondente, mas so com o que a academia tem e a casa nao:
-     leg press, hack squat, Smith, cadeira de 45 graus, abdutora e
-     adutora, panturrilha sentado e em pe, abdominal na maquina,
-     cadeira romana, remo e escada.
+  /* ══ PROGRAMA DA YMCA (Saint John Regional Y, Churchill Blvd) ══
+     27/10/2026: o Luiz saiu da Fit4Less e treina na YMCA.
+     O que a YMCA tem (vitrine da Torque Fitness para a Greater Saint
+     John YMCA): rack longo (X-RACK) com agachamento e levantamento
+     olimpico, barras e anilhas, barra fixa, fitas de suspensao (TRX),
+     kettlebells, halteres hexagonais, bancos reto e inclinado, banco
+     abdominal ajustavel e banco de lombar. Maquinas e polias nao estao
+     confirmadas — por isso nenhum exercicio abaixo depende delas.
 
-     Criterios, para um maratonista de 64 anos a 4 semanas da prova:
-       · 4 a 6 exercicios, 35 a 45 minutos
-       · pesado so na Construcao; Reducao e Manutencao longe da falha
-       · soleo sempre presente — e ele que segura o fim da maratona
-       · agachamento pesado so em maquina guiada: seguro sem parceiro
-       · pliometria (Jump Squat) so ate 20/09, e no aquecimento: e peso
-         do corpo, nao precisa de academia
-     Nomes no padrao do catalogo do Hevy, para a carga ganhar historico
-     quando voce registrar.                                           */
-  /* NOMES CONFERIDOS no catalogo do Hevy pelo robo hevy-fit4less
-     (ensaio de 16/09). Dois deles nao dizem "Machine" no catalogo,
-     embora sejam de academia: "Seated Calf Raise" (maquina de
-     panturrilha sentado) e "Knee Raise Parallel Bars" (cadeira
-     romana). academia:true diz isso ao app, sem que a Casa passe a
-     trocar o "Seated Calf Raise" que voce faz com halter.           */
-  var FIT4LESS = {
+     Mesma regra que valia para a Fit4Less: na academia, so o que nao
+     da para fazer em casa. Em casa a barra e o supino nao tem trava de
+     seguranca e o halter vai ate 50 lb. Entao a YMCA fica com:
+       · agachamento e supino PESADOS, no rack com barras de seguranca
+       · halteres acima de 50 lb
+       · barra fixa, TRX, kettlebell, banco de lombar e banco abdominal
+
+     Criterios para um maratonista de 64 anos:
+       · 4 a 6 exercicios, 40 a 50 minutos
+       · pesado na Base, Forca e Pico; Reducao e Manutencao longe da falha
+       · panturrilha sempre presente nas pernas
+       · saltos (Jump Squat) so ate 4 semanas da prova, no aquecimento
+       · parte superior toda semana: e o que segura a massa muscular
+     Nomes no padrao do catalogo do Hevy, para a carga ganhar historico.
+     academia:true marca o que so faz sentido aqui, embora o nome nao
+     diga (barra livre pesada, halter pesado).                        */
+  var SEG = 'no rack, com as barras de segurança na altura do fundo';
+  var YMCA = {
     'pernas e core (base)': {
-      aquecimento: '8 min no remo, leve',
+      aquecimento: '8 min na bike ou esteira, leve + 2 séries leves de agachamento',
       exercicios: [
-        {nome:'Squat (Smith Machine)', series:'3×8', nota:'barra guiada: carga com segurança, sem parceiro; desça até a coxa paralela'},
-        {nome:'Leg Press (Machine)', series:'3×10', nota:'pés na largura do quadril; desça até o joelho em 90°'},
-        {nome:'Back Extension (Weighted Hyperextension)', series:'3×10', nota:'banco de 45°; suba só até alinhar o corpo'},
-        {nome:'Seated Calf Raise', academia:true, series:'3×15', nota:'na máquina de panturrilha sentado; sóleo, o músculo do fim da maratona'},
-        {nome:'Calf Press (Machine)', series:'3×12', nota:'no leg press, amplitude completa'},
-        {nome:'Crunch (Machine)', series:'3×12', nota:'ao sair da máquina, levante devagar'}
+        {nome:'Squat (Barbell)', academia:true, series:'3×8', nota: SEG + '; desça até a coxa paralela'},
+        {nome:'Romanian Deadlift (Barbell)', academia:true, series:'3×8', nota:'costas neutras, barra rente às pernas'},
+        {nome:'Bulgarian Split Squat (Dumbbell)', academia:true, series:'3×8 cada', nota:'halteres acima de 50 lb; pé de trás no banco'},
+        {nome:'Back Extension (Weighted Hyperextension)', series:'3×10', nota:'banco de lombar; suba só até alinhar o corpo'},
+        {nome:'Standing Calf Raise (Barbell)', academia:true, series:'3×12', nota:'no rack, ponta do pé numa anilha; pausa embaixo'},
+        {nome:'Hanging Knee Raise', series:'3×10', nota:'na barra fixa, sem balanço'}
       ]},
     'quadril e core (base)': {
-      aquecimento: '8 min na escada, leve',
+      aquecimento: '8 min na bike, leve',
       exercicios: [
-        {nome:'Hip Thrust (Smith Machine)', series:'3×10', nota:'costas no banco, pausa de 1 s no alto; levante devagar'},
-        {nome:'Single Leg Press (Machine)', series:'3×10 cada', nota:'joelho alinhado com o pé, sem cair para dentro'},
-        {nome:'Hip Abduction (Machine)', series:'3×15', nota:'tronco um pouco à frente para pegar o glúteo médio'},
-        {nome:'Hip Adduction (Machine)', series:'3×15', nota:'volta controlada, sem soltar o peso'},
-        {nome:'Knee Raise Parallel Bars', academia:true, series:'3×10', nota:"na cadeira romana (captain's chair), sem balanço; se não houver, Crunch (Machine)"},
-        {nome:'Standing Calf Raise (Machine)', series:'3×12', nota:'pausa de 1 s embaixo, alongado'}
+        {nome:'Hip Thrust (Barbell)', academia:true, series:'3×10', nota:'barra pesada com almofada; pausa de 1 s no alto'},
+        {nome:'Kettlebell Swing', series:'3×12', nota:'o quadril empurra, os braços só acompanham'},
+        {nome:'Single Leg Romanian Deadlift (Dumbbell)', academia:true, series:'3×8 cada', nota:'halter pesado; quadril nivelado'},
+        {nome:'Back Extension (Hyperextension)', series:'2×12', nota:'banco de lombar, só o peso do corpo'},
+        {nome:'Decline Crunch', series:'3×12', nota:'banco abdominal ajustável, inclinação leve'}
       ]},
     'maxima (pico)': {
-      aquecimento: '8 min no remo + 2 séries leves do Hack Squat',
+      aquecimento: '8 min na bike + 2 séries leves de agachamento',
       pliometria: 'Jump Squat 3×5 ao fim do aquecimento',
       exercicios: [
-        {nome:'Hack Squat (Machine)', series:'4×5', nota:'pesado; 2 min de descanso entre as séries'},
-        {nome:'Single Leg Press (Machine)', series:'3×6 cada', nota:'carga alta, desça em 2 s'},
-        {nome:'Back Extension (Weighted Hyperextension)', series:'3×8', nota:'anilha no peito'},
-        {nome:'Standing Calf Raise (Machine)', series:'4×8', nota:'carga alta'},
-        {nome:'Crunch (Machine)', series:'3×10', nota:'ao sair da máquina, levante devagar'}
+        {nome:'Squat (Barbell)', academia:true, series:'4×5', nota:'pesado; ' + SEG + '; 2 a 3 min de descanso'},
+        {nome:'Romanian Deadlift (Barbell)', academia:true, series:'3×6', nota:'carga alta, desça em 2 s'},
+        {nome:'Bulgarian Split Squat (Dumbbell)', academia:true, series:'3×6 cada', nota:'halteres pesados'},
+        {nome:'Standing Calf Raise (Barbell)', academia:true, series:'4×8', nota:'carga alta, no rack'},
+        {nome:'Hanging Knee Raise', series:'3×10', nota:'na barra fixa, sem balanço'}
       ]},
     'quadril e core (pico)': {
-      aquecimento: '6 min na escada, leve',
+      aquecimento: '6 min na bike, leve',
       exercicios: [
-        {nome:'Hip Thrust (Smith Machine)', series:'3×8', nota:'carga moderada, longe da falha; levante devagar'},
-        {nome:'Hip Abduction (Machine)', series:'2×15', nota:''},
-        {nome:'Hip Adduction (Machine)', series:'2×15', nota:''},
+        {nome:'Hip Thrust (Barbell)', academia:true, series:'3×8', nota:'carga moderada, longe da falha'},
+        {nome:'Kettlebell Swing', series:'2×12', nota:''},
         {nome:'Back Extension (Hyperextension)', series:'2×12', nota:'só o peso do corpo'},
-        {nome:'Knee Raise Parallel Bars', academia:true, series:'2×10', nota:"na cadeira romana (captain's chair); se não houver, Crunch (Machine)"},
-        {nome:'Seated Calf Raise', academia:true, series:'2×15', nota:'na máquina de panturrilha sentado'}
+        {nome:'Hanging Knee Raise', series:'2×10', nota:'na barra fixa'}
       ]},
     'manutencao': {
-      aquecimento: '6 min no remo, leve',
+      aquecimento: '6 min na bike, leve',
       exercicios: [
-        {nome:'Leg Press (Machine)', series:'2×8', nota:'carga do pico, longe da falha'},
-        {nome:'Hip Abduction (Machine)', series:'2×12', nota:''},
+        {nome:'Squat (Barbell)', academia:true, series:'2×5', nota:'carga do pico, longe da falha; ' + SEG},
+        {nome:'Hip Thrust (Barbell)', academia:true, series:'2×8', nota:''},
         {nome:'Back Extension (Hyperextension)', series:'2×10', nota:'só o peso do corpo'},
-        {nome:'Seated Calf Raise', academia:true, series:'2×12', nota:'na máquina de panturrilha sentado'}
+        {nome:'Standing Calf Raise (Barbell)', academia:true, series:'2×12', nota:''}
+      ]},
+    'superior': {
+      aquecimento: '5 min na bike + 2 séries leves de supino',
+      exercicios: [
+        {nome:'Bench Press (Barbell)', academia:true, series:'4×6', nota:'no rack com as barras de segurança: carga alta sem precisar de parceiro'},
+        {nome:'Pull Up (Band)', series:'3×6-8', nota:'barra fixa, elástico no pé para ajudar; quando fizer 8 sem elástico, tire'},
+        {nome:'Dumbbell Row', academia:true, series:'3×8 cada', nota:'halter acima de 50 lb, mão e joelho no banco'},
+        {nome:'Shoulder Press (Dumbbell)', academia:true, series:'3×8', nota:'sentado, encosto em 90°; halteres mais pesados que os de casa'},
+        {nome:'Inverted Row', series:'3×10', nota:'na fita de suspensão (TRX): quanto mais deitado, mais difícil; escápulas juntas'},
+        {nome:'Farmers Walk', academia:true, series:'3×30 m', nota:'halteres pesados (60 a 70 lb), ombros para trás'}
       ]}
   };
+  /* superior leve: mesmos exercicios, 2 series, longe da falha */
+  YMCA['superior (leve)'] = {
+    aquecimento: YMCA.superior.aquecimento,
+    exercicios: YMCA.superior.exercicios.map(function(e){
+      var c = {}; Object.keys(e).forEach(function(k){ c[k] = e[k] });
+      c.series = leve(e.series); c.nota = 'carga moderada, longe da falha'; return c;
+    })
+  };
+  function leve(series){ return String(series || '').replace(/^\s*[3-5]\s*×/, '2×') }
+
+  /* ══ PARTE SUPERIOR EM CASA ══
+     Vem das suas rotinas do Hevy: "Força- Costas e Postura" inteira e
+     os dois principais do "Dumbbell Arms Workout", mais o desenvolvimento
+     de ombro, que nenhuma das duas tinha. Em casa a estacao tem polia
+     alta e baixa e o halter vai ate 50 lb — da para fazer tudo. */
+  var SUPERIOR_CASA = [
+    {nome:'Plank Pushup', series:'3×10'},
+    {nome:'Seated Cable Row - Bar Grip', series:'3×12'},
+    {nome:'Lat Pulldown (Cable)', series:'3×10'},
+    {nome:'Bench Press (Dumbbell)', series:'3×12'},
+    {nome:'Farmers Walk', series:'3 séries'}
+  ];
+  var BRACOS = ['bicep curl (dumbbell)', 'skullcrusher (dumbbell)'];
+  function superiorDeCasa(chave){
+    var ehLeve = /leve/.test(semAcento(chave));
+    var cp = acharRotina('costas e postura', 'base');
+    var br = acharRotina('dumbbell arms', 'base');
+    var ex = ((cp && cp.exercicios && cp.exercicios.length) ? cp.exercicios : SUPERIOR_CASA)
+      .map(function(e){ return copiar(e) });
+    var tem = function(n){ return ex.some(function(e){ return semAcento(e.nome) === semAcento(n) }) };
+    if(!tem('Shoulder Press (Dumbbell)'))
+      ex.splice(Math.min(4, ex.length), 0, {nome:'Shoulder Press (Dumbbell)', series:'3×10', nota:'sentado, sem arquear as costas'});
+    BRACOS.forEach(function(alvo){
+      var e = br && (br.exercicios || []).filter(function(x){ return semAcento(x.nome) === alvo })[0];
+      var nome = e ? e.nome : (alvo === BRACOS[0] ? 'Bicep Curl (Dumbbell)' : 'Skullcrusher (Dumbbell)');
+      if(!tem(nome)) ex.push({nome: nome, series:'2×12', peso: e && e.peso || 0});
+    });
+    if(ehLeve) ex = ex.map(function(e){ e.series = leve(e.series); return e });
+    return {titulo: 'Força - Parte superior' + (ehLeve ? ' (leve)' : ''), exercicios: ex};
+  }
+  function ehSuperior(chave){ return /superior/.test(semAcento(chave)) }
 
   var AQUECIMENTO_CASA = '8 min na bike ou na esteira, leve';
 
   /* nome (sem acento) -> exercicio do programa; serve a conferir() e a
      carga mostrada em Casa */
   var DO_PROGRAMA = {};
-  Object.keys(FIT4LESS).forEach(function(k){
-    FIT4LESS[k].exercicios.forEach(function(e){
+  Object.keys(YMCA).forEach(function(k){
+    YMCA[k].exercicios.forEach(function(e){
       DO_PROGRAMA[String(e.nome).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')] = e;
     });
   });
@@ -11357,14 +11681,14 @@ PARTE('painel da academia', function(){
     return c;
   }
 
-  function programaFit4less(chave, iso, base){
-    var p = FIT4LESS[semAcento(chave)];
+  function programaYmca(chave, iso, base){
+    var p = YMCA[semAcento(chave)];
     if(!p) return null;
     var aq = [p.aquecimento];
-    if(p.pliometria && iso <= FIM_PLIOMETRIA) aq.push(p.pliometria);
+    if(p.pliometria && podeSaltar(iso)) aq.push(p.pliometria);
     return {
       titulo: base && base.titulo ? base.titulo : chave,
-      programa: 'fit4less',
+      programa: 'ymca',
       aquecimento: aq.join(' · '),
       exercicios: p.exercicios.map(function(e){
         var c = copiar(e); c.peso = 0; return c;
@@ -11402,6 +11726,12 @@ PARTE('painel da academia', function(){
     [/captain|crunch.*(machine|maquina)|abdominal.*(machine|maquina)/, 'Cable Crunch', 'polia alta da estação'],
     [/(bicep|rosca|preacher).*(machine|maquina)/, 'EZ Bar Biceps Curl', 'barra W'],
     [/(tricep).*(machine|maquina)/, 'Triceps Pushdown (Cable)', 'polia alta da estação'],
+    [/pull ?up|chin ?up/, 'Lat Pulldown (Cable)', 'polia alta da estação'],
+    [/hanging (knee|leg) raise/, 'Lying Knee Raise', 'deitado no banco'],
+    [/kettlebell swing/, 'Romanian Deadlift (Dumbbell)', 'halteres, quadril para trás'],
+    [/inverted row|suspension|trx/, 'Seated Cable Row - Bar Grip', 'polia baixa da estação'],
+    [/decline crunch|ab wheel/, 'Cable Crunch', 'polia alta da estação'],
+    [/box jump/, 'Jump Squat', ''],
     [/rowing machine|remo ergo|ergometer/, 'Bike no rolo', 'mesmo tempo, mesma intensidade'],
     [/elliptical|eliptic|stair|escada/, 'Esteira com inclinação', 'mesmo tempo, mesma intensidade']
   ];
@@ -11412,7 +11742,7 @@ PARTE('painel da academia', function(){
   /* O que so existe na academia. Serve nos dois sentidos: a Casa troca
      tudo que casa aqui, e a Fit4Less so pode ter exercicio que casa
      aqui (conferido no teste e em bqLocal.conferir()).               */
-  var SO_NA_ACADEMIA = /machine|maquina|smith|plate loaded|selectorized|leg press|hack squat|pendulum|belt squat|v squat|assisted|assistid|pec deck|butterfly|glute drive|rowing|ergometer|remo ergo|elliptical|eliptic|stair|escada|t bar row|chest supported|hyperextension|back extension|calf press|captain/;
+  var SO_NA_ACADEMIA = /machine|maquina|smith|plate loaded|selectorized|leg press|hack squat|pendulum|belt squat|v squat|assisted|assistid|pec deck|butterfly|glute drive|rowing|ergometer|remo ergo|elliptical|eliptic|stair|escada|t bar row|chest supported|hyperextension|back extension|calf press|captain|pull ?up|chin ?up|hanging|kettlebell|inverted row|suspension|trx|decline crunch|ab wheel|box jump/;
 
   function precisaDeAcademia(nome){
     var t = semAcento(nome);
@@ -11467,13 +11797,13 @@ PARTE('painel da academia', function(){
     c.aquecimento = AQUECIMENTO_CASA;
     c.trocas = 0;
     c.exercicios = (r.exercicios || []).filter(function(e){
-      return !(ehPliometria(e.nome) && iso > FIM_PLIOMETRIA);
+      return !(ehPliometria(e.nome) && !podeSaltar(iso));
     }).map(function(e){
       var novo = copiar(e);
       var tr = trocaDeCasa(e.nome);
       if(maxima && ehAgachamentoComBarra(e.nome)){
         tr = {nome: 'Bulgarian Split Squat (Dumbbell)',
-              nota: 'agachamento pesado sem trava de segurança fica para a Fit4Less'};
+              nota: 'agachamento pesado sem trava de segurança fica para a YMCA'};
       }
       if(tr && !tr.semPar){
         novo.nome = tr.nome;
@@ -11512,7 +11842,7 @@ PARTE('painel da academia', function(){
      so com nome, series e carga. O aquecimento e as dicas de execucao
      continuam vindo do programa, casando pelo nome do exercicio. */
   function comDicasDoPrograma(r, chave, iso){
-    var prog = programaFit4less(chave, iso, r);
+    var prog = programaYmca(chave, iso, r);
     if(!prog) return r;
     if(!r.aquecimento) r.aquecimento = prog.aquecimento;
     var dica = {};
@@ -11526,17 +11856,18 @@ PARTE('painel da academia', function(){
   }
 
   function rotinaNoLocal(chave, iso){
-    var base = acharRotina(chave, 'base');
+    var base = ehSuperior(chave) ? superiorDeCasa(chave) : acharRotina(chave, 'base');
     if(localDe(iso) === 'casa'){
       var pc = acharRotina(chave, 'casa');
       if(pc) return daRotinaDoHevy(pc, 'casa', base);
+      if(ehSuperior(chave)){ var sc = copiar(base); sc.aquecimento = AQUECIMENTO_CASA; sc.adaptada = true; sc.trocas = 0; return sc }
       return base ? adaptarParaCasa(base, chave, iso) : null;
     }
-    var pf = acharRotina(chave, 'fit4less');
-    if(pf) return comDicasDoPrograma(daRotinaDoHevy(pf, 'fit4less', base), chave, iso);
+    var py = acharRotina(chave, 'ymca');
+    if(py) return comDicasDoPrograma(daRotinaDoHevy(py, 'ymca', base), chave, iso);
     /* sem Hevy carregado nao ha titulo de verdade: nao invento um */
     if(!base) return null;
-    return programaFit4less(chave, iso, base) || base;
+    return programaYmca(chave, iso, base) || base;
   }
 
   /* ══ FEITO EM CASA ══
@@ -11634,11 +11965,11 @@ PARTE('painel da academia', function(){
      armadilha esperando o proximo trecho que esquecesse de filtrar.
      A regra passa a morar aqui.                                      */
   function rotinaDoDia(dia, iso){
-    if(!DIAS_ACADEMIA[dia]) return null;
-    var f = faseDe(iso || hojeIso());
-    if(!f) return null;
-    var pos = dia === 1 ? 0 : dia === 3 ? 1 : 2;
-    return rotinaNoLocal(f.rotinas[pos], iso || hojeIso());
+    var k = iso || hojeIso();
+    var p = plano();
+    var s = p ? p.sessao(k) : null;
+    if(!s) return null;
+    return rotinaNoLocal(s.chave, k);
   }
 
   function hojeIso(){
@@ -11647,8 +11978,8 @@ PARTE('painel da academia', function(){
   }
 
   function diasAteProva(){
-    var h = new Date(hojeIso()), p = new Date(PROVA);
-    return Math.round((p - h) / 86400000);
+    var p = plano();
+    return p ? p.diasAteProva(hojeIso()) : null;
   }
 
   function cargaDe(nome){
@@ -11664,10 +11995,12 @@ PARTE('painel da academia', function(){
 
   function blocoFase(){
     var f = faseDe(hojeIso());
-    var d = diasAteProva();
-    if(!f) return '';
-    return '<div class="bqa-t">' + esc(f.nome) + ' · ' + d + ' dias para a prova</div>'
-         + '<div class="bqa-u">' + esc(f.nota) + '</div>';
+    var d = diasAteProva(), p = plano(), o = p ? p.prova() : null;
+    var quando = (o && d != null && d >= 0)
+      ? ' · ' + d + ' dias para ' + (p.nomeProva(o) || 'a prova')
+      : (o && d != null && d < 0 ? ' · depois de ' + (p.nomeProva(o) || 'a prova') : ' · sem prova escolhida');
+    return '<div class="bqa-t">' + esc(f.nome) + esc(quando) + '</div>'
+         + '<div class="bqa-u">' + esc(f.nota || '') + '</div>';
   }
 
   /* ══ TROCAR UM EXERCICIO ══
@@ -11683,32 +12016,52 @@ PARTE('painel da academia', function(){
      Hevy; os marcados no ensaio de 16/09 como existentes vem primeiro. */
   var GRUPOS = [
     {nome: 'quadríceps, unilateral', teste: /single leg press|split squat|bulgar|step ?up|lunge|afundo/,
-     fit4less: ['Single Leg Press (Machine)', 'Leg Press (Machine)', 'Hack Squat (Machine)', 'Leg Extension (Machine)'],
+     ymca: ['Bulgarian Split Squat (Dumbbell)', 'Walking Lunge (Dumbbell)', 'Step Up (Dumbbell)', 'Front Squat (Barbell)'],
      casa: ['Bulgarian Split Squat (Dumbbell)', 'Step Up', 'Reverse Lunge (Dumbbell)', 'Goblet Squat']},
     {nome: 'quadríceps', teste: /squat|leg press|agach|leg extension|extensora/,
-     fit4less: ['Leg Press (Machine)', 'Hack Squat (Machine)', 'Squat (Machine)', 'Squat (Smith Machine)', 'Leg Extension (Machine)'],
+     ymca: ['Squat (Barbell)', 'Front Squat (Barbell)', 'Goblet Squat', 'Bulgarian Split Squat (Dumbbell)'],
      casa: ['Goblet Squat', 'Bulgarian Split Squat (Dumbbell)', 'Leg Extension (Machine)', 'Step Up']},
-    {nome: 'posterior e lombar', teste: /back extension|hyperextension|romanian|deadlift|leg curl|flexora|superman|good morning/,
-     fit4less: ['Back Extension (Hyperextension)', 'Back Extension (Weighted Hyperextension)', 'Seated Leg Curl (Machine)', 'Romanian Deadlift (Dumbbell)'],
+    {nome: 'posterior e lombar', teste: /back extension|hyperextension|romanian|deadlift|leg curl|flexora|superman|good morning|swing/,
+     ymca: ['Romanian Deadlift (Barbell)', 'Back Extension (Weighted Hyperextension)', 'Kettlebell Swing', 'Single Leg Romanian Deadlift (Dumbbell)'],
      casa: ['Romanian Deadlift (Dumbbell)', 'Lying Leg Curl (Machine)', 'Superman', 'Single Leg Glute Bridge']},
     {nome: 'glúteo', teste: /hip thrust|glute bridge|glute kickback|ponte/,
-     fit4less: ['Hip Thrust (Smith Machine)', 'Hip Thrust (Barbell)', 'Glute Kickback (Machine)', 'Hip Abduction (Machine)'],
+     ymca: ['Hip Thrust (Barbell)', 'Glute Bridge (Barbell)', 'Kettlebell Swing', 'Single Leg Hip Thrust (Dumbbell)'],
      casa: ['Hip Thrust (Barbell)', 'Single Leg Glute Bridge', 'Glute Kickback (Cable)', 'Lateral Band Walks']},
     {nome: 'abdutores', teste: /abduct|abdutor|band walk/,
-     fit4less: ['Hip Abduction (Machine)', 'Hip Abduction (Cable)', 'Side Plank'],
+     ymca: ['Lateral Band Walks', 'Side Plank', 'Copenhagen Plank'],
      casa: ['Lateral Band Walks', 'Hip Abduction (Cable)', 'Side Plank', 'Clamshell']},
     {nome: 'adutores', teste: /adduct|adutor/,
-     fit4less: ['Hip Adduction (Machine)', 'Hip Adduction (Cable)', 'Side Plank'],
+     ymca: ['Copenhagen Plank', 'Side Plank'],
      casa: ['Hip Adduction (Cable)', 'Side Plank', 'Copenhagen Plank']},
     {nome: 'panturrilha', teste: /calf|panturrilha/,
-     fit4less: ['Standing Calf Raise (Machine)', 'Seated Calf Raise', 'Calf Press (Machine)', 'Single Leg Standing Calf Raise (Machine)'],
+     ymca: ['Standing Calf Raise (Barbell)', 'Single Leg Standing Calf Raise (Dumbbell)', 'Seated Calf Raise (Barbell)'],
      casa: ['Standing Calf Raise (Dumbbell)', 'Single Leg Standing Calf Raise', 'Seated Calf Raise (Dumbbell)']},
-    {nome: 'abdômen', teste: /crunch|knee raise|leg raise|plank|prancha|bird dog|dead bug|abdominal|pallof/,
-     fit4less: ['Crunch (Machine)', 'Knee Raise Parallel Bars', 'Hanging Knee Raise', 'Cable Crunch', 'Lying Knee Raise'],
+    /* antes do abdomen: 'Plank Pushup' e empurrar, nao prancha */
+    {nome: 'empurrar (peito)', teste: /bench press|supino|push ?up|chest press|chest fly|dip/,
+     ymca: ['Bench Press (Barbell)', 'Incline Bench Press (Barbell)', 'Bench Press (Dumbbell)', 'Incline Bench Press (Dumbbell)'],
+     casa: ['Bench Press (Dumbbell)', 'Incline Bench Press (Dumbbell)', 'Push Up', 'Plank Pushup']},
+    {nome: 'abdômen', teste: /crunch|knee raise|leg raise|plank|prancha|bird dog|dead bug|abdominal|pallof|rollout/,
+     ymca: ['Hanging Knee Raise', 'Decline Crunch', 'Hanging Leg Raise', 'Ab Wheel'],
      casa: ['Dead Bug', 'Plank', 'Bird Dog', 'Side Plank', 'Lying Knee Raise']},
     {nome: 'saltos', teste: /jump|pogo|\bhops?\b|salto/,
-     fit4less: ['Jump Squat', 'Pogo Hops', 'Standing Calf Raise (Machine)'],
-     casa: ['Jump Squat', 'Pogo Hops', 'Single Leg Standing Calf Raise']}
+     ymca: ['Jump Squat', 'Pogo Hops', 'Box Jump'],
+     casa: ['Jump Squat', 'Pogo Hops', 'Single Leg Standing Calf Raise']},
+    /* parte superior (27/10/2026) */
+    {nome: 'puxar de cima', teste: /pull ?up|chin ?up|pulldown|puxada/,
+     ymca: ['Pull Up (Band)', 'Chin Up', 'Negative Pull Up', 'Pull Up'],
+     casa: ['Lat Pulldown (Cable)', 'Single Arm Lat Pulldown', 'Straight Arm Lat Pulldown (Cable)']},
+    {nome: 'puxar à frente (costas)', teste: /\brow\b|remada/,
+     ymca: ['Dumbbell Row', 'Inverted Row', 'Bent Over Row (Barbell)', 'Chest Supported Incline Row (Dumbbell)'],
+     casa: ['Seated Cable Row - Bar Grip', 'Seated Cable Row - V Grip (Cable)', 'Dumbbell Row', 'Bent Over Row (Barbell)']},
+    {nome: 'ombro', teste: /shoulder press|overhead press|desenvolvimento|lateral raise|face pull|rear delt/,
+     ymca: ['Shoulder Press (Dumbbell)', 'Overhead Press (Barbell)', 'Lateral Raise (Dumbbell)', 'Rear Delt Reverse Fly (Dumbbell)'],
+     casa: ['Shoulder Press (Dumbbell)', 'Lateral Raise (Dumbbell)', 'Face Pull', 'Rear Delt Reverse Fly (Dumbbell)']},
+    {nome: 'braços', teste: /curl|rosca|skullcrusher|tricep|kickback/,
+     ymca: ['Bicep Curl (Dumbbell)', 'Hammer Curl (Dumbbell)', 'Skullcrusher (Dumbbell)', 'Triceps Dip'],
+     casa: ['Bicep Curl (Dumbbell)', 'Hammer Curl (Dumbbell)', 'Skullcrusher (Dumbbell)', 'Triceps Pushdown (Cable)']},
+    {nome: 'carregar', teste: /farmer|carry|suitcase/,
+     ymca: ['Farmers Walk', 'Suitcase Carry'],
+     casa: ['Farmers Walk', 'Suitcase Carry']}
   ];
 
   function grupoDe(nome){
@@ -11877,7 +12230,7 @@ PARTE('painel da academia', function(){
       if(e.antes) sub.push('no lugar de ' + esc(e.antes));
       if(e.trocadoDe){
         sub.push('<b>trocado</b> · no lugar de ' + esc(e.trocadoDe)
-          + (local === 'fit4less' ? ' · no Hevy: ⋯ › Substituir exercício' : ''));
+          + (local === 'ymca' ? ' · no Hevy: ⋯ › Substituir exercício' : ''));
       }
       if(nota) sub.push(esc(nota));
 
@@ -11915,7 +12268,7 @@ PARTE('painel da academia', function(){
       if(iso && menuAberto === chave && alts.length){
         menu = '<div style="margin:6px 0 4px;padding:8px;border-radius:9px;background:rgba(128,128,128,.12)">'
           + '<div style="font-size:11px;opacity:.7;margin-bottom:6px">Mesmo movimento (' + esc(grupoDe(e.nome).nome) + '), '
-          + (local === 'casa' ? 'com o que você tem em casa' : 'com aparelhos da Fit4Less') + ':</div>'
+          + (local === 'casa' ? 'com o que você tem em casa' : 'com o que a YMCA tem') + ':</div>'
           + '<div style="display:flex;flex-wrap:wrap;gap:6px">'
           + alts.map(function(n){
               return '<span style="display:inline-flex;align-items:center">'
@@ -11951,15 +12304,14 @@ PARTE('painel da academia', function(){
   }
 
   function rodapeDoTreino(r, local){
-    var massagem = 'Depois: cadeira de massagem, nos horários com equipe. Levante devagar.';
     if(local === 'casa' && r.adaptada && r.trocas)
       return 'Adaptada para os aparelhos de casa. Faça sem o Hevy.';
     if(local === 'casa' && r.adaptada) return 'Treino de casa: faça sem o Hevy.';
     if(local === 'casa') return 'Rotina de casa do seu Hevy.';
-    if(r.programa === 'fit4less')
-      return 'Só aparelhos que você não tem em casa. Esta rotina ainda não existe no Hevy: '
-           + 'lá, comece um <b>treino vazio</b> e adicione estes exercícios.<br>' + massagem;
-    return 'Rotina Fit4Less do seu Hevy.<br>' + massagem;
+    if(r.programa === 'ymca')
+      return 'Só o que vale ir à YMCA para fazer: barra com trava de segurança, halteres pesados, barra fixa, TRX e kettlebell. '
+           + 'Esta rotina ainda não existe no Hevy: lá, comece um <b>treino vazio</b> e adicione estes exercícios.';
+    return 'Rotina YMCA do seu Hevy.';
   }
 
   function dataCurta(iso){ return iso.slice(8, 10) + '/' + iso.slice(5, 7) }
@@ -12007,8 +12359,8 @@ PARTE('painel da academia', function(){
     }
     if(iso > hoje){
       s = 'Previsto para ' + dataCurta(iso) + '.';
-      b = local === 'fit4less' ? botao('data-bqhevy="1"', 'Abrir o Hevy', 'vazio') : '';
-    }else if(local === 'fit4less'){
+      b = local === 'ymca' ? botao('data-bqhevy="1"', 'Abrir o Hevy', 'vazio') : '';
+    }else if(local === 'ymca'){
       s = iso === hoje ? 'Pendente. Registre o treino no Hevy e depois toque em “Já registrei”.'
                        : 'Não registrado. Se treinou, registre no Hevy e toque em “Já registrei”.';
       b = botao('data-bqhevy="1"', 'Abrir o Hevy', 'vazio')
@@ -12020,7 +12372,7 @@ PARTE('painel da academia', function(){
     return '<div class="bqAcoes" style="margin-top:10px">'
       + '<div style="font-size:12px;opacity:.7;margin-bottom:8px">' + s + '</div>'
       + (b ? '<div style="display:flex;gap:8px">' + b + '</div>' : '')
-      + (local === 'fit4less' ? resultadoHTML(iso) : '') + '</div>';     // resultado do Hevy nao vale em Casa
+      + (local === 'ymca' ? resultadoHTML(iso) : '') + '</div>';     // resultado do Hevy nao vale em Casa
   }
 
   /* O que aconteceu no ultimo "Ja registrei" deste dia. Fica escrito
@@ -12060,16 +12412,17 @@ PARTE('painel da academia', function(){
   function blocoSessao(){
     var hoje = new Date();
     var dia = diaSemana(hoje);
-    if(!DIAS_ACADEMIA[dia])
-      return '<div class="bqa-t">Academia</div>'
-           + '<div class="bqa-u">Hoje não tem. Próxima sessão: '
-           + (dia < 3 ? 'quarta' : dia < 5 ? 'sexta' : 'segunda') + ', 5:30.</div>';
-
     var iso = hojeIso();
     var r = rotinaDoDia(dia, iso);
-    if(!r) return '<div class="bqa-t">Academia</div>'
-                + '<div class="bqa-u">Descanso hoje — a fase atual não prevê sessão nesta '
-                + (dia === 1 ? 'segunda' : dia === 3 ? 'quarta' : 'sexta') + '.</div>';
+    if(!r){
+      var p = plano(), px = p ? p.proxima(iso) : null;
+      var NOMES = ['', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado', 'domingo'];
+      var txt = px
+        ? 'Próxima sessão: ' + NOMES[diaSemana(new Date(px.data + 'T00:00:00'))] + ' ' + dataCurta(px.data) + ', 5:30 · '
+          + esc(TITULO_TIPO[px.sessao.tipo] || '')
+        : 'Nenhuma sessão nas próximas semanas.';
+      return '<div class="bqa-t">Academia</div><div class="bqa-u">Hoje não tem. ' + txt + '</div>';
+    }
 
     var como = comoFoiFeito(iso);
     /* UMA VEZ SO, E FECHADA (16/10/2026). O treino do dia, logo abaixo
@@ -12263,7 +12616,7 @@ PARTE('painel da academia', function(){
            + 'color:' + (on ? '#fff' : 'inherit') + '">' + rot + '</button>';
     }
     return '<div style="display:flex;gap:8px;margin:0 0 8px">'
-         + bt('fit4less', '🏋️ Fit4Less') + bt('casa', '🏠 Casa') + '</div>';
+         + bt('ymca', '🏋️ YMCA') + bt('casa', '🏠 Casa') + '</div>';
   }
 
   /* Contar pelo Garmin dava sempre zero: o Hevy nao envia nada para la,
@@ -12299,8 +12652,16 @@ PARTE('painel da academia', function(){
     var corte = new Date(); corte.setDate(corte.getDate() - 28);
     var isoCorte = corte.toISOString().slice(0,10);
     var feitas = sessoesFeitas().filter(function(s){ return s.data >= isoCorte }).length;
-    var previstas = 12;                       // 3 por semana x 4 semanas
     if(!HEVY) return '';
+    /* previstas pelo plano de verdade (semana da prova tem menos) */
+    var previstas = 0, p = plano();
+    for(var i = 1; i <= 28; i++){
+      var dx = new Date(); dx.setDate(dx.getDate() - 28 + i);
+      var kx = dx.getFullYear() + '-' + ('0'+(dx.getMonth()+1)).slice(-2) + '-' + ('0'+dx.getDate()).slice(-2);
+      if(kx > hojeIso()) break;
+      if(p ? p.sessao(kx) : false) previstas++;
+    }
+    if(!previstas) previstas = 12;
     var pct = Math.round(feitas / previstas * 100);
     var cor = pct >= 80 ? '#3FD98A' : pct >= 60 ? '#F5C544' : '#F2685C';
     return '<div class="bqa-t">Aderência · 4 semanas</div>'
@@ -12463,7 +12824,6 @@ PARTE('painel da academia', function(){
     try{
       var d = new Date(iso + 'T00:00:00');
       var n = d.getDay(); if(n === 0) n = 7;
-      if(!DIAS_ACADEMIA[n]) return null;
       var r = rotinaDoDia(n, iso);
       if(!r) return null;
       return { nome: r.titulo || 'Academia',
@@ -12490,17 +12850,17 @@ PARTE('painel da academia', function(){
       return conferirExecucao(comTrocas(rotinaDoDia(diaSemana(d), iso) || {exercicios: []}, iso, localDe(iso)), iso);
     },
     video: urlVideo,
-    programa: FIT4LESS,
+    programa: YMCA,
     /* exercicio da Fit4Less que daria para fazer em casa — deve ser [] */
     conferir: function(){
       var ruins = [];
-      Object.keys(FIT4LESS).forEach(function(k){
-        FIT4LESS[k].exercicios.forEach(function(e){
+      Object.keys(YMCA).forEach(function(k){
+        YMCA[k].exercicios.forEach(function(e){
           if(!ehDeAcademia(e.nome, e.academia)) ruins.push(k + ': ' + e.nome);
         });
       });
       if(HEVY && HEVY.rotinas) Object.keys(HEVY.rotinas).forEach(function(n){
-        if(!ehDaFit4less(n)) return;
+        if(!ehDaYmca(n)) return;
         (HEVY.rotinas[n].exercicios || []).forEach(function(e){
           if(!ehDeAcademia(e.nome)) ruins.push(n + ': ' + e.nome);
         });
@@ -12511,12 +12871,12 @@ PARTE('painel da academia', function(){
     relatorio: function(){
       if(!HEVY || !HEVY.rotinas) return 'Hevy ainda nao carregou';
       var hoje = hojeIso(), out = [];
-      Object.keys(FIT4LESS).forEach(function(k){
-        var base = acharRotina(k, 'base');
-        var f = programaFit4less(k, hoje, base);
-        var c = base ? adaptarParaCasa(base, k, hoje) : null;
+      Object.keys(YMCA).forEach(function(k){
+        var base = ehSuperior(k) ? superiorDeCasa(k) : acharRotina(k, 'base');
+        var f = programaYmca(k, hoje, base);
+        var c = base ? (ehSuperior(k) ? base : adaptarParaCasa(base, k, hoje)) : null;
         (f ? f.exercicios : []).forEach(function(e){
-          out.push({rotina: k, local: 'Fit4Less', exercicio: e.nome, series: e.series});
+          out.push({rotina: k, local: 'YMCA', exercicio: e.nome, series: e.series});
         });
         (c ? c.exercicios : []).forEach(function(e){
           out.push({rotina: k, local: 'Casa', exercicio: e.nome, series: e.series,
@@ -15398,7 +15758,7 @@ PARTE('ingles', function(){
   'trocar ⇄':'swap ⇄', 'fechar':'close', 'desfazer':'undo',
   'Mover dia':'Move day', 'Cancelar este treino':'Cancel this workout',
   '+ Adicionar segundo treino':'+ Add second workout', '+ Incluir um treino neste dia':'+ Add a workout to this day',
-  'Rotina Fit4Less do seu Hevy.':'Your Fit4Less routine from Hevy.',
+  'Rotina YMCA do seu Hevy.':'Your YMCA routine from Hevy.',
   'Rotina de casa do seu Hevy.':'Your home routine from Hevy.',
   'Treino de casa: faça sem o Hevy.':'Home workout: do it without Hevy.',
   'Adaptada para os aparelhos de casa. Faça sem o Hevy.':'Adapted to your home equipment. Do it without Hevy.',
@@ -15407,7 +15767,7 @@ PARTE('ingles', function(){
   'Hoje não tem. Próxima sessão: sexta, 5:30.':'Nothing today. Next session: Friday, 5:30.',
   'Hoje não tem. Próxima sessão: segunda, 5:30.':'Nothing today. Next session: Monday, 5:30.',
   'Hoje não tem. Próxima sessão: quarta, 5:30.':'Nothing today. Next session: Wednesday, 5:30.',
-  'Academia às segundas, quartas e sextas, 5:30. A corrida fica no relógio, montada pelo seu treinador.':'Gym on Mondays, Wednesdays and Fridays, 5:30. Running lives on the watch, built by your coach.',
+  'Academia 3 vezes por semana, 5:30, nos dias que combinam com o plano do treinador. A corrida fica no relógio, montada pelo seu treinador.':'Gym 3 times a week, 5:30, on the days that fit your coach\'s plan. Running lives on the watch, built by your coach.',
   'Fase de carga. Máxima e Pernas nunca nas 48h antes do longão.':'Loading phase. Max and Legs never within 48h of the long run.',
   'Última semana com carga alta. Tire o Jump Squat da Máxima a partir de agora.':'Last heavy week. Drop the Jump Squat from Max from now on.',
   'Nada pesado. O ganho já está feito; agora é chegar inteiro.':'Nothing heavy. The gains are in; now it\'s about arriving in one piece.',
@@ -16209,7 +16569,7 @@ PARTE('ingles', function(){
   'Sem dados para recalibrar':'No data to recalibrate',
   'Volume alto, cabeça calma':'High volume, calm head',
   'a maratona sai hoje entre':'the marathon comes out today between',
-  'com aparelhos da Fit4Less':'with Fit4Less machines',
+  'com o que a YMCA tem':'with what the YMCA has',
   'liga o plano da maratona.':'turns the marathon plan on.',
   'nenhuma sessão com marcas':'no session with marks',
   'no chão, sem banco romano':'on the floor, no roman chair',
@@ -16407,7 +16767,7 @@ PARTE('ingles', function(){
   'km por semana no último mês. A razão está em':'km per week in the last month. The ratio is at',
   'seu halter vai até 50 lb: suba as repetições':'your dumbbell goes up to 50 lb: raise the reps',
   'treinos de qualidade bateram distância e FC.':'quality workouts matched distance and heart rate.',
-  'Academia às segundas, quartas e sextas, 5:30.':'Gym on Mondays, Wednesdays and Fridays, 5:30.',
+  'Academia 3 vezes por semana, 5:30, nos dias que combinam com o plano do treinador.':'Gym 3 times a week, 5:30, on the days that fit your coach\'s plan.',
   'Confortavelmente difícil, 40 min sustentáveis':'Comfortably hard, 40 min sustainable',
   'Glúteo fraco vira dor lombar no fim do longo.':'Weak glutes become low-back pain late in the long run.',
   'Maior distância que você já correu de uma vez':'The longest distance you have ever run at once',
@@ -16509,7 +16869,7 @@ PARTE('ingles', function(){
   'Nenhuma medida ainda. Elas chegam do app Sa\\u00fade do iPhone,':'No readings yet. They arrive from the iPhone Health app,',
   'O número maior tem que ser o de cima. Confira se não inverteu.':'The higher number has to be the top one. Check you did not swap them.',
   'Séries curtas e fortes para elevar o ritmo máximo sustentável.':'Short, hard sets to raise the maximum pace you can sustain.',
-  'agachamento pesado sem trava de segurança fica para a Fit4Less':'heavy squats without a safety catch are left for Fit4Less',
+  'agachamento pesado sem trava de segurança fica para a YMCA':'heavy squats without a safety catch are left for the YMCA',
   'ainda não começaram, e a semana em curso só entra na aderência':'have not started yet, and the week in progress only counts towards adherence',
   ', nas rodagens fáceis. Sobe quando você corre mais rápido com o':', on easy runs. It goes up when you run faster at the',
   'Trocar aqui vale só para este dia e não se perde ao recarregar.':'Swapping here applies to this day only and survives a reload.',
