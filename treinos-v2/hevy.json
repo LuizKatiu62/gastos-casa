@@ -526,63 +526,6 @@
  },
  "sessoes": [
   {
-   "data": "2026-04-28",
-   "titulo": "Gym - 64km - 04/28/26",
-   "hora": "19:12",
-   "min": 47,
-   "kg": 1406,
-   "exercicios": [
-    {
-     "nome": "Lat Pulldown (Cable)",
-     "series": "3×10",
-     "peso": 13.607787283069193,
-     "kg": 408
-    },
-    {
-     "nome": "Bench Press (Dumbbell)",
-     "series": "3×12",
-     "peso": 11.339822735890994,
-     "kg": 408
-    },
-    {
-     "nome": "Bent Over Row (Barbell)",
-     "series": "3×10",
-     "peso": 11.339822735890994,
-     "kg": 340
-    },
-    {
-     "nome": "Shoulder Press (Dumbbell)",
-     "series": "3×10",
-     "peso": 9.071858188712795,
-     "kg": 249
-    }
-   ]
-  },
-  {
-   "data": "2026-04-28",
-   "titulo": "Knees exercise 1-2 weeks (copy) (copy)",
-   "hora": "19:09",
-   "min": 24,
-   "exercicios": [
-    {
-     "nome": "Wall Sit",
-     "series": "3×33s"
-    },
-    {
-     "nome": "Straight Leg Raise",
-     "series": "2×12"
-    },
-    {
-     "nome": "Clamshell",
-     "series": "4×12"
-    },
-    {
-     "nome": "Hamstring Stretch",
-     "series": "2×12"
-    }
-   ]
-  },
-  {
    "data": "2026-09-02",
    "titulo": "FORCA - QUADRIL E CORE (BASE)",
    "hora": "11:16",
@@ -802,7 +745,7 @@
   }
  ],
  "meta": {
-  "ultimaSync": "2026-10-27T23:23:19",
+  "ultimaSync": "2026-10-28T00:49:13",
   "totalRotinas": 13,
   "totalTreinos": 6,
   "semanas": 12,
