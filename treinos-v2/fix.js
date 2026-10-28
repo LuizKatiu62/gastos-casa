@@ -74,7 +74,7 @@
       Saint John no lugar da Fit4Less
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '07q';
+const FIX_VERSAO = '07r';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -1002,11 +1002,16 @@ function moverExtra(k){
   for(let i = -3; i <= 7; i++){
     const d = addD(dt(k), i), dia = iso(d);
     if(dia === k || d < HOJE) continue;
-    opts.push({k:dia, d, livre:!ST.extras[dia]});
+    /* 28/10/2026: dia que ja tem academia como treino PRINCIPAL nao
+       esta livre — antes aparecia em destaque, e a academia movida
+       sumia por cima da que ja estava la. */
+    const p = sessaoDe(dia);
+    const temAcad = !!ST.extras[dia] || !!(p && p.mod === 'forca');
+    opts.push({k:dia, d, livre:!temAcad});
   }
   abrir(`<h3>Mover o segundo treino</h3>
     <p class="sd">Só este treino muda de dia. O treino principal de ${fmt(k)} fica onde está.<br>
-      Dias em destaque ainda não têm segundo treino.</p>
+      Dias em destaque ainda não têm academia. Num dia que já tem, esta toma o lugar da que estava lá.</p>
     <div class="dgrid">${opts.map(o => `<button class="${o.livre ? 'on' : ''}" data-mvx="${o.k}">
       <div style="font-size:15px">${o.d.getDate()}</div>
       <div style="font-size:9.5px;opacity:.7;margin-top:3px">${DIA3[dow(o.d) - 1]}</div></button>`).join('')}</div>`);
@@ -1021,6 +1026,11 @@ function moverExtra(k){
     ST.extras[dest] = x;
     if(feitas) ST.feitas[x.id] = feitas;
     ST.sel = dest;
+    /* 28/10/2026: reconstruir ANTES de gravar. O dia de destino pode
+       ja ter academia do plano, e ela so troca pela que voce moveu no
+       rebuild; sem ele, a gravacao anotava a sessao velha como "troca
+       sua" e a quinta seguia com o nome antigo ate reabrir o app. */
+    try{ rebuild() }catch(e){}
     fechar(); renderCoach(); persistir();
   });
 }
@@ -8917,8 +8927,15 @@ PARTE('lápide não mata o que nasceu depois', function(){
   /* As lapides que a parte 33 quebrada deixou hoje ainda estao de pe e
      vao barrar academia por 24 horas. Como elas foram postas por um
      defeito, e nao por voce, derrubo as de academia uma unica vez. */
+  /* 28/10/2026 (fix 07r): esta "limpeza unica" nunca foi unica. Nao
+     tinha marca nenhuma, entao rodava A CADA ABERTURA do app e
+     derrubava toda lapide de academia de hoje em diante — inclusive a
+     que voce acabou de pôr ao mover a academia de quarta para quinta.
+     Na abertura seguinte a academia renascia na quarta. As lapides
+     defeituosas da parte 33 ja venceram ha muito tempo, entao a
+     limpeza fica desligada de vez (o laco abaixo roda sobre nada). */
   try{
-    var m = tumulos(), sujas = 0;
+    var m = {}, sujas = 0;
     Object.keys(m).forEach(function(c){
       if(c.indexOf('extras|') !== 0) return;
       var dia = c.split('|')[1];
@@ -10542,7 +10559,7 @@ PARTE('a academia segue a prova e o treinador', function(){
   }
 
   /* a sessao de um dia: {tipo, chave, fase} ou null */
-  function sessao(k){
+  function sessaoBruta(k){
     if(!/^\d{4}-\d{2}-\d{2}$/.test(String(k))) return null;
     var tipo = semana(segundaDe(k))[k];
     if(!tipo) return null;
@@ -10550,6 +10567,43 @@ PARTE('a academia segue a prova e o treinador', function(){
     var ch = f[tipo];
     if(!ch) return null;
     return {tipo: tipo, chave: ch, fase: f.nome};
+  }
+
+  /* ── A ACADEMIA QUE VOCE MOVEU (28/10/2026, fix 07r) ──
+     O plano escolhe o dia de cada sessao pela agenda do treinador, e
+     todo o resto do app (nome, exercicios, se o dia tem academia) le
+     daqui, pela DATA. Mover a academia de quarta para quinta mudava so
+     o segundo treino guardado: aqui a quarta continuava sendo "dia de
+     pernas", entao a academia renascia na quarta, e a quinta seguia
+     com a sessao que ja era dela (quadril e core). A que voce moveu
+     sumia no meio.
+
+     Agora o que voce move manda:
+       · o dia de onde a academia SAIU fica sem academia
+       · o dia para onde ela FOI recebe a sessao que ela era (pernas
+         continua pernas). Se esse dia ja tinha academia, a sua toma o
+         lugar — duas academias no mesmo dia o app nao monta.
+     A marca e o "movido" + "veioDe" que o botao Mover dia ja grava no
+     segundo treino, e viaja junto no Firebase.                       */
+  function movidas(){
+    var out = {};
+    try{
+      var E = (typeof ST === 'object' && ST && ST.extras) ? ST.extras : {};
+      Object.keys(E).forEach(function(k){
+        var x = E[k];
+        if(!x || !x.movido || x.mod !== 'forca') return;
+        if(!/^\d{4}-\d{2}-\d{2}$/.test(String(x.veioDe || ''))) return;
+        out[k] = x.veioDe;
+      });
+    }catch(e){}
+    return out;
+  }
+  function sessao(k){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(String(k))) return null;
+    var mv = movidas();
+    if(mv[k]) return sessaoBruta(mv[k] === k ? k : mv[k]) || sessaoBruta(k);
+    for(var d in mv) if(mv[d] === k && d !== k) return null;   // saiu daqui
+    return sessaoBruta(k);
   }
 
   function proxima(desde){
@@ -10728,6 +10782,8 @@ PARTE('a aba coach e so da academia', function(){
     }
 
     var atual = ST.extras[iso];
+    /* a academia que voce moveu para este dia fica como esta */
+    if(atual && atual.movido) return;
     if(atual && atual.mod === 'forca' && atual.auto !== true &&
        atual.origem !== 'academia' &&
        String(atual.sessao || '').indexOf('BQ_') !== 0) return;
@@ -11021,6 +11077,10 @@ PARTE('a aba coach e so da academia', function(){
   function tirarAcademiaDuplicada(iso){
     var dup = (typeof ST === 'object' && ST && ST.extras) ? ST.extras[iso] : null;
     if(!dup || dup.mod !== 'forca') return;
+    /* 28/10/2026: a que VOCE moveu para este dia nao e duplicata — e a
+       marca de que o dia agora e seu. Apagar aqui levava junto o
+       "veioDe", e a academia voltava ao dia de origem. */
+    if(dup.movido) return;
     tirarExtra(iso);
     /* 17/09/2026: a lapide so vai para a academia ANTIGA (sem origem
        'academia'). A academia automatica o proprio app poe e tira; com
@@ -11076,7 +11136,7 @@ PARTE('a aba coach e so da academia', function(){
       }else if(!ehForca(s)){
         plano[iso] = sessaoAcademia(iso);
         tirarAcademiaDuplicada(iso);
-        tirarExtra(iso);
+        if(!extraDeMao(iso)) tirarExtra(iso);
       }else{
         /* Ja e forca, entao a sessao fica — mas o nome passa a ser o
            mesmo em toda a tela. Antes, dia de academia em que o plano
@@ -13447,7 +13507,12 @@ PARTE('resumo da semana estilo trainingpeaks', function(){
     if(typeof dt !== 'function' || typeof dow !== 'function' ||
        typeof addD !== 'function') return false;
 
-    var base = dt(ST.sel);
+    /* 28/10/2026 (fix 07r): a semana e SEMPRE a de hoje. Antes ela
+       seguia o dia selecionado (ST.sel) — tocar num dia da semana que
+       vem, ou mover um treino para la, levava o resumo junto, e numa
+       quarta de outubro o cartao mostrava "2 nov – 8 nov". */
+    var base = new Date(); base.setHours(0,0,0,0);
+    HJ = chave(base);                        // vira a meia-noite com o app aberto
     var ini  = addD(base, -(dow(base) - 1));
     var dias = [];
     for(var i=0;i<7;i++) dias.push(montarDia(addD(ini, i)));
@@ -16779,6 +16844,7 @@ PARTE('ingles', function(){
   '/km. É o ritmo que você quer sentir no dia 18.':'/km. This is the pace you want to feel on the 18th.',
   'A · 3:50:00 (5:27/km) — folga larga no índice.':'A · 3:50:00 (5:27/km) — wide margin on the qualifier.',
   'Dias em destaque ainda não têm segundo treino.':'Highlighted days do not have a second workout yet.',
+  'Dias em destaque ainda não têm academia. Num dia que já tem, esta toma o lugar da que estava lá.':'Highlighted days have no gym session yet. On a day that already has one, this one takes its place.',
   'Distribui\\u00e7\\u00e3o \\u00b7 todas as medidas':'Distribution · all readings',
   'No degrau, descendo bem abaixo da linha do pé.':'On the step, dropping well below the line of the foot.',
   'Quantos quilômetros por semana, mais ou menos?':'How many kilometres per week, roughly?',
