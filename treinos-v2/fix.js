@@ -74,7 +74,7 @@
       Saint John no lugar da Fit4Less
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '07p';
+const FIX_VERSAO = '07q';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -11465,6 +11465,8 @@ PARTE('painel da academia', function(){
     var alvo = semAcento(chave);
     var achou = Object.keys(HEVY.rotinas).filter(function(n){
       if(semAcento(n).indexOf(alvo) < 0) return false;
+      /* "superior" nao pode casar com "superior (leve)" */
+      if(/\(leve\)/.test(semAcento(n)) && alvo.indexOf('(leve)') < 0) return false;
       /* rotinas antigas da Fit4Less ficam de fora de tudo */
       var c = ehDeCasa(n), f = ehDaFit4less(n), y = ehDaYmca(n);
       if(f) return false;
