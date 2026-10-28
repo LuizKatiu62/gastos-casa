@@ -1,5 +1,35 @@
 {
  "rotinas": {
+  "FORCA - QUADRIL E CORE (BASE) · YMCA": {
+   "titulo": "FORCA - QUADRIL E CORE (BASE) · YMCA",
+   "exercicios": [
+    {
+     "nome": "Hip Thrust (Barbell)",
+     "series": "3×10",
+     "nota": "Barra pesada com almofada; pausa de 1 s no alto."
+    },
+    {
+     "nome": "Kettlebell Swing",
+     "series": "3×12",
+     "nota": "O quadril empurra, os braços só acompanham."
+    },
+    {
+     "nome": "Single Leg Romanian Deadlift (Dumbbell)",
+     "series": "3×8",
+     "nota": "Cada perna. Halter pesado; quadril nivelado."
+    },
+    {
+     "nome": "Back Extension (Hyperextension)",
+     "series": "2×12",
+     "nota": "Banco de lombar, só o peso do corpo."
+    },
+    {
+     "nome": "Decline Crunch",
+     "series": "3×12",
+     "nota": "Banco abdominal ajustável, inclinação leve."
+    }
+   ]
+  },
   "FORCA - QUADRIL E CORE (BASE) · Fit4Less": {
    "titulo": "FORCA - QUADRIL E CORE (BASE) · Fit4Less",
    "exercicios": [
@@ -57,6 +87,188 @@
     {
      "nome": "Single Leg Standing Calf Raise",
      "series": "3×12"
+    }
+   ]
+  },
+  "Forca - Parte superior (leve) · YMCA": {
+   "titulo": "Forca - Parte superior (leve) · YMCA",
+   "exercicios": [
+    {
+     "nome": "Bench Press (Barbell)",
+     "series": "2×6",
+     "nota": "Carga moderada, longe da falha."
+    },
+    {
+     "nome": "Pull Up (Band)",
+     "series": "2×6",
+     "nota": "Carga moderada, longe da falha."
+    },
+    {
+     "nome": "Dumbbell Row",
+     "series": "2×8",
+     "nota": "Cada perna. Carga moderada, longe da falha."
+    },
+    {
+     "nome": "Shoulder Press (Dumbbell)",
+     "series": "2×8",
+     "nota": "Carga moderada, longe da falha."
+    },
+    {
+     "nome": "Inverted Row",
+     "series": "2×10",
+     "nota": "Carga moderada, longe da falha."
+    },
+    {
+     "nome": "Farmers Walk",
+     "series": "2 séries",
+     "nota": "Carga moderada, longe da falha."
+    }
+   ]
+  },
+  "Forca - Parte superior · YMCA": {
+   "titulo": "Forca - Parte superior · YMCA",
+   "exercicios": [
+    {
+     "nome": "Bench Press (Barbell)",
+     "series": "4×6",
+     "nota": "No rack com as barras de segurança: carga alta sem precisar de parceiro."
+    },
+    {
+     "nome": "Pull Up (Band)",
+     "series": "3×6",
+     "nota": "Barra fixa, elástico no pé para ajudar; quando fizer 8 sem elástico, tire."
+    },
+    {
+     "nome": "Dumbbell Row",
+     "series": "3×8",
+     "nota": "Cada perna. Halter acima de 50 lb, mão e joelho no banco."
+    },
+    {
+     "nome": "Shoulder Press (Dumbbell)",
+     "series": "3×8",
+     "nota": "Sentado, encosto em 90°; halteres mais pesados que os de casa."
+    },
+    {
+     "nome": "Inverted Row",
+     "series": "3×10",
+     "nota": "Na fita de suspensão (TRX): quanto mais deitado, mais difícil; escápulas juntas."
+    },
+    {
+     "nome": "Farmers Walk",
+     "series": "3 séries",
+     "nota": "Halteres pesados (60 a 70 lb), ombros para trás."
+    }
+   ]
+  },
+  "Forca - Manutencao · YMCA": {
+   "titulo": "Forca - Manutencao · YMCA",
+   "exercicios": [
+    {
+     "nome": "Squat (Barbell)",
+     "series": "2×5",
+     "nota": "Carga do pico, longe da falha; no rack, com as barras de segurança na altura do fundo."
+    },
+    {
+     "nome": "Hip Thrust (Barbell)",
+     "series": "2×8"
+    },
+    {
+     "nome": "Back Extension (Hyperextension)",
+     "series": "2×10",
+     "nota": "Só o peso do corpo."
+    },
+    {
+     "nome": "Standing Calf Raise (Barbell)",
+     "series": "2×12"
+    }
+   ]
+  },
+  "Forca - Quadril e Core (pico) · YMCA": {
+   "titulo": "Forca - Quadril e Core (pico) · YMCA",
+   "exercicios": [
+    {
+     "nome": "Hip Thrust (Barbell)",
+     "series": "3×8",
+     "nota": "Carga moderada, longe da falha."
+    },
+    {
+     "nome": "Kettlebell Swing",
+     "series": "2×12"
+    },
+    {
+     "nome": "Back Extension (Hyperextension)",
+     "series": "2×12",
+     "nota": "Só o peso do corpo."
+    },
+    {
+     "nome": "Hanging Knee Raise",
+     "series": "2×10",
+     "nota": "Na barra fixa."
+    }
+   ]
+  },
+  "Forca - Maxima (pico) · YMCA": {
+   "titulo": "Forca - Maxima (pico) · YMCA",
+   "exercicios": [
+    {
+     "nome": "Squat (Barbell)",
+     "series": "4×5",
+     "nota": "Pesado; no rack, com as barras de segurança na altura do fundo; 2 a 3 min de descanso."
+    },
+    {
+     "nome": "Romanian Deadlift (Barbell)",
+     "series": "3×6",
+     "nota": "Carga alta, desça em 2 s."
+    },
+    {
+     "nome": "Bulgarian Split Squat (Dumbbell)",
+     "series": "3×6",
+     "nota": "Cada perna. Halteres pesados."
+    },
+    {
+     "nome": "Standing Calf Raise (Barbell)",
+     "series": "4×8",
+     "nota": "Carga alta, no rack."
+    },
+    {
+     "nome": "Hanging Knee Raise",
+     "series": "3×10",
+     "nota": "Na barra fixa, sem balanço."
+    }
+   ]
+  },
+  "Forca - Pernas e Core (base) · YMCA": {
+   "titulo": "Forca - Pernas e Core (base) · YMCA",
+   "exercicios": [
+    {
+     "nome": "Squat (Barbell)",
+     "series": "3×8",
+     "nota": "No rack, com as barras de segurança na altura do fundo; desça até a coxa paralela."
+    },
+    {
+     "nome": "Romanian Deadlift (Barbell)",
+     "series": "3×8",
+     "nota": "Costas neutras, barra rente às pernas."
+    },
+    {
+     "nome": "Bulgarian Split Squat (Dumbbell)",
+     "series": "3×8",
+     "nota": "Cada perna. Halteres acima de 50 lb; pé de trás no banco."
+    },
+    {
+     "nome": "Back Extension (Weighted Hyperextension)",
+     "series": "3×10",
+     "nota": "Banco de lombar; suba só até alinhar o corpo."
+    },
+    {
+     "nome": "Standing Calf Raise (Barbell)",
+     "series": "3×12",
+     "nota": "No rack, ponta do pé numa anilha; pausa embaixo."
+    },
+    {
+     "nome": "Hanging Knee Raise",
+     "series": "3×10",
+     "nota": "Na barra fixa, sem balanço."
     }
    ]
   },
@@ -745,8 +957,8 @@
   }
  ],
  "meta": {
-  "ultimaSync": "2026-10-28T00:49:13",
-  "totalRotinas": 13,
+  "ultimaSync": "2026-10-28T01:13:08",
+  "totalRotinas": 20,
   "totalTreinos": 6,
   "semanas": 12,
   "semanasSessoes": 26
