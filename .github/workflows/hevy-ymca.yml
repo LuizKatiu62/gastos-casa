@@ -61,7 +61,7 @@ jobs:
             if (RESUMO) fs.appendFileSync(RESUMO, linhasResumo.join('\n') + '\n');
           }
           function parar(msg){
-            console.error(msg);
+            console.error(msg); console.log('::error::' + msg);
             resumo('**PAROU:** ' + msg);
             gravarResumo();
             process.exit(1);
@@ -220,6 +220,7 @@ jobs:
                 if (t){
                   resumo('| ' + e.nome + ' | ' + e.series + ' | ✅ ' + t.title + (t.is_custom ? ' ⚠️ personalizado, sem animação' : '') + ' · ' + t.type + ' |');
                   console.log('  OK      ' + e.nome);
+                  if (t.is_custom) console.log('::warning::PERSONALIZADO (sem animacao) ' + e.nome);
                   const notas = [];
                   if (/cada/i.test(e.series)) notas.push('Cada perna.');
                   if (e.nota) notas.push(e.nota.charAt(0).toUpperCase() + e.nota.slice(1) + '.');
@@ -235,6 +236,7 @@ jobs:
                   const sug = parecidos(e.nome, templates);
                   resumo('| ' + e.nome + ' | ' + e.series + ' | ❌ não achei · parecidos: ' + (sug.join(' / ') || '—') + ' |');
                   console.log('  FALTA   ' + e.nome + '   parecidos: ' + (sug.join(' / ') || '-'));
+                  console.log('::warning::FALTA ' + e.nome + ' | parecidos: ' + (sug.join(' / ') || '-'));
                 }
               }
               resumo('');
@@ -249,7 +251,7 @@ jobs:
               const msg = faltando
                 ? 'ENSAIO: ' + faltando + ' exercicio(s) sem nome identico no catalogo. Nada foi criado.'
                 : 'ENSAIO: todos os exercicios existem no catalogo. Nada foi criado. Pode rodar no modo criar.';
-              console.log(''); console.log(msg);
+              console.log(''); console.log(msg); console.log('::notice::' + msg);
               resumo('**' + msg + '**');
               gravarResumo();
               return;
@@ -271,7 +273,7 @@ jobs:
               resumo('- ✅ criada: **' + p.titulo + '** (' + p.exercicios.length + ' exercícios)');
             }
             const fim = 'PRONTO: ' + criadas + ' rotina(s) criada(s). Nenhuma rotina existente foi alterada.';
-            console.log(''); console.log(fim);
+            console.log(''); console.log(fim); console.log('::notice::' + fim);
             resumo(''); resumo('**' + fim + '**');
             gravarResumo();
           })().catch(e => parar('FALHOU: ' + (e && e.message)));
