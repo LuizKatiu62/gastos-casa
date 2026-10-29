@@ -74,7 +74,7 @@
       Saint John no lugar da Fit4Less
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '07r';
+const FIX_VERSAO = '07s';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -10558,8 +10558,9 @@ PARTE('a academia segue a prova e o treinador', function(){
     return out;
   }
 
-  /* a sessao de um dia: {tipo, chave, fase} ou null */
-  function sessaoBruta(k){
+  /* a sessao de um dia pelo plano AUTOMATICO antigo: {tipo, chave, fase} ou null.
+     Desde 29/10/2026 so vale para datas antes de CORTE (historico). */
+  function sessaoAuto(k){
     if(!/^\d{4}-\d{2}-\d{2}$/.test(String(k))) return null;
     var tipo = semana(segundaDe(k))[k];
     if(!tipo) return null;
@@ -10568,6 +10569,254 @@ PARTE('a academia segue a prova e o treinador', function(){
     if(!ch) return null;
     return {tipo: tipo, chave: ch, fase: f.nome};
   }
+
+  /* ══ ACADEMIA SOB DEMANDA (29/10/2026, fix 07s) ══
+     Pedido do Luiz: "acionar a academia quando eu for fazer, com foco
+     na proxima prova, sem nada pre-agendado, escolhendo o dia".
+
+     De CORTE em diante o app nao poe academia em dia nenhum sozinho.
+     Ela existe num dia quando:
+       · voce ATIVOU aquele dia no painel (botao "Vou à academia"), ou
+       · o dia ja passou e tem treino registrado (Hevy ou "feito em casa")
+     O tipo (pernas, quadril e core, parte superior) e sugerido na hora
+     pela fase da prova, pela agenda do treinador (nada de perna pesada
+     antes do longao), pelo que voce fez nos ultimos dias e por como
+     voce acordou (Body Battery, HRV, sono). Voce pode escolher outro.
+
+     As ativacoes ficam em treinos_coach_v2/luiz/academia_ativada,
+     um no por data { "2026-10-30": {tipo, em} }, sempre PATCH — e
+     neste aparelho, para o plano ja nascer certo antes do Firebase. */
+  var CORTE = '2026-10-29';
+  var CHAVE_ATIV = 'bq_acad_ativada';
+  var RAMO_ATIV = '/academia_ativada';
+  var ATIV = (function(){ try{ return JSON.parse(localStorage.getItem(CHAVE_ATIV) || '{}') || {} }catch(e){ return {} } })();
+  function gravarAtivLocal(){ try{ localStorage.setItem(CHAVE_ATIV, JSON.stringify(ATIV)) }catch(e){} }
+
+  /* fase sem previsao para o tipo (ex.: semana da prova): versao leve */
+  var LEVE = {pernas: 'manutencao', quadril: 'manutencao', superior: 'superior (leve)'};
+  function chaveDe(tipo, k){
+    var f = fase(k);
+    return f[tipo] || LEVE[tipo] || null;
+  }
+
+  function sessoesDoHevy(){
+    try{ var h = window.bqAcademia; return (h && Array.isArray(h.sessoes)) ? h.sessoes : [] }catch(e){ return [] }
+  }
+  function feitoNoDia(k){
+    try{ return typeof window.bqAcademiaFeita === 'function' ? window.bqAcademiaFeita(k) : '' }catch(e){ return '' }
+  }
+  /* tipo de um treino ja feito, pelo titulo no Hevy */
+  function tipoDoTitulo(t){
+    t = String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    if(/superior|upper|costas|postura|arms|braco|peito|ombro|chest|back|pull|push/.test(t)) return 'superior';
+    if(/quadril|hip|glute|gluteo/.test(t)) return 'quadril';
+    if(/perna|leg|maxima|manutencao|squat|agach/.test(t)) return 'pernas';
+    return '';
+  }
+  /* o tipo que o dia TEVE de verdade: ativado, ou feito (Hevy/casa) */
+  function tipoFeito(k){
+    var a = ATIV[k];
+    if(a && a.tipo) return a.tipo;
+    var como = feitoNoDia(k);
+    if(!como) return '';
+    var s = sessoesDoHevy().filter(function(x){ return x && x.data === k })[0];
+    return (s && tipoDoTitulo(s.titulo)) || 'pernas';
+  }
+
+  function sessaoBruta(k){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(String(k))) return null;
+    if(k < CORTE) return sessaoAuto(k);
+    var a = ATIV[k];
+    var tipo = (a && a.tipo) ? a.tipo : (k <= hoje() ? tipoFeito(k) : '');
+    if(!tipo) return null;
+    var ch = chaveDe(tipo, k);
+    if(!ch) return null;
+    return {tipo: tipo, chave: ch, fase: fase(k).nome, sobDemanda: true, ativada: !!a};
+  }
+
+  /* ── COMO VOCE ACORDOU (so para hoje) ──
+     Body Battery maximo do dia, HRV da noite contra a media de 7 dias e
+     horas de sono — o que o Sync Garmin ja grava em RAW. Nao vira nota:
+     so pesa na sugestao e aparece escrito, com os numeros. */
+  function prontidao(k){
+    if(k !== hoje()) return null;
+    var out = {cansado: false, sinais: []};
+    try{
+      var bb = RAW && RAW.bodyBattery ? RAW.bodyBattery[k] : null;
+      var hv = RAW && RAW.hrv ? RAW.hrv[k] : null;
+      var so = RAW && RAW.sono ? RAW.sono[k] : null;
+      if(bb && +bb.max > 0 && +bb.max < 45){ out.cansado = true; out.sinais.push('Body Battery ' + Math.round(bb.max)) }
+      if(hv && +hv.ontem > 0 && +hv.semanal > 0 && hv.ontem < hv.semanal * 0.9){
+        out.cansado = true; out.sinais.push('HRV ' + Math.round(hv.ontem) + ' (média ' + Math.round(hv.semanal) + ')');
+      }
+      if(so && +so.duracao >= 2 && +so.duracao < 5.5){ out.cansado = true; out.sinais.push('sono ' + (+so.duracao).toFixed(1).replace('.', ',') + ' h') }
+    }catch(e){}
+    return out;
+  }
+
+  var ROT = {pernas: 'pernas', quadril: 'quadril e core', superior: 'parte superior'};
+
+  /* ── A SUGESTAO PARA UM DIA ──
+     Devolve {data, fase, nota, sugerido, motivo, opcoes:[{tipo, chave,
+     bloqueado, aviso}], cansado, sinais}. */
+  function recomendar(k){
+    k = k || hoje();
+    var m = mapa(), f = fase(k);
+    var amanha = tipoDia(m, soma(k, 1)), depois = tipoDia(m, soma(k, 2));
+    var hojeT = tipoDia(m, k);
+    var pr = prontidao(k);
+
+    /* o que voce fez nos 10 dias antes */
+    var ult = {}, ontemInferior = false, ultimoTipo = '', ultimoDias = 0;
+    for(var i = 1; i <= 10; i++){
+      var kk = soma(k, -i), t = tipoFeito(kk);
+      if(!t) continue;
+      if(ult[t] == null) ult[t] = i;
+      if(!ultimoTipo){ ultimoTipo = t; ultimoDias = i }
+      if(i === 1 && t !== 'superior') ontemInferior = true;
+    }
+
+    var opcoes = TIPOS.map(function(t){
+      var ch = chaveDe(t, k);
+      var c = custo(t, k, m);
+      var bloqueado = !isFinite(c) || !f[t];
+      var aviso = '';
+      if(t !== 'superior'){
+        if(hojeT === 'prova' || amanha === 'prova' || depois === 'prova') aviso = 'prova perto';
+        else if(amanha === 'longo') aviso = 'longão amanhã';
+        else if(t === 'pernas' && depois === 'longo') aviso = 'longão em 2 dias';
+        else if(hojeT === 'longo') aviso = 'dia de longão';
+        else if(!f[t]) aviso = 'fora da fase';
+      }else if(!f[t]) aviso = 'fora da fase';
+      var s = isFinite(c) ? c : 50;
+      if(!f[t]) s += 20;
+      if(ult[t] != null) s += ult[t] <= 2 ? 4 : (ult[t] <= 6 ? 2 : 0);
+      else s -= 0.5;                                   // nao fez nos ultimos 10 dias
+      if(ontemInferior && t !== 'superior') s += 2;
+      if(pr && pr.cansado) s += t === 'pernas' ? 3 : (t === 'quadril' ? 1.5 : 0);
+      return {tipo: t, chave: ch, bloqueado: bloqueado, aviso: aviso, nota: s, ultimo: ult[t]};
+    }).filter(function(o){ return !!o.chave });
+
+    var ord = opcoes.slice().sort(function(a, b){ return a.nota - b.nota });
+    var sug = ord[0] || null;
+
+    var motivo = [];
+    if(sug){
+      if(sug.tipo === 'superior'){
+        var NOME_DIA = {qualidade: 'treino forte de corrida', longo: 'longão', prova: 'prova'};
+        if(NOME_DIA[hojeT]) motivo.push(NOME_DIA[hojeT] + ' hoje: pernas poupadas');
+        else if(NOME_DIA[amanha]) motivo.push(NOME_DIA[amanha] + ' amanhã: pernas poupadas');
+        else{
+          var bl = opcoes.filter(function(o){ return o.tipo === 'pernas' && o.bloqueado && o.aviso })[0];
+          if(bl) motivo.push('pernas pesadas não cabem (' + bl.aviso + ')');
+        }
+      }
+      if(sug.tipo !== 'superior' && amanha === 'qualidade') motivo.push('treino forte amanhã: sem ir à falha');
+      if(sug.ultimo == null) motivo.push('não fez ' + ROT[sug.tipo] + ' nos últimos 10 dias');
+      else motivo.push('último ' + ROT[sug.tipo] + ' há ' + sug.ultimo + ' dias');
+      if(ultimoTipo && ultimoTipo !== sug.tipo && ultimoDias <= 3) motivo.push('alterna com ' + ROT[ultimoTipo] + ' de ' + (ultimoDias === 1 ? 'ontem' : 'há ' + ultimoDias + ' dias'));
+      if(pr && pr.cansado) motivo.push('sinais de cansaço (' + pr.sinais.join(', ') + '): carga moderada, 2 séries, longe da falha');
+    }
+    return {data: k, fase: f.nome, nota: f.nota, sugerido: sug ? sug.tipo : '', motivo: motivo,
+            opcoes: opcoes.map(function(o){ return {tipo: o.tipo, chave: o.chave, bloqueado: o.bloqueado, aviso: o.aviso} }),
+            cansado: !!(pr && pr.cansado), sinais: pr ? pr.sinais : [],
+            ativada: ATIV[k] ? ATIV[k].tipo : ''};
+  }
+
+  /* ── GRAVAR / TIRAR ── */
+  function depoisDeMudar(){
+    MEMO = {};
+    try{ if(ST && ST.cache) ST.cache = {} }catch(e){}
+    try{ if(typeof rebuild === 'function') rebuild() }catch(e){ console.warn('ativar academia/rebuild:', e && e.message) }
+    try{ if(typeof persistir === 'function') persistir() }catch(e){}
+    ['bqAcadPintar', 'renderCoach', 'renderCal', 'renderSemana', 'renderTreinos', 'renderDia'].forEach(function(n){
+      try{ if(typeof window[n] === 'function') window[n]() }catch(e){}
+    });
+    try{ if(typeof window.bqPlanilha === 'object') window.bqPlanilha.ligar() }catch(e){}
+  }
+
+  async function gravarNuvem(k, valor){
+    if(typeof fbToken !== 'function' || typeof FB_DB !== 'string' || typeof FB_COACH !== 'string') throw new Error('sem login');
+    var t = await fbToken();
+    if(!t) throw new Error('sem login no Firebase');
+    var corpo = {}; corpo[k] = valor;                  // null apaga so esta data
+    var r = await fetch(FB_DB + '/' + FB_COACH + RAMO_ATIV + '.json?auth=' + t,
+      {method: 'PATCH', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(corpo)});
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+  }
+
+  /* grava aqui na hora; a nuvem vai atras. Se a nuvem falhar, fica
+     marcado como pendente e tenta de novo na proxima abertura. */
+  function ativar(k, tipo){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(String(k)) || TIPOS.indexOf(tipo) < 0) return Promise.resolve(false);
+    ATIV[k] = {tipo: tipo, em: new Date().toISOString()};
+    gravarAtivLocal();
+    depoisDeMudar();
+    return gravarNuvem(k, {tipo: tipo, em: ATIV[k].em})
+      .then(function(){ if(ATIV[k]) delete ATIV[k].pendente; gravarAtivLocal(); return true })
+      .catch(function(e){
+        if(ATIV[k]) ATIV[k].pendente = 1; gravarAtivLocal();
+        try{ if(typeof avisar === 'function') avisar('Academia ativada neste aparelho; a nuvem não respondeu (' + ((e && e.message) || 'rede') + ').', 'err') }catch(x){}
+        return true;
+      });
+  }
+  function desativar(k){
+    if(!ATIV[k]) return Promise.resolve(false);
+    delete ATIV[k];
+    var P = {}; try{ P = JSON.parse(localStorage.getItem(CHAVE_ATIV + '_apagar') || '{}') || {} }catch(e){}
+    P[k] = 1;
+    try{ localStorage.setItem(CHAVE_ATIV + '_apagar', JSON.stringify(P)) }catch(e){}
+    gravarAtivLocal();
+    /* o segundo treino guardado da academia sai junto */
+    try{
+      var x = ST && ST.extras ? ST.extras[k] : null;
+      if(x && x.mod === 'forca' && (x.origem === 'academia' || x.movido)){
+        ST.extras[k] = undefined; delete ST.extras[k];
+      }
+    }catch(e){}
+    depoisDeMudar();
+    return gravarNuvem(k, null).then(function(){
+      try{ var P2 = JSON.parse(localStorage.getItem(CHAVE_ATIV + '_apagar') || '{}') || {}; delete P2[k];
+           localStorage.setItem(CHAVE_ATIV + '_apagar', JSON.stringify(P2)) }catch(e){}
+      return true;
+    }).catch(function(){ return true });
+  }
+
+  /* le a nuvem (iPhone e Mac veem as mesmas ativacoes) */
+  async function buscarNuvem(){
+    try{
+      if(typeof fbToken !== 'function' || typeof FB_DB !== 'string') return false;
+      var t = await fbToken();
+      if(!t) return false;
+      var r = await fetch(FB_DB + '/' + FB_COACH + RAMO_ATIV + '.json?auth=' + t);
+      if(!r.ok) return false;
+      var j = (await r.json()) || {};
+      var apagar = {}; try{ apagar = JSON.parse(localStorage.getItem(CHAVE_ATIV + '_apagar') || '{}') || {} }catch(e){}
+      var novo = {};
+      Object.keys(j).forEach(function(k){ if(j[k] && j[k].tipo && !apagar[k]) novo[k] = j[k] });
+      /* o que ficou pendente aqui sobe agora */
+      Object.keys(ATIV).forEach(function(k){
+        if(ATIV[k] && ATIV[k].pendente && !novo[k]){
+          novo[k] = ATIV[k];
+          gravarNuvem(k, {tipo: ATIV[k].tipo, em: ATIV[k].em}).then(function(){ if(ATIV[k]) delete ATIV[k].pendente; gravarAtivLocal() }).catch(function(){});
+        }
+      });
+      Object.keys(apagar).forEach(function(k){ gravarNuvem(k, null).catch(function(){}) });
+      var antes = JSON.stringify(Object.keys(ATIV).sort().map(function(k){ return k + ATIV[k].tipo }));
+      var depois = JSON.stringify(Object.keys(novo).sort().map(function(k){ return k + novo[k].tipo }));
+      ATIV = novo; gravarAtivLocal();
+      if(antes !== depois) depoisDeMudar();
+      return true;
+    }catch(e){ return false }
+  }
+  (function insistir(n){
+    buscarNuvem().then(function(ok){ if(!ok && n < 8) setTimeout(function(){ insistir(n + 1) }, 1500) });
+  })(0);
+  try{
+    document.addEventListener('visibilitychange', function(){
+      if(document.visibilityState === 'visible') buscarNuvem();
+    });
+  }catch(e){}
 
   /* ── A ACADEMIA QUE VOCE MOVEU (28/10/2026, fix 07r) ──
      O plano escolhe o dia de cada sessao pela agenda do treinador, e
@@ -10625,6 +10874,14 @@ PARTE('a academia segue a prova e o treinador', function(){
     nomeProva: nomeProva,
     diasAteProva: function(k){ var o = prova(); return o ? dias(k || hoje(), o.data) : null },
     tipoDoTreino: tipoDoTreino,
+    /* sob demanda (fix 07s) */
+    sobDemandaDesde: CORTE,
+    recomendar: recomendar,
+    ativar: ativar,
+    desativar: desativar,
+    ativadas: function(){ return JSON.parse(JSON.stringify(ATIV)) },
+    tipoFeito: tipoFeito,
+    recarregar: buscarNuvem,
     limpar: function(){ MEMO = {} },
     /* console: como ficam as proximas semanas */
     relatorio: function(n){
@@ -12471,12 +12728,155 @@ PARTE('painel da academia', function(){
       + acoesDoDia(iso, local, exec) + '</div>';
   }
 
+  /* ══ VOU À ACADEMIA (29/10/2026, fix 07s) ══
+     A academia nao e mais agendada. Voce escolhe o dia (hoje ou um dos
+     proximos 6), o app sugere o tipo pela prova, pela agenda do
+     treinador, pelo que voce fez e por como acordou — e voce pode
+     escolher outro. Ativar poe o treino no calendario e no Coach com a
+     rotina da YMCA ou de casa, como antes. */
+  var ATV_DIA = '';                         // dia escolhido nos chips
+  var ATV_TIPO = {};                        // tipo escolhido, por dia
+  var ATV_ROT = {pernas: 'Pernas', quadril: 'Quadril e core', superior: 'Parte superior'};
+  var ATV_DIA3 = ['', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+  function somaDias(k, n){
+    var d = new Date(k + 'T00:00:00'); d.setDate(d.getDate() + n);
+    return d.getFullYear() + '-' + ('0'+(d.getMonth()+1)).slice(-2) + '-' + ('0'+d.getDate()).slice(-2);
+  }
+  function diasSemForca(){
+    var l = sessoesFeitas().filter(function(s){ return s.data <= hojeIso() });
+    if(!l.length) return null;
+    var u = l[l.length - 1].data;
+    return Math.round((new Date(hojeIso() + 'T00:00:00') - new Date(u + 'T00:00:00')) / 864e5);
+  }
+  function btAtv(attrs, rot, on, extra){
+    return '<button type="button" ' + attrs
+      + ' style="padding:7px 10px;border-radius:9px;font:inherit;font-size:12.5px;cursor:pointer;'
+      + 'font-weight:' + (on ? '800' : '600') + ';'
+      + 'border:1px solid ' + (on ? 'var(--gym,#9B6BD6)' : 'rgba(128,128,128,.3)') + ';'
+      + 'background:' + (on ? 'var(--gym,#9B6BD6)' : 'transparent') + ';'
+      + 'color:' + (on ? '#fff' : 'inherit') + ';' + (extra || '') + '">' + rot + '</button>';
+  }
+  function blocoAtivar(){
+    var p = plano();
+    if(!p || typeof p.recomendar !== 'function') return '';
+    var hj = hojeIso();
+    if(!ATV_DIA || ATV_DIA < hj) ATV_DIA = hj;
+    var ativ = p.ativadas();
+    var k = ATV_DIA;
+    var rec = p.recomendar(k);
+    var feito = comoFoiFeito(k);
+
+    /* os 7 dias */
+    var chips = '';
+    for(var i = 0; i < 7; i++){
+      var kk = somaDias(hj, i);
+      var d = new Date(kk + 'T00:00:00');
+      var rot = i === 0 ? 'Hoje' : i === 1 ? 'Amanhã' : ATV_DIA3[diaSemana(d)] + ' ' + d.getDate();
+      if(ativ[kk] || (i === 0 && comoFoiFeito(kk))) rot += ' ✓';
+      chips += btAtv('data-bqatvdia="' + kk + '"', rot, kk === k, 'flex:0 0 auto');
+    }
+
+    var quando = k === hj ? 'hoje' : k === somaDias(hj, 1) ? 'amanhã'
+      : ATV_DIA3[diaSemana(new Date(k + 'T00:00:00'))].toLowerCase() + ' ' + dataCurta(k);
+    var escolhido = ATV_TIPO[k] || (ativ[k] && ativ[k].tipo) || rec.sugerido;
+
+    var tipos = rec.opcoes.map(function(o){
+      var rot = ATV_ROT[o.tipo] + (o.tipo === rec.sugerido ? ' ★' : '');
+      var on = o.tipo === escolhido;
+      return '<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">'
+        + btAtv('data-bqatvtipo="' + o.tipo + '" data-bqdia="' + k + '"', rot, on, 'width:100%;' + (o.bloqueado && !on ? 'opacity:.55' : ''))
+        + (o.aviso ? '<span style="font-size:10.5px;text-align:center;color:' + (o.bloqueado ? '#E0714F' : 'inherit') + ';opacity:.85">⚠ ' + esc(o.aviso) + '</span>' : '')
+        + '</div>';
+    }).join('');
+
+    var escolhaOp = rec.opcoes.filter(function(o){ return o.tipo === escolhido })[0];
+    var sug = rec.sugerido
+      ? '<div style="margin:2px 0 8px"><b>Sugestão para ' + esc(quando) + ': ' + esc(ATV_ROT[rec.sugerido]) + '</b>'
+        + (rec.motivo.length ? '<div style="opacity:.75;font-size:12px;margin-top:2px">' + rec.motivo.map(esc).join(' · ') + '</div>' : '')
+        + '</div>'
+      : '<div style="margin:2px 0 8px">Nada de academia ' + esc(quando) + ' nesta fase.</div>';
+
+    var aviso = (escolhaOp && escolhaOp.bloqueado)
+      ? '<div style="font-size:12px;color:#E0714F;margin:6px 0 0">' + esc(ATV_ROT[escolhido]) + ' ' + esc(quando)
+        + ' vai contra o plano (' + esc(escolhaOp.aviso || 'fora da fase') + '). Se for mesmo, faça a versão leve.</div>'
+      : '';
+
+    var acao;
+    if(ativ[k]){
+      acao = '<div style="margin:8px 0 0;font-weight:700;color:#3FD98A">✓ Academia ' + esc(quando) + ' ativada · '
+           + esc(ATV_ROT[ativ[k].tipo]) + '</div>'
+           + '<div style="display:flex;gap:8px;margin-top:8px">'
+           + (escolhido !== ativ[k].tipo
+              ? btAtv('data-bqatvok="' + k + '" data-bqatvt="' + escolhido + '"', 'Trocar para ' + esc(ATV_ROT[escolhido]), true, 'flex:1')
+              : '')
+           + btAtv('data-bqatvoff="' + k + '"', 'Desativar', false, 'flex:1')
+           + '</div>'
+           + (k === hj ? '<div style="font-size:11.5px;opacity:.65;margin-top:6px">A lista de exercícios está no treino de hoje, logo abaixo.</div>' : '');
+    }else if(feito && k === hj){
+      acao = '<div style="margin:8px 0 0;font-weight:700;color:#3FD98A">✓ Treino de hoje já registrado'
+           + (feito === 'casa' ? ' (em casa)' : ' no Hevy') + '.</div>';
+    }else if(escolhido){
+      acao = '<button type="button" data-bqatvok="' + k + '" data-bqatvt="' + escolhido + '"'
+           + ' style="width:100%;margin-top:10px;padding:12px;border-radius:11px;border:0;font:inherit;'
+           + 'font-size:14.5px;font-weight:800;cursor:pointer;background:var(--gym,#9B6BD6);color:#fff">'
+           + '💪 Vou à academia ' + esc(quando) + ' · ' + esc(ATV_ROT[escolhido]) + '</button>';
+    }else acao = '';
+
+    /* proximas ja ativadas (outros dias) */
+    var outras = Object.keys(ativ).filter(function(x){ return x >= hj && x !== k }).sort();
+    var lista = outras.length
+      ? '<div style="font-size:11.5px;opacity:.7;margin-top:8px">Também ativada: '
+        + outras.map(function(x){ return dataCurta(x) + ' (' + esc(ATV_ROT[ativ[x].tipo]).toLowerCase() + ')' }).join(', ') + '</div>'
+      : '';
+
+    var ds = diasSemForca();
+    var lembrete = (ds != null && ds >= 7 && !ativ[hj])
+      ? '<div style="font-size:12px;color:#F5C544;margin:0 0 8px">' + ds + ' dias sem força. Uma sessão curta já mantém o que você ganhou.</div>'
+      : '';
+
+    return '<div class="bqa-t">Vai à academia?</div><div class="bqa-u" id="bqAtivar">'
+      + lembrete
+      + '<div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:8px;-webkit-overflow-scrolling:touch">' + chips + '</div>'
+      + sug
+      + '<div style="display:flex;gap:6px;margin-bottom:8px">' + tipos + '</div>'
+      + aviso
+      + (ativ[k] || (feito && k === hj) ? '' : seletorLocal(k, localDe(k)))
+      + acao + lista + '</div>';
+  }
+
+  document.addEventListener('click', function(ev){
+    var b = ev.target && ev.target.closest ? ev.target.closest('[data-bqatvdia],[data-bqatvtipo],[data-bqatvok],[data-bqatvoff]') : null;
+    if(!b || b.disabled) return;
+    ev.preventDefault(); ev.stopPropagation();
+    var p = plano();
+    if(b.hasAttribute('data-bqatvdia')){ ATV_DIA = b.getAttribute('data-bqatvdia'); pintar(); return }
+    if(b.hasAttribute('data-bqatvtipo')){ ATV_TIPO[b.getAttribute('data-bqdia')] = b.getAttribute('data-bqatvtipo'); pintar(); return }
+    if(!p) return;
+    if(b.hasAttribute('data-bqatvok')){
+      var k = b.getAttribute('data-bqatvok');
+      b.disabled = true; b.textContent = 'Ativando…';
+      p.ativar(k, b.getAttribute('data-bqatvt')).then(function(){ delete ATV_TIPO[k]; pintar() });
+      return;
+    }
+    if(b.hasAttribute('data-bqatvoff')){
+      var k2 = b.getAttribute('data-bqatvoff');
+      if(typeof confirm === 'function' && !confirm('Desativar a academia de ' + dataCurta(k2) + '?')) return;
+      p.desativar(k2).then(function(){ delete ATV_TIPO[k2]; pintar() });
+    }
+  }, true);
+
   function blocoSessao(){
+    return blocoAtivar() + blocoSessaoHoje();
+  }
+
+  function blocoSessaoHoje(){
     var hoje = new Date();
     var dia = diaSemana(hoje);
     var iso = hojeIso();
     var r = rotinaDoDia(dia, iso);
     if(!r){
+      /* sob demanda: o painel acima ja diz tudo */
+      if(plano() && typeof plano().recomendar === 'function') return '';
       var p = plano(), px = p ? p.proxima(iso) : null;
       var NOMES = ['', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado', 'domingo'];
       var txt = px
@@ -12716,19 +13116,29 @@ PARTE('painel da academia', function(){
     var feitas = sessoesFeitas().filter(function(s){ return s.data >= isoCorte }).length;
     if(!HEVY) return '';
     /* previstas pelo plano de verdade (semana da prova tem menos) */
+    /* sob demanda (fix 07s): nada e "previsto" por data. A meta e o
+       numero de sessoes que a fase pede por semana (Base: 3; Reducao:
+       2-3; semana da prova: 1), somado dia a dia nos 28 dias. Antes
+       do corte vale o plano automatico daquela epoca. */
     var previstas = 0, p = plano();
+    var corteSD = (p && p.sobDemandaDesde) || '9999-12-31';
     for(var i = 1; i <= 28; i++){
       var dx = new Date(); dx.setDate(dx.getDate() - 28 + i);
       var kx = dx.getFullYear() + '-' + ('0'+(dx.getMonth()+1)).slice(-2) + '-' + ('0'+dx.getDate()).slice(-2);
       if(kx > hojeIso()) break;
-      if(p ? p.sessao(kx) : false) previstas++;
+      if(kx < corteSD){ if(p ? p.sessao(kx) : false) previstas++ }
+      else if(p){
+        var fx = p.fase(kx);
+        previstas += ['pernas', 'quadril', 'superior'].filter(function(t){ return !!fx[t] }).length / 7;
+      }
     }
+    previstas = Math.round(previstas);
     if(!previstas) previstas = 12;
     var pct = Math.round(feitas / previstas * 100);
     var cor = pct >= 80 ? '#3FD98A' : pct >= 60 ? '#F5C544' : '#F2685C';
     return '<div class="bqa-t">Aderência · 4 semanas</div>'
          + '<div class="bqa-u"><b style="font-size:15px;color:' + cor + '">' + feitas + '</b> de '
-         + previstas + ' sessões previstas'
+         + previstas + ' sessões (meta da fase)'
          + (feitas ? ' · última em ' + esc(ultimaSessao()) : '') + '.</div>';
   }
 
@@ -12798,6 +13208,7 @@ PARTE('painel da academia', function(){
     }
     el.innerHTML = blocoFase() + blocoSessao() + blocoAderencia() + blocoProgressao();
   }
+  window.bqAcadPintar = pintar;
 
   var ultimoErro = '';
 
