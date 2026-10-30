@@ -1,54 +1,10 @@
 {
- "ate": "2026-11-04",
- "de": "2026-10-29",
+ "ate": "2026-11-05",
+ "de": "2026-10-30",
  "fcMax": 163,
- "gerado": "2026-10-30T00:12:48.617Z",
+ "gerado": "2026-10-30T19:03:16.734Z",
  "limiar": "5:09",
  "sessoes": [
-  {
-   "data": "2026-10-29",
-   "foco": "tiros",
-   "km": 8.9,
-   "min": 50,
-   "nome": "29/10 · 6x 600 · 8.9 km total",
-   "nota": "Total porta a porta 8.9 km. Alongamentos e educativos ANTES do start, relogio parado.",
-   "passos": [
-    {
-     "fim": "time",
-     "lento": 2.3041,
-     "rapido": 2.4752,
-     "texto": "12 min subindo devagar, 6:44–7:14/km. Se chegar ofegante ao fim, foi rapido demais.",
-     "tipo": "warmup",
-     "valor": 720
-    },
-    {
-     "passos": [
-      {
-       "fim": "distance",
-       "lento": 3.4722,
-       "rapido": 3.6496,
-       "texto": "600 m em 4:34–4:48/km, FC ate 148-158 bpm.",
-       "tipo": "interval",
-       "valor": 600
-      },
-      {
-       "fim": "time",
-       "texto": "3 min de trote leve. Nao pare de correr.",
-       "tipo": "recovery",
-       "valor": 180
-      }
-     ],
-     "tipo": "repetir",
-     "vezes": 6
-    },
-    {
-     "fim": "time",
-     "texto": "8 min de trote muito leve ate a respiracao normalizar.",
-     "tipo": "cooldown",
-     "valor": 480
-    }
-   ]
-  },
   {
    "data": "2026-10-31",
    "foco": "longo",
@@ -142,6 +98,50 @@
      "texto": "5 min de trote muito leve ate a respiracao normalizar.",
      "tipo": "cooldown",
      "valor": 300
+    }
+   ]
+  },
+  {
+   "data": "2026-11-05",
+   "foco": "tiros",
+   "km": 7.7,
+   "min": 46,
+   "nome": "05/11 · Intervalado 12x 200m · 7.7 km total",
+   "nota": "Total porta a porta 7.7 km. Alongamentos e educativos ANTES do start, relogio parado.",
+   "passos": [
+    {
+     "fim": "time",
+     "lento": 2.3041,
+     "rapido": 2.4752,
+     "texto": "12 min subindo devagar, 6:44–7:14/km. Se chegar ofegante ao fim, foi rapido demais.",
+     "tipo": "warmup",
+     "valor": 720
+    },
+    {
+     "passos": [
+      {
+       "fim": "distance",
+       "lento": 3.4722,
+       "rapido": 3.6496,
+       "texto": "600 m em 4:34–4:48/km, FC ate 148-158 bpm.",
+       "tipo": "interval",
+       "valor": 600
+      },
+      {
+       "fim": "time",
+       "texto": "3 min de trote leve. Nao pare de correr.",
+       "tipo": "recovery",
+       "valor": 150
+      }
+     ],
+     "tipo": "repetir",
+     "vezes": 5
+    },
+    {
+     "fim": "time",
+     "texto": "8 min de trote muito leve ate a respiracao normalizar.",
+     "tipo": "cooldown",
+     "valor": 480
     }
    ]
   }
