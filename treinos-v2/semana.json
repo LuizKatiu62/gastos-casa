@@ -2,7 +2,7 @@
  "ate": "2026-11-04",
  "de": "2026-10-29",
  "fcMax": 163,
- "gerado": "2026-10-29T22:42:37.094Z",
+ "gerado": "2026-10-30T00:12:48.617Z",
  "limiar": "5:09",
  "sessoes": [
   {
@@ -78,6 +78,70 @@
      "texto": "6 min de trote muito leve ate a respiracao normalizar.",
      "tipo": "cooldown",
      "valor": 360
+    }
+   ]
+  },
+  {
+   "data": "2026-11-03",
+   "foco": "facil",
+   "km": 8.6,
+   "min": 50,
+   "nome": "03/11 · Progressivo 10/10/10 · 8.6 km total",
+   "nota": "Total porta a porta 8.6 km. Alongamentos e educativos ANTES do start, relogio parado.",
+   "passos": [
+    {
+     "fim": "time",
+     "lento": 2.3041,
+     "rapido": 2.4752,
+     "texto": "8 min subindo devagar, 6:44–7:14/km. Se chegar ofegante ao fim, foi rapido demais.",
+     "tipo": "warmup",
+     "valor": 480
+    },
+    {
+     "fim": "distance",
+     "lento": 2.6042,
+     "rapido": 2.8249,
+     "texto": "6.7 km em 5:54–6:24/km. Voce deve conseguir falar frases inteiras.",
+     "tipo": "interval",
+     "valor": 6700
+    },
+    {
+     "fim": "time",
+     "texto": "5 min de trote muito leve ate a respiracao normalizar.",
+     "tipo": "cooldown",
+     "valor": 300
+    }
+   ]
+  },
+  {
+   "data": "2026-11-04",
+   "foco": "facil",
+   "km": 5.4,
+   "min": 35,
+   "nome": "04/11 · Rodagem leve 35' · 5.4 km total",
+   "nota": "Total porta a porta 5.4 km. Alongamentos e educativos ANTES do start, relogio parado.",
+   "passos": [
+    {
+     "fim": "time",
+     "lento": 2.3041,
+     "rapido": 2.4752,
+     "texto": "8 min subindo devagar, 6:44–7:14/km. Se chegar ofegante ao fim, foi rapido demais.",
+     "tipo": "warmup",
+     "valor": 480
+    },
+    {
+     "fim": "distance",
+     "lento": 2.6042,
+     "rapido": 2.8249,
+     "texto": "3.5 km em 5:54–6:24/km. Voce deve conseguir falar frases inteiras.",
+     "tipo": "interval",
+     "valor": 3500
+    },
+    {
+     "fim": "time",
+     "texto": "5 min de trote muito leve ate a respiracao normalizar.",
+     "tipo": "cooldown",
+     "valor": 300
     }
    ]
   }
