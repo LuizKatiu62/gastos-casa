@@ -2,73 +2,181 @@
  "ate": "2026-11-07",
  "de": "2026-11-01",
  "fcMax": 163,
- "gerado": "2026-11-01T03:10:09.686Z",
- "limiar": "5:21",
+ "gerado": "2026-11-01T19:17:13.407Z",
+ "limiar": "5:09",
  "sessoes": [
   {
-   "data": "2026-11-01",
-   "foco": "longo",
-   "km": 20.3,
-   "min": 120,
-   "nome": "01/11 · Rodagem Z2 · 20.3 km total",
-   "nota": "Total porta a porta 20.3 km. Alongamentos e educativos ANTES do start, relogio parado.",
+   "data": "2026-11-03",
+   "foco": "facil",
+   "km": 8.6,
+   "min": 50,
+   "nome": "03/11 · Progressivo 10/10/10 · 8.6 km total",
+   "nota": "Total porta a porta 8.6 km. Alongamentos e educativos ANTES do start, relogio parado.",
    "passos": [
     {
      "fim": "time",
-     "lento": 2.2422,
-     "rapido": 2.4038,
-     "texto": "10 min subindo devagar, 6:56–7:26/km. Se chegar ofegante ao fim, foi rapido demais.",
+     "lento": 2.3041,
+     "rapido": 2.4752,
+     "texto": "8 min subindo devagar, 6:44–7:14/km. Se chegar ofegante ao fim, foi rapido demais.",
      "tipo": "warmup",
-     "valor": 600
+     "valor": 480
     },
     {
      "fim": "distance",
-     "lento": 2.5907,
-     "rapido": 2.809,
-     "texto": "18.1 km em 5:56–6:26/km. Voce deve conseguir falar frases inteiras.",
+     "lento": 2.6042,
+     "rapido": 2.8249,
+     "texto": "6.7 km em 5:54–6:24/km. Voce deve conseguir falar frases inteiras.",
      "tipo": "interval",
-     "valor": 18100
+     "valor": 6700
     },
     {
      "fim": "time",
-     "texto": "6 min de trote muito leve ate a respiracao normalizar.",
+     "texto": "5 min de trote muito leve ate a respiracao normalizar.",
      "tipo": "cooldown",
-     "valor": 360
+     "valor": 300
+    }
+   ]
+  },
+  {
+   "data": "2026-11-04",
+   "foco": "facil",
+   "km": 5.4,
+   "min": 35,
+   "nome": "04/11 · Rodagem leve 35' · 5.4 km total",
+   "nota": "Total porta a porta 5.4 km. Alongamentos e educativos ANTES do start, relogio parado.",
+   "passos": [
+    {
+     "fim": "time",
+     "lento": 2.3041,
+     "rapido": 2.4752,
+     "texto": "8 min subindo devagar, 6:44–7:14/km. Se chegar ofegante ao fim, foi rapido demais.",
+     "tipo": "warmup",
+     "valor": 480
+    },
+    {
+     "fim": "distance",
+     "lento": 2.6042,
+     "rapido": 2.8249,
+     "texto": "3.5 km em 5:54–6:24/km. Voce deve conseguir falar frases inteiras.",
+     "tipo": "interval",
+     "valor": 3500
+    },
+    {
+     "fim": "time",
+     "texto": "5 min de trote muito leve ate a respiracao normalizar.",
+     "tipo": "cooldown",
+     "valor": 300
+    }
+   ]
+  },
+  {
+   "data": "2026-11-05",
+   "foco": "tiros",
+   "km": 7.7,
+   "min": 46,
+   "nome": "05/11 · Intervalado 12x 200m · 7.7 km total",
+   "nota": "Total porta a porta 7.7 km. Alongamentos e educativos ANTES do start, relogio parado.",
+   "passos": [
+    {
+     "fim": "time",
+     "lento": 2.3041,
+     "rapido": 2.4752,
+     "texto": "12 min subindo devagar, 6:44–7:14/km. Se chegar ofegante ao fim, foi rapido demais.",
+     "tipo": "warmup",
+     "valor": 720
+    },
+    {
+     "passos": [
+      {
+       "fim": "distance",
+       "lento": 3.4722,
+       "rapido": 3.6496,
+       "texto": "600 m em 4:34–4:48/km, FC ate 148-158 bpm.",
+       "tipo": "interval",
+       "valor": 600
+      },
+      {
+       "fim": "time",
+       "texto": "3 min de trote leve. Nao pare de correr.",
+       "tipo": "recovery",
+       "valor": 150
+      }
+     ],
+     "tipo": "repetir",
+     "vezes": 5
+    },
+    {
+     "fim": "time",
+     "texto": "8 min de trote muito leve ate a respiracao normalizar.",
+     "tipo": "cooldown",
+     "valor": 480
+    }
+   ]
+  },
+  {
+   "data": "2026-11-07",
+   "foco": "facil",
+   "km": 12.7,
+   "min": 75,
+   "nome": "07/11 · Rodagem Z2 · 12.7 km total",
+   "nota": "Total porta a porta 12.7 km. Alongamentos e educativos ANTES do start, relogio parado.",
+   "passos": [
+    {
+     "fim": "time",
+     "lento": 2.3041,
+     "rapido": 2.4752,
+     "texto": "8 min subindo devagar, 6:44–7:14/km. Se chegar ofegante ao fim, foi rapido demais.",
+     "tipo": "warmup",
+     "valor": 480
+    },
+    {
+     "fim": "distance",
+     "lento": 2.6042,
+     "rapido": 2.8249,
+     "texto": "10.8 km em 5:54–6:24/km. Voce deve conseguir falar frases inteiras.",
+     "tipo": "interval",
+     "valor": 10800
+    },
+    {
+     "fim": "time",
+     "texto": "5 min de trote muito leve ate a respiracao normalizar.",
+     "tipo": "cooldown",
+     "valor": 300
     }
    ]
   }
  ],
- "versao": "06y",
+ "versao": "07s",
  "zonas": {
   "faci": {
    "fc": "111–124",
    "n": "Rodagem fácil",
-   "pace": "6:06–6:36"
+   "pace": "5:54–6:24"
   },
   "lim": {
    "fc": "140–148",
    "n": "Limiar",
-   "pace": "5:13–5:33"
+   "pace": "5:01–5:21"
   },
   "long": {
    "fc": "114–130",
    "n": "Longo",
-   "pace": "5:56–6:26"
+   "pace": "5:44–6:14"
   },
   "mp": {
    "fc": "130–140",
    "n": "Ritmo de maratona",
-   "pace": "5:38–5:50"
+   "pace": "5:21–5:33"
   },
   "rec": {
    "fc": "98–111",
    "n": "Recuperação",
-   "pace": "6:56–7:26"
+   "pace": "6:44–7:14"
   },
   "vo2": {
    "fc": "148–158",
    "n": "VO₂ máx",
-   "pace": "4:49–5:03"
+   "pace": "4:34–4:48"
   }
  }
 }
