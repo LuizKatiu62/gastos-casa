@@ -1,5 +1,14 @@
 {
  "_leiame": "Treinos de forca que o sync-hevy-garmin.py pos no Garmin, por data. So o que esta aqui (e tem a marca [forca:data] na descricao) pode ser alterado ou removido pelo robo. Treino do coach nunca.",
- "atualizadoEm": "2026-11-02T23:19:45Z",
- "dias": {}
+ "atualizadoEm": "2026-11-02T23:30:50Z",
+ "dias": {
+  "2026-11-02": {
+   "enviadoEm": "2026-11-02T23:30:50Z",
+   "generico": false,
+   "impressao": "56da710b68bba230",
+   "nome": "Força 02/11 · Parte superior",
+   "sched": 1829392580,
+   "workoutId": 1750395722
+  }
+ }
 }
