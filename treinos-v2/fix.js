@@ -74,7 +74,7 @@
       Saint John no lugar da Fit4Less
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '07t';
+const FIX_VERSAO = '07u';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -19650,4 +19650,96 @@ PARTE('academia do dia vai para o relogio', function(){
   document.addEventListener('visibilitychange', function(){ if(!document.hidden) setTimeout(publicar, 3000) });
 
   window.bqForcaGarmin = { montar: montar, publicar: publicar };
+});
+
+
+/* ══ A ACADEMIA ENTRA EM "TODAS AS MINHAS ATIVIDADES" (fix 07u, 02/11/2026) ══
+   Pedido do Luiz: o bloco do marco (desde a cirurgia) mostrava corrida,
+   bike e natacao, e a forca so como "mais N de forca" — contando apenas
+   o que o relogio gravou. Agora ganha uma linha de academia com o PESO
+   TOTAL levantado desde o marco, em libras.
+
+   Mesma fonte da caixa GYM (uma conta so, para as duas nunca
+   discordarem): cada treino do Hevy (carga x repeticoes de todas as
+   series), os dias "feito em casa" e a sessao de forca do relogio em dia
+   sem nenhum dos dois. Um treino por dia. As sessoes e as horas do
+   rodape passam a contar a academia inteira, nao so o relogio. */
+PARTE('academia em todas as minhas atividades', function(){
+  if(typeof renderMarco !== 'function') throw new Error('app sem renderMarco');
+  var KG_LB = 2.20462262185;
+
+  function sessoesDesde(inicio){
+    var out = [], tem = {};
+    try{
+      ((window.bqGym && window.bqGym.sessoes) ? window.bqGym.sessoes() : []).forEach(function(s){
+        if(!s || !s.data || s.data < inicio) return;
+        tem[s.data] = 1; out.push(s);
+      });
+    }catch(e){}
+    (ST.runs || []).forEach(function(r){
+      if(!r || r.mod !== 'forca') return;
+      var k = iso(addD(HOJE, -r.d));
+      if(k < inicio) return;
+      var min = (typeof duracaoDe === 'function' ? duracaoDe(r) : 0) / 60;
+      if(tem[k]){
+        out.forEach(function(s){ if(s.data === k && !s.min && min) s.min = Math.round(min) });
+        return;
+      }
+      tem[k] = 1;
+      out.push({data: k, fonte: 'relogio', min: Math.round(min) || 0, kg: 0});
+    });
+    return out;
+  }
+
+  function milhar(n){ return Math.round(n).toLocaleString('pt-BR') }
+
+  var original = renderMarco;
+  renderMarco = window.renderMarco = function(){
+    var r = original.apply(this, arguments);
+    try{
+      var el = q('#tMarco');
+      if(!el || !PERFIL.marcoData || el.style.display === 'none') return r;
+      var inicio = PERFIL.marcoData;
+      var gym = sessoesDesde(inicio);
+      if(!gym.length) return r;
+      var lb = gym.reduce(function(a, s){ return a + (+s.kg || 0) }, 0) * KG_LB;
+      var minGym = gym.reduce(function(a, s){ return a + (+s.min || 0) }, 0);
+      var comCarga = gym.filter(function(s){ return +s.kg > 0 }).length;
+
+      /* as outras modalidades, pela mesma conta do renderMarco */
+      var ini = dt(inicio), sess = 0, seg = 0;
+      (ST.runs || []).forEach(function(x){
+        if(!x || x.walk || ['corrida', 'bike', 'natacao'].indexOf(x.mod) < 0) return;
+        if(addD(HOJE, -x.d) < ini) return;
+        sess++; seg += duracaoDe(x);
+      });
+
+      var linha = document.createElement('div');
+      linha.className = 'mg';
+      linha.style.marginTop = '8px';
+      linha.innerHTML = '<div class="mi" style="display:flex;align-items:center;justify-content:space-between;gap:10px">'
+        + '<div class="ml" style="margin:0"><i style="background:' + MOD.forca.c + '"></i>Academia · ' + gym.length + '</div>'
+        + '<div style="text-align:right"><div class="mv mono">' + milhar(lb) + '<small>lb</small></div>'
+        + '<div style="font-size:9.5px;color:var(--tx3);margin-top:2px">peso total levantado'
+        + (comCarga < gym.length ? ' · ' + comCarga + ' com carga no Hevy' : '') + '</div></div></div>';
+      var mg = el.querySelector('.mg');
+      if(mg) mg.parentNode.insertBefore(linha, mg.nextSibling);
+
+      var tot = el.querySelector('.mtot');
+      if(tot){
+        tot.innerHTML = '<span>' + sess + ' sessões · mais ' + gym.length + ' de academia</span>'
+          + '<b>' + ((seg / 3600) + minGym / 60).toFixed(0) + ' h de treino</b>';
+      }
+    }catch(e){ console.warn('marco/academia:', e && e.message) }
+    return r;
+  };
+
+  /* o Hevy chega depois da primeira pintura: repinta quando ele estiver pronto */
+  var tent = 0, t = setInterval(function(){
+    tent++;
+    if((window.bqGym && window.bqGym.pronto && window.bqGym.pronto()) || tent > 30){
+      clearInterval(t);
+      try{ renderMarco() }catch(e){}
+    }
+  }, 1000);
 });
