@@ -1,0 +1,111 @@
+{
+ "_leiame": "Rotinas do Hevy enviadas ao Garmin pelo sync-hevy-garmin.py. So os treinos listados aqui (e com a marca [hevy:id] na descricao) podem ser alterados pelo robo. Nada e apagado.",
+ "atualizadoEm": "2026-11-02T23:13:09Z",
+ "treinos": {
+  "00f34df8-ddb7-4f74-bd0e-69670370558f": {
+   "enviadoEm": "2026-11-02T23:13:08Z",
+   "generico": false,
+   "impressao": "acac91fe3af389bc",
+   "titulo": "Forca - Parte superior (leve) · YMCA",
+   "workoutId": 1750379845
+  },
+  "23d73c71-ada8-4dd4-8e9a-a14754d0e2a7": {
+   "enviadoEm": "2026-11-02T23:13:08Z",
+   "generico": false,
+   "impressao": "e6671b2cbf620f26",
+   "titulo": "Forca - Maxima (pico) · YMCA",
+   "workoutId": 1750379856
+  },
+  "2493c076-e6a4-48ca-8b13-fe7e4aa51f90": {
+   "enviadoEm": "2026-11-02T23:13:09Z",
+   "generico": false,
+   "impressao": "b76ef030a5b54072",
+   "titulo": "Forca - Manutencao",
+   "workoutId": 1750379905
+  },
+  "29d4a43e-58b1-4f32-8940-b4e3f10eca18": {
+   "enviadoEm": "2026-11-02T23:13:09Z",
+   "generico": false,
+   "impressao": "437df69552238ef3",
+   "titulo": "Forca - Quadril e Core (pico)",
+   "workoutId": 1750379899
+  },
+  "368ecdf4-1f64-4b85-bf6f-8f2df7af38b0": {
+   "enviadoEm": "2026-11-02T23:13:09Z",
+   "generico": false,
+   "impressao": "0a56806cf153a837",
+   "titulo": "Dumbbell Arms Workout",
+   "workoutId": 1750379918
+  },
+  "570ef5e9-77de-4b2d-bbc1-1f1609a8bd62": {
+   "enviadoEm": "2026-11-02T23:13:09Z",
+   "generico": false,
+   "impressao": "b8f9c3bc02bbe082",
+   "titulo": "Força- Costas e Postura",
+   "workoutId": 1750379908
+  },
+  "5d5598b4-f75f-4c30-8992-cbb931325cc8": {
+   "enviadoEm": "2026-11-02T23:13:09Z",
+   "generico": false,
+   "impressao": "7ceddb51795a8f40",
+   "titulo": "Forca - Maxima (pico)",
+   "workoutId": 1750379886
+  },
+  "6a0bd26e-50b4-4dbf-8fc9-5185a0f6552c": {
+   "enviadoEm": "2026-11-02T23:13:08Z",
+   "generico": false,
+   "impressao": "d9158168c78fb55d",
+   "titulo": "FORCA - QUADRIL E CORE (BASE) · YMCA",
+   "workoutId": 1750379835
+  },
+  "6dc0cde9-3e56-4172-aa62-6bb239c374e4": {
+   "enviadoEm": "2026-11-02T23:13:09Z",
+   "generico": false,
+   "impressao": "34f3932c23454f53",
+   "titulo": "Forca - Pernas e Core (base) · YMCA",
+   "workoutId": 1750379861
+  },
+  "a3327785-3de2-4d2f-b799-793ca8488986": {
+   "enviadoEm": "2026-11-02T23:13:08Z",
+   "generico": false,
+   "impressao": "e8dbe40f52fdb13a",
+   "titulo": "Forca - Parte superior · YMCA",
+   "workoutId": 1750379848
+  },
+  "a35017c0-f866-4869-ac42-64f316d3154f": {
+   "enviadoEm": "2026-11-02T23:13:08Z",
+   "generico": false,
+   "impressao": "f91e8712f669ef35",
+   "titulo": "Forca - Manutencao · YMCA",
+   "workoutId": 1750379851
+  },
+  "c13ddfa6-b46a-4359-8476-690baa570ed7": {
+   "enviadoEm": "2026-11-02T23:13:09Z",
+   "generico": false,
+   "impressao": "09eddc7c41b02fbf",
+   "titulo": "Forca - Pernas e Core (base)",
+   "workoutId": 1750379872
+  },
+  "c758d9df-f012-489b-9404-61d36f663f5b": {
+   "enviadoEm": "2026-11-02T23:13:09Z",
+   "generico": false,
+   "impressao": "400da2dc22c18bb1",
+   "titulo": "Knees exercise 1-2 weeks",
+   "workoutId": 1750379865
+  },
+  "f1aeec48-adc0-41ce-9f96-6abb0b783e60": {
+   "enviadoEm": "2026-11-02T23:13:08Z",
+   "generico": false,
+   "impressao": "1bcda30dd7ba9644",
+   "titulo": "Forca - Quadril e Core (pico) · YMCA",
+   "workoutId": 1750379854
+  },
+  "f32d2a63-ffec-41af-aa24-ce951545cde4": {
+   "enviadoEm": "2026-11-02T23:13:08Z",
+   "generico": false,
+   "impressao": "0b2091d97258c56c",
+   "titulo": "FORCA - QUADRIL E CORE (BASE)",
+   "workoutId": 1750379839
+  }
+ }
+}
