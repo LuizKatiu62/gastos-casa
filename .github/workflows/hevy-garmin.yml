@@ -1,0 +1,72 @@
+name: Hevy para Garmin
+
+# Cada rotina de forca do Hevy vira um treino de forca na biblioteca do
+# Garmin Connect (exercicio, series, reps, carga em libras, descanso),
+# pronto para mandar para o relogio. Ver sync-hevy-garmin.py.
+#
+# Seguranca: nunca apaga nada, nunca mexe no calendario do coach, e so
+# altera treino do Garmin que tenha a marca [hevy:id] deste robo.
+# Sem novidade no Hevy, nem faz login no Garmin.
+
+on:
+  schedule:
+    - cron: '45 * * * *'   # toda hora, depois do hevy-pull (:20)
+  workflow_dispatch:
+    inputs:
+      modo:
+        description: 'ensaio = so mostra como fica · enviar = cria/atualiza no Garmin'
+        required: true
+        default: enviar
+        type: choice
+        options:
+          - enviar
+          - ensaio
+      filtro:
+        description: 'Opcional: so rotinas cujo nome contenha isto (ex.: YMCA)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: hevy-garmin
+  cancel-in-progress: false
+
+jobs:
+  enviar:
+    runs-on: ubuntu-latest
+    if: github.repository == 'LuizKatiu62/gastos-casa'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependências
+        run: pip install garminconnect
+
+      - name: Rotinas do Hevy → treinos de força no Garmin
+        run: python sync-hevy-garmin.py
+        env:
+          HEVY_API_KEY:    ${{ secrets.HEVY_API_KEY }}
+          GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
+          MODO:   ${{ github.event_name == 'workflow_dispatch' && inputs.modo || 'enviar' }}
+          FILTRO: ${{ inputs.filtro }}
+
+      - name: Guardar o registro do que foi enviado
+        if: always()
+        run: |
+          if [ -n "$(git status --porcelain treinos-v2/garmin-forca.json)" ]; then
+            git config user.name  "hevy-garmin"
+            git config user.email "hevy-garmin@users.noreply.github.com"
+            git add treinos-v2/garmin-forca.json
+            git commit -m "forca no Garmin: $(date -u +%Y-%m-%d\ %H:%M) UTC"
+            for i in 1 2 3; do
+              git pull --rebase -q && git push && break
+              sleep 5
+            done
+          else
+            echo "registro sem mudanca"
+          fi
