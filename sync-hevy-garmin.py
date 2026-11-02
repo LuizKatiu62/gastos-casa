@@ -270,6 +270,9 @@ def renumerar(passos, c=None):
 def nome_do_treino(data, dia):
     d = f"{data[8:10]}/{data[5:7]}"
     nome = re.sub(r"^\s*for[cç]a\s*[-–]\s*", "", dia.get("nome") or "Academia", flags=re.I)
+    local = "Casa" if dia.get("local") == "casa" else "YMCA"
+    if not re.search(r"\b(ymca|casa)\b", nome, re.I):
+        nome += " · " + local
     return f"Força {d} · {nome}"[:80]
 
 def montar(data, dia, cargas):
