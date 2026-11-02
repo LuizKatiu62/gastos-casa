@@ -1,50 +1,52 @@
 #!/usr/bin/env python3
 """
-Hevy -> Garmin: cada rotina de forca do Hevy vira um treino de forca
-(strength training) na biblioteca de treinos do Garmin Connect, com
-exercicio, series, repeticoes, carga em libras e descanso, pronto para
-mandar para o relogio e executar passo a passo.
+Academia do dia -> Garmin.
 
-REGRAS DE SEGURANCA (a mesma regra do Luiz para o Garmin:
-"jamais apagar o que o meu coach humano colocou no garmin, jamais"):
+O app (treinos-v2) decide o dia e o tipo da academia — e ele quem evita
+perna antes do longao e dos treinos de qualidade. Quando o Luiz ativa um
+dia ("Vou a academia"), o app grava a lista final daquele dia (YMCA ou
+Casa, com as trocas) em treinos_coach_v2/luiz/garmin_forca. Este robo le
+esse no e poe NAQUELA DATA do calendario do Garmin um treino de forca
+(exercicio, series, reps, carga em libras, descanso), pronto para o
+relogio executar passo a passo.
 
-  · NUNCA mexe no calendario. Nao agenda, nao desagenda.
-  · NUNCA apaga nada. Nenhum DELETE neste arquivo.
-  · So ALTERA um treino do Garmin se ele tiver a marca deste robo na
-    descricao ("[hevy:<id da rotina>]"). Treino sem a marca — do coach,
-    do Luiz, de qualquer um — nunca e tocado.
-  · Rotina que nao mudou desde o ultimo envio nao e reenviada: o robo
-    nem faz login no Garmin quando nao ha novidade.
+REGRAS DE SEGURANCA ("jamais apagar o que o meu coach humano colocou no
+garmin, jamais"):
+  · so altera, desagenda ou apaga treino com a marca deste robo na
+    descricao ("[forca:AAAA-MM-DD]" ou a antiga "[hevy:id]") E que esteja
+    no registro treinos-v2/garmin-forca.json. Treino do coach nunca.
+  · antes de qualquer alteracao, o treino e relido do Garmin e a marca
+    conferida.
+  · dia que ja passou nao e mexido: fica no Garmin como historico.
+  · sem novidade, nem faz login no Garmin.
 
-Modos (variavel MODO):
-  ensaio  -> le o Hevy e mostra como cada rotina vai ficar no Garmin.
-             Nao faz login no Garmin, nao cria nada.
-  enviar  -> cria as novas e atualiza as que mudaram.
-
-Quais rotinas vao: todas, menos as da Fit4Less (academia antiga).
-Para mudar, ponha uma expressao regular em FILTRO (ex.: "YMCA").
+Modos (MODO): ensaio = so mostra · enviar = aplica (padrao no agendamento)
 """
 
 import hashlib, json, os, re, sys, time
 import urllib.request as urlreq
 import urllib.error
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 GARMIN_EMAIL = "lcdsilva@hotmail.com"
-HEVY_BASE    = "https://api.hevyapp.com/v1"
+FIREBASE_DB  = "https://gastos-casa-7f431-default-rtdb.firebaseio.com"
+FIREBASE_KEY = "AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU"
+NO_PACOTE    = "treinos_coach_v2/luiz/garmin_forca"
+FUSO         = ZoneInfo("America/Moncton")
 AQUI         = os.path.dirname(os.path.abspath(__file__))
 REGISTRO     = os.path.join(AQUI, "treinos-v2", "garmin-forca.json")
+HEVY_JSON    = os.path.join(AQUI, "treinos-v2", "hevy.json")
 RESUMO       = os.environ.get("GITHUB_STEP_SUMMARY", "")
 
-MODO     = "enviar" if os.environ.get("MODO", "ensaio").strip().lower() == "enviar" else "ensaio"
-FILTRO   = os.environ.get("FILTRO", "").strip()
-EXCLUIR  = os.environ.get("EXCLUIR", r"fit\s*4\s*less").strip()
-UNIDADE  = "kg" if os.environ.get("UNIDADE", "lb").strip().lower() == "kg" else "lb"
+MODO    = "enviar" if os.environ.get("MODO", "ensaio").strip().lower() == "enviar" else "ensaio"
+UNIDADE = "kg" if os.environ.get("UNIDADE", "lb").strip().lower() == "kg" else "lb"
 
 FORCA = {"sportTypeId": 5, "sportTypeKey": "strength_training"}
 LIBRA = {"unitId": 9, "unitKey": "pound", "factor": 453.59237}
 QUILO = {"unitId": 8, "unitKey": "kilogram", "factor": 1000.0}
 KG_LB = 2.20462262185
+DESCANSO_PADRAO = 90
 
 # ──────────────────────────────────────────────────────────────────────
 #  Exercicio do Hevy -> exercicio do Garmin (categoria, nome).
@@ -134,68 +136,75 @@ def parar(msg):
     gravar_resumo()
     sys.exit(1)
 
-def marca(rid):
-    return f"[hevy:{rid}]"
+def agora_utc():
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+def marca(data):
+    return f"[forca:{data}]"
+
+def tem_nossa_marca(w):
+    return bool(re.search(r"\[(forca|hevy):[^\]]+\]", (w or {}).get("description") or ""))
 
 
-# ── Hevy (so leitura) ─────────────────────────────────────────────────
-def hevy_get(caminho, chave):
-    req = urlreq.Request(HEVY_BASE + caminho, headers={"api-key": chave, "accept": "application/json"})
-    for tentativa in range(3):
-        try:
-            with urlreq.urlopen(req, timeout=30) as r:
-                return json.loads(r.read().decode() or "{}")
-        except urllib.error.HTTPError as e:
-            if e.code == 401:
-                parar("Chave recusada pelo Hevy (401). Confira o secret HEVY_API_KEY.")
-            if e.code == 404:
-                return {}
-            if e.code in (429, 500, 502, 503) and tentativa < 2:
-                time.sleep(3 * (tentativa + 1)); continue
-            parar(f"Hevy GET {caminho} devolveu {e.code}")
-        except Exception as e:
-            if tentativa < 2:
-                time.sleep(3); continue
-            parar(f"Hevy GET {caminho} falhou: {e}")
+# ── Firebase (so leitura) ─────────────────────────────────────────────
+def firebase_token():
+    email = os.environ.get("FIREBASE_EMAIL", "").strip()
+    senha = os.environ.get("FIREBASE_PASSWORD", "")
+    if not email or not senha:
+        parar("Faltam os secrets FIREBASE_EMAIL / FIREBASE_PASSWORD.")
+    url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={FIREBASE_KEY}"
+    body = json.dumps({"email": email, "password": senha, "returnSecureToken": True}).encode()
+    req = urlreq.Request(url, data=body, headers={"Content-Type": "application/json"})
+    try:
+        with urlreq.urlopen(req, timeout=15) as r:
+            return json.loads(r.read()).get("idToken", "")
+    except Exception as e:
+        parar(f"Login no Firebase falhou: {e}")
 
-def rotinas_do_hevy(chave):
-    out = []
-    for p in range(1, 41):
-        j = hevy_get(f"/routines?page={p}&pageSize=10", chave)
-        lote = j.get("routines") or []
-        out.extend(lote)
-        if len(lote) < 10 or (j.get("page_count") and p >= j["page_count"]):
-            break
-    return out
+def firebase_get(path, token):
+    try:
+        with urlreq.urlopen(f"{FIREBASE_DB}/{path}.json?auth={token}", timeout=20) as r:
+            return json.loads(r.read().decode() or "null")
+    except Exception as e:
+        parar(f"Leitura do Firebase falhou em {path}: {e}")
 
 
-# ── traducao Hevy -> Garmin ───────────────────────────────────────────
+# ── traducao app -> Garmin ────────────────────────────────────────────
+def cargas_do_hevy():
+    try:
+        with open(HEVY_JSON, encoding="utf-8") as f:
+            return json.load(f).get("cargas") or {}
+    except Exception:
+        return {}
+
 def peso(kg):
-    if not kg:
+    if not kg or kg <= 0:
         return None
     if UNIDADE == "lb":
         return round(kg * KG_LB * 2) / 2, LIBRA      # meia libra: 20 lb continua 20
     return round(kg * 4) / 4, QUILO
 
-def fim_da_serie(s):
-    """(conditionTypeId, key, valor, texto) da serie do Hevy."""
-    reps = s.get("reps")
-    faixa = s.get("rep_range") or {}
-    if not reps and faixa.get("start"):
-        reps = faixa.get("start")
-    if reps:
-        return 10, "reps", int(reps), f"{int(reps)} reps"
-    if s.get("duration_seconds"):
-        v = int(s["duration_seconds"]);  return 2, "time", v, f"{v} s"
-    if s.get("distance_meters"):
-        v = int(s["distance_meters"]);   return 3, "distance", v, f"{v} m"
-    return 1, "lap.button", None, "aperte a volta"
+def ler_series(txt):
+    """'4×6' · '3×8 cada' · '3×6-8' · '3×40s' · '3×30 m' · '3 séries'.
+    Devolve (quantas, condicao, chave, valor) — valor None = botao de volta."""
+    t = str(txt or "")
+    m = re.search(r"(\d+)\s*[x×]\s*(\d+)(?:\s*[-–a]\s*\d+)?\s*(min|seg|s|m)?\b", t, re.I)
+    if m:
+        n, v, un = int(m.group(1)), int(m.group(2)), (m.group(3) or "").lower()
+        n = max(1, min(n, 10))
+        if un == "min":
+            return n, 2, "time", v * 60
+        if un in ("s", "seg"):
+            return n, 2, "time", v
+        if un == "m":
+            return n, 3, "distance", v
+        return n, 10, "reps", v
+    m = re.search(r"(\d+)\s*s[ée]ries?", t, re.I)
+    n = max(1, min(int(m.group(1)), 10)) if m else 1
+    return n, 1, "lap.button", None
 
-def assinatura(s):
-    """Duas series iguais viram um bloco 'repita N vezes'."""
-    return (s.get("type") or "normal", s.get("weight_kg"), s.get("reps"),
-            json.dumps(s.get("rep_range"), sort_keys=True), s.get("duration_seconds"),
-            s.get("distance_meters"))
+def descanso_de(nota):
+    return 150 if re.search(r"2 (a 3 )?min", nota or "") else DESCANSO_PADRAO
 
 class Montador:
     def __init__(self):
@@ -206,88 +215,84 @@ class Montador:
         self.ordem += 1
         return self.ordem
 
-    def serie(self, ex, s, nota):
-        nome = ex.get("title") or ""
-        cid, ckey, valor, _ = fim_da_serie(s)
-        tipo = (3, "interval")
-        if (s.get("type") or "") == "warmup" or nome.strip().lower() in AQUECIMENTO:
-            tipo = (1, "warmup")
-        passo = {
-            "type": "ExecutableStepDTO",
-            "stepOrder": self._n(),
-            "stepType": {"stepTypeId": tipo[0], "stepTypeKey": tipo[1]},
-            "endCondition": {"conditionTypeId": cid, "conditionTypeKey": ckey},
-            "description": (nome + (" · " + nota if nota else ""))[:250],
-        }
+    def passo(self, tipo, cond, chave, valor, desc):
+        p = {"type": "ExecutableStepDTO", "stepOrder": self._n(),
+             "stepType": {"stepTypeId": tipo[0], "stepTypeKey": tipo[1]},
+             "endCondition": {"conditionTypeId": cond, "conditionTypeKey": chave},
+             "description": (desc or "")[:250]}
         if valor is not None:
-            passo["endConditionValue"] = valor
-        if ckey == "distance":
-            passo["preferredEndConditionUnit"] = {"unitId": 1, "unitKey": "meter", "factor": 100.0}
-        par = MAPA.get(nome)
-        if par:
-            passo["category"], passo["exerciseName"] = par
-        elif nome.strip().lower() not in AQUECIMENTO:
-            self.sem_mapa.add(nome)
-        p = peso(s.get("weight_kg"))
-        if p:
-            passo["weightValue"], passo["weightUnit"] = p[0], p[1]
-        return passo
+            p["endConditionValue"] = valor
+        if chave == "distance":
+            p["preferredEndConditionUnit"] = {"unitId": 1, "unitKey": "meter", "factor": 100.0}
+        return p
 
     def descanso(self, seg):
-        d = {"type": "ExecutableStepDTO", "stepOrder": self._n(),
-             "stepType": {"stepTypeId": 5, "stepTypeKey": "rest"}}
-        if seg and int(seg) > 0:
-            d["endCondition"] = {"conditionTypeId": 2, "conditionTypeKey": "time"}
-            d["endConditionValue"] = int(seg)
+        return self.passo((5, "rest"), 2, "time", int(seg), "")
+
+    def exercicio(self, it, cargas):
+        nome = it.get("nome") or ""
+        nota = (it.get("nota") or "").strip()
+        n, cond, chave, valor = ler_series(it.get("series"))
+        if re.search(r"\bcada\b", it.get("series") or "", re.I) and "cada" not in nota.lower():
+            nota = ("Cada lado. " + nota).strip()
+        serie = self.passo((3, "interval"), cond, chave, valor,
+                           nome + (" · " + nota if nota else ""))
+        par = MAPA.get(nome)
+        if par:
+            serie["category"], serie["exerciseName"] = par
         else:
-            d["endCondition"] = {"conditionTypeId": 1, "conditionTypeKey": "lap.button"}
-        return d
+            self.sem_mapa.add(nome)
+        kg = float(it.get("peso") or 0) or float((cargas.get(nome) or {}).get("atual") or 0)
+        pw = peso(kg)
+        if pw:
+            serie["weightValue"], serie["weightUnit"] = pw
+        rest = self.descanso(descanso_de(nota))
+        if n == 1:
+            return [serie, rest], (n, valor, chave, pw)
+        grupo = {"type": "RepeatGroupDTO", "stepOrder": None,
+                 "stepType": {"stepTypeId": 6, "stepTypeKey": "repeat"},
+                 "numberOfIterations": n, "smartRepeat": False,
+                 "endCondition": {"conditionTypeId": 7, "conditionTypeKey": "iterations"},
+                 "endConditionValue": n, "skipLastRestStep": False,
+                 "workoutSteps": [serie, rest]}
+        return [grupo], (n, valor, chave, pw)
 
-    def exercicio(self, ex):
-        """Uma lista de passos para um exercicio: blocos 'repita N' para
-        series iguais seguidas, cada serie seguida do descanso."""
-        nota = (ex.get("notes") or "").strip()
-        rest = ex.get("rest_seconds")
-        sets = ex.get("sets") or [{"type": "normal"}]
-        grupos = []
-        for s in sets:
-            if grupos and assinatura(grupos[-1][0]) == assinatura(s):
-                grupos[-1][1] += 1
-            else:
-                grupos.append([s, 1])
-        passos = []
-        for s, n in grupos:
-            if n == 1:
-                passos.append(self.serie(ex, s, nota))
-                passos.append(self.descanso(rest))
-            else:
-                grupo = {"type": "RepeatGroupDTO", "stepOrder": self._n(),
-                         "stepType": {"stepTypeId": 6, "stepTypeKey": "repeat"},
-                         "numberOfIterations": n, "smartRepeat": False,
-                         "endCondition": {"conditionTypeId": 7, "conditionTypeKey": "iterations"},
-                         "endConditionValue": n, "skipLastRestStep": False}
-                grupo["workoutSteps"] = [self.serie(ex, s, nota), self.descanso(rest)]
-                passos.append(grupo)
-        return passos
+def renumerar(passos, c=None):
+    """O Garmin numera os passos em sequencia, contando os de dentro
+    dos blocos de repeticao."""
+    c = c if c is not None else [0]
+    for p in passos:
+        c[0] += 1
+        p["stepOrder"] = c[0]
+        if p.get("workoutSteps"):
+            renumerar(p["workoutSteps"], c)
 
-def montar(rotina):
+def nome_do_treino(data, dia):
+    d = f"{data[8:10]}/{data[5:7]}"
+    nome = re.sub(r"^\s*for[cç]a\s*[-–]\s*", "", dia.get("nome") or "Academia", flags=re.I)
+    return f"Força {d} · {nome}"[:80]
+
+def montar(data, dia, cargas):
     m = Montador()
-    passos = []
-    for ex in sorted(rotina.get("exercises") or [], key=lambda e: e.get("index", 0)):
-        passos.extend(m.exercicio(ex))
-    nota = re.sub(r"\s+", " ", (rotina.get("notes") or "")).strip()
-    desc = (marca(rotina["id"]) + " Do Hevy. " + nota)[:500]
+    passos, tabela = [], []
+    aq = (dia.get("aquecimento") or "").strip()
+    if aq:
+        passos.append(m.passo((1, "warmup"), 1, "lap.button", None, "Aquecimento: " + aq))
+    for it in dia.get("itens") or []:
+        ps, info = m.exercicio(it, cargas)
+        passos.extend(ps)
+        tabela.append((it, info))
+    renumerar(passos)
+    local = "Casa" if dia.get("local") == "casa" else "YMCA"
     dto = {
         "sportType": FORCA,
-        "workoutName": (rotina.get("title") or "Forca")[:80],
-        "description": desc,
+        "workoutName": nome_do_treino(data, dia),
+        "description": f"{marca(data)} {local} · criado pelo app treinos-v2 a partir do dia que você ativou."[:500],
         "workoutSegments": [{"segmentOrder": 1, "sportType": FORCA, "workoutSteps": passos}],
     }
-    return dto, m.sem_mapa
+    return dto, m.sem_mapa, tabela
 
 def sem_exercicio(dto):
-    """Copia do treino sem categoria/exercicio — reserva para quando o
-    Garmin recusar algum nome do mapa."""
     d = json.loads(json.dumps(dto))
     def limpa(passos):
         for p in passos:
@@ -300,18 +305,14 @@ def sem_exercicio(dto):
 def impressao(dto):
     return hashlib.sha1(json.dumps(dto, sort_keys=True, ensure_ascii=False).encode()).hexdigest()[:16]
 
-def linhas_do_treino(rotina, dto):
-    """Tabela legivel para o resumo do GitHub."""
-    out = ["| Exercício | Séries | Carga | Descanso | No Garmin |", "|---|---|---|---|---|"]
-    for ex in sorted(rotina.get("exercises") or [], key=lambda e: e.get("index", 0)):
-        sets = ex.get("sets") or []
-        txt = ", ".join(fim_da_serie(s)[3] for s in sets) or "—"
-        cargas = sorted({peso(s.get("weight_kg"))[0] for s in sets if peso(s.get("weight_kg"))})
-        carga = " / ".join(f"{c:g} {UNIDADE}" for c in cargas) or "—"
-        par = MAPA.get(ex.get("title") or "")
-        g = f"{par[0]} · {par[1]}" if par else "⚠️ genérico (sem animação)"
-        rest = ex.get("rest_seconds")
-        out.append(f"| {ex.get('title')} | {len(sets)}: {txt} | {carga} | {rest or '—'} s | {g} |")
+def linhas(tabela):
+    out = ["| Exercício | Séries | Carga | No Garmin |", "|---|---|---|---|"]
+    for it, (n, valor, chave, pw) in tabela:
+        alvo = {"reps": f"{valor} reps", "time": f"{valor} s", "distance": f"{valor} m"}.get(chave, "botão de volta")
+        carga = f"{pw[0]:g} {UNIDADE}" if pw else "—"
+        par = MAPA.get(it.get("nome") or "")
+        out.append(f"| {it.get('nome')} | {n} × {alvo} | {carga} | "
+                   f"{(par[0] + ' · ' + par[1]) if par else '⚠️ genérico'} |")
     return out
 
 
@@ -330,7 +331,7 @@ def chamar(g, metodo, path, payload=None):
     """Mesmo cuidado do sync-garmin-auto.py: o garth muda de assinatura
     entre versoes, entao tento as formas conhecidas e so troco de forma
     em erro de ASSINATURA (TypeError). Erro do Garmin sobe na hora."""
-    assert metodo in ("GET", "POST", "PUT"), "este robo nunca apaga nada"
+    assert metodo in ("GET", "POST", "PUT", "DELETE")
     kw = {"json": payload} if payload is not None else {}
     formas = []
     fn = getattr(g, metodo.lower(), None)
@@ -368,38 +369,40 @@ def login_garmin():
             return g
     parar("Nao achei o cliente garth dentro do garminconnect.")
 
-def nossos_no_garmin(g):
-    """{id da rotina: workoutId} dos treinos que tem a NOSSA marca."""
-    achados = {}
-    try:
-        lista = chamar(g, "GET", "/workout-service/workouts?start=0&limit=999&myWorkoutsOnly=true")
-    except Exception as e:
-        log(f"Garmin: nao consegui listar os treinos ({e}); sigo so com o registro")
-        return achados
-    for w in (lista if isinstance(lista, list) else []):
-        m = re.search(r"\[hevy:([^\]]+)\]", w.get("description") or "")
-        if m and w.get("workoutId"):
-            achados[m.group(1)] = w["workoutId"]
-    return achados
-
-def eh_nosso(g, wid, rid):
-    """Confere a marca no proprio treino antes de qualquer alteracao."""
+def ler_nosso(g, wid):
+    """O treino, so se tiver a NOSSA marca. None = nao existe / nao e nosso."""
+    if not wid:
+        return None
     try:
         w = chamar(g, "GET", f"/workout-service/workout/{wid}")
     except Exception:
         return None
-    if not w or not w.get("workoutId"):
+    if not w or not w.get("workoutId") or not tem_nossa_marca(w):
         return None
-    return w if marca(rid) in (w.get("description") or "") else False
+    return w
 
+def apagar_nosso(g, info):
+    """Desagenda e apaga — SO treino com a nossa marca, conferida agora."""
+    w = ler_nosso(g, info.get("workoutId"))
+    if info.get("sched") and (w or not info.get("workoutId")):
+        try:
+            chamar(g, "DELETE", f"/workout-service/schedule/{info['sched']}")
+        except Exception as e:
+            log(f"Garmin: nao desagendei {info['sched']}: {e}")
+    if w:
+        chamar(g, "DELETE", f"/workout-service/workout/{w['workoutId']}")
+        return True
+    return False
+
+def agendar(g, wid, data):
+    ag = chamar(g, "POST", f"/workout-service/schedule/{wid}", {"date": data})
+    return (ag or {}).get("workoutScheduleId") or (ag or {}).get("id")
 
 def salvar_registro(reg):
-    """Gravado depois de CADA envio: se o robo cair no meio, o proximo
-    nao cria duplicata do que ja subiu."""
-    reg["atualizadoEm"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    reg["_leiame"] = ("Rotinas do Hevy enviadas ao Garmin pelo sync-hevy-garmin.py. "
-                      "So os treinos listados aqui (e com a marca [hevy:id] na descricao) "
-                      "podem ser alterados pelo robo. Nada e apagado.")
+    reg["atualizadoEm"] = agora_utc()
+    reg["_leiame"] = ("Treinos de forca que o sync-hevy-garmin.py pos no Garmin, por data. "
+                      "So o que esta aqui (e tem a marca [forca:data] na descricao) pode "
+                      "ser alterado ou removido pelo robo. Treino do coach nunca.")
     os.makedirs(os.path.dirname(REGISTRO), exist_ok=True)
     with open(REGISTRO, "w", encoding="utf-8") as f:
         json.dump(reg, f, ensure_ascii=False, indent=1, sort_keys=True)
@@ -407,114 +410,130 @@ def salvar_registro(reg):
 
 # ── principal ─────────────────────────────────────────────────────────
 def main():
-    chave = os.environ.get("HEVY_API_KEY", "")
-    if not chave:
-        parar("Falta o secret HEVY_API_KEY.")
-
-    resumo(f"## Hevy → Garmin — modo {MODO.upper()} · cargas em {UNIDADE}")
+    hoje = datetime.now(FUSO).date().isoformat()
+    resumo(f"## Academia do dia → Garmin — modo {MODO.upper()} · hoje {hoje} · cargas em {UNIDADE}")
     resumo("")
 
-    todas = rotinas_do_hevy(chave)
-    escolhidas = []
-    for r in todas:
-        t = r.get("title") or ""
-        if EXCLUIR and re.search(EXCLUIR, t, re.I):
-            continue
-        if FILTRO and not re.search(FILTRO, t, re.I):
-            continue
-        if not r.get("exercises"):
-            continue
-        escolhidas.append(r)
-    log(f"Hevy: {len(todas)} rotinas, {len(escolhidas)} vao para o Garmin")
-    resumo(f"Hevy: {len(todas)} rotinas · {len(escolhidas)} escolhidas "
-           f"(fora: `{EXCLUIR or '—'}`{' · só: `' + FILTRO + '`' if FILTRO else ''})")
-    resumo("")
+    token = firebase_token()
+    pacote = firebase_get(NO_PACOTE, token) or {}
+    dias = {k: v for k, v in (pacote.get("dias") or {}).items()
+            if re.match(r"^\d{4}-\d{2}-\d{2}$", k) and k >= hoje and isinstance(v, dict)}
+    log(f"App: {len(dias)} dia(s) de academia ativado(s) de hoje em diante"
+        + (f" (pacote de {pacote.get('gerado', '?')[:16]})" if pacote else " (o app ainda nao publicou)"))
 
     try:
         with open(REGISTRO, encoding="utf-8") as f:
             reg = json.load(f)
     except Exception:
         reg = {}
-    reg.setdefault("treinos", {})
+    antigos = reg.pop("treinos", None) or {}          # 1a versao: biblioteca inteira
+    reg.setdefault("dias", {})
 
-    planos, genericos = [], set()
-    for r in escolhidas:
-        dto, sem = montar(r)
+    cargas = cargas_do_hevy()
+    planos, genericos = {}, set()
+    for data in sorted(dias):
+        dto, sem, tabela = montar(data, dias[data], cargas)
         genericos |= sem
         imp = impressao(dto)
-        antes = reg["treinos"].get(r["id"]) or {}
-        mudou = antes.get("impressao") != imp or not antes.get("workoutId")
-        planos.append((r, dto, imp, mudou))
-        resumo(f"### {r.get('title')}" + ("" if mudou else " — sem mudança"))
+        ja = reg["dias"].get(data) or {}
+        mudou = ja.get("impressao") != imp or not ja.get("workoutId")
+        planos[data] = (dto, imp, mudou)
+        resumo(f"### {dto['workoutName']}" + ("" if mudou else " — já está no Garmin, sem mudança"))
         resumo("")
-        for l in linhas_do_treino(r, dto):
-            resumo(l)
+        resumo("\n".join(linhas(tabela)))
         resumo("")
+
+    sair = [d for d in reg["dias"] if d >= hoje and d not in dias]   # desativados
+    passados = [d for d in reg["dias"] if d < hoje]
+    for d in passados:                                             # ficam no Garmin como historico
+        reg["dias"].pop(d, None)
+    for d in sair:
+        resumo(f"- 🗑️ {d}: você desativou a academia — sai do Garmin o treino deste robô")
 
     if genericos:
-        msg = "Sem par no Garmin (sobem genéricos, com o nome na descrição): " + ", ".join(sorted(genericos))
-        log("::warning::" + msg)
-        resumo("> ⚠️ " + msg)
-        resumo("")
+        msg = "Sem par no Garmin (vão genéricos, com o nome na descrição): " + ", ".join(sorted(genericos))
+        log("::warning::" + msg); resumo("> ⚠️ " + msg); resumo("")
 
-    pendentes = [p for p in planos if p[3]]
+    pendentes = [d for d, p in planos.items() if p[2]]
     if MODO == "ensaio":
-        msg = f"ENSAIO: {len(pendentes)} de {len(planos)} rotina(s) seriam criadas/atualizadas. Nada foi enviado."
+        msg = (f"ENSAIO: {len(pendentes)} dia(s) a criar/atualizar, {len(sair)} a remover, "
+               f"{len(antigos)} treino(s) antigos da biblioteca a limpar. Nada foi enviado.")
         log(msg); resumo("**" + msg + "**"); gravar_resumo()
         return
-    if not pendentes:
-        msg = "Nenhuma rotina mudou desde o último envio. Nem entrei no Garmin."
+    if not pendentes and not sair and not antigos:
+        if passados:
+            salvar_registro(reg)
+        msg = "Nada mudou no app. Nem entrei no Garmin."
         log(msg); resumo("**" + msg + "**"); gravar_resumo()
         return
 
     g = login_garmin()
-    nossos = nossos_no_garmin(g)
-    criados = atualizados = erros = 0
+    feitos = erros = 0
 
-    for r, dto, imp, _ in pendentes:
-        rid, titulo = r["id"], r.get("title")
-        wid = (reg["treinos"].get(rid) or {}).get("workoutId") or nossos.get(rid)
-        atual = eh_nosso(g, wid, rid) if wid else None
-        if atual is False:
-            # o id existe mas o treino nao tem a nossa marca: nao e nosso
-            log(f"::warning::{titulo}: o treino {wid} do Garmin nao tem a marca deste robo — nao toco nele, crio outro")
-            atual = None
+    # 1) a 1a versao tinha posto TODAS as rotinas na biblioteca; saem
+    for rid, info in list(antigos.items()):
+        try:
+            ok = apagar_nosso(g, {"workoutId": info.get("workoutId")})
+            log(f"Garmin: biblioteca antiga — {info.get('titulo')}: {'removido' if ok else 'ja nao estava'}")
+        except Exception as e:
+            log(f"::warning::nao consegui remover {info.get('titulo')}: {e}")
+            reg.setdefault("treinos", {})[rid] = info          # tenta de novo na proxima
+    if antigos:
+        resumo(f"- 🧹 limpei os {len(antigos)} treinos que a primeira versão tinha posto na biblioteca")
+        salvar_registro(reg)
+
+    # 2) dias desativados
+    for d in sair:
+        try:
+            apagar_nosso(g, reg["dias"][d])
+            reg["dias"].pop(d, None)
+            log(f"Garmin: {d} desativado — treino do robo removido")
+            salvar_registro(reg)
+        except Exception as e:
+            erros += 1
+            log(f"::error::{d}: nao consegui remover — {e}")
+
+    # 3) dias novos ou mudados
+    for data in pendentes:
+        dto, imp, _ = planos[data]
+        ja = reg["dias"].get(data) or {}
+        atual = ler_nosso(g, ja.get("workoutId"))
         aviso = ""
         for tentativa, corpo in enumerate((dto, sem_exercicio(dto))):
             try:
                 if atual:
-                    novo = dict(atual)
-                    novo.update(corpo)
-                    novo["workoutId"] = atual["workoutId"]
+                    novo = dict(atual); novo.update(corpo); novo["workoutId"] = atual["workoutId"]
                     chamar(g, "PUT", f"/workout-service/workout/{atual['workoutId']}", novo)
-                    wid_final = atual["workoutId"]
-                    atualizados += 1
-                    feito = "atualizado"
+                    wid, sched, feito = atual["workoutId"], ja.get("sched"), "atualizado"
+                    if not sched:
+                        sched = agendar(g, wid, data)
                 else:
                     resp = chamar(g, "POST", "/workout-service/workout", corpo)
-                    wid_final = (resp or {}).get("workoutId")
-                    if not wid_final:
+                    wid = (resp or {}).get("workoutId")
+                    if not wid:
                         raise RuntimeError("o Garmin respondeu sem workoutId")
-                    criados += 1
-                    feito = "criado"
-                reg["treinos"][rid] = {"workoutId": wid_final, "impressao": imp, "titulo": titulo,
-                                       "enviadoEm": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                                       "generico": tentativa == 1}
+                    sched = agendar(g, wid, data)
+                    feito = "criado e agendado"
+                reg["dias"][data] = {"workoutId": wid, "sched": sched, "impressao": imp,
+                                     "nome": dto["workoutName"], "enviadoEm": agora_utc(),
+                                     "generico": tentativa == 1}
                 salvar_registro(reg)
-                log(f"Garmin: {titulo} -> {feito} ({wid_final}){aviso}")
-                resumo(f"- ✅ **{titulo}** — {feito}{aviso}")
+                feitos += 1
+                log(f"Garmin: {dto['workoutName']} -> {feito} em {data}{aviso}")
+                resumo(f"- ✅ **{dto['workoutName']}** — {feito}{aviso}")
                 break
             except Exception as e:
-                if tentativa == 0:
-                    log(f"::warning::{titulo}: o Garmin recusou com os exercicios ({e}); tento sem eles")
+                if tentativa == 0 and not atual:
+                    log(f"::warning::{data}: o Garmin recusou com os exercicios ({e}); tento sem eles")
                     aviso = " (sem os nomes dos exercícios: o Garmin recusou algum)"
                     continue
                 erros += 1
-                log(f"::error::{titulo}: FALHOU — {e}")
-                resumo(f"- ❌ **{titulo}** — falhou: {str(e)[:200]}")
+                log(f"::error::{data}: FALHOU — {e}")
+                resumo(f"- ❌ **{dto['workoutName']}** — falhou: {str(e)[:200]}")
+                break
 
-
-    fim = f"PRONTO: {criados} criado(s), {atualizados} atualizado(s), {erros} com erro. Nada foi apagado nem agendado."
+    salvar_registro(reg)
+    fim = f"PRONTO: {feitos} dia(s) no Garmin, {len(sair)} removido(s), {erros} com erro. Treino do coach: intocado."
     log(fim); resumo(""); resumo("**" + fim + "**"); gravar_resumo()
     if erros:
         sys.exit(1)

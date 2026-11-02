@@ -1,16 +1,18 @@
-name: Hevy para Garmin
+name: Academia do dia para Garmin
 
-# Cada rotina de forca do Hevy vira um treino de forca na biblioteca do
-# Garmin Connect (exercicio, series, reps, carga em libras, descanso),
-# pronto para mandar para o relogio. Ver sync-hevy-garmin.py.
+# Quando voce ativa um dia de academia no app ("Vou a academia"), a
+# lista daquele dia (YMCA ou Casa, com as trocas) vira um treino de
+# forca no calendario do Garmin, naquela data: exercicio, series, reps,
+# carga em libras e descanso. O app e quem escolhe o dia e o tipo (nada
+# de perna antes do longao). Ver sync-hevy-garmin.py.
 #
-# Seguranca: nunca apaga nada, nunca mexe no calendario do coach, e so
-# altera treino do Garmin que tenha a marca [hevy:id] deste robo.
-# Sem novidade no Hevy, nem faz login no Garmin.
+# Seguranca: so mexe em treino com a marca [forca:data] deste robo.
+# Treino do coach humano nunca e alterado nem removido.
+# Sem novidade no app, nem faz login no Garmin.
 
 on:
   schedule:
-    - cron: '45 * * * *'   # toda hora, depois do hevy-pull (:20)
+    - cron: '*/15 * * * *'   # a cada 15 min: ativou no app, logo esta no relogio
   workflow_dispatch:
     inputs:
       modo:
@@ -21,10 +23,6 @@ on:
         options:
           - enviar
           - ensaio
-      filtro:
-        description: 'Opcional: so rotinas cujo nome contenha isto (ex.: YMCA)'
-        required: false
-        default: ''
 
 permissions:
   contents: write
@@ -47,13 +45,13 @@ jobs:
       - name: Instalar dependências
         run: pip install garminconnect
 
-      - name: Rotinas do Hevy → treinos de força no Garmin
+      - name: Academia ativada no app → treino de força no Garmin
         run: python sync-hevy-garmin.py
         env:
-          HEVY_API_KEY:    ${{ secrets.HEVY_API_KEY }}
-          GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
-          MODO:   ${{ github.event_name == 'workflow_dispatch' && inputs.modo || 'enviar' }}
-          FILTRO: ${{ inputs.filtro }}
+          GARMIN_PASSWORD:   ${{ secrets.GARMIN_PASSWORD }}
+          FIREBASE_EMAIL:    ${{ secrets.FIREBASE_EMAIL }}
+          FIREBASE_PASSWORD: ${{ secrets.FIREBASE_PASSWORD }}
+          MODO: ${{ github.event_name == 'workflow_dispatch' && inputs.modo || 'enviar' }}
 
       - name: Guardar o registro do que foi enviado
         if: always()

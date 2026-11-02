@@ -74,7 +74,7 @@
       Saint John no lugar da Fit4Less
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '07s';
+const FIX_VERSAO = '07t';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -13309,6 +13309,26 @@ PARTE('painel da academia', function(){
     }catch(e){ return null }
   };
 
+  /* A mesma lista do dia, JA com as trocas que voce fez naquele dia
+     (menu "trocar"). E o que vai para o relogio: sem as trocas, o
+     Garmin mostraria um exercicio e o app outro. */
+  window.bqAcademiaParaGarmin = function(iso){
+    try{
+      var d = new Date(iso + 'T00:00:00');
+      var n = d.getDay(); if(n === 0) n = 7;
+      var local = localDe(iso);
+      var r = rotinaDoDia(n, iso);
+      if(!r) return null;
+      r = comTrocas(r, iso, local);
+      return { nome: r.titulo || 'Academia', local: local,
+               aquecimento: r.aquecimento || '',
+               itens: (r.exercicios || []).map(function(e){
+                 return { nome: e.nome, series: e.series || '', peso: +e.peso || 0,
+                          nota: e.nota || '' };
+               }) };
+    }catch(e){ return null }
+  };
+
   /* Console: bqLocal.relatorio() lista cada exercicio das rotinas
      da academia e no que ele vira em casa. Serve para conferir as
      trocas com as SUAS rotinas, que eu nao consigo ler daqui. */
@@ -19562,4 +19582,72 @@ PARTE('energia no longão', function(){
   setTimeout(function(){ try{ montar() }catch(e){} }, 9000);
 
   window.bqLongao = { montar: montar, analisar: function(){ return analisar(longoes()[0]) }, longoes: longoes };
+});
+
+
+/* ══ A ACADEMIA DO DIA VAI PARA O RELOGIO (fix 07t, 02/11/2026) ══
+   Pedido do Luiz: os treinos de forca no Garmin, para executar no
+   relogio — mas SO o do dia que ele escolheu. Quem escolhe o dia e o
+   tipo continua sendo o app (botao "Vou a academia"), que ja evita
+   perna antes do longao e dos treinos de qualidade. Aqui nao se
+   decide nada: so se publica o que o app ja mostra.
+
+   Para cada dia ATIVADO de hoje a 7 dias, grava em
+   treinos_coach_v2/luiz/garmin_forca a lista final daquele dia
+   (YMCA ou Casa, com as trocas). O robo do GitHub (hevy-garmin.yml)
+   le esse no e monta o treino de forca no calendario do Garmin,
+   naquela data. Desativou o dia? O no some e o robo tira o treino
+   dele — e so o dele, nunca um do treinador. */
+PARTE('academia do dia vai para o relogio', function(){
+  var ULTIMO = 'bq_garmin_forca_ult';
+
+  function z(n){ return ('0' + n).slice(-2) }
+  function isoDe(d){ return d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate()) }
+
+  function montar(){
+    var p = window.bqPlanoForca;
+    if(!p || typeof p.ativadas !== 'function' || typeof window.bqAcademiaParaGarmin !== 'function') return null;
+    var ativ = p.ativadas() || {};
+    var hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+    var fim = new Date(hoje); fim.setDate(fim.getDate() + 7);
+    var ini = isoDe(hoje), ate = isoDe(fim);
+    var dias = {};
+    Object.keys(ativ).sort().forEach(function(k){
+      if(k < ini || k > ate || !ativ[k] || !ativ[k].tipo) return;
+      var a = window.bqAcademiaParaGarmin(k);
+      if(!a || !a.itens || !a.itens.length) return;
+      dias[k] = { tipo: ativ[k].tipo, nome: a.nome, local: a.local,
+                  aquecimento: a.aquecimento, itens: a.itens };
+    });
+    return dias;
+  }
+
+  var gravando = false;
+  async function publicar(){
+    if(gravando) return;
+    var dias = montar();
+    if(!dias) return;
+    var assin = JSON.stringify(dias);
+    var antes = ''; try{ antes = localStorage.getItem(ULTIMO) || '' }catch(e){}
+    if(assin === antes) return;
+    if(typeof fbToken !== 'function' || typeof FB_DB !== 'string' || typeof FB_COACH !== 'string') return;
+    gravando = true;
+    try{
+      var t = await fbToken();
+      if(!t) return;
+      var r = await fetch(FB_DB + '/' + FB_COACH + '/garmin_forca.json?auth=' + t, {
+        method: 'PUT', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ gerado: new Date().toISOString(), dias: dias }) });
+      if(r.ok){ try{ localStorage.setItem(ULTIMO, assin) }catch(e){} }
+    }catch(e){ console.warn('academia → Garmin:', e && e.message) }
+    finally{ gravando = false }
+  }
+
+  /* barato: so grava quando a lista muda (ativou, trocou exercicio,
+     mudou YMCA/Casa, virou o dia) */
+  setTimeout(publicar, 6000);
+  setInterval(publicar, 20000);
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden) setTimeout(publicar, 3000) });
+
+  window.bqForcaGarmin = { montar: montar, publicar: publicar };
 });
