@@ -17,6 +17,9 @@ CIRURGIA_DATA   = "2025-06-11"   # marco do projeto: dia da cirurgia
 DIAS_ATIVIDADES = max(365, (datetime.today() -
                             datetime.strptime(CIRURGIA_DATA, "%Y-%m-%d")).days + 30)
 DIAS_SAUDE      = 180
+# Linha do tempo do stress (leitura a cada 3 min, igual ao grafico do
+# Garmin Connect). Pesa ~1,5 KB por dia, por isso so os ultimos 28 dias.
+DIAS_STRESS_DIA = 28
 # ── TRAVA DE SEGURANCA ────────────────────────────────────────────────
 # False = o app NUNCA cria nem apaga treino no calendario do Garmin.
 # O calendario e do coach humano; aqui so lemos. Ver subir_semana_garmin.
@@ -737,6 +740,34 @@ def subir_semana_garmin(api, token, pacote):
         log(f"Garmin: nenhum subiu, {erros} com erro")
 
 
+def linha_stress(sd, d):
+    """Stress do dia em 480 casas de 3 minutos, no horario local.
+
+    Devolve {"v": "12,15,a,,x,..."}: numero = nivel 0-100, "a" = em
+    atividade (Garmin manda -2), "x" = nao medido (-1), vazio = sem
+    leitura. Virgulas finais sao cortadas para ocupar menos.
+    """
+    if not sd or not sd.get("stressValuesArray"):
+        return None
+    try:
+        fmt = lambda t: datetime.strptime(t[:19], "%Y-%m-%dT%H:%M:%S")
+        desvio = fmt(sd["startTimestampLocal"]) - fmt(sd["startTimestampGMT"])
+    except Exception:
+        return None
+    casas = [""] * 480
+    for par in sd["stressValuesArray"]:
+        if not par or len(par) < 2 or par[0] is None or par[1] is None:
+            continue
+        local = datetime.utcfromtimestamp(par[0] / 1000) + desvio
+        if local.strftime("%Y-%m-%d") != d:
+            continue
+        k = (local.hour * 60 + local.minute) // 3
+        v = int(par[1])
+        casas[k] = "a" if v == -2 else "x" if v < 0 else str(min(100, v))
+    txt = ",".join(casas).rstrip(",")
+    return {"v": txt} if txt.strip(",x") else None
+
+
 def safe_get(api, fn, *args, delay=0.4):
     try:
         result = fn(*args)
@@ -1170,6 +1201,7 @@ def main():
     log(f"Buscando dados de saúde ({dias_saude} dias)...")
     bodyBattery = {}
     stress      = {}
+    stressDia   = {}
     sono        = {}
     hrv         = {}
 
@@ -1187,6 +1219,23 @@ def main():
             max_s = st.get("maxStressLevel") or 0
             if avg_s is not None and avg_s >= 0:
                 stress[d] = {"avg": int(avg_s), "max": int(max_s)}
+                # tempo em cada nivel, em minutos — os quatro numeros do
+                # topo da tela de Stress do Garmin Connect
+                for campo, chave in (("rest", "restStressDuration"),
+                                     ("low", "lowStressDuration"),
+                                     ("med", "mediumStressDuration"),
+                                     ("high", "highStressDuration"),
+                                     ("act", "activityStressDuration")):
+                    seg = st.get(chave)
+                    if isinstance(seg, (int, float)) and seg >= 0:
+                        stress[d][campo] = int(round(seg / 60))
+
+        # Stress ao longo do dia (so os ultimos DIAS_STRESS_DIA dias)
+        if i < DIAS_STRESS_DIA:
+            sd = safe_get(api, api.get_stress_data, d, delay=0.5)
+            linha = linha_stress(sd, d)
+            if linha:
+                stressDia[d] = linha
 
         # Sono
         sl = safe_get(api, api.get_sleep_data, d, delay=0.5)
@@ -1237,6 +1286,7 @@ def main():
             "bodyBattery": bodyBattery,
             "sono":        sono,
             "stress":      stress,
+            "stressDia":   stressDia,
             "hrv":         hrv,
             "agendados":   agendados,
         }
