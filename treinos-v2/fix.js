@@ -74,7 +74,7 @@
       Saint John no lugar da Fit4Less
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '07u';
+const FIX_VERSAO = '07v';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -19742,4 +19742,426 @@ PARTE('academia em todas as minhas atividades', function(){
       try{ renderMarco() }catch(e){}
     }
   }, 1000);
+});
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   STRESS NO ESTILO DO GARMIN CONNECT (02/11/2026)
+
+   O cartão de Stress mostrava só uma linha com a média de cada dia —
+   não dava para ver quanto tempo se passou em descanso, baixo, médio
+   ou alto. Agora ele segue a tela de Stress do Garmin Connect:
+
+     · abas 1d · 7d · 4s · 1a
+     · 1d: setas para andar entre os dias, os quatro tempos (Descanso,
+       Baixo, Médio, Alto) e a linha do tempo do dia em barras de 3 min,
+       azul para descanso e laranja em três tons para o stress. Tocar e
+       arrastar no gráfico mostra a hora e o valor.
+     · 7d e 4s: uma barra por dia com as horas em cada nível; tocar na
+       barra abre aquele dia.
+     · 1a: média de cada semana, colorida pelo nível.
+
+   Dados: stress {data:{avg,max,rest,low,med,high,act}} (minutos) e
+   stressDia {data:{v:"12,15,a,,x,..."}} (480 casas de 3 min), gravados
+   pelo sync-garmin-auto.py. Dia antigo sem esses campos mostra só a
+   média até o sync seguinte preencher.
+   ═══════════════════════════════════════════════════════════════════ */
+PARTE('stress estilo garmin', function(){
+  var NIV = [
+    {k:'rest', pt:'Descanso', en:'Rest',   cor:'#3B8EEA', de:0,  ate:25},
+    {k:'low',  pt:'Baixo',    en:'Low',    cor:'#F7B955', de:26, ate:50},
+    {k:'med',  pt:'Médio',    en:'Medium', cor:'#F0801E', de:51, ate:75},
+    {k:'high', pt:'Alto',     en:'High',   cor:'#D9480F', de:76, ate:100}
+  ];
+  var COR_ATIVO = '#8E99A8';
+  var W = 380, H = 230, ML = 34, MR = 10, MT = 14, MB = 30;
+  var IW = W - ML - MR, IH = H - MT - MB;
+  var est = {modo:'1d', dia:null};
+
+  function en(){ try{ return window.bqIdioma && bqIdioma.atual() === 'en' }catch(e){ return false } }
+  function T(pt, ing){ return en() ? ing : pt }
+  function nivel(v){ return v <= 25 ? NIV[0] : v <= 50 ? NIV[1] : v <= 75 ? NIV[2] : NIV[3] }
+  function nomeNivel(n){ return en() ? n.en : n.pt }
+  function hm(min){
+    if(min == null || isNaN(min)) return '--';
+    min = Math.round(min);
+    var h = Math.floor(min / 60), m = min % 60;
+    return h ? h + 'h ' + (m < 10 ? '0' : '') + m + 'm' : m + 'm';
+  }
+  var MESES_EN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var SEM_PT = ['dom','seg','ter','qua','qui','sex','sáb'], SEM_EN = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  function rotDia(k, curto){
+    var d = dt(k), hj = iso(HOJE);
+    if(!curto){
+      if(k === hj) return T('Hoje', 'Today');
+      if(k === iso(addD(HOJE, -1))) return T('Ontem', 'Yesterday');
+    }
+    var mes = en() ? MESES_EN[d.getMonth()] : MES3[d.getMonth()];
+    if(curto) return en() ? mes + ' ' + d.getDate() : d.getDate() + ' ' + mes;
+    return en() ? SEM_EN[d.getDay()] + ', ' + mes + ' ' + d.getDate()
+                : SEM_PT[d.getDay()] + ', ' + d.getDate() + ' ' + mes;
+  }
+
+  /* ── dados ── */
+  function diario(){
+    var o = (typeof RAW !== 'undefined' && RAW && RAW.stress) || {};
+    return Object.keys(o).filter(function(k){ return /^\d{4}-\d{2}-\d{2}$/.test(k) && o[k] && o[k].avg >= 0 })
+      .sort().map(function(k){ var r = {d:k}; for(var c in o[k]) r[c] = o[k][c]; return r });
+  }
+  function linhaDo(k){
+    var o = (typeof RAW !== 'undefined' && RAW && RAW.stressDia) || {};
+    if(!o[k] || typeof o[k].v !== 'string') return null;
+    var out = new Array(480);
+    o[k].v.split(',').forEach(function(c, i){
+      if(i >= 480) return;
+      out[i] = c === '' ? null : c === 'a' ? 'a' : c === 'x' ? 'x' : +c;
+    });
+    return out;
+  }
+  /* tempos do dia: do resumo do Garmin; se faltar, contados na linha do tempo */
+  function tempos(reg, linha){
+    var t = {rest:null, low:null, med:null, high:null, act:null};
+    if(reg && reg.rest != null){ NIV.forEach(function(n){ t[n.k] = reg[n.k] || 0 }); t.act = reg.act || 0; return t }
+    if(linha){
+      NIV.forEach(function(n){ t[n.k] = 0 }); t.act = 0;
+      linha.forEach(function(v){
+        if(v === 'a') t.act += 3;
+        else if(typeof v === 'number') t[nivel(v).k] += 3;
+      });
+    }
+    return t;
+  }
+
+  /* ── estilos ── */
+  var css = document.createElement('style');
+  css.textContent = [
+    '.stx-seg{display:flex;background:var(--s2);border-radius:12px;padding:3px;margin-top:4px}',
+    '.stx-seg button{flex:1;padding:8px 0;border-radius:9px;font-size:14px;font-weight:600;color:var(--tx3)}',
+    '.stx-seg button.on{background:var(--s3);color:var(--tx)}',
+    '.stx-nav{display:flex;align-items:center;justify-content:space-between;margin:14px 0 4px}',
+    '.stx-nav button{width:34px;height:34px;border-radius:50%;background:var(--s2);font-size:18px;color:var(--tx)}',
+    '.stx-nav button:disabled{opacity:.25}',
+    '.stx-nav b{font-size:17px}',
+    '.stx-res{font-size:13.5px;color:var(--tx2);line-height:1.5;margin:8px 0 2px}',
+    '.stx-res b{color:var(--tx)}',
+    '.stx-bal{display:flex;height:10px;border-radius:6px;overflow:hidden;margin:10px 0 2px;background:var(--s2)}',
+    '.stx-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 18px;margin-top:6px}',
+    '.stx-t{border-top:1px solid var(--line);padding:10px 0 8px}',
+    '.stx-t b{display:block;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:24px;font-weight:700;letter-spacing:-.02em}',
+    '.stx-t span{font-size:13.5px;color:var(--tx2);display:flex;align-items:center;gap:7px;margin-top:2px}',
+    '.stx-t i,.stx-lg i{width:10px;height:10px;border-radius:50%;display:inline-block;flex:none}',
+    '.stx-t small{color:var(--tx3);font-size:11.5px;margin-left:auto}',
+    '.stx-h{font-size:15px;font-weight:700;margin:16px 0 0}',
+    '.stx-lg{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px}',
+    '.stx-lg span{font-size:12px;color:var(--tx2);display:flex;align-items:center;gap:6px}',
+    '.stx-aviso{font-size:12.5px;color:var(--tx3);background:var(--s2);border-radius:10px;padding:10px 12px;margin-top:10px;line-height:1.5}',
+    '#sStress svg{width:100%;height:auto;display:block;overflow:visible}',
+    '#sStress svg text{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:11.5px;fill:var(--tx3)}',
+    '#sStress svg text.nv{font-size:10.5px;font-weight:700}',
+    '#sStress .stx-dica{font-size:13px;font-weight:700}'
+  ].join('\n');
+  document.head.appendChild(css);
+
+  /* ── peças ── */
+  function abas(){
+    var ops = [['1d','1d','1d'],['7d','7d','7d'],['4w','4s','4w'],['1y','1a','1y']];
+    return '<div class="stx-seg">' + ops.map(function(o){
+      return '<button data-modo="' + o[0] + '" class="' + (est.modo === o[0] ? 'on' : '') + '">' + (en() ? o[2] : o[1]) + '</button>';
+    }).join('') + '</div>';
+  }
+  function blocos(t, porDia){
+    var tot = NIV.reduce(function(a, n){ return a + (t[n.k] || 0) }, 0);
+    return '<div class="stx-grid">' + NIV.map(function(n){
+      var v = t[n.k];
+      var pct = tot && v != null ? Math.round(v / tot * 100) + '%' : '';
+      return '<div class="stx-t"><b>' + (v ? hm(v) : '--') + '</b><span><i style="background:' + n.cor + '"></i>'
+        + nomeNivel(n) + (porDia ? '<em style="font-style:normal;color:var(--tx3);font-size:11.5px">' + T('/dia', '/day') + '</em>' : '')
+        + '<small>' + pct + '</small></span></div>';
+    }).join('') + '</div>';
+  }
+  function barraBalanco(t){
+    var tot = NIV.reduce(function(a, n){ return a + (t[n.k] || 0) }, 0) + (t.act || 0);
+    if(!tot) return '';
+    var seg = NIV.map(function(n){ return [t[n.k] || 0, n.cor] }).concat([[t.act || 0, COR_ATIVO]]);
+    return '<div class="stx-bal">' + seg.filter(function(s){ return s[0] > 0 }).map(function(s){
+      return '<div style="width:' + (s[0] / tot * 100) + '%;background:' + s[1] + '"></div>';
+    }).join('') + '</div>';
+  }
+  function legenda(comAtivo){
+    var it = NIV.map(function(n){ return '<span><i style="background:' + n.cor + '"></i>' + nomeNivel(n) + ' ' + n.de + '–' + n.ate + '</span>' });
+    if(comAtivo) it.push('<span><i style="background:' + COR_ATIVO + '"></i>' + T('Em atividade', 'Active') + '</span>');
+    return '<div class="stx-lg">' + it.join('') + '</div>';
+  }
+  /* faixas de fundo e grade de 0 a 100, com o nome de cada nível à esquerda */
+  function fundo(y){
+    var s = '';
+    NIV.forEach(function(n){
+      var y1 = y(n.ate), y0 = y(n.de === 0 ? 0 : n.de - 1);
+      s += '<rect x="' + ML + '" y="' + y1 + '" width="' + IW + '" height="' + (y0 - y1) + '" fill="' + n.cor + '" opacity=".06"/>';
+    });
+    [0, 25, 50, 75, 100].forEach(function(t){
+      s += '<line x1="' + ML + '" x2="' + (W - MR) + '" y1="' + y(t) + '" y2="' + y(t) + '" stroke="var(--line)" stroke-width="1"'
+        + (t && t < 100 ? ' stroke-dasharray="3 4"' : '') + '/>';
+      s += '<text x="' + (ML - 6) + '" y="' + (y(t) + 4) + '" text-anchor="end">' + t + '</text>';
+    });
+    return s;
+  }
+
+  /* ── 1 dia ── */
+  function desenhaDia(serie){
+    var dias = serie.map(function(r){ return r.d });
+    var comLinha = Object.keys((RAW && RAW.stressDia) || {});
+    comLinha.forEach(function(k){ if(dias.indexOf(k) < 0) dias.push(k) });
+    dias.sort();
+    if(!est.dia || dias.indexOf(est.dia) < 0) est.dia = dias[dias.length - 1];
+    var k = est.dia, pos = dias.indexOf(k);
+    var reg = serie.filter(function(r){ return r.d === k })[0] || null;
+    var linha = linhaDo(k);
+    var t = tempos(reg, linha);
+
+    var h = abas();
+    h += '<div class="stx-nav"><button data-ir="-1"' + (pos <= 0 ? ' disabled' : '') + ' aria-label="' + T('dia anterior', 'previous day') + '">‹</button>'
+      + '<b>' + rotDia(k) + '</b>'
+      + '<button data-ir="1"' + (pos >= dias.length - 1 ? ' disabled' : '') + ' aria-label="' + T('próximo dia', 'next day') + '">›</button></div>';
+    if(reg){
+      var n = nivel(reg.avg);
+      h += '<p class="stx-res">' + T('Stress médio', 'Average stress') + ' <b style="color:' + n.cor + '">' + reg.avg + '</b> · '
+        + nomeNivel(n).toLowerCase() + (reg.max ? ' · ' + T('máximo', 'max') + ' <b>' + reg.max + '</b>' : '') + '</p>';
+    }
+    h += barraBalanco(t);
+    h += blocos(t);
+    h += '<div class="stx-h">' + T('Linha do tempo do dia', 'Daily timeline') + '</div>';
+
+    if(linha){
+      var y = function(v){ return MT + IH - (v / 100) * IH };
+      var larg = IW / 480;
+      var s = fundo(y);
+      for(var i = 0; i < 480; i++){
+        var v = linha[i]; if(v == null || v === 'x') continue;
+        var x = ML + i * larg;
+        if(v === 'a'){
+          s += '<rect x="' + x.toFixed(2) + '" y="' + y(100) + '" width="' + (larg + .15).toFixed(2) + '" height="' + IH + '" fill="' + COR_ATIVO + '" opacity=".28"/>';
+        } else {
+          var alt = Math.max(1.5, (v / 100) * IH);
+          s += '<rect x="' + x.toFixed(2) + '" y="' + (MT + IH - alt).toFixed(2) + '" width="' + (larg + .15).toFixed(2) + '" height="' + alt.toFixed(2) + '" fill="' + nivel(v).cor + '"/>';
+        }
+      }
+      [0, 4, 8, 12, 16, 20, 24].forEach(function(hr, j, arr){
+        var x = ML + hr * 20 * larg;
+        s += '<text x="' + x + '" y="' + (H - 10) + '" text-anchor="' + (j === 0 ? 'start' : j === arr.length - 1 ? 'end' : 'middle') + '">' + hr + 'h</text>';
+      });
+      s += '<g class="stx-cur" style="display:none"><line y1="' + MT + '" y2="' + (MT + IH) + '" stroke="var(--tx)" stroke-width="1.2"/>'
+        + '<text class="stx-dica" y="' + (MT - 2) + '" fill="var(--tx)"></text></g>';
+      h += '<div class="stx-plot" style="margin-top:10px;touch-action:pan-y"><svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="'
+        + T('Stress ao longo do dia', 'Stress through the day') + '">' + s + '</svg></div>';
+      h += '<p class="stx-res" style="font-size:12px;color:var(--tx3)">' + T('Toque e arraste no gráfico para ver a hora e o nível.', 'Touch and drag on the chart to see the time and level.') + '</p>';
+      h += legenda(true);
+    } else {
+      h += '<div class="stx-aviso">' + T('O gráfico hora a hora deste dia ainda não chegou. O sync do Garmin passa a trazer os últimos 28 dias a cada rodada.',
+        'The hour-by-hour chart for this day has not arrived yet. The Garmin sync now brings the last 28 days on each run.') + '</div>';
+      h += legenda(false);
+    }
+    return {html: h, linha: linha};
+  }
+
+  /* ── 7 dias / 4 semanas ── */
+  function desenhaDias(serie, n){
+    var corte = iso(addD(HOJE, -(n - 1)));
+    var dias = [];
+    for(var i = n - 1; i >= 0; i--) dias.push(iso(addD(HOJE, -i)));
+    var porK = {}; serie.forEach(function(r){ porK[r.d] = r });
+    var lista = dias.map(function(k){ return {d:k, r:porK[k] || null, t:tempos(porK[k], porK[k] ? null : linhaDo(k))} });
+    var comDado = lista.filter(function(x){ return x.r });
+
+    var maxMin = 0;
+    lista.forEach(function(x){
+      var s = NIV.reduce(function(a, nv){ return a + (x.t[nv.k] || 0) }, 0);
+      if(s > maxMin) maxMin = s;
+    });
+    var topoH = Math.max(4, Math.ceil(maxMin / 60 / 4) * 4);
+    var y = function(min){ return MT + IH - (min / 60 / topoH) * IH };
+    var passo = IW / n, larg = Math.max(4, Math.min(26, passo * .62));
+    var s = '';
+    for(var t = 0; t <= topoH; t += topoH / 4){
+      s += '<line x1="' + ML + '" x2="' + (W - MR) + '" y1="' + y(t * 60) + '" y2="' + y(t * 60) + '" stroke="var(--line)"/>'
+        + '<text x="' + (ML - 6) + '" y="' + (y(t * 60) + 4) + '" text-anchor="end">' + t + 'h</text>';
+    }
+    lista.forEach(function(x, i){
+      var cx = ML + passo * i + passo / 2, base = 0, temTempo = false;
+      NIV.forEach(function(nv){
+        var v = x.t[nv.k] || 0; if(v <= 0) return; temTempo = true;
+        var y1 = y(base + v), y0 = y(base);
+        s += '<rect x="' + (cx - larg / 2) + '" y="' + y1 + '" width="' + larg + '" height="' + Math.max(1, y0 - y1) + '" fill="' + nv.cor + '"/>';
+        base += v;
+      });
+      /* área de toque da coluna inteira */
+      s += '<rect data-dia="' + x.d + '" x="' + (ML + passo * i) + '" y="' + MT + '" width="' + passo + '" height="' + IH + '" fill="transparent" style="cursor:pointer"/>';
+      if(x.r && (n <= 7 || !temTempo)){
+        var nv = nivel(x.r.avg);
+        s += '<text class="nv" x="' + cx + '" y="' + ((temTempo ? y(base) : MT + IH) - 5) + '" text-anchor="middle" fill="' + nv.cor + '" style="fill:' + nv.cor + '">' + x.r.avg + '</text>';
+      }
+      var marca = n <= 7 || i === 0 || i === n - 1 || i % 7 === 0;
+      if(marca){
+        var d = dt(x.d);
+        var rot = n <= 7 ? (en() ? SEM_EN[d.getDay()] : SEM_PT[d.getDay()]) : rotDia(x.d, true);
+        s += '<text x="' + cx + '" y="' + (H - 10) + '" text-anchor="' + (n > 7 && i === 0 ? 'start' : n > 7 && i === n - 1 ? 'end' : 'middle') + '">' + rot + '</text>';
+      }
+    });
+
+    /* médias do período */
+    var soma = {rest:0, low:0, med:0, high:0}, nT = 0;
+    lista.forEach(function(x){
+      if(x.t.rest == null) return; nT++;
+      NIV.forEach(function(nv){ soma[nv.k] += x.t[nv.k] || 0 });
+    });
+    var med = {};
+    NIV.forEach(function(nv){ med[nv.k] = nT ? soma[nv.k] / nT : null });
+    var avg = comDado.length ? Math.round(comDado.reduce(function(a, x){ return a + x.r.avg }, 0) / comDado.length) : null;
+
+    var h = abas();
+    h += '<div class="stx-nav" style="justify-content:center"><b>' + rotDia(corte, true) + ' – ' + rotDia(dias[n - 1], true) + '</b></div>';
+    if(avg != null){
+      var nv = nivel(avg);
+      h += '<p class="stx-res">' + T('Média do período', 'Range average') + ' <b style="color:' + nv.cor + '">' + avg + '</b> · '
+        + nomeNivel(nv).toLowerCase() + ' · ' + comDado.length + ' ' + T('dias medidos', 'days measured') + '</p>';
+    }
+    h += barraBalanco(med);
+    h += blocos(med, true);
+    h += '<div class="stx-h">' + T('Tempo em cada nível por dia', 'Time in each level per day') + '</div>';
+    h += '<div class="stx-plot" style="margin-top:10px"><svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="'
+      + T('Stress por dia', 'Stress per day') + '">' + s + '</svg></div>';
+    h += '<p class="stx-res" style="font-size:12px;color:var(--tx3)">' + T('Toque numa barra para abrir o dia.', 'Tap a bar to open that day.') + '</p>';
+    if(comDado.length && !nT) h += '<div class="stx-aviso">' + T('Os tempos por nível chegam no próximo sync do Garmin. Por enquanto aparece só a média de cada dia.',
+      'Time per level arrives with the next Garmin sync. For now only the daily average is shown.') + '</div>';
+    h += legenda(false);
+    return {html: h};
+  }
+
+  /* ── 1 ano: média de cada semana ── */
+  function desenhaAno(serie){
+    var corte = iso(addD(HOJE, -364));
+    var ano = serie.filter(function(r){ return r.d >= corte });
+    var sem = {};
+    ano.forEach(function(r){
+      var d = dt(r.d), seg = addD(d, -((d.getDay() + 6) % 7)), k = iso(seg);
+      (sem[k] = sem[k] || []).push(r);
+    });
+    var ks = Object.keys(sem).sort();
+    var pts = ks.map(function(k){
+      var l = sem[k];
+      return {d:k, avg: Math.round(l.reduce(function(a, r){ return a + r.avg }, 0) / l.length)};
+    });
+    var y = function(v){ return MT + IH - (v / 100) * IH };
+    var s = fundo(y);
+    var passo = IW / Math.max(1, pts.length), larg = Math.max(3, Math.min(16, passo * .66));
+    pts.forEach(function(p, i){
+      var cx = ML + passo * i + passo / 2;
+      s += '<rect x="' + (cx - larg / 2) + '" y="' + y(p.avg) + '" width="' + larg + '" height="' + Math.max(1.5, y(0) - y(p.avg)) + '" rx="' + Math.min(3, larg / 2) + '" fill="' + nivel(p.avg).cor + '"/>';
+      if(i === 0 || i === pts.length - 1 || i === Math.floor(pts.length / 2))
+        s += '<text x="' + cx + '" y="' + (H - 10) + '" text-anchor="' + (i === 0 ? 'start' : i === pts.length - 1 ? 'end' : 'middle') + '">' + rotDia(p.d, true) + '</text>';
+    });
+    var soma = {rest:0, low:0, med:0, high:0}, nT = 0;
+    ano.forEach(function(r){ if(r.rest == null) return; nT++; NIV.forEach(function(nv){ soma[nv.k] += r[nv.k] || 0 }) });
+    var med = {}; NIV.forEach(function(nv){ med[nv.k] = nT ? soma[nv.k] / nT : null });
+    var avg = ano.length ? Math.round(ano.reduce(function(a, r){ return a + r.avg }, 0) / ano.length) : null;
+
+    var h = abas();
+    h += '<div class="stx-nav" style="justify-content:center"><b>' + T('Últimos 12 meses', 'Last 12 months') + '</b></div>';
+    if(avg != null){
+      var nv = nivel(avg);
+      h += '<p class="stx-res">' + T('Média', 'Average') + ' <b style="color:' + nv.cor + '">' + avg + '</b> · ' + nomeNivel(nv).toLowerCase()
+        + ' · ' + ano.length + ' ' + T('dias medidos', 'days measured') + '</p>';
+    }
+    h += barraBalanco(med);
+    h += blocos(med, true);
+    h += '<div class="stx-h">' + T('Média de cada semana', 'Weekly average') + '</div>';
+    h += '<div class="stx-plot" style="margin-top:10px"><svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="'
+      + T('Stress médio por semana', 'Average stress per week') + '">' + s + '</svg></div>';
+    h += legenda(false);
+    return {html: h};
+  }
+
+  /* ── toque e arraste na linha do tempo ── */
+  function ligaCursor(host, linha){
+    var svgEl = host.querySelector('.stx-plot svg'); if(!svgEl || !linha) return;
+    var g = svgEl.querySelector('.stx-cur'), ln = g.querySelector('line'), tx = g.querySelector('text');
+    var larg = IW / 480, ativo = false;
+    function mostra(ev){
+      var r = svgEl.getBoundingClientRect();
+      var vx = (ev.clientX - r.left) / r.width * W;
+      var i = Math.max(0, Math.min(479, Math.floor((vx - ML) / larg)));
+      /* procura a leitura mais próxima, até 15 min para cada lado */
+      var achou = -1;
+      for(var d = 0; d <= 5 && achou < 0; d++){
+        if(linha[i - d] != null) achou = i - d; else if(linha[i + d] != null) achou = i + d;
+      }
+      if(achou < 0) achou = i;
+      var v = linha[achou], min = achou * 3;
+      var hora = Math.floor(min / 60) + ':' + ('0' + (min % 60)).slice(-2);
+      var txt = v == null ? T('sem leitura', 'no reading')
+              : v === 'a' ? T('em atividade', 'active')
+              : v === 'x' ? T('não medido', 'unmeasurable')
+              : v + ' · ' + nomeNivel(nivel(v));
+      var x = ML + achou * larg + larg / 2;
+      ln.setAttribute('x1', x); ln.setAttribute('x2', x);
+      tx.textContent = hora + '  ' + txt;
+      tx.setAttribute('x', x);
+      tx.setAttribute('text-anchor', x < ML + 70 ? 'start' : x > W - MR - 70 ? 'end' : 'middle');
+      tx.style.fill = typeof v === 'number' ? nivel(v).cor : 'var(--tx)';
+      g.style.display = '';
+    }
+    svgEl.addEventListener('pointerdown', function(ev){ ativo = true; mostra(ev) });
+    svgEl.addEventListener('pointermove', function(ev){ if(ativo || ev.pointerType === 'mouse') mostra(ev) });
+    ['pointerup', 'pointercancel'].forEach(function(e){ svgEl.addEventListener(e, function(){ ativo = false }) });
+    svgEl.addEventListener('pointerleave', function(){ ativo = false; g.style.display = 'none' });
+  }
+
+  function desenha(){
+    var host = q('#sStress'); if(!host) return;
+    var sub = q('#sStresssub');
+    var serie = diario();
+    var temLinha = RAW && RAW.stressDia && Object.keys(RAW.stressDia).length;
+    if(!serie.length && !temLinha){
+      host.innerHTML = '<p class="ajuda">' + T('Sem leituras de stress.', 'No stress readings.') + '</p>';
+      if(sub) sub.textContent = '';
+      return;
+    }
+    var r = est.modo === '7d' ? desenhaDias(serie, 7)
+          : est.modo === '4w' ? desenhaDias(serie, 28)
+          : est.modo === '1y' ? desenhaAno(serie)
+          : desenhaDia(serie);
+    host.innerHTML = r.html;
+    host.style.marginTop = '8px';
+    if(sub) sub.innerHTML = T('O relógio mede o stress de 0 a 100 pela variação do coração. <b>0–25</b> é descanso, <b>26–50</b> baixo, <b>51–75</b> médio e <b>76–100</b> alto. Durante exercício não há leitura (cinza).',
+      'The watch rates stress from 0 to 100 from heart-rate variability. <b>0–25</b> is rest, <b>26–50</b> low, <b>51–75</b> medium and <b>76–100</b> high. There is no reading during exercise (grey).');
+
+    host.querySelectorAll('[data-modo]').forEach(function(b){
+      b.onclick = function(){ est.modo = b.getAttribute('data-modo'); desenha() };
+    });
+    host.querySelectorAll('[data-ir]').forEach(function(b){
+      b.onclick = function(){
+        var dias = diario().map(function(x){ return x.d });
+        Object.keys((RAW && RAW.stressDia) || {}).forEach(function(k){ if(dias.indexOf(k) < 0) dias.push(k) });
+        dias.sort();
+        var p = dias.indexOf(est.dia) + (+b.getAttribute('data-ir'));
+        if(p >= 0 && p < dias.length){ est.dia = dias[p]; desenha() }
+      };
+    });
+    host.querySelectorAll('[data-dia]').forEach(function(el){
+      el.addEventListener('click', function(){ est.modo = '1d'; est.dia = el.getAttribute('data-dia'); desenha() });
+    });
+    if(est.modo === '1d') ligaCursor(host, r.linha);
+  }
+
+  /* o cartão ignora o seletor de período da aba: tem as próprias abas */
+  window.grafStress = function(){ desenha() };
+  try{ grafStress = window.grafStress }catch(e){}
+
+  /* troca de idioma: redesenha com os textos certos */
+  document.addEventListener('click', function(){
+    var antes = en();
+    setTimeout(function(){ if(en() !== antes && q('#sStress') && q('#sStress').innerHTML) desenha() }, 80);
+  }, true);
+
+  if(typeof ST === 'object' && ST.aba === 'saude'){ try{ desenha() }catch(e){} }
 });
