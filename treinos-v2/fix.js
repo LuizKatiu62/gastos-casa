@@ -80,7 +80,7 @@
       escolha dos anos por botão, variação só nos meses em comum
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '08b';
+const FIX_VERSAO = '08c';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -20769,27 +20769,72 @@ PARTE('provas: atualizar e adicionar', function(){
   var runnb = [], runnbInfo = null;
   function chaveNome(n){
     return String(n || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      .replace(/\b(the|and|de|la|le|du|annual|presented|by|run|race|km|k|\d+(st|nd|rd|th|e)?)\b/g, ' ')
-      .split(/[^a-z]+/).filter(function(w){ return w.length > 3 });
+      .replace(/\b(the|and|de|la|le|du|des|annual|presented|by|run|race|km|k|\d+(st|nd|rd|th|e)?)\b/g, ' ')
+      .split(/[^a-z]+/).filter(function(w){
+        return w.length > 3 && !/^(marathon|half|demi|semi|course|weekend|international|beneva|annual|road|city)$/.test(w) });
   }
-  function duplicada(p){
-    var a = chaveNome(p.nome);
-    return PROVAS_CAT.some(function(x){
-      if(!x || x.fonte === 'runnb' || x.minha) return false;
-      if(x.url && p.url && x.url.indexOf(p.id.replace('runnb-', '/')) >= 0) return true;
-      if(Math.abs(diff(x.data, p.data)) > 1) return false;
+  function host(u){ try{ return new URL(u).hostname.replace(/^www\./, '') }catch(e){ return '' } }
+  /* curadas primeiro; depois as já aceitas desta rodada (alvo > RunNB > agregador) */
+  function duplicada(p, aceitas){
+    var a = chaveNome(p.nome), ha = host(p.url);
+    var bate = function(x, tol){
+      if(!x || x === p || x.minha) return false;
+      if(x.url && p.url && p.id.indexOf('runnb-') === 0 && x.url.indexOf(p.id.replace('runnb-', '/')) >= 0) return true;
+      if(Math.abs(diff(x.data, p.data)) > tol) return false;
+      if(ha && host(x.url) === ha && ha !== 'secure.runnb.ca' && ha !== 'running.life' && ha !== 'raceroster.com') return true;
       var b = chaveNome(x.nome);
       return a.some(function(w){ return b.indexOf(w) >= 0 });
-    });
+    };
+    return PROVAS_CAT.some(function(x){ return !x.fonte && bate(x, 3) }) || (aceitas || []).some(function(x){ return bate(x, 3) });
   }
+  /* prova-alvo: atualiza a curada da mesma edição (mesmo site, até 60 dias) */
+  function curadaDoAlvo(p){
+    var ha = host(p.url), a = chaveNome(p.nome);
+    return PROVAS_CAT.filter(function(x){
+      if(!x || x.fonte || x.minha) return false;
+      if(Math.abs(diff(x.data, p.data)) > 60) return false;
+      return (ha && host(x.url) === ha) || a.some(function(w){ return chaveNome(x.nome).indexOf(w) >= 0 });
+    })[0] || null;
+  }
+  var fora = [], foraInfo = null, origAlvo = {};
   function aplicarRunnb(){
-    for(var i = PROVAS_CAT.length - 1; i >= 0; i--) if(PROVAS_CAT[i] && PROVAS_CAT[i].fonte === 'runnb') PROVAS_CAT.splice(i, 1);
-    runnb.forEach(function(p){
-      if(!p || !p.id || !p.data || duplicada(p)) return;
-      var c = Object.assign({}, p, {fonte:'runnb'});
+    for(var i = PROVAS_CAT.length - 1; i >= 0; i--) if(PROVAS_CAT[i] && PROVAS_CAT[i].fonte) PROVAS_CAT.splice(i, 1);
+    var aceitas = [];
+    var poe = function(p, fonte){
+      if(!p || !p.id || !p.data) return;
+      var c = Object.assign({}, p, {fonte:fonte});
       if(!Array.isArray(c.dists)) c.dists = [];
-      PROVAS_CAT.push(c);
+      if(duplicada(c, aceitas)) return;
+      aceitas.push(c); PROVAS_CAT.push(c);
+    };
+    fora.filter(function(p){ return p && p.fonte === 'alvo' }).forEach(function(p){
+      var cur = curadaDoAlvo(p);
+      if(cur){
+        if(!origAlvo[cur.id]) origAlvo[cur.id] = {data:cur.data, estado:cur.estado, nota:cur.nota || ''};
+        var o = origAlvo[cur.id];
+        cur.data = p.data; cur.estado = o.estado;
+        cur.nota = o.data !== p.data ? (o.nota + ' ' + T('Data conferida no site oficial em ', 'Date checked on the official site on ') + fmtCurto(p.lidoEm || iso(HOJE)) + '.').trim() : o.nota;
+        if(p.estado && p.estado !== 'confira') cur.estado = p.estado;
+        aceitas.push(cur);
+      } else poe(p, 'alvo');
     });
+    runnb.forEach(function(p){ poe(p, 'runnb') });
+    fora.filter(function(p){ return p && p.fonte !== 'alvo' }).forEach(function(p){ poe(p, 'agregador') });
+  }
+  async function carregarFora(viaApi){
+    try{
+      var r;
+      if(viaApi && tokenGH())
+        r = await fetch('https://api.github.com/repos/' + repoGH() + '/contents/treinos-v2/provas-fora.json?ref=main',
+                        {headers:{'Authorization':'Bearer ' + tokenGH(), 'Accept':'application/vnd.github.raw+json'}, cache:'no-store'});
+      else r = await fetch('./provas-fora.json', {cache:'reload'});
+      if(!r.ok) return null;
+      var d = await r.json();
+      if(!d || !Array.isArray(d.provas)) return null;
+      fora = d.provas; foraInfo = {atualizado:d.atualizado, total:d.provas.length};
+      aplicar(); redesenha();
+      return foraInfo;
+    }catch(e){ console.warn('provas-fora:', e && e.message); return null }
   }
   async function carregarRunnb(viaApi){
     try{
@@ -20878,7 +20923,19 @@ PARTE('provas: atualizar e adicionar', function(){
   try{ minhas = JSON.parse(localStorage.getItem(CHAVE) || '[]') || [] }catch(e){ minhas = [] }
   aplicar();
   setTimeout(lerNuvem, 2500);
-  setTimeout(function(){ carregarRunnb(false) }, 1200);
+  setTimeout(function(){ carregarRunnb(false); carregarFora(false) }, 1200);
+
+  /* situação "confira no site": prova lida automaticamente cuja inscrição
+     o site não disse com clareza */
+  if(typeof statusProva === 'function'){
+    var stAntes = statusProva;
+    statusProva = function(p){
+      if(p && p.estado === 'confira' && diff(iso(HOJE), p.data) >= 0)
+        return {k:'confira', t:T('Inscrição: confira no site', 'Registration: check the site'), cls:'p-mid', frio:false};
+      return stAntes.apply(this, arguments);
+    };
+    try{ window.statusProva = statusProva }catch(e){}
+  }
 
   /* o provas.json pode substituir o catálogo depois; reaplica as suas */
   if(window.bqProvas && typeof window.bqProvas.juntar === 'function'){
@@ -20918,9 +20975,10 @@ PARTE('provas: atualizar e adicionar', function(){
     var i = window.bqProvas && window.bqProvas.info;
     var n = PROVAS_CAT.filter(function(p){ return diff(iso(HOJE), p.data) >= 0 }).length;
     var m = minhas.length;
-    var nr = PROVAS_CAT.filter(function(p){ return p.fonte === 'runnb' && diff(iso(HOJE), p.data) >= 0 }).length;
+    var nr = PROVAS_CAT.filter(function(p){ return p.fonte && diff(iso(HOJE), p.data) >= 0 }).length;
+    var lida = [runnbInfo, foraInfo].filter(Boolean).map(function(x){ return x.atualizado }).sort()[0];
     el.innerHTML = n + T(' provas futuras', ' upcoming races') +
-      (runnbInfo ? ' · RunNB ' + T('lida em ', 'read on ') + '<b>' + fmtCurto(runnbInfo.atualizado) + '</b>' + (nr ? ' (+' + nr + ')' : '') : '') +
+      (lida ? ' · ' + T('sites lidos em ', 'sites read on ') + '<b>' + fmtCurto(lida) + '</b>' + (nr ? ' (+' + nr + T(' automáticas', ' automatic') + ')' : '') : '') +
       (m ? ' · ' + m + T(' sua' + (m > 1 ? 's' : ''), ' yours') : '');
   }
   function montarBarra(){
@@ -20948,14 +21006,15 @@ PARTE('provas: atualizar e adicionar', function(){
     }
     rot(T('Conferindo…', 'Checking…'));
     try{ if(window.bqProvas && window.bqProvas.recarregar) await window.bqProvas.recarregar() }catch(e){}
-    var antes = PROVAS_CAT.filter(function(p){ return p.fonte === 'runnb' }).length;
+    var antes = PROVAS_CAT.filter(function(p){ return !!p.fonte }).length;
     var ri = await carregarRunnb(!!(robo && robo.ok));
+    await carregarFora(!!(robo && robo.ok));
     await lerNuvem();
     aplicar(); redesenha();
     if(b){ b.disabled = false; b.textContent = '↻ ' + T('Atualizar', 'Refresh') }
-    var depois = PROVAS_CAT.filter(function(p){ return p.fonte === 'runnb' }).length;
+    var depois = PROVAS_CAT.filter(function(p){ return !!p.fonte }).length;
     var msg = '';
-    if(robo && robo.ok) msg = T('Calendário da RunNB lido agora. ', 'RunNB calendar read just now. ') +
+    if(robo && robo.ok) msg = T('RunNB, grandes maratonas e Ontário/Québec lidos agora. ', 'RunNB, major marathons and Ontario/Québec read just now. ') +
       (depois > antes ? '<b>' + (depois - antes) + T(' prova(s) nova(s)', ' new race(s)') + '</b>. ' : T('Nenhuma prova nova. ', 'No new races. '));
     else if(robo) msg = T('Não consegui ler a RunNB agora (' + robo.motivo + '). Mostrando a última leitura. ', 'Could not read RunNB now (' + robo.motivo + '). Showing the last read. ');
     else msg = T('Este aparelho não tem o token do GitHub (o mesmo do Sync Garmin), então mostro a última leitura — o robô lê a RunNB sozinho toda segunda. ',
@@ -21041,9 +21100,12 @@ PARTE('provas: atualizar e adicionar', function(){
   if(typeof cardAntes === 'function'){
     window.cardProva = function(p){
       var h = cardAntes.apply(this, arguments);
-      if(p && p.fonte === 'runnb'){
+      if(p && p.fonte){
         var k0 = h.lastIndexOf('</div>');
-        var tg = '<div class="pvminha"><span class="tagm">' + T('do calendário da RunNB', 'from the RunNB calendar') + '</span></div>';
+        var rotF = p.fonte === 'runnb' ? T('do calendário da RunNB', 'from the RunNB calendar')
+                 : p.fonte === 'alvo' ? T('lida no site oficial', 'read from the official site')
+                 : T('do calendário running.life', 'from the running.life calendar');
+        var tg = '<div class="pvminha"><span class="tagm">' + rotF + '</span></div>';
         h = k0 >= 0 ? h.slice(0, k0) + tg + h.slice(k0) : h + tg;
       }
       if(p && p.minha){
