@@ -1,0 +1,209 @@
+{
+ "_leia": "Gerado por sync-provas-runnb.py a partir de https://secure.runnb.ca/calendar/. Nao edite: e regravado. Para corrigir uma prova, ponha a versao certa em provas.json (a lista curada vence).",
+ "atualizado": "2026-11-11",
+ "geradoEm": "2026-11-11T01:37Z",
+ "fonte": "https://secure.runnb.ca/calendar/",
+ "provas": [
+  {
+   "id": "runnb-1004897",
+   "nome": "Les Petits Barachois de Cap-Acadie",
+   "cidade": "Barachois, NB",
+   "regiao": "atlantic",
+   "data": "2026-11-15",
+   "dists": [
+    1.0,
+    5.0
+   ],
+   "estado": "aberta",
+   "url": "https://secure.runnb.ca/event/les-petits-barachois-de-cap-acadie/1004897/",
+   "fonte": "runnb",
+   "nota": "Do calendário oficial da RunNB. Confirme data e inscrição no site antes de pagar."
+  },
+  {
+   "id": "runnb-1004847",
+   "nome": "470e Demi-marathon de l'Acadie",
+   "cidade": "Tracadie-Sheila, NB",
+   "regiao": "atlantic",
+   "data": "2026-12-06",
+   "dists": [
+    10.6,
+    21.1
+   ],
+   "estado": "aberta",
+   "url": "https://secure.runnb.ca/event/470e-demi-marathon-de-lacadie/1004847/",
+   "fonte": "runnb",
+   "nota": "Do calendário oficial da RunNB. Confirme data e inscrição no site antes de pagar."
+  },
+  {
+   "id": "runnb-1004924",
+   "nome": "Not The Honolulu",
+   "cidade": "Mactaquac Provincial Park, NB",
+   "regiao": "atlantic",
+   "data": "2026-12-12",
+   "dists": [
+    21.1,
+    42.2
+   ],
+   "estado": "aberta",
+   "url": "https://secure.runnb.ca/event/not-the-honolulu/1004924/",
+   "fonte": "runnb",
+   "nota": "Do calendário oficial da RunNB. Confirme data e inscrição no site antes de pagar."
+  },
+  {
+   "id": "runnb-1004930",
+   "nome": "The Resolution Run (5km) - Zero XQZ (free entry)",
+   "cidade": "Tracadie, NB",
+   "regiao": "atlantic",
+   "data": "2027-01-01",
+   "dists": [
+    5.0
+   ],
+   "estado": "aberta",
+   "url": "https://secure.runnb.ca/event/the-resolution-run-5km-zero-xqz-free-entry/1004930/",
+   "fonte": "runnb",
+   "nota": "Do calendário oficial da RunNB. Confirme data e inscrição no site antes de pagar."
+  },
+  {
+   "id": "runnb-1004925",
+   "nome": "471e Demi-marathon de l'Acadie",
+   "cidade": "Tracadie-Sheila, NB",
+   "regiao": "atlantic",
+   "data": "2027-01-03",
+   "dists": [
+    10.6,
+    21.1
+   ],
+   "estado": "aberta",
+   "url": "https://secure.runnb.ca/event/471e-demi-marathon-de-lacadie/1004925/",
+   "fonte": "runnb",
+   "nota": "Do calendário oficial da RunNB. Confirme data e inscrição no site antes de pagar."
+  },
+  {
+   "id": "runnb-1004926",
+   "nome": "472e Demi-marathon de l'Acadie",
+   "cidade": "Tracadie-Sheila, NB",
+   "regiao": "atlantic",
+   "data": "2027-02-07",
+   "dists": [
+    10.6,
+    21.1
+   ],
+   "estado": "aberta",
+   "url": "https://secure.runnb.ca/event/472e-demi-marathon-de-lacadie/1004926/",
+   "fonte": "runnb",
+   "nota": "Do calendário oficial da RunNB. Confirme data e inscrição no site antes de pagar."
+  },
+  {
+   "id": "runnb-1004927",
+   "nome": "473e Demi-marathon de l'Acadie",
+   "cidade": "Tracadie-Sheila, NB",
+   "regiao": "atlantic",
+   "data": "2027-03-07",
+   "dists": [
+    10.6,
+    21.1
+   ],
+   "estado": "aberta",
+   "url": "https://secure.runnb.ca/event/473e-demi-marathon-de-lacadie/1004927/",
+   "fonte": "runnb",
+   "nota": "Do calendário oficial da RunNB. Confirme data e inscrição no site antes de pagar."
+  },
+  {
+   "id": "runnb-1004920",
+   "nome": "RUN THE RUNWAY - 5 KM",
+   "cidade": "St. Stephen, NB",
+   "regiao": "atlantic",
+   "data": "2027-05-01",
+   "dists": [
+    5.0
+   ],
+   "estado": "aberta",
+   "url": "https://secure.runnb.ca/event/run-the-runway-5-km/1004920/",
+   "fonte": "runnb",
+   "nota": "Do calendário oficial da RunNB. Confirme data e inscrição no site antes de pagar."
+  },
+  {
+   "id": "runnb-1004901",
+   "nome": "49th Annual Stewart McKelvey Fredericton Marathon",
+   "cidade": "Fredericton, NB",
+   "regiao": "atlantic",
+   "data": "2027-05-09",
+   "dists": [
+    5.0,
+    10.0,
+    21.1,
+    42.2
+   ],
+   "estado": "aberta",
+   "url": "https://secure.runnb.ca/event/49th-annual-stewart-mckelvey-fredericton-marathon/1004901/",
+   "fonte": "runnb",
+   "nota": "Do calendário oficial da RunNB. Confirme data e inscrição no site antes de pagar."
+  },
+  {
+   "id": "runnb-1004923",
+   "nome": "Guérir à chaque kilomètre",
+   "cidade": "Inkerman, NB",
+   "regiao": "atlantic",
+   "data": "2027-05-24",
+   "dists": [
+    1.0,
+    5.0,
+    10.0,
+    21.1
+   ],
+   "estado": "aberta",
+   "url": "https://secure.runnb.ca/event/guerir-a-chaque-kilometre/1004923/",
+   "fonte": "runnb",
+   "nota": "Do calendário oficial da RunNB. Confirme data e inscrição no site antes de pagar."
+  },
+  {
+   "id": "runnb-1004918",
+   "nome": "10th Bay of Fundy International Marathon, Half Marathon",
+   "cidade": "Campobello Island, N.B., NB",
+   "regiao": "atlantic",
+   "data": "2027-06-20",
+   "dists": [
+    10.0,
+    21.1,
+    42.2
+   ],
+   "estado": "encerrada",
+   "url": "https://secure.runnb.ca/event/10th-bay-of-fundy-international-marathon-half-marathon/1004918/",
+   "fonte": "runnb",
+   "nota": "Do calendário oficial da RunNB. Confirme data e inscrição no site antes de pagar."
+  },
+  {
+   "id": "runnb-1004900",
+   "nome": "SUBWAY® Restaurants Canada Day 10 Miler and Grand Bay Guardian 5K",
+   "cidade": "Grand Bay- Westfield, NB",
+   "regiao": "atlantic",
+   "data": "2027-07-01",
+   "dists": [
+    5.0,
+    16.1,
+    42.2
+   ],
+   "estado": "encerrada",
+   "url": "https://secure.runnb.ca/event/subway-restaurants-canada-day-10-miler-and-grand-bay-guardian-5k/1004900/",
+   "fonte": "runnb",
+   "nota": "Do calendário oficial da RunNB. Confirme data e inscrição no site antes de pagar."
+  },
+  {
+   "id": "runnb-1004928",
+   "nome": "New Brunswick Marathon Presented by Saint John LNG",
+   "cidade": "Saint John, NB",
+   "regiao": "atlantic",
+   "data": "2027-08-01",
+   "dists": [
+    5.0,
+    10.0,
+    21.1,
+    42.2
+   ],
+   "estado": "aberta",
+   "url": "https://secure.runnb.ca/event/new-brunswick-marathon-presented-by-saint-john-lng/1004928/",
+   "fonte": "runnb",
+   "nota": "Do calendário oficial da RunNB. Confirme data e inscrição no site antes de pagar."
+  }
+ ]
+}
