@@ -80,7 +80,7 @@
       escolha dos anos por botão, variação só nos meses em comum
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '07z';
+const FIX_VERSAO = '08a';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -20732,4 +20732,247 @@ PARTE('evolucao ano a ano', function(){
   }, true);
 
   if(ST.aba === 'evolucao'){ try{ desenha() }catch(e){} }
+});
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   PROVAS: ATUALIZAR E ADICIONAR (fix 08a, 10/11/2026)
+
+   Pedido do Luiz: um botão para atualizar a lista — a Marathon by the
+   Sea 2027 já tinha inscrição aberta e não aparecia.
+
+   O app não consegue ler os sites das provas direto do celular (os
+   sites bloqueiam, CORS). Então são duas coisas:
+
+     · ↻ Atualizar — busca de novo o provas.json do GitHub, sem cache,
+       e mostra de quando é a lista e quantas provas tem.
+     · + Adicionar prova — você mesmo cadastra a prova que viu: nome,
+       data, cidade, região, distâncias e link. Fica guardada neste
+       aparelho e no Firebase (treinos_coach_v2/luiz/provasMinhas), com
+       PATCH num nó só dela — não passa pelo salvarCoach, que regrava
+       uma lista fixa de campos e apagaria a chave.
+       Prova sua tem "editar" e "remover" no cartão.
+   ═══════════════════════════════════════════════════════════════════ */
+PARTE('provas: atualizar e adicionar', function(){
+  if(typeof PROVAS_CAT === 'undefined') throw new Error('app sem PROVAS_CAT');
+  var CHAVE = 'treinos-v2-provasMinhas';
+  var minhas = [];
+
+  function en(){ try{ return window.bqIdioma && bqIdioma.atual() === 'en' }catch(e){ return false } }
+  function T(pt, ing){ return en() ? ing : pt }
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c] }) }
+
+  /* ── juntar ao catálogo ── */
+  function aplicar(){
+    for(var i = PROVAS_CAT.length - 1; i >= 0; i--) if(PROVAS_CAT[i] && PROVAS_CAT[i].minha) PROVAS_CAT.splice(i, 1);
+    minhas.forEach(function(p){
+      if(!p || !p.id || !p.data) return;
+      var c = Object.assign({}, p, {minha:true});
+      if(!Array.isArray(c.dists)) c.dists = [];
+      var j = PROVAS_CAT.findIndex(function(x){ return x.id === c.id });
+      if(j >= 0) PROVAS_CAT[j] = c; else PROVAS_CAT.push(c);
+    });
+  }
+  function redesenha(){
+    if(typeof ST === 'object' && ST.aba === 'provas' && typeof renderProvas === 'function'){ try{ renderProvas() }catch(e){} }
+  }
+  function guardarLocal(){ try{ localStorage.setItem(CHAVE, JSON.stringify(minhas)) }catch(e){} }
+  async function guardarNuvem(){
+    try{
+      var t = await fbToken(); if(!t) return false;
+      var obj = {}; minhas.forEach(function(p){ obj[p.id] = p });
+      var r = await fetch(FB_DB + '/' + FB_COACH + '/provasMinhas.json?auth=' + t,
+                          {method:'PUT', body:JSON.stringify(obj)});
+      return r.ok;
+    }catch(e){ console.warn('provasMinhas:', e && e.message); return false }
+  }
+  async function lerNuvem(){
+    try{
+      var t = await fbToken(); if(!t) return;
+      var r = await fetch(FB_DB + '/' + FB_COACH + '/provasMinhas.json?auth=' + t, {cache:'no-store'});
+      if(!r.ok) return;
+      var d = await r.json();
+      if(d && typeof d === 'object'){
+        minhas = Object.keys(d).map(function(k){ return d[k] }).filter(function(p){ return p && p.id });
+        guardarLocal(); aplicar(); redesenha();
+      }
+    }catch(e){ console.warn('provasMinhas:', e && e.message) }
+  }
+
+  try{ minhas = JSON.parse(localStorage.getItem(CHAVE) || '[]') || [] }catch(e){ minhas = [] }
+  aplicar();
+  setTimeout(lerNuvem, 2500);
+
+  /* o provas.json pode substituir o catálogo depois; reaplica as suas */
+  if(window.bqProvas && typeof window.bqProvas.juntar === 'function'){
+    var juntarApp = window.bqProvas.juntar;
+    window.bqProvas.juntar = function(){ var r = juntarApp.apply(this, arguments); aplicar(); return r };
+  }
+
+  /* ── estilo ── */
+  var css = document.createElement('style');
+  css.textContent = [
+    '#pvAcoes{display:flex;gap:8px;margin:2px 0 6px}',
+    '#pvAcoes button{flex:1;padding:11px 8px;border-radius:12px;border:1px solid var(--line,rgba(255,255,255,.1));background:var(--s1);',
+    '  color:var(--tx);font:600 13.5px/1 inherit;font-family:inherit;cursor:pointer}',
+    '#pvAcoes button.pri{background:var(--acc);border-color:var(--acc);color:#0b0f14}',
+    '#pvInfo{font-size:12px;color:var(--tx3);margin:0 0 12px;min-height:16px}',
+    '#pvInfo b{color:var(--tx2)}',
+    '.pvminha{display:flex;gap:8px;align-items:center;margin-top:10px;font-size:12px;color:var(--tx3)}',
+    '.pvminha .tagm{padding:3px 8px;border-radius:999px;background:var(--s3,#2a3340);color:var(--tx2);font-weight:700}',
+    '.pvminha button{margin-left:auto;border:0;background:var(--s2);color:var(--tx2);border-radius:8px;padding:6px 10px;font:600 12px/1 inherit;font-family:inherit}',
+    '.pvminha button + button{margin-left:0}',
+    '#pvForm label{display:block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--tx3);margin:14px 0 6px}',
+    '#pvForm input,#pvForm select,#pvForm textarea{width:100%;box-sizing:border-box;padding:11px 12px;border-radius:11px;border:1px solid var(--line,rgba(255,255,255,.1));',
+    '  background:var(--s2);color:var(--tx);font:500 15px/1.3 inherit;font-family:inherit}',
+    '#pvForm .ds{display:flex;gap:6px;flex-wrap:wrap}',
+    '#pvForm .ds button{flex:1;min-width:60px;padding:9px 0;border-radius:10px;border:1px solid var(--line,rgba(255,255,255,.1));background:transparent;color:var(--tx2);font:600 13px/1 inherit;font-family:inherit}',
+    '#pvForm .ds button.on{background:var(--acc);border-color:var(--acc);color:#0b0f14}',
+    '#pvForm .row{display:flex;gap:8px}#pvForm .row > div{flex:1}',
+    '#pvForm .salvar{width:100%;margin-top:18px;padding:14px;border-radius:13px;border:0;background:var(--acc);color:#0b0f14;font:700 15px/1 inherit;font-family:inherit}',
+    '#pvForm .erro{color:var(--bad);font-size:12.5px;margin:10px 0 0;min-height:16px}'
+  ].join('\n');
+  document.head.appendChild(css);
+
+  /* ── barra com os dois botões ── */
+  function info(msg){
+    var el = document.getElementById('pvInfo'); if(!el) return;
+    if(msg){ el.innerHTML = msg; return }
+    var i = window.bqProvas && window.bqProvas.info;
+    var n = PROVAS_CAT.filter(function(p){ return diff(iso(HOJE), p.data) >= 0 }).length;
+    var m = minhas.length;
+    el.innerHTML = (i && i.atualizado && i.atualizado !== '?' ? T('Lista de ', 'List from ') + '<b>' + fmtCurto(i.atualizado) + '</b> · ' : '') +
+      n + T(' provas futuras', ' upcoming races') + (m ? ' · ' + m + T(' sua' + (m > 1 ? 's' : ''), ' yours') : '');
+  }
+  function montarBarra(){
+    var aba = document.getElementById('v-provas'); if(!aba || document.getElementById('pvAcoes')) return;
+    var ref = document.getElementById('pvRegiao');
+    var bar = document.createElement('div'); bar.id = 'pvAcoes';
+    bar.innerHTML = '<button id="pvAtu">↻ ' + T('Atualizar', 'Refresh') + '</button>' +
+                    '<button id="pvAdd" class="pri">+ ' + T('Adicionar prova', 'Add race') + '</button>';
+    var p = document.createElement('p'); p.id = 'pvInfo';
+    aba.insertBefore(bar, ref); aba.insertBefore(p, ref);
+    bar.querySelector('#pvAtu').onclick = atualizar;
+    bar.querySelector('#pvAdd').onclick = function(){ formulario(null) };
+    info();
+  }
+  async function atualizar(){
+    var b = document.getElementById('pvAtu');
+    if(b){ b.disabled = true; b.textContent = T('Atualizando…', 'Refreshing…') }
+    var r = null;
+    try{ r = window.bqProvas && window.bqProvas.recarregar ? await window.bqProvas.recarregar() : null }catch(e){}
+    await lerNuvem();
+    aplicar(); redesenha();
+    if(b){ b.disabled = false; b.textContent = '↻ ' + T('Atualizar', 'Refresh') }
+    if(r) info(T('Atualizado agora. ', 'Refreshed. ') + (r.novas ? '<b>' + r.novas + T(' nova(s)', ' new') + '</b> · ' : T('Nenhuma prova nova no arquivo · ', 'No new races in the file · ')) +
+               T('lista de ', 'list from ') + '<b>' + fmtCurto(r.atualizado) + '</b>. ' +
+               T('Viu uma que falta? Use “Adicionar prova”.', 'Missing one? Use “Add race”.'));
+    else info(T('Não consegui buscar a lista agora (sem internet?).', 'Could not fetch the list (offline?).'));
+  }
+
+  /* ── formulário (abre no painel de baixo do app) ── */
+  var DISTS = [[5, '5 km'], [10, '10 km'], [21.1, T('Meia', 'Half')], [42.2, T('Maratona', 'Marathon')]];
+  function formulario(id){
+    var p = id ? minhas.filter(function(x){ return x.id === id })[0] : null;
+    var sel = p && Array.isArray(p.dists) ? p.dists.slice() : [];
+    var outras = sel.filter(function(d){ return !DISTS.some(function(x){ return Math.abs(x[0] - d) < 0.01 }) });
+    var regs = (typeof REGIOES === 'object') ? REGIOES : {atlantic:{n:'Atlântico'}};
+    var h = '<div id="pvForm"><h2 style="margin:0 0 2px">' + (p ? T('Editar prova', 'Edit race') : T('Adicionar prova', 'Add race')) + '</h2>' +
+      '<p class="sub" style="margin:0">' + T('Confira a data no site oficial.', 'Check the date on the official site.') + '</p>' +
+      '<label>' + T('Nome', 'Name') + '</label><input id="pfNome" value="' + esc(p && p.nome) + '" placeholder="Marathon by the Sea">' +
+      '<div class="row"><div><label>' + T('Data', 'Date') + '</label><input id="pfData" type="date" value="' + esc(p && p.data) + '"></div>' +
+      '<div><label>' + T('Região', 'Region') + '</label><select id="pfReg">' + Object.keys(regs).map(function(k){
+        return '<option value="' + k + '"' + ((p ? p.regiao : 'atlantic') === k ? ' selected' : '') + '>' + esc(regs[k].n) + '</option>' }).join('') + '</select></div></div>' +
+      '<label>' + T('Cidade', 'City') + '</label><input id="pfCid" value="' + esc(p && p.cidade) + '" placeholder="Saint John, NB">' +
+      '<label>' + T('Distâncias', 'Distances') + '</label><div class="ds">' + DISTS.map(function(x){
+        return '<button type="button" data-d="' + x[0] + '" class="' + (sel.some(function(d){ return Math.abs(d - x[0]) < 0.01 }) ? 'on' : '') + '">' + x[1] + '</button>' }).join('') + '</div>' +
+      '<input id="pfOutras" style="margin-top:8px" inputmode="decimal" value="' + esc(outras.join(', ')) + '" placeholder="' + T('Outras, em km (ex.: 30, 50)', 'Others, in km (e.g. 30, 50)') + '">' +
+      '<label>' + T('Inscrição', 'Registration') + '</label><select id="pfEst">' +
+        [['aberta', T('Aberta', 'Open')], ['abre', T('Ainda vai abrir', 'Opens later')], ['esgotada', T('Esgotada', 'Sold out')], ['encerrada', T('Encerrada', 'Closed')]].map(function(o){
+          return '<option value="' + o[0] + '"' + ((p ? p.estado : 'aberta') === o[0] ? ' selected' : '') + '>' + o[1] + '</option>' }).join('') + '</select>' +
+      '<label>Link</label><input id="pfUrl" type="url" inputmode="url" value="' + esc(p && p.url) + '" placeholder="https://raceroster.com/…">' +
+      '<label>' + T('Nota (opcional)', 'Note (optional)') + '</label><textarea id="pfNota" rows="2">' + esc(p && p.nota) + '</textarea>' +
+      '<p class="erro" id="pfErro"></p>' +
+      '<button class="salvar" id="pfSalvar">' + T('Salvar prova', 'Save race') + '</button></div>';
+
+    var aberto = false;
+    if(typeof abrir === 'function'){ try{ abrir(h); aberto = true }catch(e){} }
+    if(!aberto){
+      var sh = document.getElementById('sheetIn'); if(!sh) return;
+      sh.innerHTML = h;
+      var s = document.getElementById('sheet'), ov = document.getElementById('ov');
+      if(s) s.classList.add('on'); if(ov) ov.classList.add('on');
+    }
+    var f = document.getElementById('pvForm'); if(!f) return;
+    f.querySelectorAll('.ds button').forEach(function(b){ b.onclick = function(){ b.classList.toggle('on') } });
+    f.querySelector('#pfSalvar').onclick = function(){
+      var g = function(i){ return (f.querySelector('#' + i).value || '').trim() };
+      var nome = g('pfNome'), data = g('pfData'), url = g('pfUrl');
+      var ds = [];
+      f.querySelectorAll('.ds button.on').forEach(function(b){ ds.push(+b.getAttribute('data-d')) });
+      g('pfOutras').split(/[,;\s]+/).forEach(function(x){ var v = parseFloat(x.replace(',', '.')); if(v > 0 && v < 400) ds.push(+v.toFixed(1)) });
+      ds = ds.filter(function(v, i){ return ds.indexOf(v) === i }).sort(function(a, b){ return a - b });
+      var erro = !nome ? T('Falta o nome.', 'Name is missing.') : !/^\d{4}-\d{2}-\d{2}$/.test(data) ? T('Falta a data.', 'Date is missing.') : '';
+      if(url && !/^https?:\/\//i.test(url)) url = 'https://' + url;
+      if(erro){ f.querySelector('#pfErro').textContent = erro; return }
+      var est = g('pfEst');
+      var novo = {
+        id: p ? p.id : 'minha-' + Date.now().toString(36),
+        nome: nome, data: data, cidade: g('pfCid') || '—', regiao: g('pfReg') || 'atlantic',
+        dists: ds, estado: est === 'abre' ? 'aberta' : est, url: url || '#', nota: g('pfNota'),
+        criada: p && p.criada || iso(HOJE)
+      };
+      if(p) minhas = minhas.map(function(x){ return x.id === p.id ? novo : x }); else minhas.push(novo);
+      guardarLocal(); aplicar();
+      fechaForm(); redesenha(); info();
+      guardarNuvem().then(function(ok){
+        if(!ok) info(T('Salva neste aparelho. Não consegui gravar no Firebase agora; tento de novo no próximo salvamento.',
+                       'Saved on this device. Could not save to Firebase now; will retry next save.'));
+      });
+    };
+  }
+  function fechaForm(){
+    if(typeof fechar === 'function'){ try{ fechar(); return }catch(e){} }
+    var s = document.getElementById('sheet'), ov = document.getElementById('ov');
+    if(s) s.classList.remove('on'); if(ov) ov.classList.remove('on');
+  }
+  function remover(id){
+    var p = minhas.filter(function(x){ return x.id === id })[0]; if(!p) return;
+    if(!confirm(T('Remover "' + p.nome + '"?', 'Remove "' + p.nome + '"?'))) return;
+    minhas = minhas.filter(function(x){ return x.id !== id });
+    guardarLocal(); aplicar(); redesenha(); info(); guardarNuvem();
+  }
+
+  /* ── cartão: marca "sua" com editar e remover ── */
+  var cardAntes = window.cardProva;
+  if(typeof cardAntes === 'function'){
+    window.cardProva = function(p){
+      var h = cardAntes.apply(this, arguments);
+      if(p && p.minha){
+        var extra = '<div class="pvminha"><span class="tagm">' + T('adicionada por você', 'added by you') + '</span>' +
+          '<button data-pvedit="' + esc(p.id) + '">' + T('editar', 'edit') + '</button>' +
+          '<button data-pvdel="' + esc(p.id) + '">' + T('remover', 'remove') + '</button></div>';
+        var k = h.lastIndexOf('</div>');
+        h = k >= 0 ? h.slice(0, k) + extra + h.slice(k) : h + extra;
+        if(!p.url || p.url === '#') h = h.replace(/<a class="pvlink[\s\S]*?<\/a>/, '');
+      }
+      return h;
+    };
+  }
+  document.addEventListener('click', function(ev){
+    var e = ev.target && ev.target.closest ? ev.target.closest('[data-pvedit],[data-pvdel]') : null;
+    if(!e) return;
+    ev.preventDefault(); ev.stopPropagation();
+    if(e.hasAttribute('data-pvedit')) formulario(e.getAttribute('data-pvedit'));
+    else remover(e.getAttribute('data-pvdel'));
+  }, true);
+
+  /* barra aparece com a aba; a lista é redesenhada pelo app */
+  var renderAntes = window.renderProvas;
+  if(typeof renderAntes === 'function'){
+    renderProvas = function(){ var r = renderAntes.apply(this, arguments); try{ montarBarra(); info() }catch(e){} return r };
+    try{ window.renderProvas = renderProvas }catch(e){}
+  }
+  montarBarra();
+  if(typeof ST === 'object' && ST.aba === 'provas') redesenha();
 });
