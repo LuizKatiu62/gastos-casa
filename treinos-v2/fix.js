@@ -80,7 +80,7 @@
       escolha dos anos por botão, variação só nos meses em comum
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '08a';
+const FIX_VERSAO = '08b';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -20763,7 +20763,83 @@ PARTE('provas: atualizar e adicionar', function(){
   function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c] }) }
 
   /* ── juntar ao catálogo ── */
+  /* ── provas lidas da RunNB (provas-runnb.json, gerado no GitHub) ──
+     A lista curada vence: prova da RunNB com a mesma data e um nome
+     parecido com uma curada não entra de novo. */
+  var runnb = [], runnbInfo = null;
+  function chaveNome(n){
+    return String(n || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/\b(the|and|de|la|le|du|annual|presented|by|run|race|km|k|\d+(st|nd|rd|th|e)?)\b/g, ' ')
+      .split(/[^a-z]+/).filter(function(w){ return w.length > 3 });
+  }
+  function duplicada(p){
+    var a = chaveNome(p.nome);
+    return PROVAS_CAT.some(function(x){
+      if(!x || x.fonte === 'runnb' || x.minha) return false;
+      if(x.url && p.url && x.url.indexOf(p.id.replace('runnb-', '/')) >= 0) return true;
+      if(Math.abs(diff(x.data, p.data)) > 1) return false;
+      var b = chaveNome(x.nome);
+      return a.some(function(w){ return b.indexOf(w) >= 0 });
+    });
+  }
+  function aplicarRunnb(){
+    for(var i = PROVAS_CAT.length - 1; i >= 0; i--) if(PROVAS_CAT[i] && PROVAS_CAT[i].fonte === 'runnb') PROVAS_CAT.splice(i, 1);
+    runnb.forEach(function(p){
+      if(!p || !p.id || !p.data || duplicada(p)) return;
+      var c = Object.assign({}, p, {fonte:'runnb'});
+      if(!Array.isArray(c.dists)) c.dists = [];
+      PROVAS_CAT.push(c);
+    });
+  }
+  async function carregarRunnb(viaApi){
+    try{
+      var r, d;
+      if(viaApi && tokenGH()){
+        r = await fetch('https://api.github.com/repos/' + repoGH() + '/contents/treinos-v2/provas-runnb.json?ref=main',
+                        {headers:{'Authorization':'Bearer ' + tokenGH(), 'Accept':'application/vnd.github.raw+json'}, cache:'no-store'});
+      } else r = await fetch('./provas-runnb.json', {cache:'reload'});
+      if(!r.ok) return null;
+      d = await r.json();
+      if(!d || !Array.isArray(d.provas)) return null;
+      runnb = d.provas; runnbInfo = {atualizado:d.atualizado, total:d.provas.length};
+      aplicar(); redesenha();
+      return runnbInfo;
+    }catch(e){ console.warn('provas-runnb:', e && e.message); return null }
+  }
+  function tokenGH(){
+    try{ if(typeof GH_TOKEN === 'string' && GH_TOKEN) return GH_TOKEN; return (cofre && cofre.ler && cofre.ler('gh_token')) || '' }catch(e){ return '' }
+  }
+  function repoGH(){ try{ if(typeof GH_REPO === 'string' && GH_REPO) return GH_REPO }catch(e){} return 'LuizKatiu62/gastos-casa' }
+
+  /* chama o robô provas-runnb.yml e espera ele terminar */
+  async function rodarRobo(passo){
+    var t = tokenGH(); if(!t) return {ok:false, motivo:'sem token'};
+    var cab = {'Authorization':'Bearer ' + t, 'Accept':'application/vnd.github.v3+json', 'Content-Type':'application/json'};
+    var base = 'https://api.github.com/repos/' + repoGH() + '/actions/workflows/provas-runnb.yml';
+    var desde = new Date(Date.now() - 60000).toISOString();
+    var r = await fetch(base + '/dispatches', {method:'POST', headers:cab, body:JSON.stringify({ref:'main'})});
+    if(r.status !== 204) return {ok:false, motivo:'GitHub respondeu ' + r.status + (r.status === 403 ? ' (o token precisa da permissão workflow)' : '')};
+    var espera = function(ms){ return new Promise(function(x){ setTimeout(x, ms) }) };
+    var t0 = Date.now(), run = null;
+    while(Date.now() - t0 < 4 * 60 * 1000){
+      await espera(6000);
+      try{
+        var rr = await fetch(base + '/runs?event=workflow_dispatch&per_page=5&created=>=' + encodeURIComponent(desde), {headers:cab});
+        if(!rr.ok) continue;
+        var j = await rr.json();
+        run = (j.workflow_runs || []).sort(function(a, c){ return new Date(c.created_at) - new Date(a.created_at) })[0] || null;
+      }catch(e){ continue }
+      if(!run){ passo(T('Na fila do GitHub…', 'Queued on GitHub…')); continue }
+      if(run.status !== 'completed'){ passo(T('Lendo o site da RunNB…', 'Reading RunNB…')); continue }
+      break;
+    }
+    if(!run || run.status !== 'completed') return {ok:false, motivo:T('o GitHub demorou mais de 4 minutos', 'GitHub took over 4 minutes')};
+    if(run.conclusion !== 'success') return {ok:false, motivo:T('o robô terminou com erro', 'the job failed')};
+    return {ok:true};
+  }
+
   function aplicar(){
+    aplicarRunnb();
     for(var i = PROVAS_CAT.length - 1; i >= 0; i--) if(PROVAS_CAT[i] && PROVAS_CAT[i].minha) PROVAS_CAT.splice(i, 1);
     minhas.forEach(function(p){
       if(!p || !p.id || !p.data) return;
@@ -20802,6 +20878,7 @@ PARTE('provas: atualizar e adicionar', function(){
   try{ minhas = JSON.parse(localStorage.getItem(CHAVE) || '[]') || [] }catch(e){ minhas = [] }
   aplicar();
   setTimeout(lerNuvem, 2500);
+  setTimeout(function(){ carregarRunnb(false) }, 1200);
 
   /* o provas.json pode substituir o catálogo depois; reaplica as suas */
   if(window.bqProvas && typeof window.bqProvas.juntar === 'function'){
@@ -20841,8 +20918,10 @@ PARTE('provas: atualizar e adicionar', function(){
     var i = window.bqProvas && window.bqProvas.info;
     var n = PROVAS_CAT.filter(function(p){ return diff(iso(HOJE), p.data) >= 0 }).length;
     var m = minhas.length;
-    el.innerHTML = (i && i.atualizado && i.atualizado !== '?' ? T('Lista de ', 'List from ') + '<b>' + fmtCurto(i.atualizado) + '</b> · ' : '') +
-      n + T(' provas futuras', ' upcoming races') + (m ? ' · ' + m + T(' sua' + (m > 1 ? 's' : ''), ' yours') : '');
+    var nr = PROVAS_CAT.filter(function(p){ return p.fonte === 'runnb' && diff(iso(HOJE), p.data) >= 0 }).length;
+    el.innerHTML = n + T(' provas futuras', ' upcoming races') +
+      (runnbInfo ? ' · RunNB ' + T('lida em ', 'read on ') + '<b>' + fmtCurto(runnbInfo.atualizado) + '</b>' + (nr ? ' (+' + nr + ')' : '') : '') +
+      (m ? ' · ' + m + T(' sua' + (m > 1 ? 's' : ''), ' yours') : '');
   }
   function montarBarra(){
     var aba = document.getElementById('v-provas'); if(!aba || document.getElementById('pvAcoes')) return;
@@ -20858,16 +20937,30 @@ PARTE('provas: atualizar e adicionar', function(){
   }
   async function atualizar(){
     var b = document.getElementById('pvAtu');
-    if(b){ b.disabled = true; b.textContent = T('Atualizando…', 'Refreshing…') }
-    var r = null;
-    try{ r = window.bqProvas && window.bqProvas.recarregar ? await window.bqProvas.recarregar() : null }catch(e){}
+    var rot = function(t){ if(b) b.textContent = t };
+    if(b) b.disabled = true;
+    rot(T('Atualizando…', 'Refreshing…'));
+    var robo = null;
+    if(tokenGH()){
+      info(T('Pedindo ao GitHub para ler o calendário da RunNB. Leva cerca de 1 minuto — pode deixar a tela aberta.',
+             'Asking GitHub to read the RunNB calendar. About 1 minute.'));
+      try{ robo = await rodarRobo(rot) }catch(e){ robo = {ok:false, motivo:e && e.message} }
+    }
+    rot(T('Conferindo…', 'Checking…'));
+    try{ if(window.bqProvas && window.bqProvas.recarregar) await window.bqProvas.recarregar() }catch(e){}
+    var antes = PROVAS_CAT.filter(function(p){ return p.fonte === 'runnb' }).length;
+    var ri = await carregarRunnb(!!(robo && robo.ok));
     await lerNuvem();
     aplicar(); redesenha();
     if(b){ b.disabled = false; b.textContent = '↻ ' + T('Atualizar', 'Refresh') }
-    if(r) info(T('Atualizado agora. ', 'Refreshed. ') + (r.novas ? '<b>' + r.novas + T(' nova(s)', ' new') + '</b> · ' : T('Nenhuma prova nova no arquivo · ', 'No new races in the file · ')) +
-               T('lista de ', 'list from ') + '<b>' + fmtCurto(r.atualizado) + '</b>. ' +
-               T('Viu uma que falta? Use “Adicionar prova”.', 'Missing one? Use “Add race”.'));
-    else info(T('Não consegui buscar a lista agora (sem internet?).', 'Could not fetch the list (offline?).'));
+    var depois = PROVAS_CAT.filter(function(p){ return p.fonte === 'runnb' }).length;
+    var msg = '';
+    if(robo && robo.ok) msg = T('Calendário da RunNB lido agora. ', 'RunNB calendar read just now. ') +
+      (depois > antes ? '<b>' + (depois - antes) + T(' prova(s) nova(s)', ' new race(s)') + '</b>. ' : T('Nenhuma prova nova. ', 'No new races. '));
+    else if(robo) msg = T('Não consegui ler a RunNB agora (' + robo.motivo + '). Mostrando a última leitura. ', 'Could not read RunNB now (' + robo.motivo + '). Showing the last read. ');
+    else msg = T('Este aparelho não tem o token do GitHub (o mesmo do Sync Garmin), então mostro a última leitura — o robô lê a RunNB sozinho toda segunda. ',
+                 'No GitHub token on this device; showing the last read. ');
+    info(msg + (ri ? 'RunNB ' + T('lida em ', 'read on ') + '<b>' + fmtCurto(ri.atualizado) + '</b>.' : ''));
   }
 
   /* ── formulário (abre no painel de baixo do app) ── */
@@ -20948,6 +21041,11 @@ PARTE('provas: atualizar e adicionar', function(){
   if(typeof cardAntes === 'function'){
     window.cardProva = function(p){
       var h = cardAntes.apply(this, arguments);
+      if(p && p.fonte === 'runnb'){
+        var k0 = h.lastIndexOf('</div>');
+        var tg = '<div class="pvminha"><span class="tagm">' + T('do calendário da RunNB', 'from the RunNB calendar') + '</span></div>';
+        h = k0 >= 0 ? h.slice(0, k0) + tg + h.slice(k0) : h + tg;
+      }
       if(p && p.minha){
         var extra = '<div class="pvminha"><span class="tagm">' + T('adicionada por você', 'added by you') + '</span>' +
           '<button data-pvedit="' + esc(p.id) + '">' + T('editar', 'edit') + '</button>' +

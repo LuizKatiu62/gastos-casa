@@ -144,8 +144,8 @@ def detalhe(p):
         ds.update(km_de(other.group(1)))
     if ds:
         p["dists"] = sorted(ds)
-    if re.search(r"registration\s+(is\s+)?closed|online registration closed", t, re.I):
-        p["estado"] = "encerrada"
+    # "registration closed" aparece em pagina com inscricao aberta (prazo de
+    # uma categoria, texto antigo), entao nao marco encerrada por isso.
     if re.search(r"\bcancel+ed\b", p["nome"] + " " + t[:600], re.I):
         p["cancelada"] = True
 
