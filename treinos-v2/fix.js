@@ -80,7 +80,7 @@
       escolha dos anos por botão, variação só nos meses em comum
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '07y';
+const FIX_VERSAO = '07z';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -20212,7 +20212,7 @@ PARTE('evolucao ano a ano', function(){
   function milhar(v){ return Math.round(v).toString().replace(/\B(?=(\d{3})+(?!\d))/g, en() ? ',' : '.') }
   function pad(m){ return String(m).padStart(2, '0') }
 
-  var est = {met:'km', mod:'corrida', vista:'ano', anos:null, de:null, ate:null};
+  var est = {met:'km', mod:'corrida', vista:'ano', anos:null, de:null, ate:null, ter:'tudo'};
   try{ var g = JSON.parse(localStorage.getItem(CHAVE) || 'null'); if(g) for(var k in g) est[k] = g[k] }catch(e){}
   function guarda(){ try{ localStorage.setItem(CHAVE, JSON.stringify(est)) }catch(e){} }
 
@@ -20227,15 +20227,36 @@ PARTE('evolucao ano a ano', function(){
 
   /* ── dados por mês "AAAA-MM" ── */
   function chaveMes(d){ return d.getFullYear() + '-' + pad(d.getMonth() + 1) }
+  /* trilha: o sync grava tipo "trilha" para trail_running e ultra_run.
+     O pace de trilha (subida, terreno) não se compara com o de rua, então
+     em "Tudo" ele fica fora do PACE — mas os km e o tempo continuam. */
+  function trilhas(){
+    var t = {};
+    var A = (typeof RAW !== 'undefined' && RAW && Array.isArray(RAW.atividades)) ? RAW.atividades : [];
+    A.forEach(function(a){
+      if(!a) return;
+      if(String(a.tipo || '') === 'trilha' || /\btrail\b|\btrilha\b/i.test(String(a.notas || '')))
+        t[String(a.garminId || a.id || '')] = 1;
+    });
+    return t;
+  }
+  function ehTrilha(r, T_){ return !!(r.gid && T_[r.gid]) }
+  function passaTerreno(r, T_){
+    if(est.mod !== 'corrida' || est.ter === 'tudo') return true;
+    return est.ter === 'trilha' ? ehTrilha(r, T_) : !ehTrilha(r, T_);
+  }
   function porMes(){
-    var o = {};
+    var o = {}, T_ = trilhas();
     (ST.runs || []).forEach(function(r){
       if(!r || r.walk) return;
       if((r.mod || 'corrida') !== est.mod) return;
+      if(!passaTerreno(r, T_)) return;
       var k = chaveMes(addD(HOJE, -r.d));
-      var m = o[k] || (o[k] = {km:0, dur:0, n:0, kmP:0, durP:0});
+      var m = o[k] || (o[k] = {km:0, dur:0, n:0, kmP:0, durP:0, kmT:0});
       var km = +r.km || 0, dur = isFinite(r.dur) ? +r.dur : km * r.pace;
       m.km += km; m.dur += dur || 0; m.n++;
+      var tr = ehTrilha(r, T_);
+      if(tr && est.mod === 'corrida' && est.ter === 'tudo'){ m.kmT += km; return }
       if(km > 0.3 && dur > 0){ m.kmP += km; m.durP += dur }
     });
     return o;
@@ -20258,7 +20279,8 @@ PARTE('evolucao ano a ano', function(){
   }
   function soma(dados, ks){
     var t = {km:0, dur:0, n:0, kmP:0, durP:0};
-    ks.forEach(function(k){ var m = dados[k]; if(m){ t.km += m.km; t.dur += m.dur; t.n += m.n; t.kmP += m.kmP; t.durP += m.durP } });
+    t.kmT = 0;
+    ks.forEach(function(k){ var m = dados[k]; if(m){ t.km += m.km; t.dur += m.dur; t.n += m.n; t.kmP += m.kmP; t.durP += m.durP; t.kmT += m.kmT || 0 } });
     return t;
   }
   function meses(de, ate){
@@ -20381,6 +20403,9 @@ PARTE('evolucao ano a ano', function(){
            return '<button data-aamet="' + k + '" class="' + (est.met === k ? 'on' : '') + '">' + T(METS[k].pt, METS[k].en) + '</button>' }).join('') + '</div>';
     h += '<div class="aaBar sec">' + Object.keys(MODS).map(function(k){
            return '<button data-aamod="' + k + '" class="' + (est.mod === k ? 'on' : '') + '">' + T(MODS[k][0], MODS[k][1]) + '</button>' }).join('') + '</div>';
+    if(est.mod === 'corrida')
+      h += '<div class="aaBar sec">' + [['tudo', 'Rua + trilha', 'Road + trail'], ['rua', 'Só rua', 'Road only'], ['trilha', 'Só trilha', 'Trail only']].map(function(o){
+             return '<button data-aater="' + o[0] + '" class="' + (est.ter === o[0] ? 'on' : '') + '">' + T(o[1], o[2]) + '</button>' }).join('') + '</div>';
     h += '<div class="aaBar sec">' +
          '<button data-aavis="ano" class="' + (est.vista === 'ano' ? 'on' : '') + '">' + T('Ano a ano', 'By year') + '</button>' +
          '<button data-aavis="cont" class="' + (est.vista === 'cont' ? 'on' : '') + '">' + T('Contínuo', 'Timeline') + '</button></div>';
@@ -20411,6 +20436,7 @@ PARTE('evolucao ano a ano', function(){
     cx.innerHTML = h;
 
     cx.querySelectorAll('[data-aamet]').forEach(function(b){ b.onclick = function(){ est.met = b.getAttribute('data-aamet'); guarda(); desenha() } });
+    cx.querySelectorAll('[data-aater]').forEach(function(b){ b.onclick = function(){ est.ter = b.getAttribute('data-aater'); est.mesSel = null; guarda(); desenha() } });
     cx.querySelectorAll('[data-aamod]').forEach(function(b){ b.onclick = function(){ est.mod = b.getAttribute('data-aamod'); guarda(); desenha() } });
     cx.querySelectorAll('[data-aavis]').forEach(function(b){ b.onclick = function(){ est.vista = b.getAttribute('data-aavis'); guarda(); desenha() } });
     cx.querySelectorAll('[data-aaano]').forEach(function(b){ b.onclick = function(){
@@ -20565,8 +20591,12 @@ PARTE('evolucao ano a ano', function(){
         var per = mes3(+ks1[0].slice(5) - 1) + '–' + mes3(+ks1[ks1.length - 1].slice(5) - 1);
         sub.innerHTML = '<b>' + a1 + '</b> × ' + a0 + ', ' + per + ': <b>' + fmtV(v1) + '</b> × ' + fmtV(v0);
         if(v1 != null && v0){ var p = pctTag(v1, v0); tag.textContent = p.t; tag.className = 'tag ' + (p.bom ? 'ok' : 'warn') }
+        var kmT = soma(dados, ks1).kmT + soma(dados, ks0).kmT;
+        if(est.met === 'pace' && est.mod === 'corrida' && est.ter === 'tudo' && kmT > 0)
+          obs.textContent = T('Pace calculado sem as trilhas (' + nf(kmT, 0) + ' km de trilha ficam fora só do pace). ',
+                              'Pace excludes trail runs (' + nf(kmT, 0) + ' trail km left out of pace only). ');
         if(ks1[0].slice(5) !== '01')
-          obs.textContent = T('O histórico do Garmin começa em ' + rotMes(lim.min) + ', então a comparação usa só ' + per + '.',
+          obs.textContent += T('O histórico do Garmin começa em ' + rotMes(lim.min) + ', então a comparação usa só ' + per + '.',
                               'Garmin history starts in ' + rotMes(lim.min) + ', so the comparison only uses ' + per + '.');
       } else sub.textContent = T('Sem meses em comum para comparar.', 'No overlapping months to compare.');
     } else sub.innerHTML = '<b>' + anos[0] + '</b>: ' + fmtV(valor(soma(dados, meses(anos[0] + '-01', anos[0] + '-12'))));
@@ -20575,10 +20605,11 @@ PARTE('evolucao ano a ano', function(){
   /* ── lista das atividades de um mês, nos anos escolhidos ── */
   function detalhe(cx, anos, disp, rolar){
     var box = cx.querySelector('#aaDet'); if(!box) return;
-    var m = est.mesSel;
+    var m = est.mesSel, T_ = trilhas();
     var porAno = {};
     (ST.runs || []).forEach(function(r){
       if(!r || r.walk || (r.mod || 'corrida') !== est.mod) return;
+      if(!passaTerreno(r, T_)) return;
       var d = addD(HOJE, -r.d);
       if(d.getMonth() !== m) return;
       var a = String(d.getFullYear());
@@ -20591,15 +20622,19 @@ PARTE('evolucao ano a ano', function(){
                                                       'Slowest first. Orange: over 1 min/km slower than the month median.') + '</p>';
     anos.forEach(function(a){
       var L = porAno[a] || [];
-      var km = 0, dur = 0; L.forEach(function(x){ if(x.r.km > 0.3){ km += x.r.km; dur += x.r.dur } });
+      var semT = est.mod === 'corrida' && est.ter === 'tudo';
+      var km = 0, dur = 0, kmP = 0, durP = 0;
+      L.forEach(function(x){ km += x.r.km; if(x.r.km > 0.3 && !(semT && ehTrilha(x.r, T_))){ kmP += x.r.km; durP += x.r.dur } });
       h += '<div class="ano"><span style="color:' + corAno(a, disp) + '">● ' + a + '</span><span>' + L.length + ' · ' + nf(km, 1) + ' km' +
-           (km ? ' · ' + mmss(dur / km) + '/km' : '') + '</span></div>';
+           (kmP ? ' · ' + mmss(durP / kmP) + '/km' : '') + '</span></div>';
       if(!L.length){ h += '<div class="lin"><span></span><span class="tt">' + T('Nenhuma atividade', 'No workouts') + '</span></div>'; return }
-      var md = med(L.map(function(x){ return x.r.pace }));
+      var rua = L.filter(function(x){ return !ehTrilha(x.r, T_) }).map(function(x){ return x.r.pace });
+      var md = med(rua.length ? rua : L.map(function(x){ return x.r.pace }));
       L.sort(function(x, y){ return y.r.pace - x.r.pace }).forEach(function(x){
         var r = x.r, nome = r.titulo || (r.manual ? T('Manual', 'Manual') : T('Corrida', 'Run'));
-        h += '<div class="lin' + (r.pace - md > 60 ? ' lento' : '') + '"><span>' + x.dia.getDate() + ' ' + mes3(m) + '</span>' +
-             '<span class="tt">' + String(nome).replace(/</g, '&lt;') + '</span>' +
+        var tr = ehTrilha(r, T_);
+        h += '<div class="lin' + (!tr && r.pace - md > 60 ? ' lento' : '') + '"' + (tr ? ' style="opacity:.6"' : '') + '><span>' + x.dia.getDate() + ' ' + mes3(m) + '</span>' +
+             '<span class="tt">' + (tr ? '⛰ ' : '') + String(nome).replace(/</g, '&lt;') + '</span>' +
              '<span>' + nf(r.km, 1) + ' km · ' + fmtV(r.dur / 3600, false, 'tempo') + '</span><b>' + mmss(r.pace) + '</b></div>';
       });
     });
