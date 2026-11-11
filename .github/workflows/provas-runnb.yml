@@ -1,0 +1,38 @@
+name: Provas RunNB
+
+# Lê o calendário oficial da RunNB e grava treinos-v2/provas-runnb.json,
+# que a aba Provas do app junta à lista curada (provas.json).
+on:
+  schedule:
+    - cron: '17 11 * * 1'     # segunda, ~8h em Saint John
+  workflow_dispatch:          # botão "Atualizar" da aba Provas
+
+permissions:
+  contents: write
+
+concurrency:
+  group: provas-runnb
+  cancel-in-progress: false
+
+jobs:
+  provas:
+    runs-on: ubuntu-latest
+    if: github.repository == 'LuizKatiu62/gastos-casa'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Ler o calendário da RunNB
+        run: python sync-provas-runnb.py
+      - name: Publicar provas-runnb.json
+        run: |
+          if [ -n "$(git status --porcelain treinos-v2/provas-runnb.json)" ]; then
+            git config user.name  "provas-runnb"
+            git config user.email "provas-runnb@users.noreply.github.com"
+            git add treinos-v2/provas-runnb.json
+            git commit -m "provas RunNB: $(date -u +%Y-%m-%d\ %H:%M) UTC"
+            for i in 1 2 3; do git pull --rebase -q && git push && break; sleep 5; done
+          else
+            echo "provas-runnb.json sem mudança"
+          fi
