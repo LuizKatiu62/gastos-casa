@@ -12,9 +12,14 @@ FIREBASE_DB     = "https://gastos-casa-7f431-default-rtdb.firebaseio.com"
 FIREBASE_PATH   = "treinos/luiz"
 FIREBASE_KEY    = "AIzaSyB0hO4m0XPRqmrYegHtkV4KawJA2py1glU"
 CIRURGIA_DATA   = "2025-06-11"   # marco do projeto: dia da cirurgia
-# A janela precisa cobrir desde a cirurgia, senao o total do site comeca a
-# encolher sozinho quando o projeto passar de um ano. Antes era fixo em 365.
+# A janela cobre todo o historico desde HISTORICO_DESDE (pedido do Luiz em
+# 10/11/2026, para o grafico "ano a ano" da aba Evolucao comparar anos
+# inteiros). Os totais "desde a cirurgia" continuam filtrando por
+# CIRURGIA_DATA, entao nao mudam. Antes: desde a cirurgia - 30 dias.
+HISTORICO_DESDE = "2024-01-01"
 DIAS_ATIVIDADES = max(365, (datetime.today() -
+                            datetime.strptime(HISTORICO_DESDE, "%Y-%m-%d")).days + 1,
+                           (datetime.today() -
                             datetime.strptime(CIRURGIA_DATA, "%Y-%m-%d")).days + 30)
 DIAS_SAUDE      = 180
 # Linha do tempo do stress (leitura a cada 3 min, igual ao grafico do
