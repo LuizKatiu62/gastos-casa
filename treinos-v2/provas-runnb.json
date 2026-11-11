@@ -1,7 +1,7 @@
 {
  "_leia": "Gerado por sync-provas-runnb.py a partir de https://secure.runnb.ca/calendar/. Nao edite: e regravado. Para corrigir uma prova, ponha a versao certa em provas.json (a lista curada vence).",
  "atualizado": "2026-11-11",
- "geradoEm": "2026-11-11T01:37Z",
+ "geradoEm": "2026-11-11T01:38Z",
  "fonte": "https://secure.runnb.ca/calendar/",
  "provas": [
   {
@@ -167,7 +167,7 @@
     21.1,
     42.2
    ],
-   "estado": "encerrada",
+   "estado": "aberta",
    "url": "https://secure.runnb.ca/event/10th-bay-of-fundy-international-marathon-half-marathon/1004918/",
    "fonte": "runnb",
    "nota": "Do calendário oficial da RunNB. Confirme data e inscrição no site antes de pagar."
@@ -183,7 +183,7 @@
     16.1,
     42.2
    ],
-   "estado": "encerrada",
+   "estado": "aberta",
    "url": "https://secure.runnb.ca/event/subway-restaurants-canada-day-10-miler-and-grand-bay-guardian-5k/1004900/",
    "fonte": "runnb",
    "nota": "Do calendário oficial da RunNB. Confirme data e inscrição no site antes de pagar."
