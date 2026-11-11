@@ -56,7 +56,7 @@ AGREGADOR = [  # (url base, regiao)
     ("https://running.life/running-calendar/canada/quebec", "quebec"),
 ]
 MAX_PAGINAS = 25
-FORA_AGREG = re.compile(r"trail|sentier|snowshoe|raquette|backyard|ultra|relay|relais|ski|triathlon|duathlon|"
+FORA_AGREG = re.compile(r"mini marathon|miniest|trail|sentier|snowshoe|raquette|backyard|ultra|relay|relais|ski|triathlon|duathlon|"
                         r"virtual|virtuel|obstacle|stairs|escalier|hike|randonn|swim|bike|v[eé]lo|neige|snow|winter|hivern|polar|cross[ -]?country", re.I)
 
 MESES = {}
@@ -202,7 +202,7 @@ def agregador(hoje):
                 desc = html.unescape(str(it.get("description", "")))
                 if FORA_AGREG.search(nome) or FORA_AGREG.search(desc[:160]):
                     continue
-                ds = km_de(nome + " . " + desc)
+                ds = [x for x in km_de(nome + " . " + desc) if x >= 2]
                 if 21.1 not in ds and 42.2 not in ds:
                     continue
                 loc = it.get("location") or {}
