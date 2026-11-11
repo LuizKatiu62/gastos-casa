@@ -1,7 +1,7 @@
 {
  "_leia": "Gerado por sync-provas-fora.py. Nao edite: e regravado toda semana. Para corrigir uma prova, ponha a versao certa em provas.json (a lista curada vence).",
  "atualizado": "2026-11-11",
- "geradoEm": "2026-11-11T01:51Z",
+ "geradoEm": "2026-11-11T01:54Z",
  "avisos": [],
  "provas": [
   {
@@ -147,21 +147,6 @@
    "nota": "Data lida no site oficial em 11/11/2026."
   },
   {
-   "id": "rl-hangover-hustle-miniest-mini-marathon-2027",
-   "nome": "Hangover Hustle Miniest Mini Marathon",
-   "cidade": "Fort Erie, ON",
-   "regiao": "ontario",
-   "data": "2027-01-01",
-   "dists": [
-    5.0,
-    42.2
-   ],
-   "estado": "confira",
-   "url": "https://running.life/en/event/hangover-hustle-miniest-mini-marathon",
-   "fonte": "agregador",
-   "nota": "Informal New Year’s Day event in Crystal Beach with a 5 km on the certified course and a tongue in cheek 500 m mini marathon plus food, a shirt and live music. (Lista do running.life — confira data e inscrição no site oficial.)"
-  },
-  {
    "id": "rl-limestone-race-weekend-2027",
    "nome": "Limestone Race Weekend",
    "cidade": "Kingston, ON",
@@ -262,7 +247,6 @@
    "regiao": "ontario",
    "data": "2027-06-12",
    "dists": [
-    1.0,
     5.0,
     10.0,
     21.1
@@ -327,7 +311,6 @@
    "regiao": "ontario",
    "data": "2027-10-09",
    "dists": [
-    1.0,
     42.2
    ],
    "estado": "confira",
@@ -342,7 +325,6 @@
    "regiao": "quebec",
    "data": "2026-11-22",
    "dists": [
-    1.0,
     42.2
    ],
    "estado": "confira",
@@ -357,7 +339,6 @@
    "regiao": "quebec",
    "data": "2026-12-13",
    "dists": [
-    1.0,
     21.1
    ],
    "estado": "confira",
@@ -386,7 +367,6 @@
    "regiao": "quebec",
    "data": "2027-04-25",
    "dists": [
-    1.0,
     21.1
    ],
    "estado": "confira",
@@ -433,7 +413,6 @@
    "regiao": "quebec",
    "data": "2027-05-02",
    "dists": [
-    1.0,
     42.2
    ],
    "estado": "confira",
@@ -448,7 +427,6 @@
    "regiao": "quebec",
    "data": "2027-05-22",
    "dists": [
-    1.0,
     21.1
    ],
    "estado": "confira",
@@ -477,7 +455,6 @@
    "regiao": "quebec",
    "data": "2027-05-30",
    "dists": [
-    1.0,
     5.0,
     42.2
    ],
@@ -493,7 +470,6 @@
    "regiao": "quebec",
    "data": "2027-06-12",
    "dists": [
-    1.0,
     10.0,
     21.1
    ],
@@ -526,7 +502,6 @@
    "regiao": "quebec",
    "data": "2027-06-20",
    "dists": [
-    1.0,
     5.0,
     10.0,
     21.1
@@ -543,7 +518,6 @@
    "regiao": "quebec",
    "data": "2027-06-27",
    "dists": [
-    1.0,
     5.0,
     10.0,
     21.1
@@ -574,7 +548,6 @@
    "regiao": "quebec",
    "data": "2027-08-08",
    "dists": [
-    1.0,
     5.0,
     10.0,
     21.1
@@ -591,7 +564,6 @@
    "regiao": "quebec",
    "data": "2027-08-22",
    "dists": [
-    1.0,
     5.0,
     21.1
    ],
@@ -621,7 +593,6 @@
    "regiao": "quebec",
    "data": "2027-09-05",
    "dists": [
-    1.0,
     42.2
    ],
    "estado": "confira",
@@ -636,7 +607,6 @@
    "regiao": "quebec",
    "data": "2027-09-12",
    "dists": [
-    1.0,
     21.1
    ],
    "estado": "confira",
@@ -651,7 +621,6 @@
    "regiao": "quebec",
    "data": "2027-09-12",
    "dists": [
-    1.0,
     42.2
    ],
    "estado": "confira",
@@ -666,7 +635,6 @@
    "regiao": "quebec",
    "data": "2027-09-17",
    "dists": [
-    1.0,
     42.2
    ],
    "estado": "confira",
@@ -681,7 +649,6 @@
    "regiao": "quebec",
    "data": "2027-09-25",
    "dists": [
-    1.0,
     21.1
    ],
    "estado": "confira",
