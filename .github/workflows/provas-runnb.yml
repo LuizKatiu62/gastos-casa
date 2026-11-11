@@ -25,14 +25,18 @@ jobs:
           python-version: '3.11'
       - name: Ler o calendário da RunNB
         run: python sync-provas-runnb.py
-      - name: Publicar provas-runnb.json
+        continue-on-error: true
+      - name: Ler as provas-alvo e Ontário/Québec
+        run: python sync-provas-fora.py
+        continue-on-error: true
+      - name: Publicar
         run: |
-          if [ -n "$(git status --porcelain treinos-v2/provas-runnb.json)" ]; then
+          if [ -n "$(git status --porcelain treinos-v2/provas-runnb.json treinos-v2/provas-fora.json)" ]; then
             git config user.name  "provas-runnb"
             git config user.email "provas-runnb@users.noreply.github.com"
-            git add treinos-v2/provas-runnb.json
+            git add treinos-v2/provas-runnb.json treinos-v2/provas-fora.json
             git commit -m "provas RunNB: $(date -u +%Y-%m-%d\ %H:%M) UTC"
             for i in 1 2 3; do git pull --rebase -q && git push && break; sleep 5; done
           else
-            echo "provas-runnb.json sem mudança"
+            echo "provas sem mudança"
           fi
