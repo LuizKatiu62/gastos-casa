@@ -1,54 +1,10 @@
 {
- "ate": "2026-11-16",
- "de": "2026-11-10",
+ "ate": "2026-11-17",
+ "de": "2026-11-11",
  "fcMax": 163,
- "gerado": "2026-11-11T01:56:13.664Z",
+ "gerado": "2026-11-11T17:07:16.129Z",
  "limiar": "5:09",
  "sessoes": [
-  {
-   "data": "2026-11-10",
-   "foco": "vo2",
-   "km": 6.9,
-   "min": 41,
-   "nome": "10/11 · 5 blocos 1 de 5' Z3 - 4 de 3' Z4 · 6.9 km total",
-   "nota": "Total porta a porta 6.9 km. Alongamentos e educativos ANTES do start, relogio parado.",
-   "passos": [
-    {
-     "fim": "time",
-     "lento": 2.3041,
-     "rapido": 2.4752,
-     "texto": "12 min subindo devagar, 6:44–7:14/km. Se chegar ofegante ao fim, foi rapido demais.",
-     "tipo": "warmup",
-     "valor": 720
-    },
-    {
-     "passos": [
-      {
-       "fim": "distance",
-       "lento": 3.4722,
-       "rapido": 3.6496,
-       "texto": "600 m em 4:34–4:48/km, FC ate 148-158 bpm.",
-       "tipo": "interval",
-       "valor": 600
-      },
-      {
-       "fim": "time",
-       "texto": "3 min de trote leve. Nao pare de correr.",
-       "tipo": "recovery",
-       "valor": 150
-      }
-     ],
-     "tipo": "repetir",
-     "vezes": 4
-    },
-    {
-     "fim": "time",
-     "texto": "8 min de trote muito leve ate a respiracao normalizar.",
-     "tipo": "cooldown",
-     "valor": 480
-    }
-   ]
-  },
   {
    "data": "2026-11-11",
    "foco": "facil",
