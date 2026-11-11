@@ -72,9 +72,13 @@
       Marathon, 09/05/2027); os 3 dias da semana saem da agenda do
       treinador, longe do longão; parte superior toda semana; YMCA de
       Saint John no lugar da Fit4Less
+  26) Evolução ano a ano (10/11/2026, fix 07w): cartão no topo da aba
+      Evolução com uma linha por ano (jan–dez) ou linha contínua mês a
+      mês, filtro próprio de mês/ano a mês/ano, métricas km, tempo,
+      treinos e pace, e tabela com a variação contra o ano anterior
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '07v';
+const FIX_VERSAO = '07w';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -20164,4 +20168,434 @@ PARTE('stress estilo garmin', function(){
   }, true);
 
   if(typeof ST === 'object' && ST.aba === 'saude'){ try{ desenha() }catch(e){} }
+});
+
+/* ═══════════════════════════════════════════════════════════════════
+   EVOLUÇÃO ANO A ANO, MÊS A MÊS (fix 07w, 10/11/2026)
+
+   Cartão novo no topo da aba Evolução. A barra de período da aba vai
+   só até 180 dias, curta demais para comparar anos — por isso este
+   cartão tem o próprio filtro, de mês/ano a mês/ano, sobre todo o
+   histórico do Garmin (até ~8 anos para trás).
+
+     · Métrica: Km · Tempo · Treinos · Pace (pace = tempo total ÷ km
+       do mês, então um longão pesa mais que um tiro de 3 km)
+     · Esporte: Corrida · Bike · Natação
+     · Vista "Ano a ano": eixo de jan a dez, uma linha por ano — dá
+       para ver se outubro deste ano foi melhor que outubro do ano
+       passado.
+     · Vista "Contínuo": uma linha só, mês a mês, do início ao fim do
+       período, com reta de tendência.
+     · Embaixo, o total de cada ano no período e a variação contra o
+       ano anterior NOS MESMOS MESES (comparar 10 meses de 2026 com 12
+       de 2025 enganaria).
+     · O mês corrente aparece com ponto vazado: ainda não fechou.
+
+   Só leitura. A escolha do filtro fica guardada neste aparelho.
+   ═══════════════════════════════════════════════════════════════════ */
+PARTE('evolucao ano a ano', function(){
+  if(typeof ST !== 'object') throw new Error('app sem ST');
+
+  var W = 380, H = 270, ML = 48, MR = 14, MT = 18, MB = 34;
+  var IW = W - ML - MR, IH = H - MT - MB;
+  var CORES = ['var(--acc)', '#5B8DEF', '#C38BFF', '#4FC3A1', '#E46F6F', '#8E99A8', '#6B7685', '#4A5463'];
+  var MESES_EN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var CHAVE = 'treinos-v2-anoano';
+
+  function en(){ try{ return window.bqIdioma && bqIdioma.atual() === 'en' }catch(e){ return false } }
+  function T(pt, ing){ return en() ? ing : pt }
+  function mes3(m){ return en() ? MESES_EN[m] : MES3[m] }
+  function nf(v, c){ var s = v.toFixed(c || 0); return en() ? s : s.replace('.', ',') }
+  function milhar(v){ var s = Math.round(v).toString().replace(/\B(?=(\d{3})+(?!\d))/g, en() ? ',' : '.'); return s }
+
+  /* ── estado do filtro ── */
+  var est = {met:'km', mod:'corrida', vista:'ano', de:null, ate:null};
+  try{ var g = JSON.parse(localStorage.getItem(CHAVE) || 'null'); if(g) for(var k in g) est[k] = g[k] }catch(e){}
+  function guarda(){ try{ localStorage.setItem(CHAVE, JSON.stringify(est)) }catch(e){} }
+
+  var METS = {
+    km    :{pt:'Km',      en:'Km',       un:'km'},
+    tempo :{pt:'Tempo',   en:'Time',     un:'h'},
+    treinos:{pt:'Treinos',en:'Workouts', un:''},
+    pace  :{pt:'Pace',    en:'Pace',     un:'/km'}
+  };
+  var MODS = {corrida:['Corrida','Run'], bike:['Bike','Bike'], natacao:['Natação','Swim']};
+
+  /* ── dados: um registro por mês "AAAA-MM" ── */
+  function chaveMes(d){ return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') }
+  function porMes(){
+    var o = {};
+    (ST.runs || []).forEach(function(r){
+      if(!r || r.walk) return;
+      if((r.mod || 'corrida') !== est.mod) return;
+      var k = chaveMes(addD(HOJE, -r.d));
+      var m = o[k] || (o[k] = {km:0, dur:0, n:0, kmP:0, durP:0});
+      var km = +r.km || 0, dur = isFinite(r.dur) ? +r.dur : km * r.pace;
+      m.km += km; m.dur += dur || 0; m.n++;
+      if(km > 0.3 && dur > 0){ m.kmP += km; m.durP += dur }
+    });
+    return o;
+  }
+  function valor(m){
+    if(!m) return null;
+    if(est.met === 'km')     return m.km;
+    if(est.met === 'tempo')  return m.dur / 3600;
+    if(est.met === 'treinos')return m.n;
+    return m.kmP > 0 ? m.durP / m.kmP : null;
+  }
+  function fmtV(v, curto){
+    if(v == null || !isFinite(v)) return '—';
+    if(est.met === 'km')      return nf(v, v < 100 ? 1 : 0) + (curto ? '' : ' km');
+    if(est.met === 'tempo'){  var h = Math.floor(v), mi = Math.round((v - h) * 60); if(mi === 60){ h++; mi = 0 }
+                              return h + 'h' + (mi ? String(mi).padStart(2, '0') : (curto ? '' : '00')) }
+    if(est.met === 'treinos') return String(Math.round(v));
+    return mmss(v) + (curto ? '' : '/km');
+  }
+
+  /* lista de meses entre duas chaves, inclusive */
+  function meses(de, ate){
+    var out = [], y = +de.slice(0, 4), m = +de.slice(5, 7) - 1;
+    var Y = +ate.slice(0, 4), M = +ate.slice(5, 7) - 1;
+    while(y < Y || (y === Y && m <= M)){
+      out.push(y + '-' + String(m + 1).padStart(2, '0'));
+      if(++m > 11){ m = 0; y++ }
+      if(out.length > 240) break;
+    }
+    return out;
+  }
+  function limites(){
+    var hoje = chaveMes(HOJE), min = hoje;
+    (ST.runs || []).forEach(function(r){ var k = chaveMes(addD(HOJE, -r.d)); if(k < min) min = k });
+    return {min:min, max:hoje};
+  }
+  function rotMes(k){ return mes3(+k.slice(5, 7) - 1) + '/' + k.slice(2, 4) }
+
+  /* ── estilo ── */
+  var css = document.createElement('style');
+  css.textContent = [
+    '#aaCard .aaBar{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}',
+    '#aaCard .aaBar button{flex:1;min-width:0;padding:7px 4px;border-radius:9px;border:1px solid var(--line,rgba(255,255,255,.08));',
+    '  background:transparent;color:var(--tx2);font:600 12px/1 inherit;font-family:inherit;cursor:pointer;white-space:nowrap}',
+    '#aaCard .aaBar button.on{background:var(--acc);border-color:var(--acc);color:#0b0f14}',
+    '#aaCard .aaBar.sec button.on{background:var(--s3,#2a3340);border-color:var(--s3,#2a3340);color:var(--tx)}',
+    '#aaCard .aaPer{display:flex;align-items:center;gap:6px;margin-top:10px;font-size:12px;color:var(--tx3)}',
+    '#aaCard .aaPer select{flex:1;min-width:0;padding:7px 6px;border-radius:9px;border:1px solid var(--line,rgba(255,255,255,.08));',
+    '  background:var(--s2);color:var(--tx);font:600 12.5px/1.2 inherit;font-family:inherit}',
+    '#aaCard .aaAt{display:flex;gap:6px;margin-top:8px}',
+    '#aaCard .aaAt button{flex:1;padding:6px 0;border-radius:8px;border:0;background:var(--s2);color:var(--tx2);',
+    '  font:600 11.5px/1 inherit;font-family:inherit;cursor:pointer}',
+    '#aaCard .aaAt button.on{color:var(--acc);box-shadow:inset 0 0 0 1px var(--acc)}',
+    '#aaPlot text{font-family:"JetBrains Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums;font-size:12px;fill:var(--tx3)}',
+    '#aaPlot text.on{fill:var(--tx);font-weight:700}',
+    '#aaCard .aaTab{width:100%;border-collapse:collapse;margin-top:14px;font-size:12.5px;font-variant-numeric:tabular-nums}',
+    '#aaCard .aaTab th{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--tx3);text-align:right;padding:0 4px 6px}',
+    '#aaCard .aaTab th:first-child,#aaCard .aaTab td:first-child{text-align:left}',
+    '#aaCard .aaTab td{padding:7px 4px;border-top:1px solid var(--line,rgba(255,255,255,.07));text-align:right;color:var(--tx2)}',
+    '#aaCard .aaTab td b{color:var(--tx)}',
+    '#aaCard .aaTab i.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;vertical-align:-1px}',
+    '#aaCard .aaTab .up{color:var(--ok)} #aaCard .aaTab .dn{color:var(--bad)}'
+  ].join('\n');
+  document.head.appendChild(css);
+
+  /* ── o cartão ── */
+  function montar(){
+    var cx = document.getElementById('aaCard');
+    if(cx) return cx;
+    var aba = document.getElementById('v-evolucao');
+    if(!aba) return null;
+    cx = document.createElement('section');
+    cx.className = 'card'; cx.id = 'aaCard';
+    var ref = document.getElementById('perE');
+    if(ref) aba.insertBefore(cx, ref);
+    else { var h = aba.querySelector('.hero'); aba.insertBefore(cx, h ? h.nextSibling : aba.firstChild) }
+    return cx;
+  }
+
+  function desenha(){
+    var cx = montar(); if(!cx) return;
+    var lim = limites();
+    if(!est.de || est.de < lim.min || est.de > lim.max) est.de = lim.min;
+    if(!est.ate || est.ate > lim.max || est.ate < lim.min) est.ate = lim.max;
+    if(est.de > est.ate){ var t = est.de; est.de = est.ate; est.ate = t }
+
+    var dados = porMes(), lista = meses(est.de, est.ate), hojeK = lim.max;
+    var todos = meses(lim.min, lim.max);
+    var opts = function(sel){
+      return todos.slice().reverse().map(function(k){
+        return '<option value="' + k + '"' + (k === sel ? ' selected' : '') + '>' + rotMes(k) + '</option>' }).join('');
+    };
+    var atal = [[12, '12m'], [24, T('2 anos', '2 yrs')], [36, T('3 anos', '3 yrs')], [0, T('Tudo', 'All')]];
+    var atalOn = function(n){
+      if(est.ate !== lim.max) return false;
+      if(!n) return est.de === lim.min;
+      return lista.length === n || (est.de === lim.min && todos.length < n && lista.length === todos.length && n === 12);
+    };
+    var anos = {}; lista.forEach(function(k){ anos[k.slice(0, 4)] = 1 });
+    var listaAnos = Object.keys(anos).sort();
+
+    var h = '';
+    h += '<div class="head"><div><h2>' + T('Ano a ano, mês a mês', 'Year over year, month by month') + '</h2>' +
+         '<p class="sub" id="aaSub"></p></div><span class="tag ok" id="aaTag"></span></div>';
+    h += '<div class="aaBar">' + Object.keys(METS).map(function(k){
+           return '<button data-aamet="' + k + '" class="' + (est.met === k ? 'on' : '') + '">' + T(METS[k].pt, METS[k].en) + '</button>' }).join('') + '</div>';
+    h += '<div class="aaBar sec">' + Object.keys(MODS).map(function(k){
+           return '<button data-aamod="' + k + '" class="' + (est.mod === k ? 'on' : '') + '">' + T(MODS[k][0], MODS[k][1]) + '</button>' }).join('') + '</div>' +
+         '<div class="aaBar sec"><button data-aavis="ano" class="' + (est.vista === 'ano' ? 'on' : '') + '">' + T('Ano a ano', 'By year') + '</button>' +
+         '<button data-aavis="cont" class="' + (est.vista === 'cont' ? 'on' : '') + '">' + T('Contínuo', 'Timeline') + '</button></div>';
+    h += '<div class="aaPer">' + T('De', 'From') + ' <select id="aaDe">' + opts(est.de) + '</select> ' +
+         T('até', 'to') + ' <select id="aaAte">' + opts(est.ate) + '</select></div>';
+    h += '<div class="aaAt">' + atal.map(function(a){
+           return '<button data-aaat="' + a[0] + '" class="' + (atalOn(a[0]) ? 'on' : '') + '">' + a[1] + '</button>' }).join('') + '</div>';
+    h += '<div class="plot" id="aaPlot"></div>';
+    h += '<div class="leg" id="aaLeg"></div>';
+    h += '<table class="aaTab" id="aaTab"></table>';
+    cx.innerHTML = h;
+
+    /* eventos */
+    cx.querySelectorAll('[data-aamet]').forEach(function(b){ b.onclick = function(){ est.met = b.getAttribute('data-aamet'); guarda(); desenha() } });
+    cx.querySelectorAll('[data-aamod]').forEach(function(b){ b.onclick = function(){ est.mod = b.getAttribute('data-aamod'); guarda(); desenha() } });
+    cx.querySelectorAll('[data-aavis]').forEach(function(b){ b.onclick = function(){ est.vista = b.getAttribute('data-aavis'); guarda(); desenha() } });
+    cx.querySelectorAll('[data-aaat]').forEach(function(b){ b.onclick = function(){
+      var n = +b.getAttribute('data-aaat');
+      est.ate = lim.max;
+      est.de = n ? (todos[Math.max(0, todos.length - n)]) : lim.min;
+      guarda(); desenha() } });
+    var sDe = cx.querySelector('#aaDe'), sAte = cx.querySelector('#aaAte');
+    sDe.onchange = function(){ est.de = sDe.value; if(est.de > est.ate) est.ate = est.de; guarda(); desenha() };
+    sAte.onchange = function(){ est.ate = sAte.value; if(est.ate < est.de) est.de = est.ate; guarda(); desenha() };
+
+    var host = cx.querySelector('#aaPlot');
+    var temDado = lista.some(function(k){ return dados[k] && valor(dados[k]) != null });
+    if(!temDado){
+      host.innerHTML = '<p class="note" style="border:0;padding:0;margin:0">' +
+        T('Nenhum treino de ' + MODS[est.mod][0].toLowerCase() + ' neste período.', 'No ' + MODS[est.mod][1].toLowerCase() + ' workouts in this period.') + '</p>';
+      cx.querySelector('#aaSub').textContent = ''; cx.querySelector('#aaTag').textContent = '—';
+      return;
+    }
+    if(est.vista === 'cont') continuo(host, dados, lista, hojeK);
+    else anoAno(host, dados, lista, listaAnos, hojeK);
+    tabela(cx, dados, lista, listaAnos, hojeK);
+  }
+
+  /* escala Y comum */
+  function escalaY(vals){
+    var inv = est.met === 'pace';
+    var lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
+    var tk;
+    if(inv) tk = timeTicks(lo, hi, 4);
+    else { if(lo > 0 && (hi - lo) / hi > .35) lo = 0; tk = ticks(lo, hi === lo ? lo + 1 : hi, 4) }
+    var a = tk[0], b = tk[tk.length - 1];
+    /* pace: mais rápido em cima */
+    var Y = inv ? function(v){ return MT + ((v - a) / (b - a || 1)) * IH }
+                : function(v){ return MT + IH - ((v - a) / (b - a || 1)) * IH };
+    return {tk:tk, Y:Y};
+  }
+  function eixoY(tk, Y){
+    return tk.map(function(t){
+      return '<line class="grid2" x1="' + ML + '" x2="' + (W - MR) + '" y1="' + Y(t) + '" y2="' + Y(t) + '"/>' +
+             '<text x="' + (ML - 8) + '" y="' + (Y(t) + 4) + '" text-anchor="end">' +
+             (est.met === 'km' ? nf(t, t % 1 ? 1 : 0) : fmtV(t, true)) + '</text>' }).join('');
+  }
+
+  /* ── vista: uma linha por ano ── */
+  function anoAno(host, dados, lista, listaAnos, hojeK){
+    var noFiltro = {}; lista.forEach(function(k){ noFiltro[k] = 1 });
+    var series = listaAnos.map(function(a, i){
+      var pts = [];
+      for(var m = 0; m < 12; m++){
+        var k = a + '-' + String(m + 1).padStart(2, '0');
+        if(!noFiltro[k]) continue;
+        var v = valor(dados[k] || (est.met === 'pace' ? null : {km:0, dur:0, n:0, kmP:0, durP:0}));
+        if(v == null) continue;
+        pts.push({m:m, v:v, k:k});
+      }
+      return {ano:a, pts:pts, cor:CORES[Math.min(listaAnos.length - 1 - i, CORES.length - 1)]};
+    }).filter(function(s){ return s.pts.length });
+    var vals = []; series.forEach(function(s){ s.pts.forEach(function(p){ vals.push(p.v) }) });
+    var e = escalaY(vals), Y = e.Y;
+    var X = function(m){ return ML + (m / 11) * IW };
+
+    var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + T('Evolução mensal por ano', 'Monthly progress by year') + '">';
+    s += eixoY(e.tk, Y);
+    for(var m = 0; m < 12; m++)
+      s += '<text x="' + X(m) + '" y="' + (H - 12) + '" text-anchor="middle"' + (m === HOJE.getMonth() ? ' class="on"' : '') + '>' +
+           (en() ? MESES_EN[m] : MES3[m]).slice(0, 1).toUpperCase() + '</text>';
+    s += '<line class="cross" x1="0" x2="0" y1="' + MT + '" y2="' + (MT + IH) + '" stroke="#8FA0B4" stroke-dasharray="3 3" opacity="0"/>';
+    series.forEach(function(sr, i){
+      var ult = i === series.length - 1;
+      var p = sr.pts.map(function(q){ return [X(q.m), Y(q.v)] });
+      s += '<path d="' + spline(p) + '" fill="none" stroke="' + sr.cor + '" stroke-width="' + (ult ? 3.2 : 2) + '" stroke-linecap="round" opacity="' + (ult ? 1 : .85) + '"/>';
+      sr.pts.forEach(function(q){
+        var aberto = q.k === hojeK;
+        s += '<circle cx="' + X(q.m) + '" cy="' + Y(q.v) + '" r="' + (ult ? 3.6 : 2.6) + '" fill="' + (aberto ? 'var(--bg)' : sr.cor) + '" stroke="' + sr.cor + '" stroke-width="' + (aberto ? 2 : 0) + '"/>';
+      });
+    });
+    host.innerHTML = s + '</svg>';
+
+    hover(host, function(px){
+      var m = Math.max(0, Math.min(11, Math.round((px - ML) / IW * 11)));
+      return {m:m, x:X(m)};
+    }, function(h){
+      var linhas = series.slice().reverse().map(function(sr){
+        var q = sr.pts.filter(function(p){ return p.m === h.m })[0];
+        return '<div class="r"><i><span style="color:' + sr.cor + '">●</span> ' + sr.ano + '</i><b>' + (q ? fmtV(q.v) : '—') + '</b></div>';
+      }).join('');
+      return '<div class="t">' + (en() ? MESES_EN[h.m] : MES[h.m]) + '</div>' + linhas;
+    });
+
+    q('#aaLeg').innerHTML = series.slice().reverse().map(function(sr){
+      return '<span><i style="background:' + sr.cor + ';height:3px"></i>' + sr.ano + '</span>' }).join('') +
+      (series.some(function(sr){ return sr.pts.some(function(p){ return p.k === hojeK }) })
+        ? '<span><i style="background:transparent;border:2px solid var(--tx3);width:7px;height:7px;border-radius:50%"></i>' + T('mês em andamento', 'month in progress') + '</span>' : '');
+  }
+
+  /* ── vista: linha contínua mês a mês ── */
+  function continuo(host, dados, lista, hojeK){
+    var pts = lista.map(function(k, i){
+      var v = valor(dados[k] || (est.met === 'pace' ? null : {km:0, dur:0, n:0, kmP:0, durP:0}));
+      return v == null ? null : {i:i, k:k, v:v};
+    }).filter(Boolean);
+    var e = escalaY(pts.map(function(p){ return p.v })), Y = e.Y;
+    var N = Math.max(lista.length - 1, 1);
+    var X = function(i){ return ML + (i / N) * IW };
+
+    var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + T('Evolução mês a mês', 'Month by month') + '">';
+    s += eixoY(e.tk, Y);
+    /* rótulos: viradas de ano, ou a cada poucos meses */
+    var passo = Math.max(1, Math.ceil(lista.length / 5));
+    lista.forEach(function(k, i){
+      var jan = k.slice(5) === '01';
+      var fim = i === lista.length - 1;
+      if(lista.length > 14 ? jan : ((i % passo === 0 && lista.length - 1 - i >= passo * .7) || fim)){
+        if(jan && lista.length > 14) s += '<line x1="' + X(i) + '" x2="' + X(i) + '" y1="' + MT + '" y2="' + (MT + IH) + '" stroke="var(--line,rgba(255,255,255,.08))"/>';
+        s += '<text x="' + X(i) + '" y="' + (H - 12) + '" text-anchor="' + (i === 0 ? 'start' : i === lista.length - 1 ? 'end' : 'middle') + '">' +
+             (jan && lista.length > 14 ? k.slice(0, 4) : rotMes(k)) + '</text>';
+      }
+    });
+    /* área + linha */
+    var p = pts.map(function(q){ return [X(q.i), Y(q.v)] });
+    if(p.length > 1 && est.met !== 'pace'){
+      s += '<path d="' + spline(p) + ' L' + p[p.length - 1][0] + ',' + (MT + IH) + ' L' + p[0][0] + ',' + (MT + IH) + ' Z" fill="rgba(var(--acc-rgb),.12)"/>';
+    }
+    s += '<path d="' + spline(p) + '" fill="none" stroke="var(--acc)" stroke-width="3" stroke-linecap="round"/>';
+    /* tendência por mínimos quadrados (sem o mês em andamento) */
+    var fech = pts.filter(function(q){ return q.k !== hojeK });
+    var tend = null;
+    if(fech.length >= 4){
+      var n = fech.length, sx = 0, sy = 0, sxy = 0, sxx = 0;
+      fech.forEach(function(q){ sx += q.i; sy += q.v; sxy += q.i * q.v; sxx += q.i * q.i });
+      var mm = (n * sxy - sx * sy) / (n * sxx - sx * sx || 1), bb = (sy - mm * sx) / n;
+      var i0 = fech[0].i, i1 = fech[n - 1].i;
+      tend = {m:mm, ini:mm * i0 + bb, fim:mm * i1 + bb};
+      s += '<line x1="' + X(i0) + '" y1="' + Y(tend.ini) + '" x2="' + X(i1) + '" y2="' + Y(tend.fim) + '" stroke="var(--tx3)" stroke-width="1.6" stroke-dasharray="5 4"/>';
+    }
+    pts.forEach(function(q){
+      var aberto = q.k === hojeK;
+      s += '<circle cx="' + X(q.i) + '" cy="' + Y(q.v) + '" r="3.4" fill="' + (aberto ? 'var(--bg)' : 'var(--acc)') + '" stroke="var(--acc)" stroke-width="' + (aberto ? 2 : 0) + '"/>';
+    });
+    s += '<line class="cross" x1="0" x2="0" y1="' + MT + '" y2="' + (MT + IH) + '" stroke="#8FA0B4" stroke-dasharray="3 3" opacity="0"/>';
+    host.innerHTML = s + '</svg>';
+
+    hover(host, function(px){
+      var b = null, bd = 1e9;
+      pts.forEach(function(q){ var d = Math.abs(X(q.i) - px); if(d < bd){ bd = d; b = q } });
+      return b ? {k:b.k, v:b.v, d:dados[b.k], x:X(b.i)} : null;
+    }, function(h){
+      var d = h.d || {km:0, dur:0, n:0};
+      return '<div class="t">' + (en() ? MESES_EN[+h.k.slice(5) - 1] : MES[+h.k.slice(5) - 1]) + ' ' + h.k.slice(0, 4) +
+             (h.k === hojeK ? T(' · em andamento', ' · in progress') : '') + '</div>' +
+             '<div class="r"><i>Km</i><b>' + nf(d.km, 1) + '</b></div>' +
+             '<div class="r"><i>' + T('Tempo', 'Time') + '</i><b>' + (function(){ var met = est.met; est.met = 'tempo'; var r = fmtV(d.dur / 3600); est.met = met; return r })() + '</b></div>' +
+             '<div class="r"><i>' + T('Treinos', 'Workouts') + '</i><b>' + d.n + '</b></div>' +
+             (d.kmP ? '<div class="r"><i>Pace</i><b>' + mmss(d.durP / d.kmP) + '/km</b></div>' : '');
+    });
+    q('#aaLeg').innerHTML = '<span><i style="background:var(--acc);height:3px"></i>' + T('Mês a mês', 'Monthly') + '</span>' +
+      (tend ? '<span><i style="border-top:2px dashed var(--tx3);height:0;background:transparent"></i>' + T('Tendência', 'Trend') + '</span>' : '') +
+      (pts.some(function(q){ return q.k === hojeK }) ? '<span><i style="background:transparent;border:2px solid var(--tx3);width:7px;height:7px;border-radius:50%"></i>' + T('mês em andamento', 'month in progress') + '</span>' : '');
+  }
+
+  /* ── tabela por ano + subtítulo ── */
+  function soma(dados, ks){
+    var t = {km:0, dur:0, n:0, kmP:0, durP:0};
+    ks.forEach(function(k){ var m = dados[k]; if(m){ t.km += m.km; t.dur += m.dur; t.n += m.n; t.kmP += m.kmP; t.durP += m.durP } });
+    return t;
+  }
+  function tabela(cx, dados, lista, listaAnos, hojeK){
+    var cores = {}; listaAnos.forEach(function(a, i){ cores[a] = CORES[Math.min(listaAnos.length - 1 - i, CORES.length - 1)] });
+    var linhas = listaAnos.slice().reverse().map(function(a){
+      var ks = lista.filter(function(k){ return k.slice(0, 4) === a });
+      var t = soma(dados, ks), v = valor(t);
+      /* mesmos meses no ano anterior, mesmo fora do filtro */
+      /* só os meses em que o ano anterior já tinha histórico */
+      var minK = limites().min;
+      var par = ks.filter(function(k){ return ((+a - 1) + k.slice(4)) >= minK });
+      var ant = par.map(function(k){ return (+a - 1) + k.slice(4) });
+      var ta = soma(dados, ant), va = valor(ta), vp = valor(soma(dados, par));
+      var temAnt = ant.some(function(k){ return dados[k] });
+      var dv = '';
+      if(temAnt && va && vp != null){
+        if(est.met === 'pace'){
+          var ds = Math.round(va - vp);
+          dv = '<span class="' + (ds > 0 ? 'up' : ds < 0 ? 'dn' : '') + '">' + (ds > 0 ? '−' : ds < 0 ? '+' : '±') + Math.abs(ds) + 's</span>';
+        } else {
+          var pc = Math.round((vp / va - 1) * 100);
+          dv = '<span class="' + (pc > 0 ? 'up' : pc < 0 ? 'dn' : '') + '">' + (pc > 0 ? '+' : '') + pc + '%</span>';
+        }
+      }
+      var media = est.met === 'pace' ? '' : fmtV(v / Math.max(ks.length, 1));
+      return '<tr><td><i class="dot" style="background:' + cores[a] + '"></i><b>' + a + '</b> <small style="color:var(--tx3)">' +
+             (ks.length < 12 ? ks.length + 'm' : '') + '</small></td>' +
+             '<td><b>' + fmtV(v) + '</b></td>' +
+             (est.met === 'pace' ? '' : '<td>' + media + '</td>') +
+             '<td>' + (dv || '—') + '</td></tr>';
+    }).join('');
+    cx.querySelector('#aaTab').innerHTML =
+      '<tr><th>' + T('Ano', 'Year') + '</th><th>' + (est.met === 'pace' ? T('Pace médio', 'Avg pace') : 'Total') + '</th>' +
+      (est.met === 'pace' ? '' : '<th>' + T('Média/mês', 'Avg/month') + '</th>') +
+      '<th>' + T('vs ano ant.', 'vs prev yr') + '</th></tr>' + linhas;
+
+    /* subtítulo: último mês fechado contra o mesmo mês do ano anterior */
+    var fech = lista.filter(function(k){ return k !== hojeK && dados[k] });
+    var sub = cx.querySelector('#aaSub'), tag = cx.querySelector('#aaTag');
+    var tot = soma(dados, lista);
+    sub.innerHTML = T('Período', 'Period') + ' <b>' + rotMes(lista[0]) + ' – ' + rotMes(lista[lista.length - 1]) + '</b>: ' +
+      (est.met === 'pace' ? T('pace médio', 'avg pace') + ' <b>' + fmtV(valor(tot)) + '</b>'
+                          : '<b>' + milhar(tot.km) + ' km</b> ' + T('em', 'in') + ' <b>' + tot.n + '</b> ' + T('treinos', 'workouts'));
+    tag.textContent = '—'; tag.className = 'tag';
+    if(fech.length){
+      var k = fech[fech.length - 1], ka = (+k.slice(0, 4) - 1) + k.slice(4);
+      var v = valor(dados[k]), va = valor(dados[ka]);
+      if(va && v != null){
+        if(est.met === 'pace'){
+          var ds = Math.round(va - v);
+          tag.textContent = rotMes(k) + ' ' + (ds >= 0 ? '−' : '+') + Math.abs(ds) + 's';
+          tag.className = 'tag ' + (ds >= 0 ? 'ok' : 'warn');
+        } else {
+          var pc = Math.round((v / va - 1) * 100);
+          tag.textContent = rotMes(k) + ' ' + (pc >= 0 ? '+' : '') + pc + '%';
+          tag.className = 'tag ' + (pc >= 0 ? 'ok' : 'warn');
+        }
+        tag.title = T('contra ', 'vs ') + rotMes(ka);
+      }
+    }
+  }
+
+  /* ── ligação com a aba ── */
+  if(typeof renderEvolucao === 'function'){
+    var antes = renderEvolucao;
+    renderEvolucao = function(){
+      var r = antes.apply(this, arguments);
+      try{ desenha() }catch(e){ console.error('ano a ano', e) }
+      return r;
+    };
+    try{ window.renderEvolucao = renderEvolucao }catch(e){}
+  }
+  window.bqAnoAno = desenha;
+
+  document.addEventListener('click', function(){
+    var era = en();
+    setTimeout(function(){ if(en() !== era && document.getElementById('aaCard')) desenha() }, 80);
+  }, true);
+
+  if(ST.aba === 'evolucao'){ try{ desenha() }catch(e){} }
 });
