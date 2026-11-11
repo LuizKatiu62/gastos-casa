@@ -80,7 +80,7 @@
       escolha dos anos por botão, variação só nos meses em comum
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '07x';
+const FIX_VERSAO = '07y';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -20328,7 +20328,16 @@ PARTE('evolucao ano a ano', function(){
     '#aaCard .aaTab td b{color:var(--tx)}',
     '#aaCard .aaTab i.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;vertical-align:-1px}',
     '#aaCard .aaTab .up{color:var(--ok)} #aaCard .aaTab .dn{color:var(--bad)}',
-    '#aaCard .aaObs{font-size:11.5px;color:var(--tx3);line-height:1.5;margin:8px 0 0}'
+    '#aaCard .aaObs{font-size:11.5px;color:var(--tx3);line-height:1.5;margin:8px 0 0}',
+    '#aaCard .aaDet{margin-top:14px;padding-top:12px;border-top:1px solid var(--line,rgba(255,255,255,.08))}',
+    '#aaCard .aaDet h4{margin:0 0 4px;font-size:13px;font-weight:700;color:var(--tx);display:flex;justify-content:space-between;align-items:center}',
+    '#aaCard .aaDet h4 button{border:0;background:var(--s2);color:var(--tx2);border-radius:8px;padding:5px 9px;font:600 11px/1 inherit;font-family:inherit}',
+    '#aaCard .aaDet .ano{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--tx3);margin:12px 0 4px;display:flex;justify-content:space-between}',
+    '#aaCard .aaDet .lin{display:grid;grid-template-columns:44px 1fr auto auto;gap:8px;align-items:baseline;padding:6px 0;border-top:1px solid var(--line,rgba(255,255,255,.05));font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--tx2)}',
+    '#aaCard .aaDet .lin .tt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--tx)}',
+    '#aaCard .aaDet .lin b{color:var(--tx);min-width:62px;text-align:right}',
+    '#aaCard .aaDet .lin.lento b{color:var(--warn,#F2A541)}',
+    '#aaCard .aaDica{font-size:11.5px;color:var(--tx3);margin:6px 0 0;text-align:center}'
   ].join('\n');
   document.head.appendChild(css);
 
@@ -20398,6 +20407,7 @@ PARTE('evolucao ano a ano', function(){
     h += '<div class="leg" id="aaLeg"></div>';
     h += '<table class="aaTab" id="aaTab"></table>';
     h += '<p class="aaObs" id="aaObs"></p>';
+    h += '<div class="aaDet" id="aaDet" hidden></div>';
     cx.innerHTML = h;
 
     cx.querySelectorAll('[data-aamet]').forEach(function(b){ b.onclick = function(){ est.met = b.getAttribute('data-aamet'); guarda(); desenha() } });
@@ -20504,6 +20514,17 @@ PARTE('evolucao ano a ano', function(){
       }).join('');
     });
 
+    /* tocar num mês abre a lista das atividades daquele mês */
+    host.insertAdjacentHTML('beforeend', '<p class="aaDica">' + T('Toque num mês para ver as atividades', 'Tap a month to see its workouts') + '</p>');
+    host.addEventListener('click', function(ev){
+      var svg = host.querySelector('svg'); if(!svg) return;
+      var r = svg.getBoundingClientRect();
+      var px = (ev.clientX - r.left) / r.width * W;
+      est.mesSel = Math.max(0, Math.min(11, Math.round((px - ML - 6) / (IW - 12) * 11)));
+      detalhe(cx, anos.slice().reverse(), disp, true);
+    });
+    if(est.mesSel != null) detalhe(cx, anos.slice().reverse(), disp, false);
+
     cx.querySelector('#aaLeg').innerHTML = series.slice().reverse().map(function(sr){
       return '<span><i style="background:' + sr.cor + ';height:3px"></i>' + sr.ano + '</span>' }).join('') +
       (series.some(function(sr){ return sr.pts.some(function(p){ return p.k === hojeK }) })
@@ -20528,7 +20549,7 @@ PARTE('evolucao ano a ano', function(){
       return '<tr><td><i class="dot" style="background:' + corAno(a, disp) + '"></i><b>' + a + '</b>' + nota + '</td>' +
              '<td>' + fmtV(vT) + '</td><td><b>' + fmtV(vY) + '</b></td><td>' + dv + '</td></tr>';
     }).join('');
-    var rotT = est.met === 'pace' ? T('Ano', 'Year') : T('Ano todo', 'Full year');
+    var rotT = T('Ano todo', 'Full year');
     cx.querySelector('#aaTab').innerHTML = '<tr><th>' + T('Ano', 'Year') + '</th><th>' + rotT + '</th><th>' + ytdRot + '</th><th>' +
       T('vs ano ant.', 'vs prev yr') + '</th></tr>' + linhas;
 
@@ -20549,6 +20570,42 @@ PARTE('evolucao ano a ano', function(){
                               'Garmin history starts in ' + rotMes(lim.min) + ', so the comparison only uses ' + per + '.');
       } else sub.textContent = T('Sem meses em comum para comparar.', 'No overlapping months to compare.');
     } else sub.innerHTML = '<b>' + anos[0] + '</b>: ' + fmtV(valor(soma(dados, meses(anos[0] + '-01', anos[0] + '-12'))));
+  }
+
+  /* ── lista das atividades de um mês, nos anos escolhidos ── */
+  function detalhe(cx, anos, disp, rolar){
+    var box = cx.querySelector('#aaDet'); if(!box) return;
+    var m = est.mesSel;
+    var porAno = {};
+    (ST.runs || []).forEach(function(r){
+      if(!r || r.walk || (r.mod || 'corrida') !== est.mod) return;
+      var d = addD(HOJE, -r.d);
+      if(d.getMonth() !== m) return;
+      var a = String(d.getFullYear());
+      if(anos.indexOf(a) < 0) return;
+      (porAno[a] = porAno[a] || []).push({r:r, dia:d});
+    });
+    var h = '<h4>' + mesLongo(m).replace(/^./, function(c){ return c.toUpperCase() }) +
+            ' <button id="aaDetX">' + T('fechar', 'close') + '</button></h4>' +
+            '<p class="aaObs" style="margin:0">' + T('Mais lentas primeiro. Em laranja: mais de 1 min/km acima da mediana do mês.',
+                                                      'Slowest first. Orange: over 1 min/km slower than the month median.') + '</p>';
+    anos.forEach(function(a){
+      var L = porAno[a] || [];
+      var km = 0, dur = 0; L.forEach(function(x){ if(x.r.km > 0.3){ km += x.r.km; dur += x.r.dur } });
+      h += '<div class="ano"><span style="color:' + corAno(a, disp) + '">● ' + a + '</span><span>' + L.length + ' · ' + nf(km, 1) + ' km' +
+           (km ? ' · ' + mmss(dur / km) + '/km' : '') + '</span></div>';
+      if(!L.length){ h += '<div class="lin"><span></span><span class="tt">' + T('Nenhuma atividade', 'No workouts') + '</span></div>'; return }
+      var md = med(L.map(function(x){ return x.r.pace }));
+      L.sort(function(x, y){ return y.r.pace - x.r.pace }).forEach(function(x){
+        var r = x.r, nome = r.titulo || (r.manual ? T('Manual', 'Manual') : T('Corrida', 'Run'));
+        h += '<div class="lin' + (r.pace - md > 60 ? ' lento' : '') + '"><span>' + x.dia.getDate() + ' ' + mes3(m) + '</span>' +
+             '<span class="tt">' + String(nome).replace(/</g, '&lt;') + '</span>' +
+             '<span>' + nf(r.km, 1) + ' km · ' + fmtV(r.dur / 3600, false, 'tempo') + '</span><b>' + mmss(r.pace) + '</b></div>';
+      });
+    });
+    box.innerHTML = h; box.hidden = false;
+    box.querySelector('#aaDetX').onclick = function(){ est.mesSel = null; box.hidden = true; box.innerHTML = '' };
+    if(rolar) try{ box.scrollIntoView({behavior:'smooth', block:'start'}) }catch(e){}
   }
 
   /* ── vista contínua: mês a mês no período ── */
