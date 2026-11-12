@@ -1,42 +1,10 @@
 {
- "ate": "2026-11-17",
- "de": "2026-11-11",
+ "ate": "2026-11-18",
+ "de": "2026-11-12",
  "fcMax": 163,
- "gerado": "2026-11-11T20:25:02.634Z",
+ "gerado": "2026-11-12T23:56:43.016Z",
  "limiar": "5:09",
  "sessoes": [
-  {
-   "data": "2026-11-11",
-   "foco": "facil",
-   "km": 5.4,
-   "min": 35,
-   "nome": "11/11 · Rodagem leve 35' · 5.4 km total",
-   "nota": "Total porta a porta 5.4 km. Alongamentos e educativos ANTES do start, relogio parado.",
-   "passos": [
-    {
-     "fim": "time",
-     "lento": 2.3041,
-     "rapido": 2.4752,
-     "texto": "8 min subindo devagar, 6:44–7:14/km. Se chegar ofegante ao fim, foi rapido demais.",
-     "tipo": "warmup",
-     "valor": 480
-    },
-    {
-     "fim": "distance",
-     "lento": 2.6042,
-     "rapido": 2.8249,
-     "texto": "3.5 km em 5:54–6:24/km. Voce deve conseguir falar frases inteiras.",
-     "tipo": "interval",
-     "valor": 3500
-    },
-    {
-     "fim": "time",
-     "texto": "5 min de trote muito leve ate a respiracao normalizar.",
-     "tipo": "cooldown",
-     "valor": 300
-    }
-   ]
-  },
   {
    "data": "2026-11-12",
    "foco": "tiros",
