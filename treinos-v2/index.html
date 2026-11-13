@@ -866,6 +866,11 @@ details[open] summary .resumo{display:none}
       <p class="sub">Média das últimas 10 corridas</p></div></div>
     <div style="margin-top:6px" id="iMec"></div>
   </section>
+  <section class="card">
+    <div class="head"><div><h2>Tênis</h2>
+      <p class="sub">Km de cada par: Strava até 13/11/2026 + Garmin desde então</p></div></div>
+    <div style="margin-top:6px" id="iTenis"></div>
+  </section>
 </main>
 
 <!-- ============ SAÚDE ============ -->
@@ -2837,7 +2842,76 @@ function sparkline(vals,cor){
     <path d="${spline(pts)}" fill="none" stroke="${cor}" stroke-width="2" stroke-linecap="round"/>
     <circle cx="${pts[pts.length-1][0]}" cy="${pts[pts.length-1][1]}" r="2.6" fill="${cor}"/></svg>`;
 }
+/* ---- Tênis ----
+   O Strava gratuito não tem mais API, então o km que cada par já tinha
+   lá entra aqui fixo (foto da tela de Gear em 13/11/2026). Daí em diante
+   quem conta é o Garmin: o sync grava RAW.tenis com o km de cada tênis
+   cadastrado em Equipamentos, e o app soma os dois.
+   'chaves': palavras que identificam o par no nome do Garmin. Basta um
+   dos grupos bater (todas as palavras do grupo presentes). A ordem
+   importa: os mais específicos vêm antes. */
+const TENIS_STRAVA = [
+  {nome:'Adidas Adizero Adios Pro (verdinho)', km:96.8,  chaves:[['adios'],['verdinho']]},
+  {nome:'Adidas Adizero EVO SL',               km:117.1, chaves:[['evo']]},
+  {nome:'Adidas Adizero Pro (dourado)',        km:153.6, chaves:[['dourado'],['adizero','pro']]},
+  {nome:'Adidas Adizero (preto)',              km:69.7,  chaves:[['preto'],['adizero']]},
+  {nome:'ASICS Cumulus 23',                    km:268.7, chaves:[['cumulus']]},
+  {nome:'ASICS GT-2000 13',                    km:572.5, chaves:[['2000']]},
+  {nome:'ASICS Superblast 3',                  km:457.7, chaves:[['superblast']]},
+  {nome:'ASICS Trail',                         km:228.2, chaves:[['asics','trail']]},
+  {nome:'HOKA Clifton 8',                      km:673.8, chaves:[['clifton']]},
+  {nome:'New Balance FuelCell Rebel v5',       km:292.8, chaves:[['rebel'],['fuelcell']]},
+  {nome:'Nike Trail',                          km:246.4, chaves:[['nike']]},
+  {nome:'Olympikus Corre Grafeno',             km:173.6, chaves:[['olympikus'],['graf']]},
+  {nome:'Salomon',                             km:97.9,  chaves:[['salomon']]},
+];
+const TENIS_LIMITE = 700;   // km de vida útil quando o Garmin não traz um limite
+function renderTenis(){
+  const box = q('#iTenis'); if(!box) return;
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const norm = s => String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+  const fmt = v => v.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1});
+  const garmin = (RAW && Array.isArray(RAW.tenis)) ? RAW.tenis : [];
+  const usados = new Set();
+  const lista = garmin.map(g => {
+    const n = norm(g.nome);
+    const s = TENIS_STRAVA.find(t => !usados.has(t) && t.chaves.some(grp => grp.every(w => n.includes(w))));
+    if(s) usados.add(s);
+    const kmG = +g.km || 0, base = s ? s.km : 0;
+    return {nome:g.nome, base, kmG, total:base+kmG, lim:+g.maxKm || TENIS_LIMITE,
+            aposentado:g.status==='retired', strava:!!s};
+  }).sort((a,b) => (a.aposentado-b.aposentado) || (b.total-a.total));
+  const so = TENIS_STRAVA.filter(t => !usados.has(t));
+
+  let html = '';
+  if(!garmin.length){
+    html += `<p class="note" style="border:0;padding:0;margin:10px 0 0">Os km do Garmin aparecem depois do próximo Sync Garmin. Por enquanto, os totais do Strava:</p>`;
+  }
+  html += lista.map(t => {
+    const pct = t.total / t.lim;
+    const cls = pct>=1 ? 'p-out' : pct>=.85 ? 'p-mid' : 'p-ok';
+    const cor = pct>=1 ? 'var(--bad)' : pct>=.85 ? 'var(--warn)' : 'var(--ok)';
+    const tag = t.aposentado ? 'aposentado' : pct>=1 ? 'hora de trocar' : pct>=.85 ? 'perto do fim' : 'em uso';
+    const det = t.strava ? `Strava ${fmt(t.base)} + Garmin ${fmt(t.kmG)} km` : `Garmin ${fmt(t.kmG)} km · sem par no Strava`;
+    return `<div class="g"${t.aposentado?' style="opacity:.55"':''}>
+      <div class="r1"><span class="nm">${esc(t.nome)}</span><span class="pill ${cls}">${tag}</span></div>
+      <div class="r1" style="margin-top:2px">
+        <span class="vv mono" style="color:${cor}">${fmt(t.total)}<small>km</small></span>
+        <span style="font-size:11.5px;color:var(--tx3)">${det}</span></div>
+      <div class="track"><i class="mk" style="left:calc(${Math.min(100,pct*100)}% - 1.5px)"></i></div>
+      <div class="ends"><span class="mono">0</span><span class="mono">${t.lim} km</span></div></div>`;
+  }).join('');
+  if(so.length){
+    html += `<p class="sub" style="margin:14px 0 4px">${garmin.length?'Só no Strava (não cadastrados no Garmin)':''}</p>` +
+      so.slice().sort((a,b)=>b.km-a.km).map(t =>
+        `<div class="r1" style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--line);font-size:12.5px">
+          <span>${esc(t.nome)}</span><span class="mono" style="color:var(--tx2)">${fmt(t.km)} km</span></div>`).join('');
+  }
+  box.innerHTML = html;
+}
+
 function renderIndices(){
+  renderTenis();
   renderPeriodo('perI');
   const runs=ST.runs.filter(r=>noPeriodo(r)&&!r.walk&&(r.mod||'corrida')==='corrida');
   const rec=runs.slice(0,10);

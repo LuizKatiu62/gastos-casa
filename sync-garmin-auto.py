@@ -1099,6 +1099,80 @@ def buscar_agendados(api, dias_frente=35, dias_tras=7):
     return agenda
 
 
+def _connect_get(api, path):
+    """GET simples na API do Garmin Connect, pelo garth."""
+    g, _ = _garth(api)
+    if g is None:
+        return None
+    try:
+        return _resposta(g.connectapi(path))
+    except Exception as e:
+        log(f"Tenis: GET {path} falhou: {e}")
+        return None
+
+
+def _perfil_pk(api):
+    """Numero do perfil, que a lista de equipamentos exige. Ele aparece
+    em lugares diferentes conforme a versao; procuro em todos."""
+    g, _ = _garth(api)
+    prof = getattr(g, "profile", None) if g is not None else None
+    if isinstance(prof, dict) and prof.get("profileId"):
+        return prof["profileId"]
+    fn = getattr(api, "get_device_last_used", None)
+    if callable(fn):
+        d = safe_get(api, fn)
+        if isinstance(d, dict) and d.get("userProfileNumber"):
+            return d["userProfileNumber"]
+    sp = _connect_get(api, "/userprofile-service/socialProfile")
+    if isinstance(sp, dict):
+        return sp.get("profileId") or sp.get("userProfilePK")
+    return None
+
+
+def buscar_tenis(api):
+    """Tenis cadastrados em Equipamentos no Garmin Connect, com o km que o
+    Garmin contou para cada um. O km anterior (do Strava) fica no app,
+    que soma os dois."""
+    pk = _perfil_pk(api)
+    if not pk:
+        log("Tenis: nao achei o numero do perfil — pulando")
+        return []
+    fn = getattr(api, "get_gear", None)
+    gear = safe_get(api, fn, pk) if callable(fn) else None
+    if not isinstance(gear, list):
+        gear = _connect_get(api, f"/gear-service/gear/filterGear?userProfilePk={pk}")
+    if not isinstance(gear, list):
+        log("Tenis: lista de equipamentos nao veio")
+        return []
+
+    tenis = []
+    for it in gear:
+        tipo = str(it.get("gearTypeName") or "").lower()
+        if tipo and "shoe" not in tipo:
+            continue   # bike, relogio etc. nao entram
+        uuid = it.get("uuid")
+        if not uuid:
+            continue
+        fs = getattr(api, "get_gear_stats", None)
+        st = safe_get(api, fs, uuid) if callable(fs) else None
+        if not isinstance(st, dict):
+            st = _connect_get(api, f"/userstats-service/gears/{uuid}") or {}
+        nome = (it.get("displayName") or it.get("customMakeModel") or
+                " ".join(x for x in (it.get("gearMakeName"), it.get("gearModelName")) if x) or "Tenis")
+        tenis.append({
+            "uuid":      uuid,
+            "nome":      nome,
+            "km":        round((st.get("totalDistance") or 0) / 1000, 1),
+            "corridas":  int(st.get("totalActivities") or 0),
+            "maxKm":     round((it.get("maximumMeters") or 0) / 1000) or None,
+            "status":    str(it.get("gearStatusName") or "active").lower(),
+            "desde":     str(it.get("dateBegin") or "")[:10],
+        })
+    for t in tenis:
+        log(f"Tenis: {t['nome']} · {t['km']} km no Garmin · {t['status']}")
+    return tenis
+
+
 def main():
     log("━━━ Iniciando sync automático ━━━")
 
@@ -1175,6 +1249,13 @@ def main():
     log(f"{len(treinos)} treinos para sincronizar | {ignorados} ignorados")
 
     agendados = buscar_agendados(api)
+
+    try:
+        tenis = buscar_tenis(api)
+    except Exception as e:
+        # extra: se falhar, o resto do sync segue igual
+        log(f"AVISO: tenis falhou: {e}")
+        tenis = []
 
     # Diagnóstico: tipos encontrados
     tipos_raw = {}
@@ -1294,6 +1375,7 @@ def main():
             "stressDia":   stressDia,
             "hrv":         hrv,
             "agendados":   agendados,
+            "tenis":       tenis,
         }
         ok = firebase_put(FIREBASE_PATH, payload, token)
         if ok:
