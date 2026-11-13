@@ -80,7 +80,7 @@
       escolha dos anos por botão, variação só nos meses em comum
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '08c';
+const FIX_VERSAO = '08d';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -20618,8 +20618,8 @@ PARTE('evolucao ano a ano', function(){
     });
     var h = '<h4>' + mesLongo(m).replace(/^./, function(c){ return c.toUpperCase() }) +
             ' <button id="aaDetX">' + T('fechar', 'close') + '</button></h4>' +
-            '<p class="aaObs" style="margin:0">' + T('Mais lentas primeiro. Em laranja: mais de 1 min/km acima da mediana do mês.',
-                                                      'Slowest first. Orange: over 1 min/km slower than the month median.') + '</p>';
+            '<p class="aaObs" style="margin:0">' + T('Mais recentes primeiro. Em laranja: mais de 1 min/km acima da mediana do mês.',
+                                                      'Newest first. Orange: over 1 min/km slower than the month median.') + '</p>';
     anos.forEach(function(a){
       var L = porAno[a] || [];
       var semT = est.mod === 'corrida' && est.ter === 'tudo';
@@ -20630,7 +20630,7 @@ PARTE('evolucao ano a ano', function(){
       if(!L.length){ h += '<div class="lin"><span></span><span class="tt">' + T('Nenhuma atividade', 'No workouts') + '</span></div>'; return }
       var rua = L.filter(function(x){ return !ehTrilha(x.r, T_) }).map(function(x){ return x.r.pace });
       var md = med(rua.length ? rua : L.map(function(x){ return x.r.pace }));
-      L.sort(function(x, y){ return y.r.pace - x.r.pace }).forEach(function(x){
+      L.sort(function(x, y){ return x.r.d - y.r.d }).forEach(function(x){
         var r = x.r, nome = r.titulo || (r.manual ? T('Manual', 'Manual') : T('Corrida', 'Run'));
         var tr = ehTrilha(r, T_);
         h += '<div class="lin' + (!tr && r.pace - md > 60 ? ' lento' : '') + '"' + (tr ? ' style="opacity:.6"' : '') + '><span>' + x.dia.getDate() + ' ' + mes3(m) + '</span>' +
