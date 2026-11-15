@@ -1,42 +1,10 @@
 {
- "ate": "2026-11-20",
- "de": "2026-11-14",
+ "ate": "2026-11-21",
+ "de": "2026-11-15",
  "fcMax": 163,
- "gerado": "2026-11-14T23:03:32.202Z",
+ "gerado": "2026-11-15T13:41:17.875Z",
  "limiar": "5:02",
  "sessoes": [
-  {
-   "data": "2026-11-14",
-   "foco": "facil",
-   "km": 13.5,
-   "min": 80,
-   "nome": "14/11 · Rodagem Z2 · 13.5 km total",
-   "nota": "Total porta a porta 13.5 km. Alongamentos e educativos ANTES do start, relogio parado.",
-   "passos": [
-    {
-     "fim": "time",
-     "lento": 2.3419,
-     "rapido": 2.5189,
-     "texto": "8 min subindo devagar, 6:37–7:07/km. Se chegar ofegante ao fim, foi rapido demais.",
-     "tipo": "warmup",
-     "valor": 480
-    },
-    {
-     "fim": "distance",
-     "lento": 2.6525,
-     "rapido": 2.8818,
-     "texto": "11.6 km em 5:47–6:17/km. Voce deve conseguir falar frases inteiras.",
-     "tipo": "interval",
-     "valor": 11600
-    },
-    {
-     "fim": "time",
-     "texto": "5 min de trote muito leve ate a respiracao normalizar.",
-     "tipo": "cooldown",
-     "valor": 300
-    }
-   ]
-  },
   {
    "data": "2026-11-19",
    "foco": "tiros",
@@ -72,6 +40,46 @@
      ],
      "tipo": "repetir",
      "vezes": 5
+    },
+    {
+     "fim": "time",
+     "texto": "8 min de trote muito leve ate a respiracao normalizar.",
+     "tipo": "cooldown",
+     "valor": 480
+    }
+   ]
+  },
+  {
+   "data": "2026-11-21",
+   "foco": "limiar",
+   "km": 11.4,
+   "min": 65,
+   "nome": "21/11 · Rodagem Z2 + ritmo em Z3 · 11.4 km total",
+   "nota": "Total porta a porta 11.4 km. Alongamentos e educativos ANTES do start, relogio parado.",
+   "passos": [
+    {
+     "fim": "time",
+     "lento": 2.3419,
+     "rapido": 2.5189,
+     "texto": "12 min subindo devagar, 6:37–7:07/km. Se chegar ofegante ao fim, foi rapido demais.",
+     "tipo": "warmup",
+     "valor": 720
+    },
+    {
+     "fim": "distance",
+     "lento": 2.6525,
+     "rapido": 2.8818,
+     "texto": "Rodagem de entrada, 4.2 km em 5:47–6:17/km. Segure aqui: o trabalho vem a seguir.",
+     "tipo": "interval",
+     "valor": 4200
+    },
+    {
+     "fim": "distance",
+     "lento": 3.1847,
+     "rapido": 3.4014,
+     "texto": "4.3 km em 4:54–5:14/km, FC 140-148 bpm.",
+     "tipo": "interval",
+     "valor": 4300
     },
     {
      "fim": "time",
