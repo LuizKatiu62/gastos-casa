@@ -80,7 +80,7 @@
       escolha dos anos por botão, variação só nos meses em comum
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '08e';
+const FIX_VERSAO = '08f';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -12743,9 +12743,12 @@ PARTE('painel da academia', function(){
   var ATV_DIA = '';                         // dia escolhido nos chips
   var ATV_TIPO = {};                        // tipo escolhido, por dia
   var ATV_ABERTO = false;                   // cartao "Vai a academia?" aberto?
+  var ADER_ABERTO = false;                  // cartao "Aderencia" aberto?
   document.addEventListener('toggle', function(ev){
     var d = ev.target;
-    if(d && d.classList && d.classList.contains('bqAtv')) ATV_ABERTO = d.open;
+    if(!d || !d.classList) return;
+    if(d.classList.contains('bqAtv')) ATV_ABERTO = d.open;
+    if(d.classList.contains('bqAder')) ADER_ABERTO = d.open;
   }, true);
   var ATV_ROT = {pernas: 'Pernas', quadril: 'Quadril e core', superior: 'Parte superior'};
   var ATV_DIA3 = ['', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
@@ -13157,10 +13160,16 @@ PARTE('painel da academia', function(){
     if(!previstas) previstas = 12;
     var pct = Math.round(feitas / previstas * 100);
     var cor = pct >= 80 ? '#3FD98A' : pct >= 60 ? '#F5C544' : '#F2685C';
-    return '<div class="bqa-t">Aderência · 4 semanas</div>'
+    /* FECHADA POR PADRAO (15/11/2026, fix 08f): na faixa fica so o
+       placar "X de Y"; tocar abre o detalhe. */
+    return '<details class="bqAder"' + (ADER_ABERTO ? ' open' : '') + '><summary style="cursor:pointer;list-style:none">'
+         + '<div class="bqa-t" style="display:flex;justify-content:space-between;align-items:center;gap:8px">'
+         + '<span>Aderência · 4 semanas · <span style="text-transform:none;opacity:1;color:' + cor + '">'
+         + feitas + ' de ' + previstas + '</span></span>'
+         + '<span class="bqProgCh" style="opacity:.5">▼</span></div></summary>'
          + '<div class="bqa-u"><b style="font-size:15px;color:' + cor + '">' + feitas + '</b> de '
          + previstas + ' sessões (meta da fase)'
-         + (feitas ? ' · última em ' + esc(ultimaSessao()) : '') + '.</div>';
+         + (feitas ? ' · última em ' + esc(ultimaSessao()) : '') + '.</div></details>';
   }
 
   function ultimaSessao(){
@@ -13215,8 +13224,8 @@ PARTE('painel da academia', function(){
   (function(){
     if(document.getElementById('bqProgCss')) return;
     var st = document.createElement('style'); st.id = 'bqProgCss';
-    st.textContent = '.bqProg>summary::-webkit-details-marker,.bqAcadHoje>summary::-webkit-details-marker,.bqAtv>summary::-webkit-details-marker{display:none}'
-      + '.bqProg[open] .bqProgCh,.bqAtv[open] .bqProgCh{display:inline-block;transform:rotate(180deg)}';
+    st.textContent = '.bqProg>summary::-webkit-details-marker,.bqAcadHoje>summary::-webkit-details-marker,.bqAtv>summary::-webkit-details-marker,.bqAder>summary::-webkit-details-marker{display:none}'
+      + '.bqProg[open] .bqProgCh,.bqAtv[open] .bqProgCh,.bqAder[open] .bqProgCh{display:inline-block;transform:rotate(180deg)}';
     document.head.appendChild(st);
   })();
   function pintar(){
