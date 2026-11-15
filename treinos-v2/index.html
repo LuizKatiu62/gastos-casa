@@ -866,11 +866,16 @@ details[open] summary .resumo{display:none}
       <p class="sub">Média das últimas 10 corridas</p></div></div>
     <div style="margin-top:6px" id="iMec"></div>
   </section>
+  <!-- FECHADO POR PADRAO (15/11/2026, fix 08g): tocar no titulo abre a lista. -->
   <section class="card">
-    <div class="head"><div><h2>Tênis</h2>
-      <p class="sub">Km de cada par: Strava até 13/11/2026 + Garmin desde então</p></div></div>
+    <details class="tenisBox"><summary style="cursor:pointer;list-style:none">
+    <div class="head" style="align-items:center"><div><h2>Tênis <span id="iTenisRes" style="text-transform:none;letter-spacing:0;font-weight:600"></span></h2></div>
+      <span class="tenisCh" style="opacity:.5;font-size:12px;color:var(--tx3)">▼</span></div></summary>
+    <p class="sub">Km de cada par: Strava até 13/11/2026 + Garmin desde então</p>
     <div style="margin-top:6px" id="iTenis"></div>
+    </details>
   </section>
+  <style>.tenisBox>summary::-webkit-details-marker{display:none}.tenisBox[open] .tenisCh{display:inline-block;transform:rotate(180deg)}</style>
 </main>
 
 <!-- ============ SAÚDE ============ -->
@@ -2908,6 +2913,16 @@ function renderTenis(){
           <span>${esc(t.nome)}</span><span class="mono" style="color:var(--tx2)">${fmt(t.km)} km</span></div>`).join('');
   }
   box.innerHTML = html;
+  /* resumo na faixa fechada: quantos pares precisam de atencao */
+  const res = q('#iTenisRes');
+  if(res){
+    const ativos = lista.filter(t => !t.aposentado);
+    const trocar = ativos.filter(t => t.total >= t.lim).length;
+    const perto  = ativos.filter(t => t.total < t.lim && t.total >= t.lim*.85).length;
+    res.innerHTML = trocar ? `· <span style="color:var(--bad)">${trocar} para trocar</span>`
+                  : perto ? `· <span style="color:var(--warn)">${perto} perto do fim</span>`
+                  : ativos.length ? `· <span style="color:var(--tx3)">${ativos.length} em uso</span>` : '';
+  }
 }
 
 function renderIndices(){

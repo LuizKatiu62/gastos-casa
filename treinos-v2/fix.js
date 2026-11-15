@@ -80,7 +80,7 @@
       escolha dos anos por botão, variação só nos meses em comum
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '08f';
+const FIX_VERSAO = '08g';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
