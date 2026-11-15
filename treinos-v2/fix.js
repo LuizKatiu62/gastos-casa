@@ -80,7 +80,7 @@
       escolha dos anos por botão, variação só nos meses em comum
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '08d';
+const FIX_VERSAO = '08e';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -12742,6 +12742,11 @@ PARTE('painel da academia', function(){
      rotina da YMCA ou de casa, como antes. */
   var ATV_DIA = '';                         // dia escolhido nos chips
   var ATV_TIPO = {};                        // tipo escolhido, por dia
+  var ATV_ABERTO = false;                   // cartao "Vai a academia?" aberto?
+  document.addEventListener('toggle', function(ev){
+    var d = ev.target;
+    if(d && d.classList && d.classList.contains('bqAtv')) ATV_ABERTO = d.open;
+  }, true);
   var ATV_ROT = {pernas: 'Pernas', quadril: 'Quadril e core', superior: 'Parte superior'};
   var ATV_DIA3 = ['', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
   function somaDias(k, n){
@@ -12840,14 +12845,24 @@ PARTE('painel da academia', function(){
       ? '<div style="font-size:12px;color:#F5C544;margin:0 0 8px">' + ds + ' dias sem força. Uma sessão curta já mantém o que você ganhou.</div>'
       : '';
 
-    return '<div class="bqa-t">Vai à academia?</div><div class="bqa-u" id="bqAtivar">'
+    /* FECHADO POR PADRAO (15/11/2026): a pagina ficava cheia demais.
+       Na faixa fica so o titulo + um resumo curto; tocar abre o cartao.
+       ATV_ABERTO guarda o estado porque pintar() refaz o HTML a cada toque. */
+    var resumo = ativ[hj] ? '✓ ativada hoje · ' + esc(ATV_ROT[ativ[hj].tipo]).toLowerCase()
+               : (comoFoiFeito(hj) ? '✓ treino de hoje registrado'
+               : (ds != null && ds >= 7 ? ds + ' dias sem força' : ''));
+    return '<details class="bqAtv"' + (ATV_ABERTO ? ' open' : '') + '><summary style="cursor:pointer;list-style:none">'
+      + '<div class="bqa-t" style="display:flex;justify-content:space-between;align-items:center;gap:8px">'
+      + '<span>Vai à academia?' + (resumo ? ' · <span style="text-transform:none;opacity:.75">' + resumo + '</span>' : '') + '</span>'
+      + '<span class="bqProgCh" style="opacity:.5">▼</span></div></summary>'
+      + '<div class="bqa-u" id="bqAtivar">'
       + lembrete
       + '<div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:8px;-webkit-overflow-scrolling:touch">' + chips + '</div>'
       + sug
       + '<div style="display:flex;gap:6px;margin-bottom:8px">' + tipos + '</div>'
       + aviso
       + (ativ[k] || (feito && k === hj) ? '' : seletorLocal(k, localDe(k)))
-      + acao + lista + '</div>';
+      + acao + lista + '</div></details>';
   }
 
   document.addEventListener('click', function(ev){
@@ -13200,8 +13215,8 @@ PARTE('painel da academia', function(){
   (function(){
     if(document.getElementById('bqProgCss')) return;
     var st = document.createElement('style'); st.id = 'bqProgCss';
-    st.textContent = '.bqProg>summary::-webkit-details-marker,.bqAcadHoje>summary::-webkit-details-marker{display:none}'
-      + '.bqProg[open] .bqProgCh{display:inline-block;transform:rotate(180deg)}';
+    st.textContent = '.bqProg>summary::-webkit-details-marker,.bqAcadHoje>summary::-webkit-details-marker,.bqAtv>summary::-webkit-details-marker{display:none}'
+      + '.bqProg[open] .bqProgCh,.bqAtv[open] .bqProgCh{display:inline-block;transform:rotate(180deg)}';
     document.head.appendChild(st);
   })();
   function pintar(){
