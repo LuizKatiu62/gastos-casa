@@ -1,24 +1,9 @@
 {
  "_leia": "Gerado por sync-provas-runnb.py a partir de https://secure.runnb.ca/calendar/. Nao edite: e regravado. Para corrigir uma prova, ponha a versao certa em provas.json (a lista curada vence).",
- "atualizado": "2026-11-11",
- "geradoEm": "2026-11-11T01:56Z",
+ "atualizado": "2026-11-16",
+ "geradoEm": "2026-11-16T21:06Z",
  "fonte": "https://secure.runnb.ca/calendar/",
  "provas": [
-  {
-   "id": "runnb-1004897",
-   "nome": "Les Petits Barachois de Cap-Acadie",
-   "cidade": "Barachois, NB",
-   "regiao": "atlantic",
-   "data": "2026-11-15",
-   "dists": [
-    1.0,
-    5.0
-   ],
-   "estado": "aberta",
-   "url": "https://secure.runnb.ca/event/les-petits-barachois-de-cap-acadie/1004897/",
-   "fonte": "runnb",
-   "nota": "Do calendário oficial da RunNB. Confirme data e inscrição no site antes de pagar."
-  },
   {
    "id": "runnb-1004847",
    "nome": "470e Demi-marathon de l'Acadie",
@@ -109,6 +94,21 @@
    "nota": "Do calendário oficial da RunNB. Confirme data e inscrição no site antes de pagar."
   },
   {
+   "id": "runnb-1004931",
+   "nome": "Lorneville Loop 13K",
+   "cidade": "Saint John, NB",
+   "regiao": "atlantic",
+   "data": "2027-04-04",
+   "dists": [
+    5.0,
+    13.0
+   ],
+   "estado": "aberta",
+   "url": "https://secure.runnb.ca/event/lorneville-loop-13k/1004931/",
+   "fonte": "runnb",
+   "nota": "Do calendário oficial da RunNB. Confirme data e inscrição no site antes de pagar."
+  },
+  {
    "id": "runnb-1004920",
    "nome": "RUN THE RUNWAY - 5 KM",
    "cidade": "St. Stephen, NB",
@@ -169,22 +169,6 @@
    ],
    "estado": "aberta",
    "url": "https://secure.runnb.ca/event/10th-bay-of-fundy-international-marathon-half-marathon/1004918/",
-   "fonte": "runnb",
-   "nota": "Do calendário oficial da RunNB. Confirme data e inscrição no site antes de pagar."
-  },
-  {
-   "id": "runnb-1004900",
-   "nome": "SUBWAY® Restaurants Canada Day 10 Miler and Grand Bay Guardian 5K",
-   "cidade": "Grand Bay- Westfield, NB",
-   "regiao": "atlantic",
-   "data": "2027-07-01",
-   "dists": [
-    5.0,
-    16.1,
-    42.2
-   ],
-   "estado": "aberta",
-   "url": "https://secure.runnb.ca/event/subway-restaurants-canada-day-10-miler-and-grand-bay-guardian-5k/1004900/",
    "fonte": "runnb",
    "nota": "Do calendário oficial da RunNB. Confirme data e inscrição no site antes de pagar."
   },
