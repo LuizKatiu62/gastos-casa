@@ -2,8 +2,8 @@
  "ate": "2026-11-23",
  "de": "2026-11-17",
  "fcMax": 163,
- "gerado": "2026-11-18T00:52:18.615Z",
- "limiar": "5:02",
+ "gerado": "2026-11-18T01:03:52.387Z",
+ "limiar": "4:59",
  "sessoes": [
   {
    "data": "2026-11-19",
@@ -15,9 +15,9 @@
    "passos": [
     {
      "fim": "time",
-     "lento": 2.3419,
-     "rapido": 2.5189,
-     "texto": "12 min subindo devagar, 6:37–7:07/km. Se chegar ofegante ao fim, foi rapido demais.",
+     "lento": 2.3585,
+     "rapido": 2.5381,
+     "texto": "12 min subindo devagar, 6:34–7:04/km. Se chegar ofegante ao fim, foi rapido demais.",
      "tipo": "warmup",
      "valor": 720
     },
@@ -59,25 +59,25 @@
    "passos": [
     {
      "fim": "time",
-     "lento": 2.3419,
-     "rapido": 2.5189,
-     "texto": "12 min subindo devagar, 6:37–7:07/km. Se chegar ofegante ao fim, foi rapido demais.",
+     "lento": 2.3585,
+     "rapido": 2.5381,
+     "texto": "12 min subindo devagar, 6:34–7:04/km. Se chegar ofegante ao fim, foi rapido demais.",
      "tipo": "warmup",
      "valor": 720
     },
     {
      "fim": "distance",
-     "lento": 2.6525,
-     "rapido": 2.8818,
-     "texto": "Rodagem de entrada, 4.2 km em 5:47–6:17/km. Segure aqui: o trabalho vem a seguir.",
+     "lento": 2.6738,
+     "rapido": 2.907,
+     "texto": "Rodagem de entrada, 4.1 km em 5:44–6:14/km. Segure aqui: o trabalho vem a seguir.",
      "tipo": "interval",
-     "valor": 4200
+     "valor": 4100
     },
     {
      "fim": "distance",
-     "lento": 3.1847,
-     "rapido": 3.4014,
-     "texto": "4.3 km em 4:54–5:14/km, FC 140-148 bpm.",
+     "lento": 3.2154,
+     "rapido": 3.4364,
+     "texto": "4.3 km em 4:51–5:11/km, FC 140-148 bpm.",
      "tipo": "interval",
      "valor": 4300
     },
@@ -95,17 +95,17 @@
   "faci": {
    "fc": "111–124",
    "n": "Rodagem fácil",
-   "pace": "5:47–6:17"
+   "pace": "5:44–6:14"
   },
   "lim": {
    "fc": "140–148",
    "n": "Limiar",
-   "pace": "4:54–5:14"
+   "pace": "4:51–5:11"
   },
   "long": {
    "fc": "114–130",
    "n": "Longo",
-   "pace": "5:37–6:07"
+   "pace": "5:34–6:04"
   },
   "mp": {
    "fc": "130–140",
@@ -115,7 +115,7 @@
   "rec": {
    "fc": "98–111",
    "n": "Recuperação",
-   "pace": "6:37–7:07"
+   "pace": "6:34–7:04"
   },
   "vo2": {
    "fc": "148–158",
