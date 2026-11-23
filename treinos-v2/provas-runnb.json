@@ -1,7 +1,7 @@
 {
  "_leia": "Gerado por sync-provas-runnb.py a partir de https://secure.runnb.ca/calendar/. Nao edite: e regravado. Para corrigir uma prova, ponha a versao certa em provas.json (a lista curada vence).",
- "atualizado": "2026-11-16",
- "geradoEm": "2026-11-16T21:06Z",
+ "atualizado": "2026-11-23",
+ "geradoEm": "2026-11-23T22:43Z",
  "fonte": "https://secure.runnb.ca/calendar/",
  "provas": [
   {
@@ -31,6 +31,20 @@
    ],
    "estado": "aberta",
    "url": "https://secure.runnb.ca/event/not-the-honolulu/1004924/",
+   "fonte": "runnb",
+   "nota": "Do calendário oficial da RunNB. Confirme data e inscrição no site antes de pagar."
+  },
+  {
+   "id": "runnb-1004932",
+   "nome": "A Very Merry Glow Run",
+   "cidade": "Fredericton, NB",
+   "regiao": "atlantic",
+   "data": "2026-12-15",
+   "dists": [
+    5.0
+   ],
+   "estado": "aberta",
+   "url": "https://secure.runnb.ca/event/a-very-merry-glow-run/1004932/",
    "fonte": "runnb",
    "nota": "Do calendário oficial da RunNB. Confirme data e inscrição no site antes de pagar."
   },
@@ -90,6 +104,20 @@
    ],
    "estado": "aberta",
    "url": "https://secure.runnb.ca/event/473e-demi-marathon-de-lacadie/1004927/",
+   "fonte": "runnb",
+   "nota": "Do calendário oficial da RunNB. Confirme data e inscrição no site antes de pagar."
+  },
+  {
+   "id": "runnb-1004934",
+   "nome": "Pete's Pub St Paddy's Dash",
+   "cidade": "Saint John, NB",
+   "regiao": "atlantic",
+   "data": "2027-03-14",
+   "dists": [
+    3.0
+   ],
+   "estado": "aberta",
+   "url": "https://secure.runnb.ca/event/petes-pub-st-paddys-dash/1004934/",
    "fonte": "runnb",
    "nota": "Do calendário oficial da RunNB. Confirme data e inscrição no site antes de pagar."
   },

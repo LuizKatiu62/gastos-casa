@@ -1,7 +1,7 @@
 {
  "_leia": "Gerado por sync-provas-fora.py. Nao edite: e regravado toda semana. Para corrigir uma prova, ponha a versao certa em provas.json (a lista curada vence).",
- "atualizado": "2026-11-16",
- "geradoEm": "2026-11-16T21:07Z",
+ "atualizado": "2026-11-23",
+ "geradoEm": "2026-11-23T22:44Z",
  "avisos": [],
  "provas": [
   {
@@ -17,8 +17,8 @@
    "estado": "confira",
    "url": "https://www.baa.org/races/boston-marathon",
    "fonte": "alvo",
-   "lidoEm": "2026-11-16",
-   "nota": "Data lida no site oficial em 16/11/2026."
+   "lidoEm": "2026-11-23",
+   "nota": "Data lida no site oficial em 23/11/2026."
   },
   {
    "id": "alvo-nyc-2027",
@@ -33,26 +33,26 @@
    "estado": "confira",
    "url": "https://www.nyrr.org/tcsnycmarathon",
    "fonte": "alvo",
-   "lidoEm": "2026-11-16",
-   "nota": "Data lida no site oficial em 16/11/2026."
+   "lidoEm": "2026-11-23",
+   "nota": "Data lida no site oficial em 23/11/2026."
   },
   {
-   "id": "alvo-phila-2026",
+   "id": "alvo-phila-2027",
    "alvo": "phila",
    "nome": "TIAA Philadelphia Marathon",
    "cidade": "Filadélfia, PA",
    "regiao": "usa",
-   "data": "2026-11-22",
+   "data": "2027-11-21",
    "dists": [
     8,
     21.1,
     42.2
    ],
-   "estado": "esgotada",
+   "estado": "aberta",
    "url": "https://www.philadelphiamarathon.com",
    "fonte": "alvo",
-   "lidoEm": "2026-11-16",
-   "nota": "Data lida no site oficial em 16/11/2026."
+   "lidoEm": "2026-11-23",
+   "nota": "Data lida no site oficial em 23/11/2026."
   },
   {
    "id": "alvo-chicago-2027",
@@ -67,8 +67,8 @@
    "estado": "confira",
    "url": "https://www.chicagomarathon.com",
    "fonte": "alvo",
-   "lidoEm": "2026-11-16",
-   "nota": "Data lida no site oficial em 16/11/2026."
+   "lidoEm": "2026-11-23",
+   "nota": "Data lida no site oficial em 23/11/2026."
   },
   {
    "id": "alvo-ottawa-2027",
@@ -87,8 +87,8 @@
    "estado": "aberta",
    "url": "https://www.runottawa.ca",
    "fonte": "alvo",
-   "lidoEm": "2026-11-16",
-   "nota": "Data lida no site oficial em 16/11/2026."
+   "lidoEm": "2026-11-23",
+   "nota": "Data lida no site oficial em 23/11/2026."
   },
   {
    "id": "alvo-toronto-2027",
@@ -105,8 +105,8 @@
    "estado": "aberta",
    "url": "https://www.torontowaterfrontmarathon.com",
    "fonte": "alvo",
-   "lidoEm": "2026-11-16",
-   "nota": "Data lida no site oficial em 16/11/2026."
+   "lidoEm": "2026-11-23",
+   "nota": "Data lida no site oficial em 23/11/2026."
   },
   {
    "id": "alvo-montreal-2027",
@@ -124,8 +124,8 @@
    "estado": "aberta",
    "url": "https://mtlmarathon.com",
    "fonte": "alvo",
-   "lidoEm": "2026-11-16",
-   "nota": "Data lida no site oficial em 16/11/2026."
+   "lidoEm": "2026-11-23",
+   "nota": "Data lida no site oficial em 23/11/2026."
   },
   {
    "id": "alvo-quebec-2027",
@@ -143,8 +143,8 @@
    "estado": "aberta",
    "url": "https://www.jecoursqc.com/en/beneva-quebec-city-marathon-presented-by-montellier/",
    "fonte": "alvo",
-   "lidoEm": "2026-11-16",
-   "nota": "Data lida no site oficial em 16/11/2026."
+   "lidoEm": "2026-11-23",
+   "nota": "Data lida no site oficial em 23/11/2026."
   },
   {
    "id": "rl-limestone-race-weekend-2027",
@@ -161,7 +161,7 @@
    "estado": "confira",
    "url": "https://running.life/en/event/limestone-race-weekend",
    "fonte": "agregador",
-   "nota": "A two-day Kingston running weekend featuring a kids 2K, Kingston Bum Run 5K, Tamarack 10K and a Historic Half Marathon with routes through the penitentiary. (Lista do running.life — confira data e inscrição no site oficial.)"
+   "nota": "A community multi-race weekend in Kingston featuring a kids 2K, the Kingston Bum Run 5K, the Tamarack 10K, and a Historic Half Marathon with sections through Ki.. (Lista do running.life — confira data e inscrição no site oficial.)"
   },
   {
    "id": "rl-beneva-mississauga-marathon-2027",
@@ -214,21 +214,6 @@
    "nota": "A multi distance race weekend in Ottawa on May 29 and 30 2027 featuring marathon, half marathon, 10K, 5K, 2K and a Kids Marathon. (Lista do running.life — confira data e inscrição no site oficial.)"
   },
   {
-   "id": "rl-sudburyrocks-marathon-2027",
-   "nome": "SudburyROCKS Marathon",
-   "cidade": "Greater Sudbury, ON",
-   "regiao": "ontario",
-   "data": "2027-05-30",
-   "dists": [
-    21.1,
-    42.2
-   ],
-   "estado": "confira",
-   "url": "https://running.life/en/event/sudburyrocks-marathon",
-   "fonte": "agregador",
-   "nota": "Multi-distance run and walk in downtown Sudbury featuring certified marathon and half marathon courses supporting cancer care through the Health Sciences North.. (Lista do running.life — confira data e inscrição no site oficial.)"
-  },
-  {
    "id": "rl-pelee-island-half-marathon-2027",
    "nome": "Pelee Island Half Marathon",
    "cidade": "Pelee Island, ON",
@@ -240,7 +225,7 @@
    "estado": "confira",
    "url": "https://running.life/en/event/pelee-island-half-marathon",
    "fonte": "agregador",
-   "nota": "A limited-field half marathon circling Pelee Island with mixed road and gravel surfaces, regular aid stations, and a winery finish that includes a post-race lun.. (Lista do running.life — confira data e inscrição no site oficial.)"
+   "nota": "A half marathon around Pelee Island finishing at Pelee Island Winery, limited to about 440 runners with regular aid stations and a finish luncheon that includes.. (Lista do running.life — confira data e inscrição no site oficial.)"
   },
   {
    "id": "rl-waterfront-run-barrie-2027",
@@ -386,6 +371,20 @@
    "nota": "Half marathon and 5K along Windsor's waterfront with a certified out and back course, Detroit skyline views and a festival finish at Festival Plaza. (Lista do running.life — confira data e inscrição no site oficial.)"
   },
   {
+   "id": "rl-blairs-run-2027",
+   "nome": "Blair's Run",
+   "cidade": "Cabbagetown-South St.James Town, ON",
+   "regiao": "ontario",
+   "data": "2027-09-12",
+   "dists": [
+    42.2
+   ],
+   "estado": "confira",
+   "url": "https://running.life/en/event/blairs-run",
+   "fonte": "agregador",
+   "nota": "Community mini-marathon in Cabbagetown, Toronto, raising funds for local charities including the Cabbagetown Youth Centre; 48th edition on September 12, 2027. (Lista do running.life — confira data e inscrição no site oficial.)"
+  },
+  {
    "id": "rl-oakville-half-marathon-2027",
    "nome": "Oakville Half Marathon",
    "cidade": "Oakville, ON",
@@ -432,20 +431,6 @@
    "nota": "Waterfront two-day running weekend in Hamilton offering 1k, 5k, 10k, half and full marathon on a certified Boston qualifying course. (Lista do running.life — confira data e inscrição no site oficial.)"
   },
   {
-   "id": "rl-marathon-de-louest-de-lile-de-montreal-2026",
-   "nome": "Marathon de l'Ouest de l'Île de Montréal",
-   "cidade": "Cap-Saint-Jacques, QC",
-   "regiao": "quebec",
-   "data": "2026-11-22",
-   "dists": [
-    42.2
-   ],
-   "estado": "confira",
-   "url": "https://running.life/en/event/marathon-de-louest-de-lile-de-montreal",
-   "fonte": "agregador",
-   "nota": "Road running event at Parc Nature du Cap Saint-Jacques on 22 November 2026 with distances from 1 km to 42.2 km and solo or team marathon options. (Lista do running.life — confira data e inscrição no site oficial.)"
-  },
-  {
    "id": "rl-course-des-lutins-eastman-2026",
    "nome": "Course des Lutins - Eastman",
    "cidade": "Eastman, QC",
@@ -457,7 +442,7 @@
    "estado": "confira",
    "url": "https://running.life/en/event/course-des-lutins-eastman",
    "fonte": "agregador",
-   "nota": "Festive family race in Eastman on 13 December offering distances from a 1 km kids run to 21,1 km, an on-road course with aid stations and a finisher medal. (Lista do running.life — confira data e inscrição no site oficial.)"
+   "nota": "A family friendly road event in Eastman on 13 December offering six distances from 1 km to 21.1 km with on-course aid and community donations. (Lista do running.life — confira data e inscrição no site oficial.)"
   },
   {
    "id": "rl-banque-scotia-21k-de-montreal-2027",
@@ -474,20 +459,6 @@
    "nota": "Half marathon at Parc Jean-Drapeau on Circuit Gilles Villeneuve, a 21.1 km certified course with aid stations, chip timing and pacers. (Lista do running.life — confira data e inscrição no site oficial.)"
   },
   {
-   "id": "rl-defi-daniel-lequin-2027",
-   "nome": "Défi Daniel Lequin",
-   "cidade": "Sorel-Tracy, QC",
-   "regiao": "quebec",
-   "data": "2027-04-25",
-   "dists": [
-    21.1
-   ],
-   "estado": "confira",
-   "url": "https://running.life/en/event/defi-daniel-lequin",
-   "fonte": "agregador",
-   "nota": "Timed races in Sorel-Tracy on 25 April 2027 with distances from 1 km to 21.1 km along the St. Lawrence at quai Catherine-Legardeur. (Lista do running.life — confira data e inscrição no site oficial.)"
-  },
-  {
    "id": "rl-duchesnay-trail-race-2027",
    "nome": "Demi Marathon Lévis",
    "cidade": "Québec City, QC",
@@ -502,7 +473,7 @@
    "estado": "confira",
    "url": "https://running.life/en/event/duchesnay-trail-race",
    "fonte": "agregador",
-   "nota": "A certified Lévis road event featuring a downhill half marathon plus 10 km 5 km and 2 km races with river views and Athletics Canada certification. (Lista do running.life — confira data e inscrição no site oficial.)"
+   "nota": "Road races of 21.1 km, 10 km, 5 km and a 2 km kids race along the south shore of Quebec City, featuring a largely downhill half marathon and certified courses. (Lista do running.life — confira data e inscrição no site oficial.)"
   },
   {
    "id": "rl-demi-marathon-de-levis-2027",
@@ -518,20 +489,6 @@
    "url": "https://running.life/en/event/demi-marathon-de-levis",
    "fonte": "agregador",
    "nota": "Certified 21.1, 10, 5 and 2 km races on the south shore with river views along the Parcours des Anses and a finish at Juvénat Notre-Dame de Saint-Romuald. (Lista do running.life — confira data e inscrição no site oficial.)"
-  },
-  {
-   "id": "rl-ile-perrot-marathon-2027",
-   "nome": "Ile Perrot Marathon",
-   "cidade": "Pincourt, QC",
-   "regiao": "quebec",
-   "data": "2027-05-02",
-   "dists": [
-    42.2
-   ],
-   "estado": "confira",
-   "url": "https://running.life/en/event/ile-perrot-marathon",
-   "fonte": "agregador",
-   "nota": "Multisport festival on Île Perrot with distances from 1 km to a certified marathon and on site family activities and sports programming. (Lista do running.life — confira data e inscrição no site oficial.)"
   },
   {
    "id": "rl-demi-marathon-de-la-fete-des-meres-2027",
@@ -554,12 +511,43 @@
    "regiao": "quebec",
    "data": "2027-05-22",
    "dists": [
+    2.5,
+    5.0,
+    10.0,
     21.1
    ],
    "estado": "confira",
    "url": "https://running.life/en/event/demi-marathon-champlain",
    "fonte": "agregador",
-   "nota": "Demi-Marathon Champlain 22-23 May 2027 offers flat, scenic races along Promenade Samuel de Champlain in Quebec City with distances from 1 km to 21.1 km. (Lista do running.life — confira data e inscrição no site oficial.)"
+   "nota": "Flat, scenic races along Promenade Samuel-de Champlain in Quebec offering 21.1 km, 10 km, 5 km, 2.5 km and a 20 minute kids race. (Lista do running.life — confira data e inscrição no site oficial.)"
+  },
+  {
+   "id": "rl-courir-baie-saint-paul-2027",
+   "nome": "Courir Baie-Saint-Paul",
+   "cidade": "Charlevoix Regional County Municipality, QC",
+   "regiao": "quebec",
+   "data": "2027-05-23",
+   "dists": [
+    21.1
+   ],
+   "estado": "confira",
+   "url": "https://running.life/en/event/courir-baie-saint-paul",
+   "fonte": "agregador",
+   "nota": "Family walk and run in Baie-Saint-Paul on 23 May 2027 with distances from 500 m to a half marathon and proceeds to a local school sport fund. (Lista do running.life — confira data e inscrição no site oficial.)"
+  },
+  {
+   "id": "rl-marathon-de-longueuil-2027",
+   "nome": "Marathon de Longueuil",
+   "cidade": "Longueuil, QC",
+   "regiao": "quebec",
+   "data": "2027-05-23",
+   "dists": [
+    42.2
+   ],
+   "estado": "confira",
+   "url": "https://running.life/en/event/marathon-de-longueuil",
+   "fonte": "agregador",
+   "nota": "Multiple urban race distances in Longueuil on 23 May 2027 with chip timing, live Sportstats tracking, post race meal and accessibility options. (Lista do running.life — confira data e inscrição no site oficial.)"
   },
   {
    "id": "rl-course-des-pompiers-de-laval-2027",
@@ -583,13 +571,12 @@
    "regiao": "quebec",
    "data": "2027-06-12",
    "dists": [
-    10.0,
     21.1
    ],
    "estado": "confira",
    "url": "https://running.life/en/event/classique-estivale-quebec",
    "fonte": "agregador",
-   "nota": "A first-edition event on 12 June 2027 at Village Vacances Valcartier featuring a flat, linear half marathon plus 1 km to 10 km routes in a forested setting. (Lista do running.life — confira data e inscrição no site oficial.)"
+   "nota": "Summer running event at Valcartier Vacation Village on June 12, 2027 with races from 1 km to a 21.1 km half marathon and a 30% park entry discount. (Lista do running.life — confira data e inscrição no site oficial.)"
   },
   {
    "id": "rl-course-du-festival-sportif-de-sainte-marie-2027",
@@ -606,7 +593,7 @@
    "estado": "confira",
    "url": "https://running.life/en/event/course-du-festival-sportif-de-sainte-marie",
    "fonte": "agregador",
-   "nota": "Multiple races in Sainte‑Marie on 12 June 2027 including 2 km, 6 km, 10 km and 21.1 km with water stations, chip timing and finish at Polyvalente Benoît Vachon. (Lista do running.life — confira data e inscrição no site oficial.)"
+   "nota": "Multiple road routes in Sainte-Marie on 12 June 2027: 2 km, 6 km, 10 km and a 21.1 km half-marathon with timing, aid stations and race services. (Lista do running.life — confira data e inscrição no site oficial.)"
   },
   {
    "id": "rl-defi-pointe-claire-cours-avec-moi-2027",
@@ -631,14 +618,12 @@
    "regiao": "quebec",
    "data": "2027-06-27",
    "dists": [
-    5.0,
-    10.0,
     21.1
    ],
    "estado": "confira",
    "url": "https://running.life/en/event/demi-marathon-de-sherbrooke",
    "fonte": "agregador",
-   "nota": "Demi Marathon RBC de Sherbrooke on 27 June 2027 offers 1 km, 5 km, 10 km and 21.1 km routes starting at Parc Jacques Cartier and the Jacques Cartier bridge. (Lista do running.life — confira data e inscrição no site oficial.)"
+   "nota": "Multi-distance road race in Parc Jacques Cartier, Sherbrooke with 1, 5, 10 and 21.1 km courses, water stations, live results and pre-race bib pickup. (Lista do running.life — confira data e inscrição no site oficial.)"
   },
   {
    "id": "rl-demi-marathon-du-lac-temiscouata-2027",
@@ -647,12 +632,13 @@
    "regiao": "quebec",
    "data": "2027-06-27",
    "dists": [
-    21.1
+    21.1,
+    22.0
    ],
    "estado": "confira",
    "url": "https://running.life/en/event/demi-marathon-du-lac-temiscouata",
    "fonte": "agregador",
-   "nota": "Demi Marathon du Lac Témiscouata on 27 June 2027: out and back courses along the lake with multiple distances, compacted gravel surface and aid stations. (Lista do running.life — confira data e inscrição no site oficial.)"
+   "nota": "Out-and-back race along Lac Témiscouata offering 2, 5, 10 and 22 km on mostly compacted-gravel terrain with multiple aid stations and low elevation change. (Lista do running.life — confira data e inscrição no site oficial.)"
   },
   {
    "id": "rl-marathon-de-magog-estival-2027",
@@ -678,14 +664,12 @@
    "regiao": "quebec",
    "data": "2027-08-08",
    "dists": [
-    5.0,
-    10.0,
     21.1
    ],
    "estado": "confira",
    "url": "https://running.life/en/event/demi-marathon-mont-tremblant",
    "fonte": "agregador",
-   "nota": "A gold sanctioned running event in Mont-Tremblant on 8 August 2027 offering 21.1 km, 10 km, 5 km and a 1 km children race with timed results and participant ame.. (Lista do running.life — confira data e inscrição no site oficial.)"
+   "nota": "Demi Marathon Mont Tremblant on 8 August 2027 offers races from 1 km to 21.1 km in a mountain side setting with timed results and a medal for every finisher. (Lista do running.life — confira data e inscrição no site oficial.)"
   },
   {
    "id": "rl-demi-marathon-de-la-voie-verte-2027",
@@ -694,13 +678,28 @@
    "regiao": "quebec",
    "data": "2027-08-22",
    "dists": [
-    5.0,
     21.1
    ],
    "estado": "confira",
    "url": "https://running.life/en/event/demi-marathon-de-la-voie-verte",
    "fonte": "agregador",
-   "nota": "A linear half-marathon plus 5 km and 1 km races on La Voie Verte in Chelsea, QC, with bus transport, gear check, timing and proceeds to local charities. (Lista do running.life — confira data e inscrição no site oficial.)"
+   "nota": "Linear half marathon and shorter races on La Voie Verte in Chelsea QC with medals, timing, aid stations, shuttle service and eco responsible commitments. (Lista do running.life — confira data e inscrição no site oficial.)"
+  },
+  {
+   "id": "rl-brossard-sun-life-half-marathon-2027",
+   "nome": "Demi-Marathon Sun Life de Brossard",
+   "cidade": "Brossard, QC",
+   "regiao": "quebec",
+   "data": "2027-08-22",
+   "dists": [
+    5.0,
+    10.0,
+    21.1
+   ],
+   "estado": "confira",
+   "url": "https://running.life/en/event/brossard-sun-life-half-marathon",
+   "fonte": "agregador",
+   "nota": "Sun Life Brossard half marathon on 22 August 2027 offers 21.1 km, 10 km, 5 km and 1 km races with chip timing and fundraising for Fondation Jean Lapointe. (Lista do running.life — confira data e inscrição no site oficial.)"
   },
   {
    "id": "rl-defi-de-la-tortue-2027",
@@ -714,7 +713,7 @@
    "estado": "confira",
    "url": "https://running.life/en/event/defi-de-la-tortue",
    "fonte": "agregador",
-   "nota": "Annual Shawinigan timed running and walking event with 2 hour, 6 hour, 12 hour and marathon formats and fundraising for local school sport programs. (Lista do running.life — confira data e inscrição no site oficial.)"
+   "nota": "Endurance walking and running event in Shawinigan with 2h, 6h, 12h and marathon formats, team or solo, fundraising for local charities. (Lista do running.life — confira data e inscrição no site oficial.)"
   },
   {
    "id": "rl-la-galopade-2027",
@@ -742,7 +741,7 @@
    "estado": "confira",
    "url": "https://running.life/en/event/le-defi-lac-aylmer",
    "fonte": "agregador",
-   "nota": "Multi-distance running and cycling event at Lac Aylmer on 5 September 2027, from a 1 km youth race to a new 42.2 km marathon. (Lista do running.life — confira data e inscrição no site oficial.)"
+   "nota": "Multiple running distances from 1 km to 42,2 km plus a 42 km cycling tour around Lac Aylmer on 5 September 2027 at Marina de Beaulac-Garthby. (Lista do running.life — confira data e inscrição no site oficial.)"
   },
   {
    "id": "rl-demi-marathon-de-blainville-2027",
@@ -751,17 +750,16 @@
    "regiao": "quebec",
    "data": "2027-09-12",
    "dists": [
-    5.0,
     21.1
    ],
    "estado": "confira",
    "url": "https://running.life/en/event/demi-marathon-de-blainville",
    "fonte": "agregador",
-   "nota": "A multi-distance running event at Parc Équestre on 12 September 2027 with chip timing, water stations, medals for all and cash prizes for the 5 km. (Lista do running.life — confira data e inscrição no site oficial.)"
+   "nota": "Multiple distances from 1 km to the half marathon in Blainville on 12 September 2027, certified OR by Athlétisme Québec; proceeds benefit Club d'athlétisme Cors.. (Lista do running.life — confira data e inscrição no site oficial.)"
   },
   {
-   "id": "rl-bougebouge-marathon-and-verdun-festival-2027",
-   "nome": "BougeBouge Marathon and Verdun Festival",
+   "id": "rl-bougebouge-verdun-marathon-2027",
+   "nome": "BougeBouge Verdun Marathon",
    "cidade": "Montreal, QC",
    "regiao": "quebec",
    "data": "2027-09-12",
@@ -769,9 +767,9 @@
     42.2
    ],
    "estado": "confira",
-   "url": "https://running.life/en/event/bougebouge-marathon-and-verdun-festival",
+   "url": "https://running.life/en/event/bougebouge-verdun-marathon",
    "fonte": "agregador",
-   "nota": "BougeBouge Verdun on 12 September 2027 offers distances from 1 km to 42.2 km on a Gold sanctioned riverside course certified for Boston qualification. (Lista do running.life — confira data e inscrição no site oficial.)"
+   "nota": "BougeBouge Verdun, 12 September 2027, offers distances from 1 km to 42.2 km on a Gold sanctioned Boston qualifying riverside course, with music and community ac.. (Lista do running.life — confira data e inscrição no site oficial.)"
   },
   {
    "id": "rl-marathon-beneva-de-montreal-2027",
@@ -780,12 +778,13 @@
    "regiao": "quebec",
    "data": "2027-09-17",
    "dists": [
+    21.1,
     42.2
    ],
    "estado": "confira",
    "url": "https://running.life/en/event/marathon-beneva-de-montreal",
    "fonte": "agregador",
-   "nota": "Multi-day running event in Montreal offering distances from 1 km to the full marathon with certified courses and race-day support. (Lista do running.life — confira data e inscrição no site oficial.)"
+   "nota": "Multi-distance running event in Montreal from Sep 17 to Sep 19, 2027 offering marathon, half marathon, shorter races, live tracking and finisher medals. (Lista do running.life — confira data e inscrição no site oficial.)"
   },
   {
    "id": "rl-demi-marathon-opti-jeunesse-de-farnham-2027",
@@ -799,7 +798,7 @@
    "estado": "confira",
    "url": "https://running.life/en/event/demi-marathon-opti-jeunesse-de-farnham",
    "fonte": "agregador",
-   "nota": "Fundraising running event at Centre de la Nature de Farnham on 25 September 2027 with multiple distances, including a half marathon and cani course options. (Lista do running.life — confira data e inscrição no site oficial.)"
+   "nota": "Multiple-distance running and walking event at Centre de la Nature de Farnham with dog-friendly races and on-course water stations for canine participants. (Lista do running.life — confira data e inscrição no site oficial.)"
   },
   {
    "id": "rl-marathon-beneva-de-quebec-2027",
@@ -877,18 +876,33 @@
    "nota": "Nature races near Québec on closed forest and base circuits, including a World Athletics homologated 42.2 km marathon and family distances. (Lista do running.life — confira data e inscrição no site oficial.)"
   },
   {
-   "id": "rl-bougebouge-riviere-des-prairies-pointe-aux-trembles-special--2027",
-   "nome": "BougeBouge Pointe-de-l'Île - Halloween Marathon",
-   "cidade": "Rivière-des-Prairies, QC",
+   "id": "rl-bougebouge-mont-royal-marathon-2027",
+   "nome": "BougeBouge Mont-Royal Marathon",
+   "cidade": "Montreal, QC",
    "regiao": "quebec",
-   "data": "2027-10-31",
+   "data": "2027-10-24",
    "dists": [
     42.2
    ],
    "estado": "confira",
-   "url": "https://running.life/en/event/bougebouge-riviere-des-prairies-pointe-aux-trembles-special-halloween",
+   "url": "https://running.life/en/event/bougebouge-mont-royal-marathon",
    "fonte": "agregador",
-   "nota": "Halloween-themed running event on 31 October 2027 at Parc Saint-Joseph with multiple distances, a waterfront course and official race certification. (Lista do running.life — confira data e inscrição no site oficial.)"
+   "nota": "The BougeBouge Mont-Royal Marathon will take place in Montreal on Sunday 24 October 2027. You can run between 5 and 42 kilometers. (Lista do running.life — confira data e inscrição no site oficial.)"
+  },
+  {
+   "id": "rl-bougebouge-pointe-de-lile-marathon-dhalloween-2027",
+   "nome": "BougeBouge Pointe-de-l'Île - Marathon d'Halloween",
+   "cidade": "Rivière-des-Prairies, QC",
+   "regiao": "quebec",
+   "data": "2027-10-31",
+   "dists": [
+    21.1,
+    42.2
+   ],
+   "estado": "confira",
+   "url": "https://running.life/en/event/bougebouge-pointe-de-lile-marathon-dhalloween",
+   "fonte": "agregador",
+   "nota": "Halloween themed races at Parc Saint Joseph in Montreal on 31 October 2027 with distances from 1 km to 21.1 km, certified courses and four water stations. (Lista do running.life — confira data e inscrição no site oficial.)"
   }
  ]
 }
