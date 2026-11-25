@@ -80,7 +80,7 @@
       escolha dos anos por botão, variação só nos meses em comum
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '08h';
+const FIX_VERSAO = '08i';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -16314,7 +16314,7 @@ PARTE('ingles', function(){
   'Polimento':'Taper', 'Semana da prova':'Race week', 'Plano do treinador':'Coach\'s plan',
   'Barra cheia: feito':'Solid bar: done', 'Tracejada: previsto que falta':'Dashed: still to do',
   'toque numa linha':'tap a row', 'para abrir o treino':'to open the workout',
-  'Planilha':'Plan', 'Calendário':'Calendar', 'Ferramentas':'Tools', 'Trocar prova':'Change race', 'Linha do tempo':'Timeline',
+  'Planilha':'Plan', 'Calendário':'Calendar', 'Ferramentas':'Tools', 'Trocar prova':'Change race', 'Resumo da semana e aderência':'Weekly summary and compliance', 'Linha do tempo':'Timeline',
   'Progresso do ciclo':'Cycle progress', 'Treinar para esta':'Train for this one',
   'Simulador de estratégia':'Pacing simulator', 'Calculadora de pace e splits':'Pace and splits calculator',
   'três blocos de ritmo até o tempo final':'three pace blocks to the finish time',
@@ -21197,8 +21197,49 @@ PARTE('coach organizado', function(){
     '#v-coach #objTrocar{display:none}',
     '#v-coach #objBox:not(:has(#objPainel.on)){display:none}',
     '#v-coach .csTrocar{position:absolute;top:22px;right:0;font:inherit;font-size:12px;font-weight:700;padding:6px 12px;border-radius:999px;border:1px solid currentColor;background:transparent;color:var(--tx2);opacity:.85;cursor:pointer}',
-    '#v-coach #objBox{margin-top:-6px}'
+    '#v-coach #objBox{margin-top:-6px}',
+    /* o resumo da semana vira o rodape da planilha, fechado por padrao */
+    '#v-coach #bqPl:has(+ .csResumo){margin-bottom:0;border-bottom-left-radius:0;border-bottom-right-radius:0}',
+    '#v-coach #bqPl + .csResumo{border-top-left-radius:0;border-top-right-radius:0;border-top:1px solid rgba(127,127,127,.18)}',
+    '#v-coach .csResumo.csFechado > :not(.csResTg){display:none}',
+    '#v-coach .csResumo.csFechado{padding-top:0;padding-bottom:0}',
+    '#v-coach .csResTg{display:flex;justify-content:space-between;align-items:center;width:100%;font:inherit;font-size:13px;font-weight:700;color:var(--tx2);background:transparent;border:0;padding:13px 0;cursor:pointer;text-align:left}',
+    '#v-coach .csResumo:not(.csFechado) .csResTg{padding-top:0}',
+    '#v-coach .csResumo:not(.csFechado) .csResTg i{transform:rotate(180deg)}',
+    '#v-coach .csResTg i{font-style:normal;opacity:.5;font-size:11px;display:inline-block}',
+    '#v-provas .csSec{font-size:10.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3);margin:22px 4px 8px;display:flex;align-items:center;gap:8px}',
+    '#v-provas .csSec::after{content:"";flex:1;height:1px;background:currentColor;opacity:.18}'
   ].join('\n');
+
+  /* ── as calculadoras vao para a aba Provas (planejar o ritmo da prova) ── */
+  (function(){
+    var pv = document.getElementById('v-provas');
+    if(!pv) return;
+    var cs = [cartao('#cSplitOut'), cartao('#eOut')].filter(Boolean);
+    if(!cs.length) return;
+    var r = document.createElement('div'); r.id = 'csCalc'; r.className = 'csSec'; r.textContent = 'Ferramentas';
+    var foot = pv.querySelector(':scope > .foot');
+    [r].concat(cs).forEach(function(e){ if(foot) pv.insertBefore(e, foot); else pv.appendChild(e) });
+  })();
+
+  /* ── resumo da semana: fechado, colado na planilha ── */
+  var CH_RES = 'cs_resumo_aberto';
+  function resumo(){
+    var c = cartao('#wkRow');
+    if(!c || c.querySelector(':scope > .csResTg')) return;
+    c.classList.add('csResumo');
+    var aberto = false;
+    try{ aberto = localStorage.getItem(CH_RES) === '1' }catch(e){}
+    if(!aberto) c.classList.add('csFechado');
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'csResTg';
+    b.innerHTML = '<span>Resumo da semana e aderência</span><i>▼</i>';
+    b.onclick = function(){
+      var fechou = c.classList.toggle('csFechado');
+      try{ localStorage.setItem(CH_RES, fechou ? '0' : '1') }catch(e){}
+    };
+    c.insertBefore(b, c.firstChild);
+  }
   document.head.appendChild(st);
 
   function rotulo(id, txt){
@@ -21252,6 +21293,7 @@ PARTE('coach organizado', function(){
     try{
       botaoTrocar();
       limparAcademia();
+      resumo();
       var seq = [
         v.querySelector(':scope > .hero'),
         filho('objBox'),
@@ -21260,9 +21302,7 @@ PARTE('coach organizado', function(){
         rotulo('csSemana', 'Esta semana'),
         filho('bqPl'), cartao('#wkRow'),
         rotulo('csMes', 'Calendário'),
-        cartao('#grid'),
-        rotulo('csFerr', 'Ferramentas'),
-        cartao('#cSplitOut'), cartao('#eOut')
+        cartao('#grid')
       ].filter(Boolean);
       var resto = Array.prototype.filter.call(v.children, function(c){ return seq.indexOf(c) < 0 });
       var quero = seq.concat(resto);
