@@ -1,8 +1,8 @@
 {
- "ate": "2026-11-30",
- "de": "2026-11-24",
+ "ate": "2026-12-01",
+ "de": "2026-11-25",
  "fcMax": 163,
- "gerado": "2026-11-25T01:22:48.195Z",
+ "gerado": "2026-11-25T12:47:46.254Z",
  "limiar": "4:59",
  "sessoes": [
   {
@@ -88,9 +88,41 @@
      "valor": 480
     }
    ]
+  },
+  {
+   "data": "2026-12-01",
+   "foco": "longo",
+   "km": 20.3,
+   "min": 120,
+   "nome": "01/12 · Rodagem Z2 · 20.3 km total",
+   "nota": "Total porta a porta 20.3 km. Alongamentos e educativos ANTES do start, relogio parado.",
+   "passos": [
+    {
+     "fim": "time",
+     "lento": 2.3585,
+     "rapido": 2.5381,
+     "texto": "10 min subindo devagar, 6:34–7:04/km. Se chegar ofegante ao fim, foi rapido demais.",
+     "tipo": "warmup",
+     "valor": 600
+    },
+    {
+     "fim": "distance",
+     "lento": 2.7473,
+     "rapido": 2.994,
+     "texto": "18.0 km em 5:34–6:04/km. Voce deve conseguir falar frases inteiras.",
+     "tipo": "interval",
+     "valor": 18000
+    },
+    {
+     "fim": "time",
+     "texto": "6 min de trote muito leve ate a respiracao normalizar.",
+     "tipo": "cooldown",
+     "valor": 360
+    }
+   ]
   }
  ],
- "versao": "08g",
+ "versao": "08k",
  "zonas": {
   "faci": {
    "fc": "111–124",
