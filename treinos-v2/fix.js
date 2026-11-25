@@ -80,7 +80,7 @@
       escolha dos anos por botão, variação só nos meses em comum
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '08i';
+const FIX_VERSAO = '08j';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -14392,7 +14392,8 @@ PARTE('treinos do mes embaixo do calendario', function(){
               : feitoAc === 'hevy' ? 'feito no Hevy ✓'
               : iso < HJ ? 'não registrado' : 'previsto'),
         min: +s.min || 0,
-        aguardando: !feitoAc
+        aguardando: !feitoAc,
+        feitoAc: feitoAc
       });
     });
 
@@ -14513,16 +14514,27 @@ PARTE('treinos do mes embaixo do calendario', function(){
     blocos.forEach(function(b){ corpo.appendChild(b) });
 
     /* cabecalho do mes: nome, quantos treinos e o tempo total */
-    var totMin = 0, totFeitos = 0;
+    /* CONTA CORRIGIDA (fix 08j, 25/11/2026). Antes era "feitos de
+       todas as linhas", e duas coisas viravam falha sem ser:
+         · academia feita no Hevy ou em casa (nao tem atividade no
+           relogio, entao nao contava como feita);
+         · treinos previstos de hoje em diante (ainda nem chegaram).
+       Agora: feito = relogio OU Hevy OU casa; o que esta por vir
+       aparece a parte, como "previstos", e nao entra na conta. */
+    var totMin = 0, totFeitos = 0, totPrev = 0, totConta = 0;
     linhas.forEach(function(l){
       totMin += l.min || 0;
-      if(l.feito) totFeitos++;
+      var ok = l.feito || !!l.feitoAc;
+      if(ok){ totFeitos++; totConta++ }
+      else if(l.iso >= HJ) totPrev++;
+      else totConta++;
     });
     titulo.innerHTML =
       '<span class="seta">›</span>' +
       '<span class="rot">' + MESES[mes] + ' ' + ano + '</span>' +
-      '<span class="tot">' + totFeitos + ' de ' + linhas.length +
-        ' feitos · ' + hm(totMin) + '</span>';
+      '<span class="tot">' + totFeitos + ' de ' + totConta + ' feitos' +
+        (totPrev ? ' · ' + totPrev + ' previsto' + (totPrev > 1 ? 's' : '') : '') +
+        ' · ' + hm(totMin) + '</span>';
 
     /* guardo as linhas para o clique achar a atividade certa sem
        depender de casar numeros de novo */
