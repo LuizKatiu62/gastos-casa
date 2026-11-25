@@ -80,7 +80,7 @@
       escolha dos anos por botão, variação só nos meses em comum
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '08l';
+const FIX_VERSAO = '08m';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -1899,7 +1899,8 @@ PARTE('login firebase', function(){
           const r = await comSenha(email, senha);
           f.remove();
           console.log('fix.js · entrou. Seu uid para a regra do Firebase:', r.uid);
-          alert('Pronto.\n\nSeu uid, para colar na regra do Firebase:\n\n' + r.uid);
+          /* o alert com o uid servia so para montar a regra do Firebase,
+             uma vez; aparecia em todo login (tirado no fix 08m) */
           try{ location.reload() }catch(e){}
           ok(r.token);
         }catch(e){
