@@ -80,7 +80,7 @@
       escolha dos anos por botão, variação só nos meses em comum
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '08g';
+const FIX_VERSAO = '08h';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -16314,7 +16314,7 @@ PARTE('ingles', function(){
   'Polimento':'Taper', 'Semana da prova':'Race week', 'Plano do treinador':'Coach\'s plan',
   'Barra cheia: feito':'Solid bar: done', 'Tracejada: previsto que falta':'Dashed: still to do',
   'toque numa linha':'tap a row', 'para abrir o treino':'to open the workout',
-  'Planilha':'Plan', 'Calendário':'Calendar', 'Linha do tempo':'Timeline',
+  'Planilha':'Plan', 'Calendário':'Calendar', 'Ferramentas':'Tools', 'Trocar prova':'Change race', 'Linha do tempo':'Timeline',
   'Progresso do ciclo':'Cycle progress', 'Treinar para esta':'Train for this one',
   'Simulador de estratégia':'Pacing simulator', 'Calculadora de pace e splits':'Pace and splits calculator',
   'três blocos de ritmo até o tempo final':'three pace blocks to the finish time',
@@ -21159,4 +21159,136 @@ PARTE('provas: atualizar e adicionar', function(){
   }
   montarBarra();
   if(typeof ST === 'object' && ST.aba === 'provas') redesenha();
+});
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   ABA COACH ORGANIZADA (fix 08h, 25/11/2026)
+
+   Pedido do Luiz: "as telas estao muito baguncadas". A aba tinha
+   crescido por camadas, cada parte enfiando o seu cartao onde dava:
+   a academia no topo, a prova duas vezes (hero e "Trocar"), os dias
+   para a prova duas vezes (hero e academia), a planilha antes do
+   treino do dia, a lista do mes sempre aberta.
+
+   Nada e apagado aqui. Esta parte so poe cada cartao no seu lugar,
+   numa ordem que vai do mais urgente para o de consulta:
+
+     PROVA        — hero (nome, dias, fase) + "Trocar prova" no hero.
+                    O cartao do objetivo so aparece com o painel aberto.
+     HOJE         — treino do dia e, logo abaixo, a academia
+                    (vai hoje? · aderencia · progressao de carga).
+     ESTA SEMANA  — planilha e resumo da semana.
+     CALENDARIO   — grade do mes; a lista do mes comeca fechada.
+     FERRAMENTAS  — calculadora de pace e simulador.
+
+   O que outra parte criar e esta nao conhecer vai para o fim, nunca
+   some. Para desfazer: apagar esta parte.
+   ═══════════════════════════════════════════════════════════════════ */
+PARTE('coach organizado', function(){
+  var v = document.getElementById('v-coach');
+  if(!v) throw new Error('sem #v-coach');
+
+  var st = document.createElement('style');
+  st.id = 'coachOrgCss';
+  st.textContent = [
+    '#v-coach .csSec{font-size:10.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3);margin:22px 4px 8px;display:flex;align-items:center;gap:8px}',
+    '#v-coach .csSec::after{content:"";flex:1;height:1px;background:currentColor;opacity:.18}',
+    '#v-coach #objTrocar{display:none}',
+    '#v-coach #objBox:not(:has(#objPainel.on)){display:none}',
+    '#v-coach .csTrocar{position:absolute;top:22px;right:0;font:inherit;font-size:12px;font-weight:700;padding:6px 12px;border-radius:999px;border:1px solid currentColor;background:transparent;color:var(--tx2);opacity:.85;cursor:pointer}',
+    '#v-coach #objBox{margin-top:-6px}'
+  ].join('\n');
+  document.head.appendChild(st);
+
+  function rotulo(id, txt){
+    var e = document.getElementById(id);
+    if(!e){ e = document.createElement('div'); e.id = id; e.className = 'csSec'; e.textContent = txt }
+    return e;
+  }
+  /* o cartao inteiro (filho direto da aba) que contem o seletor */
+  function cartao(sel){
+    var e = v.querySelector(sel);
+    while(e && e.parentNode !== v) e = e.parentNode;
+    return e || null;
+  }
+  function filho(id){
+    var e = document.getElementById(id);
+    return (e && e.parentNode === v) ? e : null;
+  }
+
+  /* "Trocar prova" dentro do hero */
+  function botaoTrocar(){
+    var h = cartao('.hero > #hNome') || v.querySelector('.hero');
+    if(!h || h.querySelector('.csTrocar')) return;
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'csTrocar'; b.textContent = 'Trocar prova';
+    b.onclick = function(){
+      var p = document.getElementById('objPainel');
+      if(!p) return;
+      p.classList.toggle('on');
+      if(p.classList.contains('on')){
+        try{ document.getElementById('objBox').scrollIntoView({behavior:'smooth', block:'nearest'}) }catch(e){}
+      }
+    };
+    h.appendChild(b);
+  }
+
+  /* a academia repetia "N dias para a prova", que o hero ja diz */
+  function limparAcademia(){
+    var a = document.getElementById('bqAcad');
+    if(!a) return;
+    var t = a.firstElementChild;
+    if(!t || !t.classList.contains('bqa-t') || t.dataset.csOk) return;
+    var m = String(t.textContent).match(/^(.*?) · (\d+ dias para .*|depois de .*|sem prova escolhida)$/);
+    if(m) t.textContent = 'Academia · fase ' + m[1];
+    t.dataset.csOk = '1';
+  }
+
+  var ordenando = false;
+  function ordenar(){
+    if(ordenando) return;
+    ordenando = true;
+    try{
+      botaoTrocar();
+      limparAcademia();
+      var seq = [
+        v.querySelector(':scope > .hero'),
+        filho('objBox'),
+        rotulo('csHoje', 'Hoje'),
+        filho('sessBar'), filho('sess'), filho('bqAcad'),
+        rotulo('csSemana', 'Esta semana'),
+        filho('bqPl'), cartao('#wkRow'),
+        rotulo('csMes', 'Calendário'),
+        cartao('#grid'),
+        rotulo('csFerr', 'Ferramentas'),
+        cartao('#cSplitOut'), cartao('#eOut')
+      ].filter(Boolean);
+      var resto = Array.prototype.filter.call(v.children, function(c){ return seq.indexOf(c) < 0 });
+      var quero = seq.concat(resto);
+      var agora = v.children;
+      var igual = quero.length === agora.length && quero.every(function(e, i){ return agora[i] === e });
+      if(!igual) quero.forEach(function(e){ v.appendChild(e) });
+    }finally{ ordenando = false }
+  }
+
+  /* a lista do mes abaixo do calendario comeca fechada (uma vez so;
+     se voce abrir, fica aberta) */
+  var ml = v.querySelector('.mesLista');
+  if(ml) ml.classList.add('fechado');
+
+  ordenar();
+  new MutationObserver(function(){ ordenar() }).observe(v, {childList: true});
+  /* a academia pode nascer depois (Hevy assincrono) */
+  var tentou = 0;
+  (function esperaAcad(){
+    var a = document.getElementById('bqAcad');
+    if(a && !a.dataset.csObs){
+      a.dataset.csObs = '1';
+      new MutationObserver(limparAcademia).observe(a, {childList: true});
+      limparAcademia();
+      return;
+    }
+    if(++tentou < 20) setTimeout(esperaAcad, 1000);
+  })();
 });
