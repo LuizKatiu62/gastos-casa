@@ -80,7 +80,7 @@
       escolha dos anos por botão, variação só nos meses em comum
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '08j';
+const FIX_VERSAO = '08k';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -21343,4 +21343,220 @@ PARTE('coach organizado', function(){
     }
     if(++tentou < 20) setTimeout(esperaAcad, 1000);
   })();
+});
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   EVOLUCAO LEGIVEL (fix 08k, 25/11/2026)
+
+   Pedido do Luiz: os graficos de Pace, Eficiencia aerobica e
+   Cadencia x pace "estao confusos". Estavam mesmo:
+     · Pace: pontos cinza-escuro quase invisiveis no fundo escuro, uma
+       faixa sombreada sem explicacao e so tres datas no eixo.
+     · Eficiencia: nuvem de pontos pace x FC com duas retas. Exigia
+       ler dois eixos ao mesmo tempo, e as cores nao batiam com a
+       legenda (pontos verde-limao, legenda amarela).
+     · Cadencia: outra nuvem pace x cadencia, com uma faixa "esperada"
+       que ninguem sabia de onde vinha.
+
+   Agora os tres sao o MESMO tipo de grafico, lido do mesmo jeito:
+     eixo de baixo = tempo (meses), uma bolinha clara por corrida e uma
+     linha com a media de cada semana. Em cima, a frase do que mudou.
+     Linha subindo = melhorando, nos tres (o pace tem o mais rapido em
+     cima).
+
+   Eficiencia vira um numero so: METROS POR BATIMENTO = velocidade
+   (m/min) / FC media. Ex.: 6:00/km a 140 bpm = 1,19 m a cada batida.
+   Se sobe, voce corre mais com o mesmo coracao.
+
+   Comparacao do selo: mediana das ultimas 4 semanas contra a das
+   4 primeiras semanas do intervalo escolhido no alto da aba.
+   ═══════════════════════════════════════════════════════════════════ */
+PARTE('evolucao legivel', function(){
+  if(typeof ST !== 'object') throw new Error('sem ST');
+  var W = 380, ML = 46, MR = 18, MT = 26, MB = 34, IW = W - ML - MR;
+  var _q = function(sel){ return document.querySelector(sel) };
+  var _med = function(a){ var b = a.slice().sort(function(x,y){return x-y}), m = b.length >> 1; return b.length % 2 ? b[m] : (b[m-1] + b[m]) / 2 };
+  var quant = function(a, p){ var x = a.slice().sort(function(m,n){return m-n}), i = (x.length - 1) * p, l = Math.floor(i); return x[l] + (x[Math.ceil(i)] - x[l]) * (i - l) };
+  var M3 = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+  function _mmss(v){ v = Math.round(v); return Math.floor(v/60) + ':' + ('0' + (v % 60)).slice(-2) }
+  function dia(n){ var d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() - n); return d }
+  function dLab(n){ var d = dia(n); return d.getDate() + ' ' + M3[d.getMonth()] }
+  function noPer(r){ return r.d < ST.periodo }
+  function corridas(){ return (ST.runs || []).filter(function(r){ return r && noPer(r) && !r.walk && (r.mod || 'corrida') === 'corrida' }) }
+
+  var css = document.createElement('style');
+  css.textContent = [
+    '#pacePlot text.lx,#effPlot text.lx,#cadPlot text.lx{font-size:12px;fill:var(--tx3)}',
+    '#pacePlot text.ly,#effPlot text.ly,#cadPlot text.ly{font-size:12px;fill:var(--tx3)}',
+    '#pacePlot text.ult,#effPlot text.ult,#cadPlot text.ult{font-size:14px;font-weight:800;fill:var(--tx)}',
+    '.evLeg{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:12px;color:var(--tx3)}',
+    '.evLeg i{display:inline-block;vertical-align:middle;margin-right:6px}',
+    '.evLeg .pt{width:8px;height:8px;border-radius:50%;background:var(--acc);opacity:.35}',
+    '.evLeg .ln{width:18px;height:3px;border-radius:2px;background:var(--acc)}',
+    '.evComo{font-size:12.5px;line-height:1.55;color:var(--tx3);margin-top:10px}'
+  ].join('\n');
+  document.head.appendChild(css);
+
+  function niceTicks(lo, hi, n, passos){
+    /* o menor passo que da no maximo 6 linhas: escala justa, sem sobra */
+    var best = passos[passos.length - 1];
+    for(var i = 0; i < passos.length; i++){
+      var c = Math.ceil(hi/passos[i]) - Math.floor(lo/passos[i]) + 1;
+      if(c <= 6){ best = passos[i]; break }
+    }
+    var out = []; for(var v = Math.floor(lo/best)*best; v <= Math.ceil(hi/best)*best + 1e-9; v += best) out.push(+v.toFixed(4));
+    return out;
+  }
+
+  /* um grafico de serie no tempo, igual para os tres */
+  function serie(o){
+    var host = _q(o.host), card = host ? host.closest('.card') : null;
+    if(!host) return;
+    var runs = o.runs;
+    if(runs.length < 4){
+      host.innerHTML = '<p class="note" style="border:0;padding:0;margin:0">Só ' + runs.length + ' corrida' + (runs.length === 1 ? '' : 's') + ' com este dado em ' + ST.periodo + ' dias. Aumente o intervalo no alto da aba.</p>';
+      _q(o.sub).textContent = 'Poucas corridas no intervalo'; _q(o.tag).textContent = '—'; _q(o.tag).className = 'tag';
+      if(o.nota) _q(o.nota).textContent = '';
+      legenda(card, ''); return;
+    }
+    var span = Math.max(ST.periodo - 1, Math.max.apply(null, runs.map(function(r){ return r.d })), 7);
+    var wk = {};
+    runs.forEach(function(r){ var k = Math.floor(r.d / 7); (wk[k] = wk[k] || []).push(o.val(r)) });
+    /* a linha e a MEDIA MOVEL DE 4 SEMANAS (mediana das corridas da
+       semana e das 3 anteriores): semana a semana ela serrilhava
+       demais e escondia a tendencia */
+    var sem = Object.keys(wk).map(Number).sort(function(a,b){ return b - a })
+      .map(function(k){
+        var v = []; for(var j = k; j < k + 4; j++) if(wk[j]) v = v.concat(wk[j]);
+        return {k: k, v: _med(v), n: v.length};
+      });
+    var vals = runs.map(o.val);
+    /* a escala ignora os 5% mais extremos de cada lado; quem passa fica
+       encostado na borda, para um tiro ou um dia ruim nao achatar tudo */
+    var lo = quant(vals, .05), hi = quant(vals, .95);
+    var clamp = function(v){ return Math.max(tk[0], Math.min(tk[tk.length - 1], v)) };
+    var tk = niceTicks(lo, hi, 4, o.passos);
+    var tlo = tk[0], thi = tk[tk.length - 1];
+    var H = 250, IH = H - MT - MB;
+    var X = function(d){ return ML + IW - (d / span) * IW };
+    var Y = function(v){ var f = (v - tlo) / (thi - tlo || 1); return o.invert ? MT + f * IH : MT + IH - f * IH };
+    var xs = function(k){ return X(Math.min(span, k * 7 + 3)) };
+
+    var s = '';
+    tk.forEach(function(t){
+      s += '<line x1="' + ML + '" x2="' + (W - MR) + '" y1="' + Y(t) + '" y2="' + Y(t) + '" stroke="var(--line)" stroke-width="1"/>'
+         + '<text class="ly" x="' + (ML - 8) + '" y="' + (Y(t) + 4) + '" text-anchor="end">' + o.fmt(t) + '</text>';
+    });
+    /* meses no eixo de baixo: o dia 1 de cada mes dentro do intervalo */
+    for(var n = span; n >= 0; n--){
+      var d = dia(n);
+      if(d.getDate() === 1 && X(n) > ML + 14 && X(n) < W - MR - 14){
+        s += '<line x1="' + X(n) + '" x2="' + X(n) + '" y1="' + MT + '" y2="' + (MT + IH) + '" stroke="var(--line)" stroke-dasharray="2 4"/>'
+           + '<text class="lx" x="' + X(n) + '" y="' + (H - 12) + '" text-anchor="middle">' + M3[d.getMonth()] + '</text>';
+      }
+    }
+    runs.forEach(function(r){ s += '<circle cx="' + X(r.d) + '" cy="' + Y(clamp(o.val(r))) + '" r="3.2" fill="var(--acc)" opacity=".28"/>' });
+    var pts = sem.map(function(a){ return [xs(a.k), Y(a.v)] });
+    s += '<path d="' + (typeof spline === 'function' ? spline(pts) : 'M' + pts.join('L')) + '" fill="none" stroke="var(--acc)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>';
+    pts.forEach(function(p){ s += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="3" fill="var(--acc)"/>' });
+    var u = sem[sem.length - 1], pu = pts[pts.length - 1];
+    s += '<circle cx="' + pu[0] + '" cy="' + pu[1] + '" r="6.5" fill="var(--bg)" stroke="var(--acc)" stroke-width="3"/>';
+    var ty = pu[1] < MT + 18 ? pu[1] + 22 : pu[1] - 12;
+    s += '<text class="ult" x="' + Math.min(pu[0], W - MR) + '" y="' + ty + '" text-anchor="end">' + o.fmt(u.v) + '</text>';
+    s += '<line class="cross" x1="0" x2="0" y1="' + MT + '" y2="' + (MT + IH) + '" stroke="var(--tx3)" stroke-dasharray="3 3" opacity="0"/>';
+    s += '<text class="lx" x="' + (ML - 8) + '" y="' + (MT - 10) + '" text-anchor="end">' + o.unid + '</text>';
+    s += '<text class="lx" x="' + (W - MR) + '" y="' + (MT - 10) + '" text-anchor="end">' + (o.cima || '') + '</text>';
+    host.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + o.rot + '">' + s + '</svg>';
+
+    if(typeof hover === 'function') hover(host, function(px){
+      var b = null, bd = 1e9;
+      sem.forEach(function(a){ var dd = Math.abs(xs(a.k) - px); if(dd < bd){ bd = dd; b = a } });
+      return b ? {a: b, x: xs(b.k)} : null;
+    }, function(h){
+      var a = h.a, ini = a.k * 7 + 6, fim = a.k * 7;
+      return '<div class="t">' + dLab(ini) + ' – ' + dLab(fim) + '</div>'
+           + '<div class="r"><i>Média de 4 semanas</i><b>' + o.fmt(a.v) + ' ' + o.unidTip + '</b></div>'
+           + '<div class="r"><i>Corridas na semana</i><b>' + (wk[a.k] ? wk[a.k].length : 0) + '</b></div>';
+    });
+
+    /* comparacao: 4 ultimas semanas x 4 primeiras do intervalo */
+    var rec = runs.filter(function(r){ return r.d < 28 }).map(o.val);
+    var ant = runs.filter(function(r){ return r.d >= span - 28 }).map(o.val);
+    var tg = _q(o.tag);
+    if(rec.length >= 2 && ant.length >= 2 && span >= 56){
+      var a = _med(ant), b = _med(rec);
+      var r = o.compara(a, b);
+      _q(o.sub).innerHTML = 'Últimas 4 semanas: <b>' + o.fmt(b) + ' ' + o.unidTip + '</b> · ' + 'há ' + Math.round(span / 30) + ' meses: <b>' + o.fmt(a) + '</b>';
+      tg.textContent = r.tag; tg.className = 'tag ' + r.cls;
+    }else{
+      _q(o.sub).innerHTML = 'Média das últimas semanas: <b>' + o.fmt(u.v) + ' ' + o.unidTip + '</b>';
+      tg.textContent = '—'; tg.className = 'tag';
+    }
+    if(o.nota) _q(o.nota).innerHTML = o.textoNota;
+    legenda(card, o.como);
+  }
+
+  function legenda(card, como){
+    if(!card) return;
+    var old = card.querySelector('.leg'); if(old) old.style.display = 'none';
+    var l = card.querySelector('.evLeg');
+    if(!l){ l = document.createElement('div'); l.className = 'evLeg'; card.appendChild(l) }
+    l.innerHTML = como ? '<span><i class="pt"></i>Cada corrida</span><span><i class="ln"></i>Média de 4 semanas</span>' : '';
+    var c = card.querySelector('.evComo');
+    if(!c){ c = document.createElement('p'); c.className = 'evComo'; card.appendChild(c) }
+    c.innerHTML = como || '';
+    c.style.display = como ? '' : 'none';
+  }
+
+  window.chartPace = function(){
+    serie({
+      host: '#pacePlot', sub: '#paceSub', tag: '#paceTag', rot: 'Pace médio por semana',
+      runs: corridas().filter(function(r){ return isFinite(r.pace) && r.pace > 150 && r.pace < 900 }),
+      val: function(r){ return r.pace }, fmt: _mmss, invert: true,
+      passos: [10, 15, 20, 30, 60], unid: 'min/km', unidTip: '/km', cima: '↑ mais rápido',
+      compara: function(a, b){
+        var g = Math.round(a - b);
+        return Math.abs(g) < 5 ? {tag: 'estável', cls: ''} : g > 0 ? {tag: g + ' s/km mais rápido', cls: 'ok'} : {tag: (-g) + ' s/km mais lento', cls: 'warn'};
+      },
+      como: 'Quanto mais alto, mais rápido. Inclui todo tipo de corrida (leve, longão, tiro), por isso as bolinhas variam tanto — olhe a <b>linha</b>.'
+    });
+  };
+
+  function mpb(r){ return (60000 / r.pace) / r.fc }
+  window.chartEff = function(){
+    serie({
+      host: '#effPlot', sub: '#effSub', tag: '#effTag', nota: '#effNote', rot: 'Metros por batimento, média por semana',
+      runs: corridas().filter(function(r){ return isFinite(r.fc) && r.fc > 60 && isFinite(r.pace) && r.pace > 150 && r.pace < 900 }),
+      val: mpb, fmt: function(v){ return v.toFixed(2).replace('.', ',') }, invert: false,
+      passos: [0.05, 0.1, 0.2, 0.25, 0.5], unid: 'm/bat', unidTip: 'm por batida', cima: '↑ mais eficiente',
+      compara: function(a, b){
+        var p = Math.round((b / a - 1) * 100);
+        return Math.abs(p) < 2 ? {tag: 'estável', cls: ''} : p > 0 ? {tag: '+' + p + '% eficiente', cls: 'ok'} : {tag: p + '%', cls: 'warn'};
+      },
+      textoNota: '',
+      como: 'Quantos metros você anda a cada batida do coração (velocidade ÷ FC média). Ex.: 6:00/km a 140 bpm = 1,19 m. <b>Subindo</b> = mais base aeróbica: mais velocidade com o mesmo esforço. Calor, subida e treino forte puxam o dia para baixo.'
+    });
+  };
+
+  window.chartCad = function(){
+    var runs = corridas().filter(function(r){ return isFinite(r.cad) && r.cad > 120 });
+    serie({
+      host: '#cadPlot', sub: '#cadSub', tag: '#cadTag', nota: '#cadNote', rot: 'Cadência média por semana',
+      runs: runs, val: function(r){ return r.cad }, fmt: function(v){ return String(Math.round(v)) }, invert: false,
+      passos: [2, 5, 10], unid: 'spm', unidTip: 'passos/min',
+      compara: function(a, b){
+        var g = Math.round(b - a);
+        return Math.abs(g) < 2 ? {tag: 'estável', cls: ''} : g > 0 ? {tag: '+' + g + ' spm', cls: 'ok'} : {tag: g + ' spm', cls: 'warn'};
+      },
+      textoNota: '',
+      como: 'Passos por minuto. Sobe naturalmente quando você corre mais rápido, então compare semanas parecidas. Passos mais curtos e rápidos (cadência subindo devagar) aliviam o impacto no joelho.'
+    });
+  };
+
+  /* o titulo do cartao de cadencia dizia "Cadência × pace" */
+  try{ var h = _q('#cadSub'); h = h && h.parentNode.querySelector('h2'); if(h) h.textContent = 'Cadência' }catch(e){}
+  try{ var h2 = _q('#effSub'); h2 = h2 && h2.parentNode.querySelector('h2'); if(h2) h2.textContent = 'Eficiência aeróbica' }catch(e){}
+
+  if(ST.aba === 'evolucao' && typeof renderEvolucao === 'function'){ try{ renderEvolucao() }catch(e){} }
 });
