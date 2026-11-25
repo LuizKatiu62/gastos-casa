@@ -80,7 +80,7 @@
       escolha dos anos por botão, variação só nos meses em comum
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '08k';
+const FIX_VERSAO = '08l';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -4323,6 +4323,7 @@ PARTE('questionario do corredor', function(){
     window.lerCoach = async function(){
       var c = await lerApp.apply(this, arguments);
       if(c && c.quest){ ST.quest = c.quest; try{ aplicarSemRender(c.quest) }catch(e){} }
+      if(c) window.__coachLido = true;
       return c;
     };
   }
@@ -4395,9 +4396,18 @@ PARTE('questionario do corredor', function(){
      pediu para deixar para depois, a tela aparece sozinha. */
   var adiado = false;
   try{ adiado = localStorage.getItem('quest_adiado') === '1' }catch(e){}
-  setTimeout(function(){
-    if(!ST.quest && !adiado) abrirQuest();
-  }, 1800);
+  /* SO DEPOIS DE LER O FIREBASE (fix 08l, 25/11/2026). Antes abria
+     1,8 s depois de carregar, sem esperar o login. Num endereco novo
+     (treinosgarmin.runwithgratitude.ca) ainda sem login, ST.quest
+     estava vazio e o questionario aparecia como se a conta fosse
+     nova, embora as respostas estivessem guardadas. Agora so abre
+     quando o Coach ja foi lido da nuvem e de fato nao tem respostas. */
+  var tentativas = 0;
+  (function esperar(){
+    if(ST.quest || adiado) return;
+    if(window.__coachLido){ abrirQuest(); return }
+    if(++tentativas < 120) setTimeout(esperar, 1500);
+  })();
 });
 
 
