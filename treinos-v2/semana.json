@@ -2,8 +2,8 @@
  "ate": "2026-12-01",
  "de": "2026-11-25",
  "fcMax": 163,
- "gerado": "2026-11-25T23:14:37.199Z",
- "limiar": "4:59",
+ "gerado": "2026-11-25T23:31:36.707Z",
+ "limiar": "4:53",
  "sessoes": [
   {
    "data": "2026-11-26",
@@ -15,9 +15,9 @@
    "passos": [
     {
      "fim": "time",
-     "lento": 2.3585,
-     "rapido": 2.5381,
-     "texto": "12 min subindo devagar, 6:34–7:04/km. Se chegar ofegante ao fim, foi rapido demais.",
+     "lento": 2.3923,
+     "rapido": 2.5773,
+     "texto": "12 min subindo devagar, 6:28–6:58/km. Se chegar ofegante ao fim, foi rapido demais.",
      "tipo": "warmup",
      "valor": 720
     },
@@ -25,9 +25,9 @@
      "passos": [
       {
        "fim": "distance",
-       "lento": 3.5842,
-       "rapido": 3.7594,
-       "texto": "600 m em 4:26–4:39/km, FC ate 148-158 bpm.",
+       "lento": 3.69,
+       "rapido": 3.876,
+       "texto": "600 m em 4:18–4:31/km, FC ate 148-158 bpm.",
        "tipo": "interval",
        "valor": 600
       },
@@ -35,7 +35,7 @@
        "fim": "time",
        "texto": "3 min de trote leve. Nao pare de correr.",
        "tipo": "recovery",
-       "valor": 180
+       "valor": 150
       }
      ],
      "tipo": "repetir",
@@ -59,25 +59,25 @@
    "passos": [
     {
      "fim": "time",
-     "lento": 2.3585,
-     "rapido": 2.5381,
-     "texto": "12 min subindo devagar, 6:34–7:04/km. Se chegar ofegante ao fim, foi rapido demais.",
+     "lento": 2.3923,
+     "rapido": 2.5773,
+     "texto": "12 min subindo devagar, 6:28–6:58/km. Se chegar ofegante ao fim, foi rapido demais.",
      "tipo": "warmup",
      "valor": 720
     },
     {
      "fim": "distance",
-     "lento": 2.6738,
-     "rapido": 2.907,
-     "texto": "Rodagem de entrada, 4.8 km em 5:44–6:14/km. Segure aqui: o trabalho vem a seguir.",
+     "lento": 2.7174,
+     "rapido": 2.9586,
+     "texto": "Rodagem de entrada, 4.7 km em 5:38–6:08/km. Segure aqui: o trabalho vem a seguir.",
      "tipo": "interval",
-     "valor": 4800
+     "valor": 4700
     },
     {
      "fim": "distance",
-     "lento": 3.2154,
-     "rapido": 3.4364,
-     "texto": "4.7 km em 4:51–5:11/km, FC 140-148 bpm.",
+     "lento": 3.2787,
+     "rapido": 3.5088,
+     "texto": "4.7 km em 4:45–5:05/km, FC 140-148 bpm.",
      "tipo": "interval",
      "valor": 4700
     },
@@ -99,25 +99,25 @@
    "passos": [
     {
      "fim": "time",
-     "lento": 2.3585,
-     "rapido": 2.5381,
-     "texto": "12 min subindo devagar, 6:34–7:04/km. Se chegar ofegante ao fim, foi rapido demais.",
+     "lento": 2.3923,
+     "rapido": 2.5773,
+     "texto": "12 min subindo devagar, 6:28–6:58/km. Se chegar ofegante ao fim, foi rapido demais.",
      "tipo": "warmup",
      "valor": 720
     },
     {
      "fim": "distance",
-     "lento": 2.6738,
-     "rapido": 2.907,
-     "texto": "Rodagem de entrada, 15.1 km em 5:44–6:14/km. Segure aqui: o trabalho vem a seguir.",
+     "lento": 2.7174,
+     "rapido": 2.9586,
+     "texto": "Rodagem de entrada, 15.1 km em 5:38–6:08/km. Segure aqui: o trabalho vem a seguir.",
      "tipo": "interval",
      "valor": 15100
     },
     {
      "fim": "distance",
-     "lento": 3.2154,
-     "rapido": 3.4364,
-     "texto": "11.1 km em 4:51–5:11/km, FC 140-148 bpm.",
+     "lento": 3.2787,
+     "rapido": 3.5088,
+     "texto": "11.1 km em 4:45–5:05/km, FC 140-148 bpm.",
      "tipo": "interval",
      "valor": 11100
     },
@@ -135,32 +135,32 @@
   "faci": {
    "fc": "111–124",
    "n": "Rodagem fácil",
-   "pace": "5:44–6:14"
+   "pace": "5:38–6:08"
   },
   "lim": {
    "fc": "140–148",
    "n": "Limiar",
-   "pace": "4:51–5:11"
+   "pace": "4:45–5:05"
   },
   "long": {
    "fc": "114–130",
    "n": "Longo",
-   "pace": "5:34–6:04"
+   "pace": "5:28–5:58"
   },
   "mp": {
    "fc": "130–140",
    "n": "Ritmo de maratona",
-   "pace": "5:11–5:23"
+   "pace": "5:02–5:14"
   },
   "rec": {
    "fc": "98–111",
    "n": "Recuperação",
-   "pace": "6:34–7:04"
+   "pace": "6:28–6:58"
   },
   "vo2": {
    "fc": "148–158",
    "n": "VO₂ máx",
-   "pace": "4:26–4:39"
+   "pace": "4:18–4:31"
   }
  }
 }
