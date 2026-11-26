@@ -2,7 +2,7 @@
  "ate": "2026-12-02",
  "de": "2026-11-26",
  "fcMax": 163,
- "gerado": "2026-11-26T10:39:28.173Z",
+ "gerado": "2026-11-26T13:36:45.241Z",
  "limiar": "4:53",
  "sessoes": [
   {
@@ -27,19 +27,19 @@
        "fim": "distance",
        "lento": 3.69,
        "rapido": 3.876,
-       "texto": "600 m em 4:18–4:31/km, FC ate 148-158 bpm.",
+       "texto": "300 m em 4:18–4:31/km, FC ate 148-158 bpm.",
        "tipo": "interval",
-       "valor": 600
+       "valor": 300
       },
       {
        "fim": "time",
-       "texto": "3 min de trote leve. Nao pare de correr.",
+       "texto": "2 min de trote leve. Nao pare de correr.",
        "tipo": "recovery",
-       "valor": 150
+       "valor": 90
       }
      ],
      "tipo": "repetir",
-     "vezes": 5
+     "vezes": 8
     },
     {
      "fim": "time",
@@ -162,7 +162,7 @@
    ]
   }
  ],
- "versao": "08s",
+ "versao": "08x",
  "zonas": {
   "faci": {
    "fc": "111–124",
