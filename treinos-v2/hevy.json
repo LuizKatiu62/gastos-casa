@@ -710,11 +710,6 @@
   }
  },
  "historico": {
-  "2026-W36": {
-   "semana": "2026-W36",
-   "kg": 0,
-   "sessoes": 1
-  },
   "2026-W38": {
    "semana": "2026-W38",
    "kg": 7648,
@@ -957,9 +952,9 @@
   }
  ],
  "meta": {
-  "ultimaSync": "2026-11-25T15:42:21",
+  "ultimaSync": "2026-11-26T00:28:42",
   "totalRotinas": 20,
-  "totalTreinos": 6,
+  "totalTreinos": 5,
   "semanas": 12,
   "semanasSessoes": 26
  }
