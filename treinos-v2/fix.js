@@ -80,7 +80,7 @@
       escolha dos anos por botão, variação só nos meses em comum
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '08r';
+const FIX_VERSAO = '08s';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -21357,7 +21357,10 @@ PARTE('coach organizado', function(){
     '#v-coach #bqAcad > .bqa-t:first-child::after{content:"▼";font-size:11px;opacity:.6;transition:transform .2s}',
     '#v-coach #bqAcad:not(.csFechado) > .bqa-t:first-child::after{transform:rotate(180deg)}',
     '#v-coach #bqAcad.csFechado{padding-top:18px;padding-bottom:18px}',
-    '#v-coach #bqAcad.csFechado > .bqa-t:first-child{margin:0}'
+    '#v-coach #bqAcad.csFechado > .bqa-t:first-child{margin:0}',
+    /* SEM "TROCAR TREINO" (fix 08s, 26/11/2026): o treino e o que o coach
+       humano manda pelo TrainingPeaks. Ficam Mover dia e Concluir. */
+    '[data-act="treino"]{display:none !important}'
   ].join('\n');
   document.head.appendChild(css2);
   function acadInicial(a){
