@@ -1,8 +1,8 @@
 {
- "ate": "2026-12-01",
- "de": "2026-11-25",
+ "ate": "2026-12-02",
+ "de": "2026-11-26",
  "fcMax": 163,
- "gerado": "2026-11-26T02:13:16.007Z",
+ "gerado": "2026-11-26T10:39:28.173Z",
  "limiar": "4:53",
  "sessoes": [
   {
@@ -128,9 +128,41 @@
      "valor": 480
     }
    ]
+  },
+  {
+   "data": "2026-12-02",
+   "foco": "facil",
+   "km": 6.5,
+   "min": 40,
+   "nome": "02/12 · Rodagem leve 40' · 6.5 km total",
+   "nota": "Total porta a porta 6.5 km. Alongamentos e educativos ANTES do start, relogio parado.",
+   "passos": [
+    {
+     "fim": "time",
+     "lento": 2.3923,
+     "rapido": 2.5773,
+     "texto": "8 min subindo devagar, 6:28–6:58/km. Se chegar ofegante ao fim, foi rapido demais.",
+     "tipo": "warmup",
+     "valor": 480
+    },
+    {
+     "fim": "distance",
+     "lento": 2.7174,
+     "rapido": 2.9586,
+     "texto": "4.6 km em 5:38–6:08/km. Voce deve conseguir falar frases inteiras.",
+     "tipo": "interval",
+     "valor": 4600
+    },
+    {
+     "fim": "time",
+     "texto": "5 min de trote muito leve ate a respiracao normalizar.",
+     "tipo": "cooldown",
+     "valor": 300
+    }
+   ]
   }
  ],
- "versao": "08p",
+ "versao": "08s",
  "zonas": {
   "faci": {
    "fc": "111–124",
