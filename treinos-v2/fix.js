@@ -80,7 +80,7 @@
       escolha dos anos por botão, variação só nos meses em comum
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '08p';
+const FIX_VERSAO = '08q';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -21340,6 +21340,41 @@ PARTE('coach organizado', function(){
      se voce abrir, fica aberta) */
   var ml = v.querySelector('.mesLista');
   if(ml) ml.classList.add('fechado');
+
+  /* ACADEMIA FECHADA (fix 08q, 26/11/2026). Pedido do Luiz: o cartao da
+     academia fica fechado no Coach e so abre quando ele toca na seta.
+     Fechado, mostra so a linha "ACADEMIA · FASE BASE ▼". O app lembra
+     se ficou aberto ou fechado. */
+  var CH_ACAD = 'cs_acad_aberto';
+  var css2 = document.createElement('style');
+  css2.textContent = [
+    '#v-coach #bqAcad.csFechado > :not(:first-child){display:none !important}',
+    '#v-coach #bqAcad > .bqa-t:first-child{cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:0}',
+    '#v-coach #bqAcad > .bqa-t:first-child::after{content:"▼";font-size:11px;opacity:.6;transition:transform .2s}',
+    '#v-coach #bqAcad:not(.csFechado) > .bqa-t:first-child::after{transform:rotate(180deg)}',
+    '#v-coach #bqAcad.csFechado{padding-top:18px;padding-bottom:18px}',
+    '#v-coach #bqAcad.csFechado > .bqa-t:first-child{margin:0}'
+  ].join('\n');
+  document.head.appendChild(css2);
+  function acadInicial(a){
+    if(!a || a.dataset.csTg) return;
+    a.dataset.csTg = '1';
+    var ab = false;
+    try{ ab = localStorage.getItem(CH_ACAD) === '1' }catch(e){}
+    a.classList.toggle('csFechado', !ab);
+    a.addEventListener('click', function(e){
+      var t = e.target && e.target.closest ? e.target.closest('.bqa-t') : null;
+      if(!t || t !== a.firstElementChild) return;
+      var fechou = a.classList.toggle('csFechado');
+      try{ localStorage.setItem(CH_ACAD, fechou ? '0' : '1') }catch(x){}
+    });
+  }
+  acadInicial(document.getElementById('bqAcad'));
+  (function esperaAcad2(n){
+    var a = document.getElementById('bqAcad');
+    if(a){ acadInicial(a); return }
+    if(n < 30) setTimeout(function(){ esperaAcad2(n + 1) }, 1000);
+  })(0);
 
   /* TOCAR NUM DIA DO CALENDARIO (fix 08p, 25/11/2026).
      08o: a tela subia ate o treino aberto em "Hoje".
