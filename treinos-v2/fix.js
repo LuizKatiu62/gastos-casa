@@ -80,7 +80,7 @@
       escolha dos anos por botão, variação só nos meses em comum
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '08w';
+const FIX_VERSAO = '08x';
 /* TIROS DO TITULO (fix 08w, 26/11/2026). O treino do coach vem com o
    titulo pronto, ex. "8× 300", "6x800 m", "5 x 1 km". Antes o app
    ignorava isso e montava SEMPRE tiros de 600 m (5×600 no lugar de
@@ -8222,10 +8222,59 @@ PARTE('o quilômetro é o total', function(){
 
       var s = (typeof sessaoDe === 'function') ? sessaoDe(ST.sel) : (ST.plano || {})[ST.sel];
       if(!s || s.mod !== 'corrida' || s.prova) return;
+      /* O TREINO NO RELOGIO VEM DO TRAININGPEAKS (fix 08x, 26/11/2026).
+         O Luiz: "os treinos do relogio sao carregados a partir do
+         TrainingPeaks". Este cartao ensinava a montar o Workout na mao,
+         com passos que o app inventava (5x600 no lugar de 8x300). Agora
+         ele mostra os passos REAIS que o coach mandou e que o sync leu
+         do calendario do Garmin (RAW.agendados[].passos). Sem esses
+         passos, o cartao nao aparece: melhor nada do que um treino
+         diferente do que esta no relogio. */
+      var ag = null;
+      try{
+        (RAW && RAW.agendados || []).forEach(function(a){
+          if(!ag && a && a.data === ST.sel && Array.isArray(a.passos) && a.passos.length &&
+             !/strength|forca|força|bike|cycling|swim|natacao/i.test(String(a.esporte || ''))) ag = a;
+        });
+      }catch(e){}
+      if(!ag) return;
+      function vDe(it){
+        if(it.m) return it.m >= 1000 ? (it.m / 1000).toFixed(it.m % 1000 ? 1 : 0).replace('.', ',') + ' km' : it.m + ' m';
+        if(it.seg) return it.seg % 60 ? Math.floor(it.seg / 60) + ':' + ('0' + (it.seg % 60)).slice(-2) + ' min' : (it.seg / 60) + ' min';
+        if(it.livre) return 'botão Lap';
+        return '';
+      }
+      var linhas = [];
+      (function andar(lista, dentro){
+        lista.forEach(function(it){
+          if(!it) return;
+          if(it.rep && Array.isArray(it.itens)){
+            linhas.push({ t: 'Repetir ' + it.rep + '×', d: '', v: '' });
+            andar(it.itens, true);
+          } else {
+            linhas.push({ t: (dentro ? '— ' : '') + (it.t || 'Bloco'), d: it.pace ? 'Ritmo ' + it.pace : '', v: vDe(it) });
+          }
+        });
+      })(ag.passos, false);
+
+      var div = document.createElement('div');
+      div.id = 'bqGar';
+      div.innerHTML = '<h4>No seu relógio</h4>'
+        + '<p class="gsub">' + (ag.nome ? '<b>' + ag.nome + '</b> · ' : '') + 'o treino que o seu coach mandou pelo '
+        + 'TrainingPeaks, como está no Garmin. Os alongamentos e os educativos ficam fora: faça antes do start.</p>'
+        + '<ol>' + linhas.map(function(p){
+            return '<li><div class="gt"><b>' + p.t + '</b>' + (p.d ? '<span>' + p.d + '</span>' : '') + '</div>'
+                 + (p.v ? '<div class="gv">' + p.v + '</div>' : '') + '</li>';
+          }).join('') + '</ol>';
+      el.appendChild(div);
+      return;
+
+      /* (o cartao antigo "Montar no Garmin", com passos calculados pelo
+         app, ficou abaixo so como referencia; nao e mais desenhado) */
       var G = passosGarmin(s);
       if(!G) return;
 
-      var div = document.createElement('div');
+      div = document.createElement('div');
       div.id = 'bqGar';
       div.innerHTML = '<h4>Montar no Garmin</h4>'
         + '<p class="gsub">Um único Workout, do começo ao fim. O relógio grava tudo como '
