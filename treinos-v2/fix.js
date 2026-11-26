@@ -80,7 +80,7 @@
       escolha dos anos por botão, variação só nos meses em comum
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '08t';
+const FIX_VERSAO = '08u';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -19151,9 +19151,16 @@ PARTE('prova no site runwithgratitude', function(){
    16/10 — página nova relatorios.html: volume por semana e por mês,
    pace, tipos de treino por semana, faixas de distância/pace/tempo,
    eficiência nas corridas leves e lista de corridas, com botão para
-   salvar em PDF. O atalho fica no alto das abas Evolução e Treinos. */
+   salvar em PDF.
+
+   26/11 (fix 08u) — o atalho aparecia duas vezes, no alto de Evolução
+   e no alto de Treinos, e os dois abriam a MESMA página. Pedido do Luiz:
+   um só, dentro do KPI. Agora fica no topo da aba KPI. A aba KPI e
+   redesenhada inteira (innerHTML) a cada visita, entao um observador
+   recoloca o atalho no topo sempre que ela muda.
+   Na demonstracao (?demo) o link leva o ?demo junto, para a pagina de
+   relatorios tambem usar os dados de exemplo. */
 PARTE('atalho para os relatorios', function(){
-  if(document.getElementById('btRelatorios')) return;
   var st = document.createElement('style');
   st.textContent = '.bt-rel{display:flex;align-items:center;gap:10px;margin:4px 0 12px;padding:12px 14px;'
     + 'border-radius:14px;background:var(--s1);border:1px solid var(--line);color:var(--tx);text-decoration:none;'
@@ -19163,16 +19170,26 @@ PARTE('atalho para os relatorios', function(){
     + '.bt-rel i{margin-left:auto;font-style:normal;color:var(--tx3)}';
   document.head.appendChild(st);
   var html = '<svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/><path d="M9 17v-3M12 17v-6M15 17v-4"/></svg>'
-    + '<div>Relatórios para PDF<span>Semana a semana, mês a mês, tipos de treino, pace</span></div><i>›</i>';
-  ['v-evolucao','v-treinos'].forEach(function(id, n){
-    var v = document.getElementById(id); if(!v) return;
-    var a = document.createElement('a');
-    a.className = 'bt-rel'; a.href = './relatorios.html'; a.innerHTML = html;
-    if(n === 0) a.id = 'btRelatorios';
-    var hero = v.querySelector('.hero');
-    if(hero && hero.parentNode) hero.parentNode.insertBefore(a, hero.nextSibling);
-    else v.insertBefore(a, v.firstChild);
-  });
+    + '<div>Relatórios em PDF<span>Semana a semana, mês a mês, tipos de treino, pace</span></div><i>›</i>';
+  var href = './relatorios.html' + (window.BQ_DEMO ? '?demo' : '');
+  function colocar(){
+    var v = document.getElementById('v-kpi');
+    if(!v) return false;
+    var a = document.getElementById('btRelatorios');
+    if(!a){
+      a = document.createElement('a');
+      a.id = 'btRelatorios'; a.className = 'bt-rel'; a.href = href; a.innerHTML = html;
+    }
+    if(v.firstElementChild !== a) v.insertBefore(a, v.firstChild);
+    return true;
+  }
+  (function esperar(n){
+    if(colocar()){
+      new MutationObserver(function(){ colocar() }).observe(document.getElementById('v-kpi'), {childList: true});
+      return;
+    }
+    if(n < 40) setTimeout(function(){ esperar(n + 1) }, 500);
+  })(0);
 });
 
 

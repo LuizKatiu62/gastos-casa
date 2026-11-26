@@ -2,6 +2,8 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
+<!-- Modo demonstracao (?demo): dados de exemplo, ver demo.js -->
+<script>if(/[?&]demo\b/.test(location.search))document.write('<script src="./demo.js?v=2"><\/script>')</script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Relatórios de corrida · Luiz Silva</title>
 <meta name="theme-color" content="#F6F5F1">
@@ -133,7 +135,7 @@ tr.tot td{font-weight:700;border-top:1.5px solid var(--tx)}
 </head>
 <body>
 <div class="wrap">
-  <a class="voltar noprint" href="./">← Voltar ao app</a>
+  <a class="voltar noprint" href="./" onclick="if(window.BQ_DEMO)this.href='./?demo'">← Voltar ao app</a>
   <header class="top">
     <div><div class="kicker">Treinos · relatório de corrida</div><h1>Evolução das corridas</h1></div>
     <div class="stamp" id="stamp">Carregando…</div>
