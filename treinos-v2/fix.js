@@ -80,7 +80,7 @@
       escolha dos anos por botão, variação só nos meses em comum
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '08o';
+const FIX_VERSAO = '08p';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -21321,11 +21321,12 @@ PARTE('coach organizado', function(){
         v.querySelector(':scope > .hero'),
         filho('objBox'),
         rotulo('csHoje', 'Hoje'),
-        filho('sessBar'), filho('sess'), filho('bqAcad'),
+        diaEmbaixo ? null : filho('sessBar'), diaEmbaixo ? null : filho('sess'), filho('bqAcad'),
         rotulo('csSemana', 'Esta semana'),
         filho('bqPl'), cartao('#wkRow'),
         rotulo('csMes', 'Calendário'),
-        cartao('#grid')
+        cartao('#grid'),
+        diaEmbaixo ? filho('sessBar') : null, diaEmbaixo ? filho('sess') : null
       ].filter(Boolean);
       var resto = Array.prototype.filter.call(v.children, function(c){ return seq.indexOf(c) < 0 });
       var quero = seq.concat(resto);
@@ -21340,32 +21341,40 @@ PARTE('coach organizado', function(){
   var ml = v.querySelector('.mesLista');
   if(ml) ml.classList.add('fechado');
 
-  /* TOCAR NUM DIA DO CALENDARIO (fix 08o, 25/11/2026). O treino do dia
-     abre la em cima, em "Hoje", e o calendario fica embaixo: o Luiz
-     tocava no dia e achava que nada tinha acontecido. Agora a tela sobe
-     ate o treino aberto, e o rotulo diz qual dia esta aberto. */
-  var MES3 = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
-  function rotuloDia(){
-    var r = document.getElementById('csHoje');
-    if(!r || typeof ST === 'undefined' || !ST.sel) return;
-    var hoje = (typeof iso === 'function' && typeof HOJE !== 'undefined') ? iso(HOJE) : '';
-    var p = String(ST.sel).split('-');
-    r.textContent = (ST.sel === hoje || p.length < 3) ? 'Hoje' : ('Dia ' + (+p[2]) + ' ' + MES3[(+p[1]) - 1]);
+  /* TOCAR NUM DIA DO CALENDARIO (fix 08p, 25/11/2026).
+     08o: a tela subia ate o treino aberto em "Hoje".
+     08p, pedido do Luiz: "porque nao abre embaixo e fica mais facil de
+     trabalhar?". Agora o dia tocado abre LOGO ABAIXO do calendario, onde
+     o dedo ja esta. Ao fechar o dia (ou tocar em hoje), o treino volta
+     para o lugar dele em "Hoje". */
+  var diaEmbaixo = false;
+  function hojeIso(){ return (typeof iso === 'function' && typeof HOJE !== 'undefined') ? iso(HOJE) : '' }
+  function aberto(){ return !!(window.bqDia && bqDia.estado() === 'aberto') }
+  function conferir(){
+    var antes = diaEmbaixo;
+    if(diaEmbaixo && (!aberto() || (typeof ST !== 'undefined' && ST.sel === hojeIso()))) diaEmbaixo = false;
+    if(antes !== diaEmbaixo) ordenar();
   }
   v.addEventListener('click', function(e){
-    var d = e.target && e.target.closest ? e.target.closest('#grid [data-d]') : null;
-    if(!d) return;
-    setTimeout(function(){
-      rotuloDia();
-      if(!window.bqDia || bqDia.estado() !== 'aberto') return;
-      var alvo = document.getElementById('csHoje') || document.getElementById('sessBar');
-      if(!alvo) return;
-      var topo = document.querySelector('header, .top, .topo');
-      var folga = topo ? topo.getBoundingClientRect().height + 8 : 90;
-      try{ window.scrollTo({top: window.scrollY + alvo.getBoundingClientRect().top - folga, behavior: 'smooth'}) }
-      catch(x){ alvo.scrollIntoView() }
-    }, 60);
+    var t = e.target && e.target.closest ? e.target : null;
+    if(!t) return;
+    if(t.closest('#grid [data-d]')){
+      setTimeout(function(){
+        diaEmbaixo = aberto() && typeof ST !== 'undefined' && ST.sel !== hojeIso();
+        ordenar();
+        if(!diaEmbaixo) return;
+        var alvo = document.getElementById('sessBar');
+        if(!alvo) return;
+        var topo = document.querySelector('header.appbar, header');
+        var folga = topo ? topo.getBoundingClientRect().height + 10 : 80;
+        try{ window.scrollTo({top: window.scrollY + alvo.getBoundingClientRect().top - folga, behavior: 'smooth'}) }
+        catch(x){ alvo.scrollIntoView() }
+      }, 60);
+    }else if(t.closest('#sessBar, .fechar-dia')){
+      setTimeout(conferir, 60);
+    }
   }, true);   /* captura: o clique redesenha a grade e o dia sai do DOM */
+  function rotuloDia(){}
 
   ordenar();
   rotuloDia();
