@@ -116,9 +116,21 @@
                dataManual: true, prova: 'bluenose27', distProva: 21.1},
     quest: {sexo: 'x', idade: 42, altura: 172, peso: 72, maiorDist: 21, sono: 7},
     feitas: {}, extras: {}, trocas: {}, periodo: 90,
+    /* o marco do Luiz ("dia da cirurgia") nao aparece na demonstracao */
+    marcoData: isoDe(diasAtras(182)), marcoNome: 'Início dos treinos',
     em: new Date().toISOString()
   };
   var MAIN = {atividades: ATIV, atualizado: new Date().toISOString()};
+
+  /* rotinas de academia na demonstracao: os exercicios ficam, o nome
+     da academia do Luiz (YMCA) vira so "Academia" */
+  function limparHevy(j){
+    try{
+      var t = JSON.stringify(j).replace(/\s*·\s*YMCA/g, '').replace(/YMCA/g, 'Academia');
+      j = JSON.parse(t);
+    }catch(e){}
+    return j;
+  }
 
   /* ── fetch falso para Firebase e GitHub ── */
   var fetchReal = window.fetch ? window.fetch.bind(window) : null;
@@ -171,7 +183,7 @@
          neste site (o mesmo formato do ramo hevy no Firebase) */
       if(metodo === 'GET' && raiz === COACH && resto[0] === 'hevy' && !COACH.hevy && fetchReal)
         return fetchReal('./hevy.json', {cache: 'no-store'}).then(function(r){ return r.json() })
-          .then(function(j){ COACH.hevy = j; return resp(ler(COACH, resto)) })
+          .then(function(j){ COACH.hevy = limparHevy(j); return resp(ler(COACH, resto)) })
           .catch(function(){ return resp(null) });
       if(metodo === 'GET') return Promise.resolve(resp(raiz ? ler(raiz, resto) : null));
       if(raiz) gravar(raiz, resto, metodo, corpo);

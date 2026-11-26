@@ -80,7 +80,7 @@
       escolha dos anos por botão, variação só nos meses em comum
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '08s';
+const FIX_VERSAO = '08t';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -1889,7 +1889,11 @@ PARTE('login firebase', function(){
         + '<div id="bqErro" style="font-size:12px;color:#E0714F;margin-top:9px;display:none"></div>'
         + '<button type="submit" id="bqEntrar" style="width:100%;margin-top:14px;padding:12px;'
         + 'border:0;border-radius:10px;background:#D9A441;color:#14181f;font-size:15px;'
-        + 'font-weight:700;cursor:pointer">Entrar</button></form>';
+        + 'font-weight:700;cursor:pointer">Entrar</button>'
+        /* "Ver demonstracao" (fix 08t, 26/11/2026): quem abre o link sem
+           conta encontra o app com dados de exemplo (ver demo.js) */
+        + '<a href="./?demo" style="display:block;text-align:center;margin-top:14px;font-size:13px;'
+        + 'color:#8A94A6;text-decoration:underline">Não tem conta? Ver demonstração</a></form>';
       document.body.appendChild(f);
       const form = f.querySelector('form'), erro = f.querySelector('#bqErro'),
             bt = f.querySelector('#bqEntrar');
