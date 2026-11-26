@@ -80,7 +80,24 @@
       escolha dos anos por botão, variação só nos meses em comum
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '08v';
+const FIX_VERSAO = '08w';
+/* TIROS DO TITULO (fix 08w, 26/11/2026). O treino do coach vem com o
+   titulo pronto, ex. "8× 300", "6x800 m", "5 x 1 km". Antes o app
+   ignorava isso e montava SEMPRE tiros de 600 m (5×600 no lugar de
+   8×300), no cartao "Montar no Garmin" e no treino que vai para o
+   relogio. Agora le repeticoes e distancia do titulo; so cai nos 600 m
+   quando o titulo nao diz. */
+function tirosDoTitulo(s){
+  var t = String((s && (s.titulo || s.nome)) || '');
+  var m = t.match(/(\d{1,2})\s*[x×]\s*(\d+(?:[.,]\d+)?)\s*(km|k|m)?\b/i);
+  if(!m) return null;
+  var n = +m[1], d = parseFloat(m[2].replace(',', '.')), u = (m[3] || '').toLowerCase();
+  var metros = (u === 'km' || u === 'k' || (!u && d <= 10)) ? d * 1000 : d;
+  if(!(n >= 1 && n <= 40 && metros >= 100 && metros <= 5000)) return null;
+  return { n: n, m: Math.round(metros) };
+}
+window.tirosDoTitulo = tirosDoTitulo;
+
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -8171,9 +8188,10 @@ PARTE('o quilômetro é o total', function(){
     if(r.qual){
       var z = Z[r.zonaForte] || {};
       var fx = z.p ? pcs(z.p[0]) + '–' + pcs(z.p[1]) : pcs(r.paceForte);
-      var mrep = r.zonaForte === 'mp' ? null : 600;
+      var tt = tirosDoTitulo(s);
+      var mrep = r.zonaForte === 'mp' ? null : (tt ? tt.m : 600);
       if(mrep){
-        var n = Math.max(3, Math.round(r.kmForte * 1000 / mrep));
+        var n = tt ? tt.n : Math.max(3, Math.round(r.kmForte * 1000 / mrep));
         P.push({ t:'Repetir ' + n + '×', v:'', d:'Crie um bloco de repetição com os dois passos abaixo.' });
         P.push({ t:'— Tiro', v:mrep + ' m',
                  d:'Por DISTÂNCIA. Alvo de ritmo ' + fx + '/km' +
@@ -8366,7 +8384,8 @@ PARTE('ponte para o Garmin', function(){
                         (forte.fc ? ', FC ' + forte.fc[0] + '-' + forte.fc[1] + ' bpm' : '') + '.' });
       } else {
         /* tiros: grupo de repeticao */
-        var m = 600, n = Math.max(3, Math.min(10, Math.round(R.kmForte * 1000 / m)));
+        var tt = tirosDoTitulo(s);
+        var m = tt ? tt.m : 600, n = tt ? tt.n : Math.max(3, Math.min(10, Math.round(R.kmForte * 1000 / m)));
         var trote = Math.max(90, Math.round(R.kmTrote * 1000 / n * (faci.lento ? 1/faci.lento : 0.4)));
         trote = Math.min(210, Math.max(90, Math.round(trote / 30) * 30));
         P.push({ tipo:'repetir', vezes: n, passos: [
