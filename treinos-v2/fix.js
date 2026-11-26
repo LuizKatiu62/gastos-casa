@@ -80,7 +80,7 @@
       escolha dos anos por botão, variação só nos meses em comum
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '08q';
+const FIX_VERSAO = '08r';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -936,8 +936,12 @@ window.sheetAdicionar = function(k){
 window.blocoExtra = function(k){
   const x = ST.extras[k] || null;
   const s = sessaoDe(k);
-  if(!x) return `<div class="addex"><button data-addex="${k}">` +
-    (s ? '+ Adicionar segundo treino' : '+ Incluir um treino neste dia') + `</button></div>`;
+  /* SEM "+ ADICIONAR SEGUNDO TREINO" (fix 08r, 26/11/2026). Pedido do
+     Luiz: o treino do dia e sempre o que o coach humano manda pelo
+     TrainingPeaks; ele nao quer a opcao de somar outro. Em dia vazio
+     continua o "+ Incluir um treino neste dia". Um segundo treino que ja
+     exista continua aparecendo (abaixo). */
+  if(!x) return s ? '' : `<div class="addex"><button data-addex="${k}">+ Incluir um treino neste dia</button></div>`;
   const ets = etapasDe(x), fe = feitasDe(x.id);
   /* ZERO ETAPAS NAO E TREINO CONCLUIDO.
      'fe.length >= ets.length' com as duas listas vazias da 0 >= 0, que
