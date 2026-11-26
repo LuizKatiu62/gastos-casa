@@ -80,7 +80,7 @@
       escolha dos anos por botão, variação só nos meses em comum
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '08u';
+const FIX_VERSAO = '08v';
 const FIX_FALHAS = [];
 
 function PARTE(nome, fn){
@@ -19167,7 +19167,10 @@ PARTE('atalho para os relatorios', function(){
     + 'font-weight:700;font-size:14px}.bt-rel:active{transform:scale(.99)}'
     + '.bt-rel svg{width:20px;height:20px;stroke:var(--acc);fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;flex:none}'
     + '.bt-rel span{display:block;font-size:11.5px;font-weight:500;color:var(--tx3);margin-top:1px}'
-    + '.bt-rel i{margin-left:auto;font-style:normal;color:var(--tx3)}';
+    + '.bt-rel i{margin-left:auto;font-style:normal;color:var(--tx3)}'
+    /* no KPI, a regra "#v-kpi svg{width:100%}" dos graficos esticava o
+       icone na tela toda (fix 08v) */
+    + '#v-kpi .bt-rel svg{width:20px !important;height:20px !important;margin:0 !important;display:block;flex:none}';
   document.head.appendChild(st);
   var html = '<svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/><path d="M9 17v-3M12 17v-6M15 17v-4"/></svg>'
     + '<div>Relatórios em PDF<span>Semana a semana, mês a mês, tipos de treino, pace</span></div><i>›</i>';
