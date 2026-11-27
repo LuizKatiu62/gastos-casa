@@ -2,7 +2,7 @@
  "ate": "2026-12-02",
  "de": "2026-11-26",
  "fcMax": 163,
- "gerado": "2026-11-26T13:36:45.241Z",
+ "gerado": "2026-11-27T00:22:09.199Z",
  "limiar": "4:53",
  "sessoes": [
   {
@@ -50,11 +50,95 @@
    ]
   },
   {
+   "data": "2026-11-27",
+   "foco": "tiros",
+   "km": 8.2,
+   "min": 48,
+   "nome": "27/11 · 8x 300 · 8.2 km total",
+   "nota": "Total porta a porta 8.2 km. Alongamentos e educativos ANTES do start, relogio parado.",
+   "passos": [
+    {
+     "fim": "time",
+     "lento": 2.3923,
+     "rapido": 2.5773,
+     "texto": "12 min subindo devagar, 6:28–6:58/km. Se chegar ofegante ao fim, foi rapido demais.",
+     "tipo": "warmup",
+     "valor": 720
+    },
+    {
+     "passos": [
+      {
+       "fim": "distance",
+       "lento": 3.69,
+       "rapido": 3.876,
+       "texto": "300 m em 4:18–4:31/km, FC ate 148-158 bpm.",
+       "tipo": "interval",
+       "valor": 300
+      },
+      {
+       "fim": "time",
+       "texto": "2 min de trote leve. Nao pare de correr.",
+       "tipo": "recovery",
+       "valor": 90
+      }
+     ],
+     "tipo": "repetir",
+     "vezes": 8
+    },
+    {
+     "fim": "time",
+     "texto": "8 min de trote muito leve ate a respiracao normalizar.",
+     "tipo": "cooldown",
+     "valor": 480
+    }
+   ]
+  },
+  {
    "data": "2026-11-28",
    "foco": "limiar",
    "km": 12.4,
    "min": 70,
    "nome": "28/11 · Rodagem Z2 + ritmo em Z3 · 12.4 km total",
+   "nota": "Total porta a porta 12.4 km. Alongamentos e educativos ANTES do start, relogio parado.",
+   "passos": [
+    {
+     "fim": "time",
+     "lento": 2.3923,
+     "rapido": 2.5773,
+     "texto": "12 min subindo devagar, 6:28–6:58/km. Se chegar ofegante ao fim, foi rapido demais.",
+     "tipo": "warmup",
+     "valor": 720
+    },
+    {
+     "fim": "distance",
+     "lento": 2.7174,
+     "rapido": 2.9586,
+     "texto": "Rodagem de entrada, 4.7 km em 5:38–6:08/km. Segure aqui: o trabalho vem a seguir.",
+     "tipo": "interval",
+     "valor": 4700
+    },
+    {
+     "fim": "distance",
+     "lento": 3.2787,
+     "rapido": 3.5088,
+     "texto": "4.7 km em 4:45–5:05/km, FC 140-148 bpm.",
+     "tipo": "interval",
+     "valor": 4700
+    },
+    {
+     "fim": "time",
+     "texto": "8 min de trote muito leve ate a respiracao normalizar.",
+     "tipo": "cooldown",
+     "valor": 480
+    }
+   ]
+  },
+  {
+   "data": "2026-11-29",
+   "foco": "limiar",
+   "km": 12.4,
+   "min": 70,
+   "nome": "29/11 · Rodagem Z2 + ritmo em Z3 · 12.4 km total",
    "nota": "Total porta a porta 12.4 km. Alongamentos e educativos ANTES do start, relogio parado.",
    "passos": [
     {
@@ -162,7 +246,7 @@
    ]
   }
  ],
- "versao": "08x",
+ "versao": "08y",
  "zonas": {
   "faci": {
    "fc": "111–124",
