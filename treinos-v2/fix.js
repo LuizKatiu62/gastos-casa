@@ -80,7 +80,7 @@
       escolha dos anos por botão, variação só nos meses em comum
    ══════════════════════════════════════════════════════════════════ */
 
-const FIX_VERSAO = '08x';
+const FIX_VERSAO = '08y';
 /* TIROS DO TITULO (fix 08w, 26/11/2026). O treino do coach vem com o
    titulo pronto, ex. "8× 300", "6x800 m", "5 x 1 km". Antes o app
    ignorava isso e montava SEMPRE tiros de 600 m (5×600 no lugar de
@@ -21741,4 +21741,64 @@ PARTE('evolucao legivel', function(){
   try{ var h2 = _q('#effSub'); h2 = h2 && h2.parentNode.querySelector('h2'); if(h2) h2.textContent = 'Eficiência aeróbica' }catch(e){}
 
   if(ST.aba === 'evolucao' && typeof renderEvolucao === 'function'){ try{ renderEvolucao() }catch(e){} }
+});
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   PROXIMA PROVA ANTES DO OBJETIVO (fix 08y, 26/11/2026)
+
+   O Luiz: "a proxima corrida nao sera a Maratona de Fredericton e sim a
+   Sao Silvestre no Brasil no dia 31/12". Ele escolheu manter as duas:
+   em destaque a Sao Silvestre, e embaixo, menor, o objetivo principal
+   (a maratona). O objetivo, as fases e as semanas continuam sendo os da
+   maratona; isto so muda o que aparece no topo do Coach.
+
+   Depois do dia da prova ela sai sozinha e a maratona volta ao destaque.
+   Para incluir a proxima: acrescentar um item em PROXIMAS.
+   ═══════════════════════════════════════════════════════════════════ */
+PARTE('proxima prova antes do objetivo', function(){
+  var PROXIMAS = [
+    { nome: 'São Silvestre', data: '2026-12-31', km: 15, cidade: 'São Paulo · Brasil' }
+  ];
+  if(typeof renderHero !== 'function') throw new Error('sem renderHero');
+  var css = document.createElement('style');
+  css.textContent = '#hObjetivo{margin:12px 0 2px;font-size:13px;color:var(--tx3);line-height:1.45}'
+    + '#hObjetivo b{color:var(--tx2);font-weight:700}';
+  document.head.appendChild(css);
+
+  function proxima(){
+    if(window.BQ_DEMO) return null;   /* a demonstracao fica so com a prova de exemplo */
+    var hoje = iso(HOJE), o = null;
+    try{ o = objetivoAtivo() }catch(e){}
+    var lim = o && o.data ? o.data : '9999-12-31';
+    return PROXIMAS.filter(function(p){ return p.data >= hoje && p.data < lim })
+      .sort(function(a, b){ return a.data < b.data ? -1 : 1 })[0] || null;
+  }
+
+  var orig = renderHero;
+  window.renderHero = function(){
+    var r = orig.apply(this, arguments);
+    try{
+      var linha = document.getElementById('hObjetivo');
+      var p = proxima();
+      if(!p){ if(linha) linha.remove(); return r }
+      var o = objetivoAtivo();
+      var d = diff(iso(HOJE), p.data);
+      q('#hNome').textContent = p.nome;
+      q('#hDias').textContent = d > 0 ? d : 'HOJE';
+      q('#hUn').textContent = d > 1 ? 'dias restantes' : d === 1 ? 'dia restante' : 'é hoje!';
+      q('#hProvas').innerHTML = '<span class="chip">Corrida</span><span class="chip">' + p.km + ' km</span>'
+        + '<span class="chip">' + fmt(p.data) + '</span>' + (p.cidade ? '<span class="chip">' + p.cidade + '</span>' : '');
+      if(o && o.data){
+        if(!linha){
+          linha = document.createElement('div'); linha.id = 'hObjetivo';
+          var ch = q('#hProvas'); ch.parentNode.insertBefore(linha, ch.nextSibling);
+        }
+        var dO = diff(iso(HOJE), o.data);
+        linha.innerHTML = 'Objetivo principal: <b>' + o.nome + '</b> · ' + dO + ' dias · ' + fmt(o.data);
+      }
+    }catch(e){ console.warn('proxima prova:', e && e.message) }
+    return r;
+  };
+  try{ window.renderHero() }catch(e){}
 });
